@@ -1,5 +1,6 @@
 #include "TitleDialog.hpp"
 #include <wx/stattext.h>
+#include "wx/graphics.h"
 #include "wxExtensions.hpp"
 
 
@@ -12,10 +13,7 @@ TitleBar::TitleBar(wxWindow *parent, const wxString& title, const wxColour& colo
     , m_bgColor(color)
     , m_title(title)
 {
-    //this->SetWindowStyle(wxTRANSPARENT_WINDOW);
-    //SetBackgroundColour(wxTransparentColour);
-    SetBackgroundStyle(wxBG_STYLE_TRANSPARENT);
-
+    SetBackgroundColour(m_bgColor);
     m_titleLbl = new wxStaticText(this, wxID_ANY, m_title, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER | wxALIGN_CENTER_VERTICAL);
     m_titleLbl->Bind(wxEVT_LEFT_DOWN, &TitleBar::OnMouseLeftDown, this);
     m_titleLbl->SetBackgroundColour(m_bgColor);
@@ -57,13 +55,11 @@ void TitleBar::SetTitle(const wxString& title)
 void TitleBar::OnPaint(wxPaintEvent& event)
 {
     wxPaintDC dc(this);
-    dc.SetBackground(*wxTRANSPARENT_BRUSH);
     dc.SetBrush(m_bgColor);
     dc.SetPen(*wxTRANSPARENT_PEN);
-    wxRect rect = GetClientRect();
-    dc.SetBackgroundMode(wxTRANSPARENT);
-    dc.DrawRoundedRectangle(rect, m_borderRadius); 
-    dc.DrawRectangle(0, m_borderRadius+1, rect.GetWidth(), rect.GetHeight());
+    wxSize size = GetSize();
+    //dc.DrawRoundedRectangle(0, 0, size.x, size.y, m_borderRadius);
+    dc.DrawRectangle(0, size.y / 2, size.x, size.y);
 }
 
 void TitleBar::OnMouseLeftDown(wxMouseEvent &event)
@@ -122,7 +118,7 @@ void TitleBar::FinishDrag()
 
 // TitleDialog
 TitleDialog::TitleDialog(wxWindow* parent, const wxString& title, int borderRadius/*=6*/)
-    : DPIDialog(parent, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBORDER | wxCLOSE_BOX)
+    : DPIDialog(parent, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxFRAME_SHAPED | wxNO_BORDER)
     , m_borderRadius(borderRadius)
     , m_titleBar(new TitleBar(this, title, "#E1E2E6", borderRadius))
     , m_mainSizer(new wxBoxSizer(wxVERTICAL))
@@ -134,6 +130,7 @@ TitleDialog::TitleDialog(wxWindow* parent, const wxString& title, int borderRadi
     Layout();
 
     Bind(wxEVT_PAINT, &TitleDialog::OnPaint, this);
+    Bind(wxEVT_SIZE, &TitleDialog::OnSize, this);
 }
 
 void TitleDialog::SetTitleBackgroundColor(const wxColour& color)
@@ -149,12 +146,18 @@ wxBoxSizer* TitleDialog::MainSizer()
 void TitleDialog::OnPaint(wxPaintEvent& event)
 {
     wxPaintDC dc(this);
-    dc.SetBackground(*wxTRANSPARENT_BRUSH);
-    dc.SetBrush(wxColor(255, 255, 255));
+    dc.SetBrush(wxColour(255, 255, 255));
     dc.SetPen(*wxTRANSPARENT_PEN);
-    wxRect rect = GetClientRect();
-    dc.SetBackgroundMode(wxTRANSPARENT);
-    dc.DrawRoundedRectangle(rect, m_borderRadius);
+    //dc.DrawRoundedRectangle(, m_borderRadius);
+    dc.DrawRectangle(GetClientSize());
+}
+
+void TitleDialog::OnSize(wxSizeEvent& event)
+{
+    wxGraphicsPath path = wxGraphicsRenderer::GetDefaultRenderer()->CreatePath();
+    wxSize size = event.GetSize();
+    path.AddRoundedRectangle(0, 0, size.x, size.y, m_borderRadius);
+    SetShape(path);
 }
 
 } // end namespace
