@@ -3,6 +3,7 @@
 
 #include <wx/wx.h>
 #include <wx/intl.h>
+#include <wx/hyperlink.h>
 
 #include "slic3r/GUI/GUI_Utils.hpp"
 #include "slic3r/GUI/Widgets/Button.hpp"
@@ -122,16 +123,20 @@ private:
     VerifycodeTextCtrl* m_verify_code {nullptr};
     wxCheckBox* m_login_check_box_page1 {nullptr};
     CountdownButton* m_get_code_button {nullptr};
+    wxStaticText* m_protocol_page1{nullptr};
+    wxHyperlinkCtrl* m_service_link_page1{nullptr};
+    wxHyperlinkCtrl* m_privacy_policy_page1{nullptr};
 
     UsrnameTextCtrl* m_usrname_page2 {nullptr};
     PasswordTextCtrl* m_password {nullptr};
     wxStaticText* m_error_label_page2 {nullptr};
     wxButton* m_login_button_page2 {nullptr};
     wxCheckBox* m_login_check_box_page2 {nullptr};
+    wxPanel* m_panel_checkbox_page2 {nullptr};
 
     wxStaticText* m_protocol_page2{nullptr};
-    wxStaticText* m_service_link_page2{nullptr};
-    wxStaticText* m_privacy_policy_link_page2{nullptr};
+    wxHyperlinkCtrl* m_service_link_page2{nullptr};
+    wxHyperlinkCtrl* m_privacy_policy_page2{nullptr};
 
     wxStaticLine* m_staticLine_verify{nullptr};
     wxStaticLine* m_staticLine_password{nullptr};
