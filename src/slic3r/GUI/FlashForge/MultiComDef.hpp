@@ -15,8 +15,10 @@ enum ComErrno {
     COM_OK,
     COM_ERROR,
     COM_UNINITIALIZED,
-    COM_VERIFY_LAN_DEV_FAILED,
     COM_DEVICE_IS_BUSY,
+    COM_VERIFY_LAN_DEV_FAILED,  // invalid serialNumber/checkCode
+    COM_UNAUTHORIZED,           // invalid accessToken/clientAccessToken
+    COM_INVALID_VALIDATION,     // invalid userName/password/SMSCode
 };
 
 enum ComConnectMode {
@@ -24,10 +26,15 @@ enum ComConnectMode {
     COM_CONNECT_WAN,
 };
 
-struct com_token_info_t {
+struct com_token_data_t {
     int expiresIn;
     std::string accessToken;
     std::string refreshToken;
+};
+
+struct com_clinet_token_data_t {
+    int expiresIn;
+    std::string accessToken;
 };
 
 struct com_user_profile_t {

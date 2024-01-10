@@ -13,7 +13,7 @@ Orca-Flashforge is an open source slicer for FDM printers.
 2. Drag Orca-Flashforge.app to Application folder. 
 3. *If you want to run a build from a PR, you also need following instructions bellow*  
     <details quarantine>
-    - Option 1 (You only need to do this once. After that the app can be oppened normally.):
+    - Option 1 (You only need to do this once. After that the app can be opened normally.):
       - Step 1: Hold _cmd_ and right click the app, from the context menu choose **Open**.
       - Step 2: A warning window will pop up, click _Open_  
       

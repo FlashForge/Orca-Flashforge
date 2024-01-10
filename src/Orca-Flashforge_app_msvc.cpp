@@ -53,10 +53,10 @@ public:
         wc.lpfnWndProc   = OpenGLVersionCheck::supports_opengl2_wndproc;
         wc.hInstance     = (HINSTANCE)GetModuleHandle(nullptr);
         wc.hbrBackground = (HBRUSH)(COLOR_BACKGROUND);
-        wc.lpszClassName = L"OrcaSlicer_opengl_version_check";
+        wc.lpszClassName = L"Orca-Flashforge_opengl_version_check";
         wc.style = CS_OWNDC;
         if (RegisterClass(&wc)) {
-            HWND hwnd = CreateWindowW(wc.lpszClassName, L"OrcaSlicer_opengl_version_check", WS_OVERLAPPEDWINDOW, 0, 0, 640, 480, 0, 0, wc.hInstance, (LPVOID)this);
+            HWND hwnd = CreateWindowW(wc.lpszClassName, L"Orca-Flashforge_opengl_version_check", WS_OVERLAPPEDWINDOW, 0, 0, 640, 480, 0, 0, wc.hInstance, (LPVOID)this);
             if (hwnd) {
                 message_pump_exit = false;
                 while (GetMessage(&msg, NULL, 0, 0 ) > 0 && ! message_pump_exit)
@@ -204,7 +204,7 @@ bool OpenGLVersionCheck::message_pump_exit = false;
 
 extern "C" {
     typedef int (__stdcall *Slic3rMainFunc)(int argc, wchar_t **argv);
-    Slic3rMainFunc flashslicer_main = nullptr;
+    Slic3rMainFunc orca_flashforge_main = nullptr;
 }
 
 extern "C" {
@@ -292,19 +292,19 @@ int wmain(int argc, wchar_t **argv)
     }
 
     // resolve function address here
-    flashslicer_main = (Slic3rMainFunc)GetProcAddress(hInstance_Slic3r,
+    orca_flashforge_main = (Slic3rMainFunc)GetProcAddress(hInstance_Slic3r,
 #ifdef _WIN64
         // there is just a single calling conversion, therefore no mangling of the function name.
-        "flashslicer_main"
+        "orca_flashforge_main"
 #else	// stdcall calling convention declaration
         "_bambustu_main@8"
 #endif
         );
-    if (flashslicer_main == nullptr) {
-        printf("could not locate the function flashslicer_main in Orca-Flashforge.dll\n");
+    if (orca_flashforge_main == nullptr) {
+        printf("could not locate the function orca_flashforge_main in Orca-Flashforge.dll\n");
         return -1;
     }
     // argc minus the trailing nullptr of the argv
-    return flashslicer_main((int)argv_extended.size() - 1, argv_extended.data());
+    return orca_flashforge_main((int) argv_extended.size() - 1, argv_extended.data());
 }
 }

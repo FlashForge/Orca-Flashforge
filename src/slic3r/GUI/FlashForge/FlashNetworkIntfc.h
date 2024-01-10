@@ -26,7 +26,13 @@ public:
     decltype(&fnet_getLanDevDetail) getLanDevDetail;
     decltype(&fnet_getTokenByPassword) getTokenByPassword;
     decltype(&fnet_refreshToken) refreshToken;
-    decltype(&fnet_freeTokenInfo) freeTokenInfo;
+    decltype(&fnet_freeToken) freeToken;
+    decltype(&fnet_getClientToken) getClientToken;
+    decltype(&fnet_freeClientToken) freeClientToken;
+    decltype(&fnet_sendSMSCode) sendSMSCode;
+    decltype(&fnet_getTokenBySMSCode) getTokenBySMSCode;
+    decltype(&fnet_checkToken) checkToken;
+    decltype(&fnet_signOut) signOut;
     decltype(&fnet_getUserProfile) getUserProfile;
     decltype(&fnet_freeUserProfile) freeUserProfile;
     decltype(&fnet_downloadFile) downloadFile;

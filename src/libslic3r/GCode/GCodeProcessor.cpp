@@ -1430,7 +1430,7 @@ void GCodeProcessor::process_file(const std::string& filename, std::function<voi
         });
         m_parser.reset();
 
-        // if the gcode was produced by OrcaSlicer,
+        // if the gcode was produced by Orca-Flashforge,
         // extract the config from it
         if (m_producer == EProducer::OrcaSlicer || m_producer == EProducer::Slic3rPE || m_producer == EProducer::Slic3r) {
             DynamicPrintConfig config;

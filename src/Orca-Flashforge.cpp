@@ -342,7 +342,7 @@ const float bed3d_ax3s_default_tip_length = 5.0f;
 int CLI::run(int argc, char **argv)
 {
     // Mark the main thread for the debugger and for runtime checks.
-    set_current_thread_name("flashslicer_main");
+    set_current_thread_name("orca_flashforge_main");
     // Save the thread ID of the main thread.
     save_main_thread_id();
 #ifdef __WXGTK__
@@ -2752,8 +2752,8 @@ bool CLI::setup(int argc, char **argv)
     detect_platform();
 
 #ifdef WIN32
-    // Notify user that a blacklisted DLL was injected into OrcaSlicer process (for example Nahimic, see GH #5573).
-    // We hope that if a DLL is being injected into a OrcaSlicer process, it happens at the very start of the application,
+    // Notify user that a blacklisted DLL was injected into Orca-Flashforge process (for example Nahimic, see GH #5573).
+    // We hope that if a DLL is being injected into a Orca-Flashforge process, it happens at the very start of the application,
     // thus we shall detect them now.
     if (BlacklistedLibraryCheck::get_instance().perform_check()) {
         std::wstring text = L"Following DLLs have been injected into the Orca-Flashforge process:\n\n";
@@ -3003,7 +3003,7 @@ LONG WINAPI VectoredExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo)
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
 extern "C" {
-    __declspec(dllexport) int __stdcall flashslicer_main(int argc, wchar_t **argv)
+__declspec(dllexport) int __stdcall orca_flashforge_main(int argc, wchar_t **argv)
     {
         // Convert wchar_t arguments to UTF8.
         std::vector<std::string> 	argv_narrow;

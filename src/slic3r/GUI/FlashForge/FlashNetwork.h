@@ -42,11 +42,16 @@ typedef struct fnet_file_data {
     unsigned int size;
 } fnet_file_data_t;
 
-typedef struct fnet_token_info {
+typedef struct fnet_token_data {
     int expiresIn;
     char *accessToken;
     char *refreshToken;
-} fnet_token_info_t;
+} fnet_token_data_t;
+
+typedef struct fnet_client_token_data {
+    int expiresIn;
+    char *accessToken;
+} fnet_client_token_data_t;
 
 typedef struct fnet_user_profile {
     char *nickname;
@@ -70,6 +75,7 @@ typedef struct fnet_wan_dev_info {
 
 typedef struct fnet_dev_detail {
     char *model;
+    int pid;
     int nozzleCnt;
     int nozzleStyle;            // 0 independent, 1 non-independent
     char *measure;
@@ -126,8 +132,10 @@ typedef struct fnet_dev_detail {
 
 #define FNET_OK 0
 #define FNET_ERROR -1
-#define FNET_VERIFY_LAN_DEV_FAILED 1
 #define FNET_DIVICE_IS_BUSY 2
+#define FNET_VERIFY_LAN_DEV_FAILED 1001 // invalid serialNumber/checkCode
+#define FNET_UNAUTHORIZED 2001          // invalid accessToken/clientAccessToken
+#define FNET_INVALID_VALIDATION 2002    // invalid userName/password/SMSCode
 
 #ifdef __cplusplus
 extern "C" {
@@ -157,18 +165,32 @@ FNET_API int fnet_downloadFile(const char *url, fnet_file_data_t **fileData,
 FNET_API void fnet_freeFileData(fnet_file_data_t *fileData);
 
 FNET_API int fnet_getTokenByPassword(const char *userName, const char *password,
-    fnet_token_info_t **tokenInfo);
+    fnet_token_data_t **tokenData);
 
-FNET_API int fnet_refreshToken(const char *refreshToken, fnet_token_info_t **tokenInfo);
+FNET_API int fnet_refreshToken(const char *refreshToken, fnet_token_data_t **tokenData);
 
-FNET_API void fnet_freeTokenInfo(fnet_token_info_t *tokenInfo);
+FNET_API void fnet_freeToken(fnet_token_data_t *tokenData);
+
+FNET_API int fnet_getClientToken(fnet_client_token_data_t **clientTokenData);
+
+FNET_API void fnet_freeClientToken(fnet_client_token_data_t *clientTokenData);
+
+FNET_API int fnet_sendSMSCode(const char *clientAccessToken, const char *phoneNumber,
+    const char *language); // en/zh
+
+FNET_API int fnet_getTokenBySMSCode(const char *userName, const char *SMSCode,
+    fnet_token_data_t **tokenData);
+
+FNET_API int fnet_checkToken(const char *accessToken);
+
+FNET_API int fnet_signOut(const char *accessToken);
 
 FNET_API int fnet_getUserProfile(const char *accessToken, fnet_user_profile_t **profile);
 
 FNET_API void fnet_freeUserProfile(fnet_user_profile_t *profile);
 
 FNET_API int fnet_bindWanDev(const char *accessToken, const char *serialNumber,
-    const char *model, const char *name, fnet_wan_dev_bind_data_t **bindData);
+    unsigned short pid, const char *name, fnet_wan_dev_bind_data_t **bindData);
 
 FNET_API void fent_freeBindData(fnet_wan_dev_bind_data_t *bindData);
 

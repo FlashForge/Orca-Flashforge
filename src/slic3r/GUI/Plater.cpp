@@ -171,7 +171,6 @@ wxDEFINE_EVENT(EVT_REPAIR_MODEL,                    wxCommandEvent);
 wxDEFINE_EVENT(EVT_FILAMENT_COLOR_CHANGED,          wxCommandEvent);
 wxDEFINE_EVENT(EVT_INSTALL_PLUGIN_NETWORKING,       wxCommandEvent);
 wxDEFINE_EVENT(EVT_UPDATE_PLUGINS_WHEN_LAUNCH,       wxCommandEvent);
-wxDEFINE_EVENT(EVT_INSTALL_PLUGIN_HINT,             wxCommandEvent);
 wxDEFINE_EVENT(EVT_PREVIEW_ONLY_MODE_HINT,          wxCommandEvent);
 //BBS: change light/dark mode
 wxDEFINE_EVENT(EVT_GLCANVAS_COLOR_MODE_CHANGED,     SimpleEvent);
@@ -1533,7 +1532,7 @@ void Sidebar::sync_ams_list()
     wxGetApp().app_config ->set("ams_filament_ids", p->ams_list_device, ams_filament_ids);
     if (unknowns > 0) {
         MessageDialog dlg(this,
-            _L("There are some unknown filaments mapped to generic preset. Please update Orca Slicer or restart Orca Slicer to check if there is an update to system presets."),
+            _L("There are some unknown filaments mapped to generic preset. Please update Orca-Flashforge or restart Orca-Flashforge to check if there is an update to system presets."),
             _L("Sync filaments with AMS"), wxOK);
         dlg.ShowModal();
     }
@@ -2173,7 +2172,6 @@ struct Plater::priv
     //BBS: add model repair
     void on_repair_model(wxCommandEvent &event);
     void on_filament_color_changed(wxCommandEvent &event);
-    void show_install_plugin_hint(wxCommandEvent &event);
     void install_network_plugin(wxCommandEvent &event);
     void show_preview_only_hint(wxCommandEvent &event);
     //BBS: add part plate related logic
@@ -2389,7 +2387,6 @@ Plater::priv::priv(Plater *q, MainFrame *main_frame)
     this->q->Bind(EVT_REPAIR_MODEL, &priv::on_repair_model, this);
     this->q->Bind(EVT_FILAMENT_COLOR_CHANGED, &priv::on_filament_color_changed, this);
     this->q->Bind(EVT_INSTALL_PLUGIN_NETWORKING, &priv::install_network_plugin, this);
-    this->q->Bind(EVT_INSTALL_PLUGIN_HINT, &priv::show_install_plugin_hint, this);
     this->q->Bind(EVT_UPDATE_PLUGINS_WHEN_LAUNCH, &priv::update_plugin_when_launch, this);
     this->q->Bind(EVT_PREVIEW_ONLY_MODE_HINT, &priv::show_preview_only_hint, this);
     this->q->Bind(EVT_GLCANVAS_COLOR_MODE_CHANGED, &priv::on_change_color_mode, this);
@@ -6460,11 +6457,6 @@ void Plater::priv::update_plugin_when_launch(wxCommandEvent &event)
     }
 }
 
-void Plater::priv::show_install_plugin_hint(wxCommandEvent &event)
-{
-    //notification_manager->bbl_show_plugin_install_notification(into_u8(_L("Network Plug-in is not detected. Network related features are unavailable.")));
-}
-
 void Plater::priv::show_preview_only_hint(wxCommandEvent &event)
 {
     notification_manager->bbl_show_preview_only_notification(into_u8(_L("Preview only mode:\nThe loaded file contains gcode only, Can not enter the Prepare page")));
@@ -7622,7 +7614,7 @@ void Plater::priv::bring_instance_forward() const
         BOOST_LOG_TRIVIAL(debug) << "Couldnt bring instance forward - mainframe is null";
         return;
     }
-    BOOST_LOG_TRIVIAL(debug) << "Orca Slicer window going forward";
+    BOOST_LOG_TRIVIAL(debug) << "Orca-Flashforge window going forward";
     //this code maximize app window on Fedora
     {
         main_frame->Iconize(false);
@@ -8126,7 +8118,7 @@ void Plater::import_model_id(wxString download_info)
                         error);
 
                     if (retry_count == max_retries) {
-                        msg = _L("Importing to Orca Slicer failed. Please download the file and manually import it.");
+                        msg = _L("Importing to Orca-Flashforge failed. Please download the file and manually import it.");
                         cont = false;
                     }
                 })
@@ -12417,7 +12409,7 @@ void Plater::show_object_info()
 
     #ifndef __WINDOWS__
     if (non_manifold_edges > 0) {
-        info_manifold += into_u8("\n" + _L("Tips:") + "\n" +_L("\"Fix Model\" feature is currently only on Windows. Please repair the model on Orca Slicer(windows) or CAD softwares."));
+        info_manifold += into_u8("\n" + _L("Tips:") + "\n" +_L("\"Fix Model\" feature is currently only on Windows. Please repair the model on Orca-Flashforge(windows) or CAD softwares."));
     }
     #endif //APPLE & LINUX
 

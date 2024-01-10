@@ -20,7 +20,7 @@ namespace GUI {
 
     wxDEFINE_EVENT(EVT_UPDATE_TEXT_LOGIN, wxCommandEvent);
 
-    com_token_info_t LoginDialog::m_token_info = {};
+    com_token_data_t LoginDialog::m_token_data = {};
 
     CountdownButton::CountdownButton(wxWindow* parent, wxString text, wxString icon /*= ""*/, long style /*= 0*/, int iconSize /*= 0*/, wxWindowID btn_id /*= wxID_ANY*/)
         : Button(parent,text,icon,style,iconSize,btn_id)
@@ -240,17 +240,20 @@ LoginDialog::LoginDialog()
     wxPanel* page1 = new wxPanel(this, wxID_ANY);
     wxBoxSizer* page1Sizer = new wxBoxSizer(wxVERTICAL);
     setupLayoutPage1(page1Sizer,page1);
+    page1Sizer->AddSpacer(FromDIP(63));
     page1->SetSizer(page1Sizer);
 
     // 创建第二个标签页
     wxPanel* page2 = new wxPanel(this, wxID_ANY);
     wxBoxSizer* page2Sizer = new wxBoxSizer(wxVERTICAL);
     setupLayoutPage2(page2Sizer,page2);
+    page2Sizer->AddSpacer(FromDIP(63));
     page2->SetSizer(page2Sizer);
 
     // 添加 wxPanel 控件
     sizer->Add(page1, 1, wxEXPAND | wxALL, 10);
     sizer->Add(page2, 1, wxEXPAND | wxALL, 10);
+    //sizer->AddSpacer(FromDIP(63));
     page2->Hide(); 
 
     // 创建 wxStaticText 控件
@@ -281,11 +284,12 @@ LoginDialog::LoginDialog()
         m_login_check_box_page2->Refresh();
         m_protocol_page2->Refresh();
         m_service_link_page2->Refresh();
-        m_privacy_policy_link_page2->Refresh();
+        m_privacy_policy_page2->Refresh();
         m_staticLine_verify->Hide();
         m_staticLine_verify->Refresh();
         m_staticLine_password->Show();
         m_staticLine_password->Refresh();
+        m_panel_checkbox_page2->Refresh();
         Layout();
         m_password->RefreshEyePicPosition();
         });
@@ -325,17 +329,20 @@ LoginDialog::LoginDialog()
     sizer_frame->Add(sizer, 0, wxALIGN_CENTER);
 
     SetSizerAndFit(sizer_frame);
+
+    initWidget();
+
 }
 
-com_token_info_t LoginDialog::GetLoginToken()
+com_token_data_t LoginDialog::GetLoginToken()
 {
-    return m_token_info;
+    return m_token_data;
 }
 
 void LoginDialog::SetToken(std::string accessToken, std::string refreshToken)
 {
-    m_token_info.accessToken = accessToken;
-    m_token_info.refreshToken = refreshToken;
+    m_token_data.accessToken = accessToken;
+    m_token_data.refreshToken = refreshToken;
 }
 
 void LoginDialog::on_dpi_changed(const wxRect &suggested_rect)
@@ -345,6 +352,14 @@ void LoginDialog::on_dpi_changed(const wxRect &suggested_rect)
     SetMinSize(size);
     Fit();
     Refresh();
+}
+
+void LoginDialog::initWidget()
+{
+   ComErrno get_result = MultiComUtils::getClientToken(m_client_SMS_token);
+   if(get_result == ComErrno::COM_ERROR){
+        BOOST_LOG_TRIVIAL(warning) << boost::format("MultiComUtils::getClientToken Failed!");
+   }
 }
 
 void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
@@ -398,6 +413,11 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     m_get_code_button->SetWindowStyleFlag(wxBORDER_NONE); //去除边框线
     m_get_code_button->SetMinSize(wxSize(114,54));
     m_get_code_button->Bind(wxEVT_BUTTON, [this](wxCommandEvent& event){
+        //发送验证码
+        ComErrno send_result =MultiComUtils::sendSMSCode(m_client_SMS_token.accessToken,m_usrname_page1->GetValue().ToStdString());
+        if(send_result == ComErrno::COM_ERROR){
+            BOOST_LOG_TRIVIAL(warning) << boost::format("MultiComUtils::sendSMSCode Failed!");
+        }
         m_get_code_button->startTimer();
     });
     //Bind(EVT_UPDATE_TEXT_LOGIN, &LoginDialog::OnUpdateText, this);
@@ -433,60 +453,62 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     m_login_button_page1->SetWindowStyleFlag(wxBORDER_NONE); 
     m_login_button_page1->SetMinSize(wxSize(101,44));
     m_login_button_page1->SetFont((wxFont(wxFontInfo(16))));
+    m_login_button_page1->Bind(wxEVT_BUTTON,&LoginDialog::onPage1Login, this);
 
     page1Sizer->Add(m_login_button_page1, 0, wxALIGN_CENTER_HORIZONTAL| wxUP, FromDIP(36));
 
     //check box
     wxBoxSizer* checkbox_sizer = new wxBoxSizer(wxHORIZONTAL);
+    auto m_panel_checkbox_page1 = new wxPanel(parent, wxID_ANY,wxDefaultPosition,wxSize(FromDIP(209), -1), wxTAB_TRAVERSAL);
 
-    m_login_check_box_page1 = new wxCheckBox(parent, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, 0);
+    m_login_check_box_page1 = new wxCheckBox(m_panel_checkbox_page1, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, 0);
     m_login_check_box_page1->Bind(wxEVT_CHECKBOX, &LoginDialog::onAgreeCheckBoxChangedPage1, this);
 
-    wxStaticText* protocol = new  wxStaticText(parent, wxID_ANY,_L("Read and Agree to Accept"));
-    protocol->SetFont((wxFont(wxFontInfo(14))));
+    m_protocol_page1 = new  wxStaticText(m_panel_checkbox_page1, wxID_ANY,_L("Read and Agree to Accept"));
+    m_protocol_page1->SetFont((wxFont(wxFontInfo(14))));
 
     //Service Item
-    wxStaticText* service_link = new wxStaticText(parent, wxID_ANY, _L("《Term of Sevrvice》"));
-    service_link->SetFont((wxFont(wxFontInfo(14))));
-    //service_link->Wrap(100);
-
-    service_link->Bind(wxEVT_LEFT_UP, [this,parent](wxMouseEvent& e){
-         wxTextCtrl* textCtrl = new wxTextCtrl(parent, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
-         textCtrl->LoadFile("");
-         wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
-         sizer->Add(textCtrl, wxSizerFlags(1).Expand());
-
-         wxDialog* dialog = new wxDialog(parent, wxID_ANY, "Term of Sevrvice", wxDefaultPosition, wxSize(400, 300));
-         dialog->SetSizer(sizer);
-         dialog->ShowModal();
+    m_service_link_page1 = new wxHyperlinkCtrl(m_panel_checkbox_page1, wxID_ANY, _L("《Term of Sevrvice》"), wxEmptyString, wxDefaultPosition, wxDefaultSize, wxHL_DEFAULT_STYLE);
+    m_service_link_page1->Bind(wxEVT_HYPERLINK, [this](wxCommandEvent& e){
+        wxString url = "http://dev.auth.flashforge.shop/en/userAgreement";
+        AppConfig *app_config = wxGetApp().app_config;
+        if(app_config){
+            std::string language = app_config->get("language");
+            if(language.compare("zh_CN") == 0){
+                url = "http://dev.auth.flashforge.shop/userAgreement";
+            }
+        }
+        wxLaunchDefaultBrowser(url);
     });
 
-    //Privacy Policy
-    wxStaticText* privacy_policy_link = new wxStaticText(parent, wxID_ANY, _L("《Privacy Policy》"));
-    privacy_policy_link->SetFont((wxFont(wxFontInfo(14))));
-    //privacy_policy_link->Wrap(100);
-
-    privacy_policy_link->Bind(wxEVT_LEFT_UP, [this,parent](wxMouseEvent& e){
-         wxTextCtrl* textCtrl = new wxTextCtrl(parent, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
-         textCtrl->LoadFile("");
-         wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
-         sizer->Add(textCtrl, wxSizerFlags(1).Expand());
-
-         wxDialog* dialog = new wxDialog(parent, wxID_ANY, _L("Privacy Policy"), wxDefaultPosition, wxSize(400, 300));
-         dialog->SetSizer(sizer);
-         dialog->ShowModal();
+    //privacy Policy
+    m_privacy_policy_page1 = new wxHyperlinkCtrl(m_panel_checkbox_page1, wxID_ANY, _L("《Privacy Policy》"), wxEmptyString, wxDefaultPosition, wxDefaultSize, wxHL_DEFAULT_STYLE);
+    m_privacy_policy_page1->Bind(wxEVT_HYPERLINK, [this](wxCommandEvent& e){
+        wxString url = "http://dev.auth.flashforge.shop/en/privacyPolicy";
+        AppConfig *app_config = wxGetApp().app_config;
+        if(app_config){
+            std::string language = app_config->get("language");
+            if(language.compare("zh_CN") == 0){
+                url = "http://dev.auth.flashforge.shop/privacyPolicy";
+            }
+        }
+        wxLaunchDefaultBrowser(url);
     });
 
     //left gaption
     checkbox_sizer->Add(FromDIP(50), 0, 0, 0);
     checkbox_sizer->Add(m_login_check_box_page1, 0, wxALIGN_CENTER_HORIZONTAL | wxTOP, FromDIP(5));
-    checkbox_sizer->Add(protocol,0, wxALIGN_CENTER_HORIZONTAL | wxTOP, FromDIP(5));
-    //checkbox_sizer->Add(service_link,0, wxTOP, FromDIP(5));
-    //checkbox_sizer->Add(privacy_policy_link,0, wxTOP, FromDIP(5));
+    checkbox_sizer->Add(m_protocol_page1,0, wxALIGN_CENTER_HORIZONTAL | wxTOP, FromDIP(5));
+    checkbox_sizer->Add(m_service_link_page1,0, wxTOP, FromDIP(5));
+    checkbox_sizer->Add(m_privacy_policy_page1,0, wxTOP, FromDIP(5));
 
-    page1Sizer->Add(checkbox_sizer, 0, wxEXPAND, 0);
-    page1Sizer->Add(service_link, 0,  wxTOP, FromDIP(5));
-    page1Sizer->Add(privacy_policy_link, 0,  wxTOP, FromDIP(5));
+    m_panel_checkbox_page1->SetSizer(checkbox_sizer);
+    m_panel_checkbox_page1->Layout();
+    checkbox_sizer->Fit(m_panel_checkbox_page1);
+
+    page1Sizer->Add(m_panel_checkbox_page1, 0, wxEXPAND, 0);
+    //page1Sizer->Add(m_service_link_page1, 0,  wxTOP, FromDIP(5));
+    //page1Sizer->Add(m_privacy_policy_page1, 0,  wxTOP, FromDIP(5));
 }
 
 void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
@@ -570,6 +592,17 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
 
     page2Sizer->Add(regist_forget_hor_sizer, 0, wxEXPAND | wxALIGN_CENTER_HORIZONTAL,0);
 
+//****error tips ***
+    m_error_label_page2 = new wxStaticText(parent,wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize);
+    m_error_label_page2->SetLabel(_L("Account or Password Input Error"));
+    m_error_label_page2->SetFont((wxFont(wxFontInfo(16))));
+    m_error_label_page2->SetBackgroundColour(wxColour(250, 207, 202)); // #FACFCA
+    m_error_label_page2->SetForegroundColour(wxColour(234, 53, 34)); // #EA3522
+    m_error_label_page2->SetWindowStyle(wxALIGN_CENTER_VERTICAL | wxALIGN_CENTER_HORIZONTAL);
+    m_error_label_page2->SetMinSize(wxSize(348,55));
+    page2Sizer->Add(m_error_label_page2, 0, wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
+    m_error_label_page2->Show(false); 
+
     //login button
     m_login_button_page2 = new wxButton(parent, wxID_ANY, _L("Login"));
     m_login_button_page2->SetMinSize(wxSize(101,44));
@@ -583,55 +616,55 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
 
     //check box
     wxBoxSizer* checkbox_sizer = new wxBoxSizer(wxHORIZONTAL);
+    m_panel_checkbox_page2 = new wxPanel(parent, wxID_ANY,wxDefaultPosition,wxSize(FromDIP(209), -1), wxTAB_TRAVERSAL);
 
-    m_login_check_box_page2 = new wxCheckBox(parent, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, 0);
-    // m_login_check_box_page2->Bind(wxEVT_COMMAND_CHECKBOX_CLICKED, [this](wxCommandEvent& e) {
-    // });
+    m_login_check_box_page2 = new wxCheckBox(m_panel_checkbox_page2, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, 0);
     m_login_check_box_page2->Bind(wxEVT_CHECKBOX, &LoginDialog::onAgreeCheckBoxChangedPage2, this);
 
-    m_protocol_page2 = new  wxStaticText(parent, wxID_ANY,_L("Read and Agree to Accept"));
+    m_protocol_page2 = new  wxStaticText(m_panel_checkbox_page2, wxID_ANY,_L("Read and Agree to Accept"));
     m_protocol_page2->SetFont((wxFont(wxFontInfo(14))));
     //protocol->SetMinSize(wxSize(46,28));
 
     //Service Item
-    m_service_link_page2 = new wxStaticText(parent, wxID_ANY, _L("《Term of Sevrvice》"));
-    m_service_link_page2->SetFont((wxFont(wxFontInfo(14))));
-
-    m_service_link_page2->Bind(wxEVT_LEFT_UP, [this,parent](wxMouseEvent& e){
-         wxTextCtrl* textCtrl = new wxTextCtrl(parent, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
-         textCtrl->LoadFile("");
-         wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
-         sizer->Add(textCtrl, wxSizerFlags(1).Expand());
-
-         wxDialog* dialog = new wxDialog(parent, wxID_ANY, "Term of Sevrvice", wxDefaultPosition, wxSize(400, 300));
-         dialog->SetSizer(sizer);
-         dialog->ShowModal();
+    m_service_link_page2 = new wxHyperlinkCtrl(m_panel_checkbox_page2, wxID_ANY, _L("《Term of Sevrvice》"), wxEmptyString, wxDefaultPosition, wxDefaultSize, wxHL_DEFAULT_STYLE);
+    m_service_link_page2->Bind(wxEVT_HYPERLINK, [this](wxCommandEvent& e){
+        wxString url = "http://dev.auth.flashforge.shop/en/userAgreement";
+        AppConfig *app_config = wxGetApp().app_config;
+        if(app_config){
+            std::string language = app_config->get("language");
+            if(language.compare("zh_CN") == 0){
+                url = "http://dev.auth.flashforge.shop/userAgreement";
+            }
+        }
+        wxLaunchDefaultBrowser(url);
     });
 
-    //Privacy Policy
-    m_privacy_policy_link_page2 = new wxStaticText(parent, wxID_ANY, _L("《Privacy Policy》"));
-    m_privacy_policy_link_page2->SetFont((wxFont(wxFontInfo(14))));
-    m_privacy_policy_link_page2->Bind(wxEVT_LEFT_UP, [this,parent](wxMouseEvent& e){
-         wxTextCtrl* textCtrl = new wxTextCtrl(parent, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
-         textCtrl->LoadFile("");
-         wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
-         sizer->Add(textCtrl, wxSizerFlags(1).Expand());
-
-         wxDialog* dialog = new wxDialog(parent, wxID_ANY, _L("Privacy Policy"), wxDefaultPosition, wxSize(400, 300));
-         dialog->SetSizer(sizer);
-         dialog->ShowModal();
+    //privacy Policy
+    m_privacy_policy_page2 = new wxHyperlinkCtrl(m_panel_checkbox_page2, wxID_ANY, _L("《Privacy Policy》"), wxEmptyString, wxDefaultPosition, wxDefaultSize, wxHL_DEFAULT_STYLE);
+    m_privacy_policy_page2->Bind(wxEVT_HYPERLINK, [this](wxCommandEvent& e){
+        wxString url = "http://dev.auth.flashforge.shop/en/privacyPolicy";
+        AppConfig *app_config = wxGetApp().app_config;
+        if(app_config){
+            std::string language = app_config->get("language");
+            if(language.compare("zh_CN") == 0){
+                url = "http://dev.auth.flashforge.shop/privacyPolicy";
+            }
+        }
+        wxLaunchDefaultBrowser(url);
     });
 
     //left gaption
     checkbox_sizer->Add(FromDIP(50), 0, 0, 0);
     checkbox_sizer->Add(m_login_check_box_page2, 0, wxALIGN_CENTER_HORIZONTAL | wxTOP, FromDIP(5));
     checkbox_sizer->Add(m_protocol_page2,0, wxALIGN_CENTER_HORIZONTAL | wxTOP, FromDIP(5));
-    //checkbox_sizer->Add(m_service_link_page2,0, wxTOP, FromDIP(5));
-    //checkbox_sizer->Add(m_privacy_policy_link_page2,0, wxTOP, FromDIP(5));
+    checkbox_sizer->Add(m_service_link_page2,0, wxTOP, FromDIP(5));
+    checkbox_sizer->Add(m_privacy_policy_page2,0, wxTOP, FromDIP(5));
 
-    page2Sizer->Add(checkbox_sizer, 0, wxEXPAND, 0);
-    page2Sizer->Add(m_service_link_page2, 0,  wxTOP, FromDIP(5));
-    page2Sizer->Add(m_privacy_policy_link_page2, 0,  wxTOP, FromDIP(5));
+    m_panel_checkbox_page2->SetSizer(checkbox_sizer);
+    m_panel_checkbox_page2->Layout();
+    checkbox_sizer->Fit(m_panel_checkbox_page2);
+
+    page2Sizer->Add(m_panel_checkbox_page2, 0, wxEXPAND, 0);
 }
 
 void LoginDialog::onUsrNameOrPasswordChangedPage1(wxCommandEvent& event)
@@ -707,26 +740,71 @@ void LoginDialog::onAgreeCheckBoxChangedPage2(wxCommandEvent& event)
         }
 }
 
-void LoginDialog::onPage2Login(wxCommandEvent& event)
+void LoginDialog::onPage1Login(wxCommandEvent& event)
 {
-    wxString usrname = m_usrname_page2->GetValue();
-    wxString password = m_password->GetValue();
-    com_token_info_t token_info;
-    ComErrno login_result =  MultiComUtils::getTokenByPassword(usrname.ToStdString(),password.ToStdString(),token_info);
+    wxString usrname = m_usrname_page1->GetValue();
+    wxString verify_code = m_verify_code->GetValue();
+    com_token_data_t token_data;
+    ComErrno login_result =  MultiComUtils::getTokenBySMSCode(usrname.ToStdString(),verify_code.ToStdString(),token_data);
     if(login_result == ComErrno::COM_OK){
-        LoginDialog::m_token_info = token_info;
+        LoginDialog::m_token_data = token_data;
         wxGetApp().handle_login_result("default.jpg",usrname.ToStdString());
         this->Hide();
         AppConfig *app_config = wxGetApp().app_config;
         if(app_config){
             //主动点击登录，设置token值
-            app_config->set("access_token",token_info.accessToken);
-            app_config->set("refresh_token",token_info.refreshToken);
-            app_config->set("expire_time",std::to_string(token_info.expiresIn));
-             Slic3r::GUI::MultiComMgr::inst()->setWanDevToken(usrname.ToStdString(),token_info.accessToken);
+            app_config->set("access_token",token_data.accessToken);
+            app_config->set("refresh_token",token_data.refreshToken);
+            app_config->set("expire_time",std::to_string(token_data.expiresIn));
+             Slic3r::GUI::MultiComMgr::inst()->setWanDevToken(usrname.ToStdString(),token_data.accessToken);
+        } 
+    }
+    else if (login_result == ComErrno::COM_INVALID_VALIDATION){
+        m_timer.Bind(wxEVT_TIMER, &LoginDialog::OnTimer, this);
+        //账号、验证码错误
+        m_error_label->Show(true);
+        startTimer();
+    }
+}
+
+void LoginDialog::onPage2Login(wxCommandEvent& event)
+{
+    wxString usrname = m_usrname_page2->GetValue();
+    wxString password = m_password->GetValue();
+    com_token_data_t token_data;
+    ComErrno login_result =  MultiComUtils::getTokenByPassword(usrname.ToStdString(),password.ToStdString(),token_data);
+    if(login_result == ComErrno::COM_OK){
+        LoginDialog::m_token_data = token_data;
+        wxGetApp().handle_login_result("default.jpg",usrname.ToStdString());
+        this->Hide();
+        AppConfig *app_config = wxGetApp().app_config;
+        if(app_config){
+            //主动点击登录，设置token值
+            app_config->set("access_token",token_data.accessToken);
+            app_config->set("refresh_token",token_data.refreshToken);
+            app_config->set("expire_time",std::to_string(token_data.expiresIn));
+             Slic3r::GUI::MultiComMgr::inst()->setWanDevToken(usrname.ToStdString(),token_data.accessToken);
         }
         
     }
+    else if (login_result == ComErrno::COM_INVALID_VALIDATION){
+        m_timer.Bind(wxEVT_TIMER, &LoginDialog::OnTimer, this);
+        //账号、密码错误
+        m_error_label_page2->Show(true);
+        startTimer();
+    }
+}
+
+void LoginDialog::OnTimer(wxTimerEvent& event)
+{
+    if(m_error_label->IsShown()){
+        m_error_label->Show(false);
+    }
+    if(m_error_label_page2->IsShown()){
+        m_error_label_page2->Show(false);
+    }
+
+    m_timer.Stop();
 }
 
 

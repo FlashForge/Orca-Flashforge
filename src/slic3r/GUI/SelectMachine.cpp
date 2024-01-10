@@ -117,11 +117,12 @@ MachineObjectPanel::MachineObjectPanel(wxWindow *parent, wxWindowID id, const wx
     m_edit_name_img     = ScalableBitmap(this, "edit_button", 18);
     m_select_unbind_img = ScalableBitmap(this, "unbind_selected", 18);
 
-    m_printer_status_offline = ScalableBitmap(this, "printer_status_offline", 12);
+    m_printer_status_offline_lan = ScalableBitmap(this, "printer_status_offline_lan", 16);
+    m_printer_status_offline_wan = ScalableBitmap(this, "printer_status_offline_wan", 16);
     m_printer_status_busy    = ScalableBitmap(this, "printer_status_busy", 12);
     m_printer_status_idle    = ScalableBitmap(this, "printer_status_idle", 12);
-    m_printer_status_lock    = ScalableBitmap(this, "printer_status_lock", 16);
-    m_printer_in_lan         = ScalableBitmap(this, "printer_in_lan", 16);
+    m_printer_online_lan         = ScalableBitmap(this, "printer_online_lan", 16);
+    m_printer_online_wan         = ScalableBitmap(this, "printer_online_wan", 16);
 
     this->Bind(wxEVT_ENTER_WINDOW, &MachineObjectPanel::on_mouse_enter, this);
     this->Bind(wxEVT_LEAVE_WINDOW, &MachineObjectPanel::on_mouse_leave, this);
@@ -205,12 +206,13 @@ void MachineObjectPanel::doRender(wxDC &dc)
     wxSize size = GetSize();
     dc.SetPen(*wxTRANSPARENT_PEN);
 
-    auto dwbitmap = m_printer_status_offline;
+    auto dwbitmap = m_printer_status_offline_lan;
     if (m_state == PrinterState::IDLE) { dwbitmap = m_printer_status_idle; }
     if (m_state == PrinterState::BUSY) { dwbitmap = m_printer_status_busy; }
-    if (m_state == PrinterState::OFFLINE) { dwbitmap = m_printer_status_offline; }
-    if (m_state == PrinterState::LOCK) { dwbitmap = m_printer_status_lock; }
-    if (m_state == PrinterState::IN_LAN) { dwbitmap = m_printer_in_lan; }
+    if (m_state == PrinterState::OFFLINE_LAN) { dwbitmap = m_printer_status_offline_lan; }
+    if (m_state == PrinterState::OFFLINE_WAN) { dwbitmap = m_printer_status_offline_wan; }
+    if (m_state == PrinterState::ONLINE_LAN) { dwbitmap = m_printer_online_lan; }
+    if (m_state == PrinterState::ONLINE_WAN) { dwbitmap = m_printer_online_wan; }
 
     // dc.DrawCircle(left, size.y / 2, 3);
     dc.DrawBitmap(dwbitmap.bmp(), wxPoint(left, (size.y - dwbitmap.GetBmpSize().y) / 2));
@@ -369,7 +371,7 @@ void MachineObjectPanel::on_mouse_left_up(wxMouseEvent &evt)
 }
 
 SelectMachinePopup::SelectMachinePopup(wxWindow *parent)
-    : PopupWindow(parent, wxBORDER_NONE | wxPU_CONTAINS_CONTROLS), m_dismiss(false)
+    : PopupWindow(parent, wxBORDER_NONE | wxPU_CONTAINS_CONTROLS), m_dismiss(false), m_updateConnect(false)
 {
 #ifdef __WINDOWS__
     SetDoubleBuffered(true);
@@ -432,6 +434,20 @@ SelectMachinePopup::SelectMachinePopup(wxWindow *parent)
     Bind(EVT_UPDATE_USER_MACHINE_LIST, &SelectMachinePopup::update_machine_list, this);
     Bind(wxEVT_TIMER, &SelectMachinePopup::on_timer, this);
     Bind(EVT_DISSMISS_MACHINE_LIST, &SelectMachinePopup::on_dissmiss_win, this);
+
+    MultiComMgr::inst()->Bind(COM_CONNECTION_EXIT_EVENT, [this](ComConnectionExitEvent &event) {
+        if (this->IsShown() && m_refresh_timer && !m_refresh_timer->IsRunning()) {
+            m_refresh_timer->Start(MACHINE_LIST_REFRESH_INTERVAL);
+        }
+        event.Skip();
+    });
+
+    MultiComMgr::inst()->Bind(COM_CONNECTION_READY_EVENT, [this](ComConnectionReadyEvent &event) {
+        if (this->IsShown() && m_refresh_timer && !m_refresh_timer->IsRunning()) {
+            m_refresh_timer->Start(MACHINE_LIST_REFRESH_INTERVAL);
+        }
+        event.Skip();
+    });
 }
 
 SelectMachinePopup::~SelectMachinePopup() { delete m_refresh_timer;}
@@ -439,7 +455,7 @@ SelectMachinePopup::~SelectMachinePopup() { delete m_refresh_timer;}
 void SelectMachinePopup::Popup(wxWindow *WXUNUSED(focus))
 {
     BOOST_LOG_TRIVIAL(trace) << "get_print_info: start";
-    start_ssdp(true);
+    m_updateConnect = true;
     if (m_refresh_timer) {
         m_refresh_timer->Stop();
         m_refresh_timer->Start(MACHINE_LIST_REFRESH_INTERVAL);
@@ -471,7 +487,6 @@ void SelectMachinePopup::Popup(wxWindow *WXUNUSED(focus))
 void SelectMachinePopup::OnDismiss()
 {
     BOOST_LOG_TRIVIAL(trace) << "get_print_info: dismiss";
-    start_ssdp(false);
     m_dismiss = true;
 
     if (m_refresh_timer) {
@@ -537,14 +552,7 @@ void SelectMachinePopup::on_timer(wxTimerEvent &event)
 
 void SelectMachinePopup::update_other_devices()
 {
-    /*DeviceManager *dev = wxGetApp().getDeviceManager();
-    if (!dev)
-        return;
-    m_free_machine_list = dev->get_local_machine_list();*/
-
-
     DeviceObjectOpr *devOpr = wxGetApp().getDeviceObjectOpr();
-    devOpr->update_scan_machine();
     m_free_device_list.clear();
     devOpr->get_local_machine(m_free_device_list);
 
@@ -560,7 +568,7 @@ void SelectMachinePopup::update_other_devices()
         //if (!mobj->is_avaliable()) continue;
 
         /*if (!wxGetApp().is_user_login())
-            continue;*/
+            continue; */
 
         /* do not show printer in my list */
         auto it = m_bind_machine_list.find(deviceObj->get_dev_id());
@@ -589,14 +597,14 @@ void SelectMachinePopup::update_other_devices()
         op->update_device_info(deviceObj);
 
         if (deviceObj->is_lan_mode_in_scan_print()) {
-            op->set_printer_state(PrinterState::LOCK);
+            op->set_printer_state(PrinterState::OFFLINE_LAN);
             /*if (deviceObj->has_access_right()) {
                 op->set_printer_state(PrinterState::IN_LAN);
             } else {
                 op->set_printer_state(PrinterState::LOCK);
             }*/
         } else {
-            op->set_printer_state(PrinterState::IN_WAN);
+            op->set_printer_state(PrinterState::OFFLINE_WAN);
             /*op->show_edit_printer_name(false);
             op->show_printer_bind(true, PrinterBindState::ALLOW_BIND);
             if (deviceObj->is_in_printing()) {
@@ -697,26 +705,32 @@ void SelectMachinePopup::update_user_devices()
         //set in lan
         if (devObj->is_lan_mode_printer()) {
             if (!devObj->is_online()) {
-                op->set_printer_state(PrinterState::OFFLINE);
+                op->SetToolTip(_L(""));
+                if (devObj->is_lan_mode_in_scan_print()) {
+                    op->set_printer_state(PrinterState::OFFLINE_LAN);
+                    if (m_updateConnect && devObj->get_lan_dev_info() != nullptr) {
+                        m_updateConnect = false;
+                        m_refresh_timer->Stop();
+                        devOpr->set_selected_machine(devObj->get_dev_id());
+                    }
+                } else {
+                    op->set_printer_state(PrinterState::OFFLINE_WAN);
+                }
             }
             else {
                 op->show_printer_bind(false, PrinterBindState::NONE);
                 op->show_edit_printer_name(false);
                 if (devObj->has_access_right() && devObj->is_avaliable()) {
-                    op->set_printer_state(PrinterState::IN_LAN);
+                    op->set_printer_state(PrinterState::ONLINE_LAN);
                     op->show_printer_bind(true, PrinterBindState::ALLOW_UNBIND);
                     op->SetToolTip(_L("Online"));
                 }
                 else {
-                    op->set_printer_state(PrinterState::LOCK);
+                    op->set_printer_state(PrinterState::OFFLINE_LAN);
                 }
             }
             op->Bind(EVT_UNBIND_MACHINE, [this, devOpr, devObj](wxCommandEvent &e) {
-                devOpr->set_selected_machine("");
-                if (devObj) {
-                    devObj->set_access_code("");
-                    devObj->erase_user_access_code();
-                }
+                devOpr->unbind_machine(devObj);
 
                 MessageDialog msg_wingow(nullptr, _L("Log out successful."), "", wxAPPLY | wxOK);
                 if (msg_wingow.ShowModal() == wxOK) { return; }
@@ -735,7 +749,7 @@ void SelectMachinePopup::update_user_devices()
 
             if (!devObj->is_online()) {
                 op->SetToolTip(_L("Offline"));
-                op->set_printer_state(PrinterState::OFFLINE);
+                op->set_printer_state(PrinterState::OFFLINE_WAN);
             }
             else {
                 op->show_edit_printer_name(true);
@@ -746,7 +760,7 @@ void SelectMachinePopup::update_user_devices()
                 }
                 else {
                     op->SetToolTip(_L("Online"));
-                    op->set_printer_state(PrinterState::IDLE);
+                    op->set_printer_state(PrinterState::ONLINE_WAN);
                 }
             }
         }
@@ -811,15 +825,12 @@ void SelectMachinePopup::on_dissmiss_win(wxCommandEvent &event)
 
 void SelectMachinePopup::update_machine_list(wxCommandEvent &event)
 {
+    DeviceObjectOpr *devOpr = wxGetApp().getDeviceObjectOpr();
+    devOpr->update_scan_machine();
+
     update_user_devices();
     update_other_devices();
     BOOST_LOG_TRIVIAL(trace) << "SelectMachinePopup update_machine_list end";
-}
-
-void SelectMachinePopup::start_ssdp(bool start)
-{
-    return;
-    //if (wxGetApp().getAgent()) { wxGetApp().getAgent()->start_discovery(true, start); }
 }
 
 void SelectMachinePopup::OnLeftUp(wxMouseEvent &event)

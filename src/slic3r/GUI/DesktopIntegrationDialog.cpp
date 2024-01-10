@@ -209,7 +209,7 @@ bool DesktopIntegrationDialog::is_integrated()
     if (path.empty())
         return false;
 
-    // confirmation that OrcaSlicer.desktop exists
+    // confirmation that Orca-Flashforge.desktop exists
     struct stat buffer;   
     return (stat (path.c_str(), &buffer) == 0);
 }
@@ -290,11 +290,11 @@ void DesktopIntegrationDialog::perform_desktop_integration()
     // slicer icon
     // iterate thru target_candidates to find icons folder
     for (size_t i = 0; i < target_candidates.size(); ++i) {
-        // Copy icon OrcaSlicer.png from resources_dir()/icons to target_dir_icons/icons/
+        // Copy icon Orca-Flashforge.png from resources_dir()/icons to target_dir_icons/icons/
         if (contains_path_dir(target_candidates[i], "images")) {
             target_dir_icons = target_candidates[i];
             std::string icon_path = GUI::format("%1%/images/Orca-Flashforge.png",resources_dir());
-            std::string dest_path = GUI::format("%1%/images/%2%OrcaSlicer%3%.png", target_dir_icons, icon_theme_path, version_suffix);
+            std::string dest_path = GUI::format("%1%/images/%2%Orca-Flashforge%3%.png", target_dir_icons, icon_theme_path, version_suffix);
             if (copy_icon(icon_path, dest_path))
                 break; // success
             else
@@ -306,7 +306,7 @@ void DesktopIntegrationDialog::perform_desktop_integration()
                 // copy icon
                 target_dir_icons = GUI::format("%1%/.local/share",wxFileName::GetHomeDir());
                 std::string icon_path = GUI::format("%1%/images/Orca-Flashforge.png",resources_dir());
-                std::string dest_path = GUI::format("%1%/images/%2%OrcaSlicer%3%.png", target_dir_icons, icon_theme_path, version_suffix);
+                std::string dest_path = GUI::format("%1%/images/%2%Orca-Flashforge%3%.png", target_dir_icons, icon_theme_path, version_suffix);
                 if (!contains_path_dir(target_dir_icons, "images") 
                     || !copy_icon(icon_path, dest_path)) {
                 	// every attempt failed - icon wont be present
@@ -319,7 +319,7 @@ void DesktopIntegrationDialog::perform_desktop_integration()
         BOOST_LOG_TRIVIAL(error) << "Copying Orca-Flashforge icon to icons directory failed.";
     } else 
     	// save path to icon
-        app_config->set("desktop_integration_icon_slicer_path", GUI::format("%1%/images/%2%OrcaSlicer%3%.png", target_dir_icons, icon_theme_path, version_suffix));
+        app_config->set("desktop_integration_icon_slicer_path", GUI::format("%1%/images/%2%Orca-Flashforge%3%.png", target_dir_icons, icon_theme_path, version_suffix));
 
     // desktop file
     // iterate thru target_candidates to find applications folder
@@ -330,9 +330,9 @@ void DesktopIntegrationDialog::perform_desktop_integration()
             // Write slicer desktop file
             std::string desktop_file = GUI::format(
                 "[Desktop Entry]\n"
-                "Name=OrcaSlicer%1%\n"
+                "Name=Orca-Flashforge%1%\n"
                 "GenericName=3D Printing Software\n"
-                "Icon=OrcaSlicer%2%\n"
+                "Icon=Orca-Flashforge%2%\n"
                 "Exec=\"%3%\" %%F\n"
                 "Terminal=false\n"
                 "Type=Application\n"
@@ -342,13 +342,13 @@ void DesktopIntegrationDialog::perform_desktop_integration()
                 "StartupNotify=false\n"
                 "StartupWMClass=orca-slicer\n", name_suffix, version_suffix, excutable_path);
 
-            std::string path = GUI::format("%1%/applications/OrcaSlicer%2%.desktop", target_dir_desktop, version_suffix);
+            std::string path = GUI::format("%1%/applications/Orca-Flashforge%2%.desktop", target_dir_desktop, version_suffix);
             if (create_desktop_file(path, desktop_file)){
-                BOOST_LOG_TRIVIAL(debug) << "OrcaSlicer.desktop file installation success.";
+                BOOST_LOG_TRIVIAL(debug) << "Orca-Flashforge.desktop file installation success.";
                 break;
             } else {
             	// write failed - try another path
-                BOOST_LOG_TRIVIAL(debug) << "Attempt to OrcaSlicer.desktop file installation failed. failed path: " << target_candidates[i];
+                BOOST_LOG_TRIVIAL(debug) << "Attempt to Orca-Flashforge.desktop file installation failed. failed path: " << target_candidates[i];
                 target_dir_desktop.clear(); 
             }
             // if all failed - try creating default home folder
@@ -357,7 +357,7 @@ void DesktopIntegrationDialog::perform_desktop_integration()
                 create_path(boost::nowide::narrow(wxFileName::GetHomeDir()), ".local/share/applications");
                 // create desktop file
                 target_dir_desktop = GUI::format("%1%/.local/share",wxFileName::GetHomeDir());
-                std::string path = GUI::format("%1%/applications/OrcaSlicer%2%.desktop", target_dir_desktop, version_suffix);
+                std::string path = GUI::format("%1%/applications/Orca-Flashforge%2%.desktop", target_dir_desktop, version_suffix);
                 if (contains_path_dir(target_dir_desktop, "applications")) {
                     if (!create_desktop_file(path, desktop_file)) {    
                         // Desktop file not written - end desktop integration
@@ -379,7 +379,7 @@ void DesktopIntegrationDialog::perform_desktop_integration()
         return;
     }
     // save path to desktop file
-    app_config->set("desktop_integration_app_path", GUI::format("%1%/applications/OrcaSlicer%2%.desktop", target_dir_desktop, version_suffix));
+    app_config->set("desktop_integration_app_path", GUI::format("%1%/applications/Orca-Flashforge%2%.desktop", target_dir_desktop, version_suffix));
 
     // Repeat for Gcode viewer - use same paths as for slicer files
     // Do NOT add gcode viewer desktop file on ChromeOS
@@ -387,8 +387,8 @@ void DesktopIntegrationDialog::perform_desktop_integration()
         // Icon
         if (!target_dir_icons.empty())
         {
-            std::string icon_path = GUI::format("%1%/images/OrcaSlicer-gcodeviewer_192px.png",resources_dir());
-            std::string dest_path = GUI::format("%1%/images/%2%OrcaSlicer-gcodeviewer%3%.png", target_dir_icons, icon_theme_path, version_suffix);
+            std::string icon_path = GUI::format("%1%/images/Orca-Flashforge-gcodeviewer_192px.png",resources_dir());
+            std::string dest_path = GUI::format("%1%/images/%2%Orca-Flashforge-gcodeviewer%3%.png", target_dir_icons, icon_theme_path, version_suffix);
             if (copy_icon(icon_path, dest_path))
                 // save path to icon
                 app_config->set("desktop_integration_icon_viewer_path", dest_path);
@@ -401,7 +401,7 @@ void DesktopIntegrationDialog::perform_desktop_integration()
             "[Desktop Entry]\n"
             "Name=Bambu Gcode Viewer%1%\n"
             "GenericName=3D Printing Software\n"
-            "Icon=OrcaSlicer-gcodeviewer%2%\n"
+            "Icon=Orca-Flashforge-gcodeviewer%2%\n"
             "Exec=\"%3%\" --gcodeviewer %%F\n"
             "Terminal=false\n"
             "Type=Application\n"
@@ -410,13 +410,13 @@ void DesktopIntegrationDialog::perform_desktop_integration()
             "Keywords=3D;Printing;Slicer;\n"
             "StartupNotify=false\n", name_suffix, version_suffix, excutable_path);
 
-        std::string desktop_path = GUI::format("%1%/applications/OrcaSlicerGcodeViewer%2%.desktop", target_dir_desktop, version_suffix);
+        std::string desktop_path = GUI::format("%1%/applications/Orca-FlashforgeGcodeViewer%2%.desktop", target_dir_desktop, version_suffix);
         if (create_desktop_file(desktop_path, desktop_file))
             // save path to desktop file
             app_config->set("desktop_integration_app_viewer_path", desktop_path);
         else {
             BOOST_LOG_TRIVIAL(error) << "Performing desktop integration failed - could not create Gcodeviewer desktop file";
-            show_error(nullptr, _L("Performing desktop integration failed - could not create Gcodeviewer desktop file. OrcaSlicer desktop file was probably created successfully."));
+            show_error(nullptr, _L("Performing desktop integration failed - could not create Gcodeviewer desktop file. Orca-Flashforge desktop file was probably created successfully."));
         }
     }
     

@@ -4,7 +4,7 @@
 namespace Slic3r { namespace GUI {
 
 MultiComMgr::MultiComMgr()
-    : m_idNum(0)
+    : m_idNum(-1)
 {
     m_datMap.emplace(ComInvalidId, com_dev_data_t{COM_CONNECT_LAN, nullptr});
 }
@@ -48,8 +48,17 @@ com_id_t MultiComMgr::addLanDev(const fnet_lan_dev_info &devInfo, const std::str
     if (networkIntfc() == nullptr) {
         return ComInvalidId;
     }
-    initConnection(com_ptr_t(new ComConnection(m_idNum++, checkCode, devInfo, networkIntfc())));
+    initConnection(com_ptr_t(new ComConnection(++m_idNum, checkCode, devInfo, networkIntfc())));
     return m_idNum;
+}
+
+void MultiComMgr::removeLanDev(com_id_t id)
+{
+    auto it = m_ptrMap.left.find(id);
+    if (it == m_ptrMap.left.end()) {
+        return;
+    }
+    it->second->disconnect(0);
 }
 
 void MultiComMgr::setWanDevToken(const std::string &userName, const std::string &accessToken)
@@ -73,9 +82,12 @@ void MultiComMgr::removeWanDev()
     }
 }
 
-ComErrno MultiComMgr::bindWanDev(const std::string &serialNumber, const std::string &model,
+ComErrno MultiComMgr::bindWanDev(const std::string &serialNumber, unsigned short pid,
     const std::string &name)
 {
+    if (networkIntfc() == nullptr) {
+        return COM_UNINITIALIZED;
+    }
     std::string userName, accessToken;
     m_userDataUpdateThd->getToken(userName, accessToken);
     if (accessToken.empty()) {
@@ -83,7 +95,7 @@ ComErrno MultiComMgr::bindWanDev(const std::string &serialNumber, const std::str
     }
     fnet_wan_dev_bind_data_t *bindData;
     int ret = m_networkIntfc->bindWanDev(
-        accessToken.c_str(), serialNumber.c_str(), model.c_str(), name.c_str(), &bindData);
+        accessToken.c_str(), serialNumber.c_str(), pid, name.c_str(), &bindData);
     if (ret == FNET_OK) {
         initConnection(com_ptr_t(new ComConnection(
             m_idNum++, accessToken, bindData->serialNumber, bindData->devId, m_networkIntfc.get())));
@@ -93,6 +105,9 @@ ComErrno MultiComMgr::bindWanDev(const std::string &serialNumber, const std::str
 
 ComErrno MultiComMgr::unbindWanDev(const std::string &serialNumber, const std::string &devId)
 {
+    if (networkIntfc() == nullptr) {
+        return COM_UNINITIALIZED;
+    }
     std::string userName, accessToken;
     m_userDataUpdateThd->getToken(userName, accessToken);
     if (accessToken.empty()) {
@@ -131,14 +146,13 @@ const com_dev_data_t &MultiComMgr::devData(com_id_t id, bool *valid /* = nullptr
     }
 }
 
-bool MultiComMgr::putCommand(com_id_t id, const ComCommandPtr &command)
+void MultiComMgr::putCommand(com_id_t id, const ComCommandPtr &command)
 {
     auto it = m_ptrMap.left.find(id);
     if (it == m_ptrMap.left.end()) {
-        return false;
+        return;
     }
     m_ptrMap.left.at(id)->putCommand(command);
-    return true;
 }
 
 void MultiComMgr::initConnection(const com_ptr_t &comPtr)

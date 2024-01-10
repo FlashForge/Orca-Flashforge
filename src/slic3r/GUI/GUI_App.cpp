@@ -2045,9 +2045,9 @@ static boost::optional<Semver> parse_semver_from_ini(std::string path)
     std::stringstream buffer;
     buffer << stream.rdbuf();
     std::string body = buffer.str();
-    size_t start = body.find("OrcaSlicer ");
+    size_t start = body.find("Orca-Flashforge ");
     if (start == std::string::npos) {
-        start = body.find("OrcaSlicer ");
+        start = body.find("Orca-Flashforge ");
         if (start == std::string::npos)
             return boost::none;
     }
@@ -2081,7 +2081,7 @@ void GUI_App::init_webview_runtime()
 {
     // Check WebView Runtime
     if (!WebView::CheckWebViewRuntime()) {
-        int nRet = wxMessageBox(_L("Flash Slicer requires the Microsoft WebView2 Runtime to operate certain features.\nClick Yes to install it now."),
+        int nRet = wxMessageBox(_L("Orca-Flashforge requires the Microsoft WebView2 Runtime to operate certain features.\nClick Yes to install it now."),
                                 _L("WebView2 Runtime"), wxYES_NO);
         if (nRet == wxYES) {
             WebView::DownloadAndInstallWebViewRuntime();
@@ -2505,7 +2505,7 @@ bool GUI_App::on_init_inner()
                /* wxString tips = wxString::Format(_L("Click to download new version in default browser: %s"), version_info.version_str);
                 DownloadDialog dialog(this->mainframe,
                     tips,
-                    _L("New version of Flash Slicer"),
+                    _L("New version of Orca-Flashforge"),
                     false,
                     wxCENTER | wxICON_INFORMATION);
 
@@ -2553,7 +2553,7 @@ bool GUI_App::on_init_inner()
                 wxString tips = wxString::Format(_L("Click to download new version in default browser: %s"), version_str);
                 DownloadDialog dialog(this->mainframe,
                     tips,
-                    _L("The Flash Slicer needs an upgrade"),
+                    _L("The Orca-Flashforge needs an upgrade"),
                     false,
                     wxCENTER | wxICON_INFORMATION);
                 dialog.SetExtendedMessage(description_text);
@@ -3487,24 +3487,35 @@ void GUI_App::ShowUserLogin(bool show)
 {
     // BBS: User Login Dialog
     if(show){
-        wxIPV4address addr;
-        addr.Hostname(wxGetHostName());
-        addr.Service(0);
-        wxString ip = addr.IPAddress();
-        bool isDomestic = ip.StartsWith("10.") ||
-                  ip.StartsWith("172.") ||
-                  ip.StartsWith("192.") ||
-                  ip.StartsWith("202.") ||
-                  ip.StartsWith("203.") ||
-                  ip.StartsWith("210.") ||
-                  ip.StartsWith("211.") ||
-                  ip.StartsWith("219.") ||
-                  ip.StartsWith("220.") ||
-                  ip.StartsWith("221.") ||
-                  ip.StartsWith("222.");
-        if(!isDomestic){
+        if(nullptr == app_config){
             return;
         }
+        //判断是否国内登录
+        std::string region = app_config->get("region");
+        if(region.compare("China") == 0){
+            //国内登录
+        }
+        else{
+            //国外登录
+            return;
+        }
+
+        //判断是否已经成功登录
+        std::string access_token = app_config->get("access_token");
+        std::string refresh_token = app_config->get("refresh_token");
+        if(!access_token.empty() && !refresh_token.empty()){
+            if(!m_re_login_dlg){
+                m_re_login_dlg = new ReLoginDialog();
+            }
+            else{
+                delete m_re_login_dlg;
+                 m_re_login_dlg = new ReLoginDialog();
+            }
+            m_re_login_dlg->ShowModal();
+            return;
+        }
+
+        //正式登录
         try{
             if(!m_login_dlg){
                 m_login_dlg = new LoginDialog();
@@ -3513,7 +3524,7 @@ void GUI_App::ShowUserLogin(bool show)
                 delete m_login_dlg;
                 m_login_dlg = new LoginDialog();
             }
-        Slic3r::GUI::MultiComMgr::inst()->Bind(COM_GET_USER_PROFILE_EVENT, [this](const ComGetUserProfileEvent &event){
+        Slic3r::GUI::MultiComMgr::inst()->Bind(COM_GET_USER_PROFILE_EVENT, [this](ComGetUserProfileEvent &event){
             if(event.ret == ComErrno::COM_OK){
                 if(app_config){
                     app_config->set("usr_pic",event.userProfile.headImgUrl);
@@ -3522,6 +3533,7 @@ void GUI_App::ShowUserLogin(bool show)
                     app_config->save();
                 }
             }
+            event.Skip();
         });    
         m_login_dlg->ShowModal();
         }catch(std::exception &e){
@@ -4060,7 +4072,7 @@ void GUI_App::handle_login_result(std::string url, std::string name)
     // 将JSON对象转换为字符串
     std::string newJsonStr = jsonObj.dump();
 
-    wxString strJS = wxString::Format("window.postMessage(%s)", newJsonStr);
+    wxString strJS = wxString::Format("window.postMessage(%s)", wxString::FromUTF8(newJsonStr));
     GUI::wxGetApp().run_script(strJS);
 }
 
@@ -4172,7 +4184,7 @@ void GUI_App::on_http_error(wxCommandEvent &evt)
 
     // Version limit
     if (code == HttpErrorVersionLimited) {
-        MessageDialog msg_dlg(nullptr, _L("The version of Flash Slicer is too low and needs to be updated to the latest version before it can be used normally"), "", wxAPPLY | wxOK);
+        MessageDialog msg_dlg(nullptr, _L("The version of Orca-Flashforge is too low and needs to be updated to the latest version before it can be used normally"), "", wxAPPLY | wxOK);
         if (msg_dlg.ShowModal() == wxOK) {
             return;
         }
@@ -4506,8 +4518,13 @@ void GUI_App::check_new_version_sf(bool show_tips, int by_user)
                             if (pos != std::string::npos) {
                                 version_info.description = body.substr(pos);
                             }
+#ifdef __APPLE__
+                            version_info.url         = mac64Url;
+                            version_info.version_str = mac64Ver;
+#else
                             version_info.url           = win64Url;
                             version_info.version_str   = win64Ver;
+#endif
                             version_info.force_upgrade = false;
                             wxCommandEvent *evt        = new wxCommandEvent(EVT_SLIC3R_VERSION_ONLINE);
                             // evt->SetString((i_am_pre ? best_pre : best_release).to_string());
@@ -5266,14 +5283,14 @@ bool GUI_App::load_language(wxString language, bool initial)
 
     if (! wxLocale::IsAvailable(language_info->Language)) {
     	// Loading the language dictionary failed.
-    	wxString message = "Switching Flash Slicer to language " + language_info->CanonicalName + " failed.";
+    	wxString message = "Switching Orca-Flashforge to language " + language_info->CanonicalName + " failed.";
 #if !defined(_WIN32) && !defined(__APPLE__)
         // likely some linux system
         message += "\nYou may need to reconfigure the missing locales, likely by running the \"locale-gen\" and \"dpkg-reconfigure locales\" commands.\n";
 #endif
         if (initial)
         	message + "\n\nApplication will close.";
-        wxMessageBox(message, "Flash Slicer - Switching language failed", wxOK | wxICON_ERROR);
+        wxMessageBox(message, "Orca-Flashforge - Switching language failed", wxOK | wxICON_ERROR);
         if (initial)
 			std::exit(EXIT_FAILURE);
 		else
@@ -6587,8 +6604,8 @@ void GUI_App::associate_files(std::wstring extend)
     ::GetModuleFileNameW(nullptr, app_path, sizeof(app_path));
 
     std::wstring prog_path = L"\"" + std::wstring(app_path) + L"\"";
-    std::wstring prog_id = L" Orca.Slicer.1";
-    std::wstring prog_desc = L"OrcaSlicer";
+    std::wstring prog_id = L" Orca.Flashforge.1";
+    std::wstring prog_desc = L"Orca-Flashforge";
     std::wstring prog_command = prog_path + L" \"%1\"";
     std::wstring reg_base = L"Software\\Classes";
     std::wstring reg_extension = reg_base + L"\\." + extend;
@@ -6610,8 +6627,8 @@ void GUI_App::disassociate_files(std::wstring extend)
     ::GetModuleFileNameW(nullptr, app_path, sizeof(app_path));
 
     std::wstring prog_path = L"\"" + std::wstring(app_path) + L"\"";
-    std::wstring prog_id = L" Orca.Slicer.1";
-    std::wstring prog_desc = L"OrcaSlicer";
+    std::wstring prog_id = L" Orca.Flashforge.1";
+    std::wstring prog_desc = L"Orca-Flashforge";
     std::wstring prog_command = prog_path + L" \"%1\"";
     std::wstring reg_base = L"Software\\Classes";
     std::wstring reg_extension = reg_base + L"\\." + extend;
