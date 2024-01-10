@@ -73,8 +73,8 @@
 #include "../Utils/Http.hpp"
 #include "../Utils/UndoRedo.hpp"
 #include "slic3r/Config/Snapshot.hpp"
-#include "slic3r/GUI/FlashForge/MultiComMgr.hpp"
 #include "slic3r/GUI/FlashForge/MultiComEvent.hpp"
+#include "slic3r/GUI/FlashForge/MultiComMgr.hpp"
 #include "Preferences.hpp"
 #include "Tab.hpp"
 #include "SysInfoDialog.hpp"
@@ -1306,6 +1306,7 @@ GUI_App::GUI_App()
 	//app config initializes early becasuse it is used in instance checking in Orca-Flashforge.cpp
     this->init_app_config();
     this->init_download_path();
+    this->init_flashnetwork();
 #if wxUSE_WEBVIEW_EDGE
     this->init_webview_runtime();
 #endif
@@ -2074,6 +2075,16 @@ void GUI_App::init_download_path()
             app_config->set("download_path", user_down_path);
         }
     }
+}
+
+void GUI_App::init_flashnetwork()
+{
+#ifdef _WIN32
+    std::string flashNetworkDllPath = boost::dll::program_location().parent_path().string() + "/FlashNetwork.dll";
+#elif __APPLE__
+    std::string flashNetworkDllPath = boost::dll::program_location().parent_path().string() + "/FlashNetwork.dylib";
+#endif
+    Slic3r::GUI::MultiComMgr::inst()->initalize(flashNetworkDllPath, data_dir() + "/FlashNetwork");
 }
 
 #if wxUSE_WEBVIEW_EDGE

@@ -141,7 +141,7 @@ typedef struct fnet_dev_detail {
 extern "C" {
 #endif
 
-FNET_API int fnet_initlize();
+FNET_API int fnet_initlize(const char *logFileName);
 
 FNET_API void fnet_uninitlize();
 

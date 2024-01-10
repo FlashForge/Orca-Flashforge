@@ -77,7 +77,6 @@ using namespace nlohmann;
 #include "slic3r/GUI/OpenGLManager.hpp"
 #include "slic3r/GUI/GLCanvas3D.hpp"
 #include "slic3r/GUI/Camera.hpp"
-#include "slic3r/GUI/FlashForge/MultiComMgr.hpp"
 #include <GLFW/glfw3.h>
 
 #ifdef __WXGTK__
@@ -471,14 +470,6 @@ int CLI::run(int argc, char **argv)
         //params.start_as_gcodeviewer = start_as_gcodeviewer;
 
         BOOST_LOG_TRIVIAL(info) << "begin to launch Orca-Flashforge GUI soon";
-
-        #ifdef _WIN32
-            std::string flashNetworkDllPath = boost::dll::program_location().parent_path().string() + "/FlashNetwork.dll";
-        #elif __APPLE__
-            std::string flashNetworkDllPath = boost::dll::program_location().parent_path().string() + "/FlashNetwork.dylib";
-        #endif
-        Slic3r::GUI::MultiComMgr::inst()->initalize(flashNetworkDllPath);
-
         return Slic3r::GUI::GUI_Run(params);
 #else // SLIC3R_GUI
         // No GUI support. Just print out a help.

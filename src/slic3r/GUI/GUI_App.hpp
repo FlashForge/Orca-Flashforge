@@ -348,6 +348,7 @@ private:
     bool            init_opengl();
 
     void            init_download_path();
+    void            init_flashnetwork();
 #if wxUSE_WEBVIEW_EDGE
     void            init_webview_runtime();
 #endif

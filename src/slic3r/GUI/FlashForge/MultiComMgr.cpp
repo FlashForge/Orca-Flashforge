@@ -1,20 +1,24 @@
 #include "MultiComMgr.hpp"
+#include <strstream>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/format.hpp>
 #include "FreeInDestructor.h"
 
 namespace Slic3r { namespace GUI {
 
 MultiComMgr::MultiComMgr()
-    : m_idNum(-1)
+    : m_idNum(ComInvalidId + 1)
 {
     m_datMap.emplace(ComInvalidId, com_dev_data_t{COM_CONNECT_LAN, nullptr});
 }
 
-bool MultiComMgr::initalize(const std::string &newtworkDllPath)
+bool MultiComMgr::initalize(const std::string &newtworkDllPath, const std::string &logFileDir)
 {
     if (networkIntfc() != nullptr) {
         return false;
     }
-    m_networkIntfc.reset(new fnet::FlashNetworkIntfc(newtworkDllPath.c_str()));
+    m_networkIntfc.reset(new fnet::FlashNetworkIntfc(newtworkDllPath.c_str(), initLogFiles(logFileDir).c_str()));
     if (!m_networkIntfc->isOk()) {
         m_networkIntfc.reset(nullptr);
         return false;
@@ -48,8 +52,8 @@ com_id_t MultiComMgr::addLanDev(const fnet_lan_dev_info &devInfo, const std::str
     if (networkIntfc() == nullptr) {
         return ComInvalidId;
     }
-    initConnection(com_ptr_t(new ComConnection(++m_idNum, checkCode, devInfo, networkIntfc())));
-    return m_idNum;
+    initConnection(com_ptr_t(new ComConnection(m_idNum, checkCode, devInfo, networkIntfc())));
+    return m_idNum++;
 }
 
 void MultiComMgr::removeLanDev(com_id_t id)
@@ -153,6 +157,32 @@ void MultiComMgr::putCommand(com_id_t id, const ComCommandPtr &command)
         return;
     }
     m_ptrMap.left.at(id)->putCommand(command);
+}
+
+std::string MultiComMgr::initLogFiles(const std::string &logFileDir)
+{
+    boost::filesystem::path path(logFileDir);
+    if (!boost::filesystem::exists(path)) {
+        boost::filesystem::create_directory(path);
+    }
+    const std::locale &classicLocale = std::locale::classic();
+    const char *timeFormat = "%Y%m%d-%H%M%S";
+    boost::posix_time::ptime currentTime = boost::posix_time::second_clock::local_time();
+	for (auto &dirEntry : boost::filesystem::directory_iterator(path)) {
+        if (!boost::filesystem::is_directory(dirEntry.path())) {
+            std::stringstream iss(dirEntry.path().filename().replace_extension().string());
+            iss.imbue(std::locale(classicLocale, new boost::posix_time::time_input_facet(timeFormat)));
+            boost::posix_time::ptime time;
+            iss >> time;
+            if (iss.good() && (currentTime - time).hours() > 72) {
+                boost::filesystem::remove(dirEntry);
+            }
+        }
+	}
+    std::stringstream oss;
+    oss.imbue(std::locale(classicLocale, new boost::posix_time::time_facet(timeFormat)));
+    oss << currentTime;
+    return (boost::format("%s/%s.log") % logFileDir % oss.str()).str();
 }
 
 void MultiComMgr::initConnection(const com_ptr_t &comPtr)

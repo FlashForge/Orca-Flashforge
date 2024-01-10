@@ -47,7 +47,7 @@ public:
     decltype(&fnet_wanDevSendGcode) wanDevSendGcode;
 
 public:
-    FlashNetworkIntfc(const char *libraryPath);
+    FlashNetworkIntfc(const char *libraryPath, const char *logFileName);
 
     ~FlashNetworkIntfc();
 
