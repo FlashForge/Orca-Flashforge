@@ -62,27 +62,40 @@ void MachineItem::build()
     m_checkBox = new FFCheckBox(this, wxID_ANY);
     m_checkBox->SetValue(false);
 
-    m_iconPanel = new ThumbnailPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize);
-    m_iconPanel->SetWindowStyle(m_iconPanel->GetWindowStyle() | wxTAB_TRAVERSAL);
-    m_iconPanel->SetBackgroundColour(m_defaultColor);
-    m_iconPanel->SetSize(wxSize(FromDIP(46), FromDIP(46)));
-    m_iconPanel->SetMinSize(wxSize(FromDIP(46), FromDIP(46)));
-    m_iconPanel->SetMaxSize(wxSize(FromDIP(46), FromDIP(46)));
+    m_iconPanel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+    //m_iconPanel->SetBackgroundColour("#333333");
+
+    m_iconSizer = new wxBoxSizer(wxVERTICAL);
+    m_thumbnailPanel = new ThumbnailPanel(m_iconPanel);
+    m_thumbnailPanel->SetSize(wxSize(FromDIP(46), FromDIP(46)));
+    m_thumbnailPanel->SetMinSize(wxSize(FromDIP(46), FromDIP(46)));
+    m_thumbnailPanel->SetMaxSize(wxSize(FromDIP(46), FromDIP(46)));
+    m_iconSizer->Add(m_thumbnailPanel, 0, wxEXPAND, 0);
+    m_iconPanel->SetSizer(m_iconSizer);
+    m_iconPanel->Layout();
+
+    //m_iconPanel = new ThumbnailPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize);
+    //m_iconPanel->SetWindowStyle(m_iconPanel->GetWindowStyle() | wxTAB_TRAVERSAL);
+    //m_iconPanel->SetBackgroundColour(m_defaultColor);
+    //m_iconPanel->SetSize(wxSize(FromDIP(46), FromDIP(46)));
+    //m_iconPanel->SetMinSize(wxSize(FromDIP(46), FromDIP(46)));
+    //m_iconPanel->SetMaxSize(wxSize(FromDIP(46), FromDIP(46)));
     
     auto iter = m_machineBitmapMap.find(m_data.model);
     if (iter != m_machineBitmapMap.end()) {
-        m_iconPanel->set_thumbnail(iter->second);
+        m_thumbnailPanel->set_thumbnail(iter->second);
     }
 
     m_nameLbl = new wxStaticText(this, wxID_ANY, _(m_data.name));
     
     m_mainSizer = new wxBoxSizer(wxHORIZONTAL);
     m_mainSizer->Add(m_checkBox, 0, wxALIGN_CENTER_VERTICAL);
+    //m_mainSizer->AddSpacer(FromDIP(5));
     m_mainSizer->Add(m_iconPanel, 0, wxALIGN_CENTER_VERTICAL);
+    //m_mainSizer->AddSpacer(FromDIP(5));
     m_mainSizer->Add(m_nameLbl, 1, wxALIGN_CENTER_VERTICAL);
     
     SetSizer(m_mainSizer);
-    m_mainSizer->Fit(this);
     Layout();
 }
 
@@ -115,13 +128,13 @@ void SendToPrinterDialog::stripWhiteSpace(std::string& str)
 
 wxString SendToPrinterDialog::format_text(wxString &m_msg)
 {
-
 	if (wxGetApp().app_config->get("language") != "zh_CN") { return m_msg; }
 
 	wxString out_txt = m_msg;
 	wxString count_txt = "";
 	int      new_line_pos = 0;
 
+#if 0
 	for (int i = 0; i < m_msg.length(); i++) {
 		auto text_size = m_statictext_printer_msg->GetTextExtent(count_txt);
 		if (text_size.x < (FromDIP(400))) {
@@ -132,6 +145,7 @@ wxString SendToPrinterDialog::format_text(wxString &m_msg)
 			count_txt = "";
 		}
 	}
+#endif
 	return out_txt;
 }
 
@@ -208,20 +222,21 @@ void SendToPrinterDialog::on_rename_enter()
         MessageDialog msg_wingow(nullptr, info_line, "", wxICON_WARNING | wxOK);
         if (msg_wingow.ShowModal() == wxID_OK) {
             m_rename_switch_panel->SetSelection(0);
-            m_rename_text->SetLabel(m_current_project_name);
-            m_rename_normal_panel->Layout();
+            m_renameText->SetLabel(m_current_project_name);
+            m_renamePanel->Layout();
             return;
         }
     }
 
     m_current_project_name = new_file_name;
     m_rename_switch_panel->SetSelection(0);
-    m_rename_text->SetLabel(m_current_project_name);
-    m_rename_normal_panel->Layout();
+    m_renameText->SetLabel(m_current_project_name);
+    m_renamePanel->Layout();
 }
 
 SendToPrinterDialog::SendToPrinterDialog(Plater *plater)
-    : DPIDialog(static_cast<wxWindow *>(wxGetApp().mainframe), wxID_ANY, _L("Send to Printer SD card"), wxDefaultPosition, wxDefaultSize, wxCAPTION | wxCLOSE_BOX)
+    //: TitleDialog(static_cast<wxWindow *>(wxGetApp().mainframe), wxID_ANY, _L("Send to Printer SD card"), wxDefaultPosition, wxDefaultSize, wxCAPTION | wxCLOSE_BOX)
+    : TitleDialog(static_cast<wxWindow *>(wxGetApp().mainframe), _L("Send to Printer SD card"), 6)
     , m_plater(plater), m_export_3mf_cancel(false)
 {
 #ifdef __WINDOWS__
@@ -241,218 +256,42 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater)
     Freeze();
     SetBackgroundColour(m_colour_def_color);
 
-    m_sizer_main = new wxBoxSizer(wxVERTICAL);
+    //m_sizer_main = new wxBoxSizer(wxVERTICAL);
+    m_sizer_main = MainSizer();
 
     m_sizer_main->SetMinSize(wxSize(0, -1));
 
-    m_scrollable_region       = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-    m_sizer_scrollable_region = new wxBoxSizer(wxVERTICAL); 
+    m_topPanel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+    m_topSizer = new wxBoxSizer(wxVERTICAL); 
 
-    m_panel_image = new wxPanel(m_scrollable_region, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-    m_panel_image->SetBackgroundColour(m_colour_def_color);
+    m_imagePanel = new wxPanel(m_topPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+    m_imagePanel->SetBackgroundColour(m_colour_def_color);
 
     sizer_thumbnail = new wxBoxSizer(wxVERTICAL);
-    m_thumbnailPanel = new ThumbnailPanel(m_panel_image);
+    m_thumbnailPanel = new ThumbnailPanel(m_imagePanel);
     m_thumbnailPanel->SetSize(wxSize(FromDIP(108), FromDIP(117)));
     m_thumbnailPanel->SetMinSize(wxSize(FromDIP(108), FromDIP(117)));
     m_thumbnailPanel->SetMaxSize(wxSize(FromDIP(108), FromDIP(117)));
     sizer_thumbnail->Add(m_thumbnailPanel, 0, wxEXPAND, 0);
-    m_panel_image->SetSizer(sizer_thumbnail);
-    m_panel_image->Layout();
+    m_imagePanel->SetSizer(sizer_thumbnail);
+    m_imagePanel->Layout();
 
     wxBoxSizer *m_sizer_basic        = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer *m_sizer_basic_weight = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer *m_sizer_basic_time   = new wxBoxSizer(wxHORIZONTAL);
 
-    auto timeimg = new wxStaticBitmap(m_scrollable_region, wxID_ANY, create_scaled_bitmap("ff_print_time", this, 14), wxDefaultPosition, wxSize(FromDIP(16), FromDIP(16)), 0);
+    auto timeimg = new wxStaticBitmap(m_topPanel, wxID_ANY, create_scaled_bitmap("ff_print_time", this, 14), wxDefaultPosition, wxSize(FromDIP(16), FromDIP(16)), 0);
     m_sizer_basic_weight->Add(timeimg, 1, wxEXPAND | wxALL, FromDIP(5));
-    m_stext_time = new wxStaticText(m_scrollable_region, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT);
+    m_stext_time = new wxStaticText(m_topPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT);
     m_sizer_basic_weight->Add(m_stext_time, 0, wxALL, FromDIP(5));
     m_sizer_basic->Add(m_sizer_basic_weight, 0, wxALIGN_CENTER, 0);
     m_sizer_basic->Add(0, 0, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
 
-    auto weightimg = new wxStaticBitmap(m_scrollable_region, wxID_ANY, create_scaled_bitmap("ff_print_weight", this, 14), wxDefaultPosition, wxSize(FromDIP(16), FromDIP(16)), 0);
+    auto weightimg = new wxStaticBitmap(m_topPanel, wxID_ANY, create_scaled_bitmap("ff_print_weight", this, 14), wxDefaultPosition, wxSize(FromDIP(16), FromDIP(16)), 0);
     m_sizer_basic_time->Add(weightimg, 1, wxEXPAND | wxALL, FromDIP(5));
-    m_stext_weight = new wxStaticText(m_scrollable_region, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_stext_weight = new wxStaticText(m_topPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     m_sizer_basic_time->Add(m_stext_weight, 0, wxALL, FromDIP(5));
     m_sizer_basic->Add(m_sizer_basic_time, 0, wxALIGN_CENTER, 0);
-
-    wxBoxSizer *m_sizer_printer = new wxBoxSizer(wxHORIZONTAL);
-
-    m_stext_printer_title = new wxStaticText(this, wxID_ANY, _L("Printer"), wxDefaultPosition, wxSize(-1, -1), 0);
-    m_stext_printer_title->SetFont(::Label::Head_14);
-    m_stext_printer_title->Wrap(-1);
-    m_stext_printer_title->SetForegroundColour(m_colour_bold_color);
-    m_stext_printer_title->SetBackgroundColour(m_colour_def_color);
-    m_stext_printer_title->Show(false);
-
-    m_sizer_printer->Add(m_stext_printer_title, 0, wxALL | wxLEFT, FromDIP(5));
-    m_sizer_printer->Add(0, 0, 0, wxEXPAND | wxLEFT, FromDIP(12));
-
-    m_comboBox_printer = new ::ComboBox(this, wxID_ANY, "", wxDefaultPosition, wxSize(FromDIP(250), -1), 0, nullptr, wxCB_READONLY);
-    m_comboBox_printer->Bind(wxEVT_COMBOBOX, &SendToPrinterDialog::on_selection_changed, this);
-    m_comboBox_printer->Show(false);
-
-    m_sizer_printer->Add(m_comboBox_printer, 1, wxEXPAND | wxRIGHT, FromDIP(5));
-    btn_bg_enable = StateColor(std::pair<wxColour, int>(wxColour(0, 137, 123), StateColor::Pressed), std::pair<wxColour, int>(wxColour(38, 166, 154), StateColor::Hovered),
-                               std::pair<wxColour, int>(wxColour(0, 150, 136), StateColor::Normal));
-
-    m_button_refresh = new Button(this, _L("Refresh"));
-    m_button_refresh->SetBackgroundColor(btn_bg_enable);
-    m_button_refresh->SetBorderColor(btn_bg_enable);
-    m_button_refresh->SetTextColor(StateColor::darkModeColorFor("#FFFFFE"));
-    m_button_refresh->SetSize(SELECT_MACHINE_DIALOG_BUTTON_SIZE);
-    m_button_refresh->SetMinSize(SELECT_MACHINE_DIALOG_BUTTON_SIZE);
-    m_button_refresh->SetCornerRadius(FromDIP(10));
-    m_button_refresh->Bind(wxEVT_BUTTON, &SendToPrinterDialog::on_refresh, this);
-    m_sizer_printer->Add(m_button_refresh, 0, wxALL | wxLEFT, FromDIP(5));
-    m_button_refresh->Show(false);
-
-    m_statictext_printer_msg = new wxStaticText(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER_HORIZONTAL);
-    m_statictext_printer_msg->SetFont(::Label::Body_13);
-    m_statictext_printer_msg->SetForegroundColour(*wxBLACK);
-    m_statictext_printer_msg->Hide();
-
-    // line schedule
-    m_line_schedule = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 1));
-    m_line_schedule->SetBackgroundColour(wxColour(238, 238, 238));
-    m_simplebook   = new wxSimplebook(this, wxID_ANY, wxDefaultPosition, SELECT_MACHINE_DIALOG_SIMBOOK_SIZE, 0);
-
-    // perpare mode
-    m_panel_prepare = new wxPanel(m_simplebook, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-    m_panel_prepare->SetBackgroundColour(m_colour_def_color);
-    // m_panel_prepare->SetBackgroundColour(wxColour(135,206,250));
-    wxBoxSizer *m_sizer_prepare = new wxBoxSizer(wxVERTICAL);
-    wxBoxSizer *m_sizer_pcont   = new wxBoxSizer(wxHORIZONTAL);
-
-    m_sizer_prepare->Add(0, 0, 1, wxTOP, FromDIP(22));
-    m_sizer_pcont->Add(0, 0, 1, wxEXPAND, 0);
-    m_button_ensure = new Button(m_panel_prepare, _L("Send"));
-    m_button_ensure->SetBackgroundColor(btn_bg_enable);
-    m_button_ensure->SetBorderColor(btn_bg_enable);
-    m_button_ensure->SetTextColor(StateColor::darkModeColorFor("#FFFFFE"));
-    m_button_ensure->SetSize(SELECT_MACHINE_DIALOG_BUTTON_SIZE);
-    m_button_ensure->SetMinSize(SELECT_MACHINE_DIALOG_BUTTON_SIZE);
-    m_button_ensure->SetCornerRadius(FromDIP(12));
-
-    m_button_ensure->Bind(wxEVT_BUTTON, &SendToPrinterDialog::on_ok, this);
-    m_sizer_pcont->Add(m_button_ensure, 0, wxEXPAND | wxBOTTOM, FromDIP(10));
-    m_sizer_prepare->Add(m_sizer_pcont, 0, wxEXPAND, 0);
-    m_panel_prepare->SetSizer(m_sizer_prepare);
-    m_panel_prepare->Layout();
-    m_simplebook->AddPage(m_panel_prepare, wxEmptyString, true);
-
-    // sending mode
-    m_status_bar    = std::make_shared<BBLStatusBarSend>(m_simplebook);
-    m_panel_sending = m_status_bar->get_panel();
-    m_simplebook->AddPage(m_panel_sending, wxEmptyString, false);
-
-    // finish mode
-    m_panel_finish = new wxPanel(m_simplebook, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-    m_panel_finish->SetBackgroundColour(wxColour(135, 206, 250));
-    wxBoxSizer *m_sizer_finish   = new wxBoxSizer(wxHORIZONTAL);
-    wxBoxSizer *m_sizer_finish_v = new wxBoxSizer(wxVERTICAL);
-    wxBoxSizer *m_sizer_finish_h = new wxBoxSizer(wxHORIZONTAL);
-
-    auto imgsize      = FromDIP(25);
-    auto completedimg = new wxStaticBitmap(m_panel_finish, wxID_ANY, create_scaled_bitmap("completed", m_panel_finish, 25), wxDefaultPosition, wxSize(imgsize, imgsize), 0);
-    m_sizer_finish_h->Add(completedimg, 0, wxALIGN_CENTER | wxALL, FromDIP(5));
-
-    m_statictext_finish = new wxStaticText(m_panel_finish, wxID_ANY, L("send completed"), wxDefaultPosition, wxDefaultSize, 0);
-    m_statictext_finish->Wrap(-1);
-    m_statictext_finish->SetForegroundColour(wxColour(0, 150, 136));
-    m_sizer_finish_h->Add(m_statictext_finish, 0, wxALIGN_CENTER | wxALL, FromDIP(5));
-
-    m_sizer_finish_v->Add(m_sizer_finish_h, 1, wxALIGN_CENTER, 0);
-
-    m_sizer_finish->Add(m_sizer_finish_v, 1, wxALIGN_CENTER, 0);
-
-    m_panel_finish->SetSizer(m_sizer_finish);
-    m_panel_finish->Layout();
-    m_sizer_finish->Fit(m_panel_finish);
-    m_simplebook->AddPage(m_panel_finish, wxEmptyString, false);
-
-    //show bind failed info
-    m_sw_print_failed_info = new wxScrolledWindow(this, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(380), FromDIP(125)), wxVSCROLL);
-    m_sw_print_failed_info->SetBackgroundColour(*wxWHITE);
-    m_sw_print_failed_info->SetScrollRate(0, 5);
-    m_sw_print_failed_info->SetMinSize(wxSize(FromDIP(380), FromDIP(125)));
-    m_sw_print_failed_info->SetMaxSize(wxSize(FromDIP(380), FromDIP(125)));
-
-    wxBoxSizer* sizer_print_failed_info = new wxBoxSizer(wxVERTICAL);
-    m_sw_print_failed_info->SetSizer(sizer_print_failed_info);
-
-
-    wxBoxSizer* sizer_error_code = new wxBoxSizer(wxHORIZONTAL);
-    wxBoxSizer* sizer_error_desc = new wxBoxSizer(wxHORIZONTAL);
-    wxBoxSizer* sizer_extra_info = new wxBoxSizer(wxHORIZONTAL);
-
-    auto st_title_error_code = new wxStaticText(m_sw_print_failed_info, wxID_ANY, _L("Error code"));
-    auto st_title_error_code_doc = new wxStaticText(m_sw_print_failed_info, wxID_ANY, ": ");
-    m_st_txt_error_code = new Label(m_sw_print_failed_info, wxEmptyString);
-    st_title_error_code->SetForegroundColour(0x909090);
-    st_title_error_code_doc->SetForegroundColour(0x909090);
-    m_st_txt_error_code->SetForegroundColour(0x909090);
-    st_title_error_code->SetFont(::Label::Body_13);
-    st_title_error_code_doc->SetFont(::Label::Body_13);
-    m_st_txt_error_code->SetFont(::Label::Body_13);
-    st_title_error_code->SetMinSize(wxSize(FromDIP(74), -1));
-    st_title_error_code->SetMaxSize(wxSize(FromDIP(74), -1));
-    m_st_txt_error_code->SetMinSize(wxSize(FromDIP(260), -1));
-    m_st_txt_error_code->SetMaxSize(wxSize(FromDIP(260), -1));
-    sizer_error_code->Add(st_title_error_code, 0, wxALL, 0);
-    sizer_error_code->Add(st_title_error_code_doc, 0, wxALL, 0);
-    sizer_error_code->Add(m_st_txt_error_code, 0, wxALL, 0);
-
-
-    auto st_title_error_desc = new wxStaticText(m_sw_print_failed_info, wxID_ANY, wxT("Error desc"));
-    auto st_title_error_desc_doc = new wxStaticText(m_sw_print_failed_info, wxID_ANY, ": ");
-    m_st_txt_error_desc = new Label(m_sw_print_failed_info, wxEmptyString);
-    st_title_error_desc->SetForegroundColour(0x909090);
-    st_title_error_desc_doc->SetForegroundColour(0x909090);
-    m_st_txt_error_desc->SetForegroundColour(0x909090);
-    st_title_error_desc->SetFont(::Label::Body_13);
-    st_title_error_desc_doc->SetFont(::Label::Body_13);
-    m_st_txt_error_desc->SetFont(::Label::Body_13);
-    st_title_error_desc->SetMinSize(wxSize(FromDIP(74), -1));
-    st_title_error_desc->SetMaxSize(wxSize(FromDIP(74), -1));
-    m_st_txt_error_desc->SetMinSize(wxSize(FromDIP(260), -1));
-    m_st_txt_error_desc->SetMaxSize(wxSize(FromDIP(260), -1));
-    sizer_error_desc->Add(st_title_error_desc, 0, wxALL, 0);
-    sizer_error_desc->Add(st_title_error_desc_doc, 0, wxALL, 0);
-    sizer_error_desc->Add(m_st_txt_error_desc, 0, wxALL, 0);
-
-    auto st_title_extra_info = new wxStaticText(m_sw_print_failed_info, wxID_ANY, wxT("Extra info"));
-    auto st_title_extra_info_doc = new wxStaticText(m_sw_print_failed_info, wxID_ANY, ": ");
-    m_st_txt_extra_info = new Label(m_sw_print_failed_info, wxEmptyString);
-    st_title_extra_info->SetForegroundColour(0x909090);
-    st_title_extra_info_doc->SetForegroundColour(0x909090);
-    m_st_txt_extra_info->SetForegroundColour(0x909090);
-    st_title_extra_info->SetFont(::Label::Body_13);
-    st_title_extra_info_doc->SetFont(::Label::Body_13);
-    m_st_txt_extra_info->SetFont(::Label::Body_13);
-    st_title_extra_info->SetMinSize(wxSize(FromDIP(74), -1));
-    st_title_extra_info->SetMaxSize(wxSize(FromDIP(74), -1));
-    m_st_txt_extra_info->SetMinSize(wxSize(FromDIP(260), -1));
-    m_st_txt_extra_info->SetMaxSize(wxSize(FromDIP(260), -1));
-    sizer_extra_info->Add(st_title_extra_info, 0, wxALL, 0);
-    sizer_extra_info->Add(st_title_extra_info_doc, 0, wxALL, 0);
-    sizer_extra_info->Add(m_st_txt_extra_info, 0, wxALL, 0);
-
-
-    m_link_network_state = new Label(m_sw_print_failed_info, _L("Check the status of current system services"));
-    m_link_network_state->SetForegroundColour(0x009688);
-    m_link_network_state->SetFont(::Label::Body_12);
-    m_link_network_state->Bind(wxEVT_LEFT_DOWN, [this](auto& e) {wxGetApp().link_to_network_check(); });
-    m_link_network_state->Bind(wxEVT_ENTER_WINDOW, [this](auto& e) {m_link_network_state->SetCursor(wxCURSOR_HAND); });
-    m_link_network_state->Bind(wxEVT_LEAVE_WINDOW, [this](auto& e) {m_link_network_state->SetCursor(wxCURSOR_ARROW); });
-
-    sizer_print_failed_info->Add(m_link_network_state, 0, wxLEFT, 5);
-    sizer_print_failed_info->Add(sizer_error_code, 0, wxLEFT, 5);
-    sizer_print_failed_info->Add(0, 0, 0, wxTOP, FromDIP(3));
-    sizer_print_failed_info->Add(sizer_error_desc, 0, wxLEFT, 5);
-    sizer_print_failed_info->Add(0, 0, 0, wxTOP, FromDIP(3));
-    sizer_print_failed_info->Add(sizer_extra_info, 0, wxLEFT, 5);
 
     // bind
     Bind(EVT_SHOW_ERROR_INFO, [this](auto& e) {
@@ -460,35 +299,35 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater)
     });
 
     // bind
-    Bind(EVT_UPDATE_USER_MACHINE_LIST, &SendToPrinterDialog::update_printer_combobox, this);
+    Bind(EVT_UPDATE_USER_MACHINE_LIST, &SendToPrinterDialog::update_printer_list, this);
     Bind(EVT_PRINT_JOB_CANCEL, &SendToPrinterDialog::on_print_job_cancel, this);
 
     //file name
     //rename normal
-    m_rename_switch_panel = new wxSimplebook(m_scrollable_region);
+    m_rename_switch_panel = new wxSimplebook(m_topPanel);
     m_rename_switch_panel->SetSize(wxSize(FromDIP(320), FromDIP(25)));
     m_rename_switch_panel->SetMinSize(wxSize(FromDIP(320), FromDIP(25)));
     m_rename_switch_panel->SetMaxSize(wxSize(FromDIP(320), FromDIP(25)));
 
-    m_rename_normal_panel = new wxPanel(m_rename_switch_panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-    m_rename_normal_panel->SetBackgroundColour(*wxWHITE);
+    m_renamePanel = new wxPanel(m_rename_switch_panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+    m_renamePanel->SetBackgroundColour(*wxWHITE);
     rename_sizer_v = new wxBoxSizer(wxVERTICAL);
     rename_sizer_h = new wxBoxSizer(wxHORIZONTAL);
 
-    m_rename_text = new wxStaticText(m_rename_normal_panel, wxID_ANY, wxT("MyLabel"), wxDefaultPosition, wxDefaultSize, 0);
-    m_rename_text->SetForegroundColour(*wxBLACK);
-    m_rename_text->SetFont(::Label::Body_13);
-    m_rename_text->SetMaxSize(wxSize(FromDIP(320), -1));
-    m_rename_button = new Button(m_rename_normal_panel, "", "ff_editable", wxBORDER_NONE, FromDIP(12));
-    m_rename_button->SetBackgroundColor(*wxWHITE);
-    m_rename_button->SetBackgroundColour(*wxWHITE);
+    m_renameText = new wxStaticText(m_renamePanel, wxID_ANY, wxT("MyLabel"), wxDefaultPosition, wxDefaultSize, 0);
+    m_renameText->SetForegroundColour(*wxBLACK);
+    m_renameText->SetFont(::Label::Body_13);
+    m_renameText->SetMaxSize(wxSize(FromDIP(320), -1));
+    m_renameBtn = new Button(m_renamePanel, "", "ff_editable", wxBORDER_NONE, FromDIP(12));
+    m_renameBtn->SetBackgroundColor(*wxWHITE);
+    m_renameBtn->SetBackgroundColour(*wxWHITE);
 
-    rename_sizer_h->Add(m_rename_text, 0, wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 0);
-    rename_sizer_h->Add(m_rename_button, 0, wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL, 0);
+    rename_sizer_h->Add(m_renameText, 0, wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 0);
+    rename_sizer_h->Add(m_renameBtn, 0, wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL, 0);
     rename_sizer_v->Add(rename_sizer_h, 1, wxALIGN_LEFT, 0);
-    m_rename_normal_panel->SetSizer(rename_sizer_v);
-    m_rename_normal_panel->Layout();
-    rename_sizer_v->Fit(m_rename_normal_panel);
+    m_renamePanel->SetSizer(rename_sizer_v);
+    m_renamePanel->Layout();
+    rename_sizer_v->Fit(m_renamePanel);
 
     //rename edit
     auto m_rename_edit_panel = new wxPanel(m_rename_switch_panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
@@ -502,7 +341,7 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater)
     m_rename_input->SetMaxSize(wxSize(FromDIP(320), FromDIP(24)));
     m_rename_input->Bind(wxEVT_TEXT_ENTER, [this](auto& e) {on_rename_enter();});
     m_rename_input->Bind(wxEVT_KILL_FOCUS, [this](auto& e) {
-        if (!m_rename_input->HasFocus() && !m_rename_text->HasFocus())
+        if (!m_rename_input->HasFocus() && !m_renameText->HasFocus())
             on_rename_enter();
         else
             e.Skip(); });
@@ -512,8 +351,8 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater)
     m_rename_edit_panel->Layout();
     rename_edit_sizer_v->Fit(m_rename_edit_panel);
 
-    m_rename_button->Bind(wxEVT_BUTTON, &SendToPrinterDialog::on_rename_click, this);
-    m_rename_switch_panel->AddPage(m_rename_normal_panel, wxEmptyString, true);
+    m_renameBtn->Bind(wxEVT_BUTTON, &SendToPrinterDialog::on_rename_click, this);
+    m_rename_switch_panel->AddPage(m_renamePanel, wxEmptyString, true);
     m_rename_switch_panel->AddPage(m_rename_edit_panel, wxEmptyString, false);
 
     Bind(wxEVT_CHAR_HOOK, [this](wxKeyEvent& e) {
@@ -523,8 +362,8 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater)
             }
             else {
                 m_rename_switch_panel->SetSelection(0);
-                m_rename_text->SetLabel(m_current_project_name);
-                m_rename_normal_panel->Layout();
+                m_renameText->SetLabel(m_current_project_name);
+                m_renamePanel->Layout();
             }
         }
         else {
@@ -532,12 +371,12 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater)
         }
         });
 
-    m_panel_prepare->Bind(wxEVT_LEFT_DOWN, [this](auto& e) {
-        check_fcous_state(this);
-        e.Skip();
-        });
+    //m_panel_prepare->Bind(wxEVT_LEFT_DOWN, [this](auto& e) {
+    //    check_fcous_state(this);
+    //    e.Skip();
+    //    });
 
-    m_scrollable_region->Bind(wxEVT_LEFT_DOWN, [this](auto& e) {
+    m_topPanel->Bind(wxEVT_LEFT_DOWN, [this](auto& e) {
         check_fcous_state(this);
         e.Skip();
         });
@@ -553,15 +392,15 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater)
     rightTopSizer->Add(m_sizer_basic, 0, wxALIGN_LEFT | wxALIGN_TOP, 0);
 
     wxBoxSizer* scrollableTopSizer = new wxBoxSizer(wxHORIZONTAL);
-    scrollableTopSizer->Add(m_panel_image, 0, wxALIGN_CENTER_VERTICAL, 0);    
+    scrollableTopSizer->Add(m_imagePanel, 0, wxALIGN_CENTER_VERTICAL, 0);    
     scrollableTopSizer->Add(0, 0, 0, wxLEFT, FromDIP(5));
     scrollableTopSizer->Add(rightTopSizer, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_LEFT, 0);
 
-    m_sizer_scrollable_region->Add(scrollableTopSizer, 0, wxALIGN_CENTER_HORIZONTAL, 0);
+    m_topSizer->Add(scrollableTopSizer, 0, wxALIGN_CENTER_HORIZONTAL, 0);
     //m_sizer_scrollable_region->Add(0, 0, 0, wxTOP, FromDIP(10));
     //m_sizer_scrollable_region->Add(m_sizer_basic, 0, wxALIGN_CENTER_HORIZONTAL, 0);
-	m_scrollable_region->SetSizer(m_sizer_scrollable_region);
-	m_scrollable_region->Layout();
+	m_topPanel->SetSizer(m_topSizer);
+	m_topPanel->Layout();
 
     auto line_materia = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 1), wxTAB_TRAVERSAL);
     line_materia->SetForegroundColour(wxColour("#DDDDDD"));
@@ -569,9 +408,9 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater)
     auto line_level = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 1), wxTAB_TRAVERSAL);
     line_level->SetForegroundColour(wxColour("#DDDDDD"));
     line_level->SetBackgroundColour(wxColour("#DDDDDD"));
-    auto line_printer = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 1), wxTAB_TRAVERSAL);
-    line_printer->SetForegroundColour(wxColour("#DDDDDD"));
-    line_printer->SetBackgroundColour(wxColour("#DDDDDD"));
+    m_machineLine = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 1), wxTAB_TRAVERSAL);
+    m_machineLine->SetForegroundColour(wxColour("#DDDDDD"));
+    m_machineLine->SetBackgroundColour(wxColour("#DDDDDD"));
 
     m_levelCkb = new FFCheckBox(this);
     m_levelCkb->SetValue(true);
@@ -599,8 +438,10 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater)
     networkSizer->Add(networkLine, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(3));
     networkSizer->Add(m_lanBtn, 0, wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL | wxLEFT, FromDIP(5));
 
-    m_machinePanel = new wxScrolledWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxNO_BORDER);
+    // machine
+    m_machinePanel = new wxPanel(this);
     m_machinePanel->SetBackgroundColour(wxColour("#FAFAFA"));
+
     m_selectAll = new FFCheckBox(m_machinePanel, wxID_ANY);
     m_selectAll->SetValue(false);
     m_selectAllLbl = new wxStaticText(m_machinePanel, wxID_ANY, _("Select All"));
@@ -610,15 +451,27 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater)
     selectSizer->AddSpacer(FromDIP(10));
     selectSizer->Add(m_selectAllLbl, 0, wxALIGN_LEFT);
 
-    m_machineSizer = new wxGridSizer(2);
-    wxBoxSizer* machineSizer = new wxBoxSizer(wxVERTICAL);
-    machineSizer->AddSpacer(FromDIP(20));
-    machineSizer->Add(selectSizer, 0, wxALIGN_LEFT);
-    machineSizer->AddSpacer(FromDIP(10));
-    machineSizer->Add(m_machineSizer, 1);
-    machineSizer->AddSpacer(FromDIP(20));
-    m_machinePanel->SetSizer(machineSizer);
-    m_machinePanel->Layout();
+    m_machineListWindow = new wxScrolledWindow(m_machinePanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxNO_BORDER);
+    //m_machinePanel->SetBackgroundColour(wxColour("#FAFAFA"));
+    m_machineListWindow->EnableScrolling(false, true);
+    m_machineListWindow->SetScrollRate(0, 10);
+    m_machineListWindow->SetSize(-1, 236);
+    m_machineListWindow->SetMinSize(wxSize(-1, 236));
+    m_machineListWindow->SetMaxSize(wxSize(-1, 236));
+    m_machineListWindow->SetVirtualSize(-1, 236);
+    m_machineListSizer = new wxGridSizer(2);
+    m_machineListSizer->SetHGap(FromDIP(20));
+    m_machineListWindow->SetSizer(m_machineListSizer);
+    
+    m_machineSizer = new wxBoxSizer(wxVERTICAL);
+    m_machineSizer->AddSpacer(FromDIP(20));
+    m_machineSizer->Add(selectSizer, 0, wxALIGN_LEFT | wxLEFT | wxRIGHT, FromDIP(10));
+    m_machineSizer->AddSpacer(FromDIP(10));
+    m_machineSizer->Add(m_machineListWindow, 1, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(10));
+    m_machineSizer->AddSpacer(FromDIP(20));
+    m_machinePanel->SetSizer(m_machineSizer);
+    m_machinePanel->Show(false);
+    //m_machineSizer->Fit(m_machinePanel);
 
     // progress
     m_progressPanel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxNO_BORDER);
@@ -627,7 +480,7 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater)
     m_progressBar->SetValue(50);
     m_progressInfoLbl = new wxStaticText(m_progressPanel, wxID_ANY, "Just For test");
     m_progressLbl = new wxStaticText(m_progressPanel, wxID_ANY, "100%");
-    m_progressCancelBtn = new FFButton(m_progressPanel, _("Cancel"), wxID_ANY, FromDIP(4));
+    m_progressCancelBtn = new FFButton(m_progressPanel, wxID_ANY, _("Cancel"), FromDIP(4), true);
     wxBoxSizer* progressDownSizer = new wxBoxSizer(wxHORIZONTAL);
     progressDownSizer->Add(m_progressBar, 1, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxTOP | wxBOTTOM, FromDIP(6));
     progressDownSizer->AddSpacer(FromDIP(11));
@@ -654,8 +507,21 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater)
     m_errorMsgPanel->SetSizer(errorSizer);
     m_errorMsgPanel->Layout();
 
+    m_sendBtn = new FFButton(this, wxID_ANY, _("Send"), FromDIP(4), false);
+    m_sendBtn->SetFontColor(wxColour("#ffffff"));
+    m_sendBtn->SetFontHoverColor(wxColor("#ffffff"));
+    m_sendBtn->SetFontPressColor(wxColor("#ffffff"));
+    m_sendBtn->SetFontDisableColor(wxColor("#ffffff"));
+    m_sendBtn->SetBGColor(wxColour("#419488"));
+    m_sendBtn->SetBGHoverColor(wxColour("#65A79E"));
+    m_sendBtn->SetBGPressColor(wxColour("#1A8676"));
+    m_sendBtn->SetBGDisableColor(wxColour("#dddddd"));
+    m_sendBtn->SetSize(wxSize(FromDIP(101), FromDIP(44)));
+    m_sendBtn->SetMinSize(wxSize(FromDIP(101), FromDIP(44)));
+    m_sendBtn->SetMaxSize(wxSize(FromDIP(101), FromDIP(44)));
+
     m_sizer_main->Add(0, 0, 0, wxTOP, FromDIP(10));
-    m_sizer_main->Add(m_scrollable_region, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT, FromDIP(30));
+    m_sizer_main->Add(m_topPanel, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT, FromDIP(30));
     m_sizer_main->Add(0, 0, 0, wxEXPAND | wxTOP, FromDIP(6));
     //m_sizer_main->Add(m_rename_switch_panel, 0, wxALIGN_CENTER_HORIZONTAL, 0);
     //m_sizer_main->Add(0, 0, 0, wxEXPAND | wxTOP, FromDIP(6));
@@ -667,7 +533,7 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater)
     m_sizer_main->Add(0, 0, 0, wxEXPAND | wxTOP, FromDIP(12));
     m_sizer_main->Add(networkSizer, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
     m_sizer_main->Add(0, 0, 0, wxEXPAND | wxTOP, FromDIP(12));
-    m_sizer_main->Add(line_printer, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
+    m_sizer_main->Add(m_machineLine, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
     m_sizer_main->Add(0, 0, 0, wxEXPAND | wxTOP, FromDIP(12));
     m_sizer_main->Add(m_machinePanel, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
     //m_sizer_main->Add(m_sizer_printer, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
@@ -676,13 +542,14 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater)
     m_sizer_main->Add(0, 1, 0, wxTOP, FromDIP(22));
     m_sizer_main->Add(m_progressPanel, 1, wxEXPAND | wxALIGN_LEFT | wxLEFT | wxRIGHT, FromDIP(30));
     m_sizer_main->AddSpacer(FromDIP(22));
+    m_sizer_main->Add(m_sendBtn, 0, wxALIGN_CENTER_HORIZONTAL, 0);
+    m_sizer_main->AddSpacer(FromDIP(54));
     //m_sizer_main->Add(m_line_schedule, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
-    m_sizer_main->Add(m_simplebook, 0, wxALIGN_CENTER_HORIZONTAL, 0);
+    //m_sizer_main->Add(m_simplebook, 0, wxALIGN_CENTER_HORIZONTAL, 0);
     //m_sizer_main->Add(m_sw_print_failed_info, 0, wxALIGN_CENTER, 0);
-    //m_sizer_main->Add(0, 0, 0, wxEXPAND | wxTOP, FromDIP(13));
 
     show_print_failed_info(false);
-    SetSizer(m_sizer_main);
+    //SetSizer(m_sizer_main);
     Layout();
     Fit();
     Thaw();
@@ -703,6 +570,7 @@ void SendToPrinterDialog::update_print_error_info(int code, std::string msg, std
 
 void SendToPrinterDialog::show_print_failed_info(bool show, int code, wxString description, wxString extra)
 {
+#if 0
     if (show) {
         if (!m_sw_print_failed_info->IsShown()) {
             m_sw_print_failed_info->Show(true);
@@ -730,10 +598,12 @@ void SendToPrinterDialog::show_print_failed_info(bool show, int code, wxString d
         Layout();
         Fit();
     }
+#endif
 }
 
 void SendToPrinterDialog::prepare_mode()
 {
+#if 0
 	m_is_in_sending_mode = false;
 	if (m_send_job) {
 		m_send_job->join();
@@ -748,16 +618,19 @@ void SendToPrinterDialog::prepare_mode()
 	if (m_simplebook->GetSelection() != 0) {
 		m_simplebook->SetSelection(0);
 	}
+#endif
 }
 
 void SendToPrinterDialog::sending_mode()
 {
+#if 0
     m_is_in_sending_mode = true;
     if (m_simplebook->GetSelection() != 1){
         m_simplebook->SetSelection(1);
         Layout();
         Fit();
     }
+#endif
 }
 
 void SendToPrinterDialog::prepare(int print_plate_idx)
@@ -767,6 +640,7 @@ void SendToPrinterDialog::prepare(int print_plate_idx)
 
 void SendToPrinterDialog::update_priner_status_msg(wxString msg, bool is_warning) 
 {
+#if 0
     auto colour = is_warning ? wxColour(0xFF, 0x6F, 0x00) : wxColour(0x6B, 0x6B, 0x6B);
     m_statictext_printer_msg->SetForegroundColour(colour);
 
@@ -798,6 +672,7 @@ void SendToPrinterDialog::update_priner_status_msg(wxString msg, bool is_warning
             }
         }
     }
+#endif 
 }
 
 void SendToPrinterDialog::update_print_status_msg(wxString msg, bool is_warning, bool is_printer_msg)
@@ -835,6 +710,7 @@ void SendToPrinterDialog::on_cancel(wxCloseEvent &event)
  
 void SendToPrinterDialog::on_ok(wxCommandEvent &event)
 {
+#if 0
     BOOST_LOG_TRIVIAL(info) << "print_job: on_ok to send";
     m_is_canceled = false;
     Enable_Send_Button(false);
@@ -966,6 +842,7 @@ void SendToPrinterDialog::on_ok(wxCommandEvent &event)
     }
 
     BOOST_LOG_TRIVIAL(info) << "send_job: send print job";
+#endif
 }
 
 void SendToPrinterDialog::clear_ip_address_config(wxCommandEvent& e)
@@ -991,6 +868,19 @@ void SendToPrinterDialog::update_user_machine_list()
             } else {
                 BOOST_LOG_TRIVIAL(warning) << "com_id (" << id << "): get com data error";
             }
+        }
+    }
+    if (m_machineList.empty()) {
+        for (int i = 0; i < 5; ++i) {
+            MachineItem::MachineData mdata;
+            mdata.flag = 0;
+            if (i % 2 == 0) {
+                mdata.model = "Adventurer 5M Pro";
+            } else {
+                mdata.model = "Adventurer 5M";
+            }
+            mdata.name = "Just For Test";
+            m_machineList.emplace_back(mdata);
         }
     }
     wxCommandEvent event(EVT_UPDATE_USER_MACHINE_LIST);
@@ -1063,7 +953,26 @@ void  SendToPrinterDialog::reset_timeout()
 
 void SendToPrinterDialog::update_user_printer()
 {
-    
+    Freeze();
+    m_machineListSizer->Clear();
+    if (!m_machineList.empty()) {
+        size_t cnt = m_machineList.size();
+        size_t rows = (cnt + 1) / 2;
+        m_machineListSizer->SetRows(rows);
+        for (auto& m : m_machineList) {
+            m_machineListSizer->Add(new MachineItem(m_machineListWindow, m), 1, wxEXPAND | wxALIGN_LEFT);
+        }
+        rows = (rows > 4) ? 4 : rows;
+        int height = rows * 46 + (rows - 1) * 10;
+        m_machineListWindow->SetVirtualSize(-1, height);
+        m_machineListWindow->SetSize(-1, height);
+        m_machineListSizer->Layout();
+        m_machineListSizer->Fit(m_machineListWindow);
+    }
+    updateVisible();
+    Layout();
+    Fit();
+    Thaw();
 #if 0
     Slic3r::DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
     if (!dev) return;
@@ -1139,7 +1048,7 @@ void SendToPrinterDialog::update_user_printer()
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << "for send task, current printer id =  " << m_printer_last_select << std::endl;
 }
 
-void SendToPrinterDialog::update_printer_combobox(wxCommandEvent &event)
+void SendToPrinterDialog::update_printer_list(wxCommandEvent &event)
 {
     show_status(PrintDialogStatus::PrintStatusInit);
     update_user_printer();
@@ -1153,6 +1062,7 @@ void SendToPrinterDialog::on_timer(wxTimerEvent &event)
 
 void SendToPrinterDialog::on_selection_changed(wxCommandEvent &event)
 {
+#if 0
     /* reset timeout and reading printer info */
     //m_status_bar->reset();
     timeout_count      = 0;
@@ -1186,10 +1096,12 @@ void SendToPrinterDialog::on_selection_changed(wxCommandEvent &event)
     }
 
     update_show_status();
+#endif
 }
 
 void SendToPrinterDialog::update_show_status()
 {
+#if 0
     NetworkAgent* agent = Slic3r::GUI::wxGetApp().getAgent();
     DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
     if (!agent) return;
@@ -1262,10 +1174,12 @@ void SendToPrinterDialog::update_show_status()
     }
     
     show_status(PrintDialogStatus::PrintStatusReadingFinished);
+#endif
 }
 
 void SendToPrinterDialog::Enable_Refresh_Button(bool en)
 {
+#if 0
     if (!en) {
         if (m_button_refresh->IsEnabled()) {
             m_button_refresh->Disable();
@@ -1279,10 +1193,12 @@ void SendToPrinterDialog::Enable_Refresh_Button(bool en)
             m_button_refresh->SetBorderColor(btn_bg_enable);
         }
     }
+#endif
 }
 
 void SendToPrinterDialog::show_status(PrintDialogStatus status, std::vector<wxString> params)
 {
+#if 0
 	if (m_print_status != status)
 		BOOST_LOG_TRIVIAL(info) << "select_machine_dialog: show_status = " << status;
 	m_print_status = status;
@@ -1379,11 +1295,13 @@ void SendToPrinterDialog::show_status(PrintDialogStatus status, std::vector<wxSt
 		Enable_Send_Button(true);
 		Enable_Refresh_Button(true);
     }
+#endif
 }
 
 
 void SendToPrinterDialog::Enable_Send_Button(bool en)
 {
+#if 0
     if (!en) {
         if (m_button_ensure->IsEnabled()) {
             m_button_ensure->Disable();
@@ -1397,15 +1315,12 @@ void SendToPrinterDialog::Enable_Send_Button(bool en)
             m_button_ensure->SetBorderColor(btn_bg_enable);
         }
     }
+#endif
 }
 
 void SendToPrinterDialog::on_dpi_changed(const wxRect &suggested_rect)
 {
-    m_button_refresh->SetMinSize(SELECT_MACHINE_DIALOG_BUTTON_SIZE);
-    m_button_refresh->SetCornerRadius(FromDIP(12));
-    m_button_ensure->SetMinSize(SELECT_MACHINE_DIALOG_BUTTON_SIZE);
-    m_button_ensure->SetCornerRadius(FromDIP(12));
-    m_status_bar->msw_rescale();
+    //m_status_bar->msw_rescale();
     Fit();
     Refresh();
 }
@@ -1432,21 +1347,14 @@ void SendToPrinterDialog::set_default()
     //unsupported character filter
     m_current_project_name = from_u8(filter_characters(m_current_project_name.ToUTF8().data(), "<>[]:/\\|?*\""));
 
-    m_rename_text->SetLabelText(m_current_project_name);
-    m_rename_normal_panel->Layout();
+    m_renameText->SetLabelText(m_current_project_name);
+    m_renamePanel->Layout();
 
     enable_prepare_mode = true;
     prepare_mode();
 
-    //clear combobox
-    m_list.clear();
-    m_comboBox_printer->Clear();
-    m_printer_last_select = "";
-    m_print_info = "";
-    m_comboBox_printer->SetValue(wxEmptyString);
-    m_comboBox_printer->Enable();
     // rset status bar
-    m_status_bar->reset();
+    //m_status_bar->reset();
     
     NetworkAgent* agent = wxGetApp().getAgent();
     if (agent) {
@@ -1491,8 +1399,8 @@ void SendToPrinterDialog::set_default()
         }
     }
 
-    m_scrollable_region->Layout();
-    m_scrollable_region->Fit();
+    m_topPanel->Layout();
+    m_topPanel->Fit();
     Layout();
     Fit();
 
@@ -1544,10 +1452,26 @@ void SendToPrinterDialog::onNetworkToggled(wxCommandEvent& event)
 
 }
 
+void SendToPrinterDialog::updateVisible()
+{
+    bool hasMachine = !m_machineList.empty();
+    m_errorMsgPanel->Show(!hasMachine);
+    m_machineLine->Show(!hasMachine);
+    m_machinePanel->Show(hasMachine);
+    m_progressPanel->Show(m_is_in_sending_mode);
+    m_sendBtn->Enable(hasMachine && !m_is_in_sending_mode);
+    
+    if (m_machinePanel->IsShown()) {
+        m_machinePanel->Layout();
+        m_machineSizer->Fit(m_machinePanel);
+    }
+}
+
 SendToPrinterDialog::~SendToPrinterDialog()
 {
     delete m_refresh_timer;
 }
+
 
 }
 }

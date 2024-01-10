@@ -2,23 +2,25 @@
 #include <wx/dcgraph.h>
 
 
-FFButton::FFButton(wxWindow* parent, const wxString& label/*= ""*/, wxWindowID id/*= wxID_ANY*/, int borderRadius/*=4*/)
+FFButton::FFButton(wxWindow* parent, wxWindowID id/*= wxID_ANY*/, const wxString& label/*= ""*/,
+	int borderRadius/*=4*/, bool borderFlag/* = true*/)
 	: wxButton(parent, id, label, wxDefaultPosition, wxDefaultSize, wxNO_BORDER)
 	, m_hoverFlag(false)
 	, m_pressFlag(false)
+	, m_borderFlag(borderFlag)
 	, m_borderRadius(borderRadius)
 	, m_fontColor("#333333")
-	, m_fontHoverColor("#95C5FF")
-	, m_fontPressColor("#328DFB")
+	, m_fontHoverColor("#65A79E")
+	, m_fontPressColor("#419488")
 	, m_fontDisableColor("#dddddd")
 	, m_borderColor("#333333")
-	, m_borderHoverColor("#95C5FF")
-	, m_borderPressColor("#328DFB")
+	, m_borderHoverColor("#65A79E")
+	, m_borderPressColor("#419488")
 	, m_borderDisableColor("#dddddd")
 	, m_bgColor("#ffffff")
 	, m_bgHoverColor("#ffffff")
 	, m_bgPressColor("#ffffff")
-	, m_bgDisableColor("#ffffff")
+	, m_bgDisableColor("#dddddd")
 {
 	Bind(wxEVT_ENTER_WINDOW, [this](wxMouseEvent&) { m_hoverFlag = true; Update(); });
 	Bind(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent&) { m_hoverFlag = false; m_pressFlag = false; Update(); });
@@ -156,6 +158,9 @@ void FFButton::render(wxDC &dc)
 		dc.SetPen(m_borderColor);
 		dc.SetBrush(m_bgColor);
 		dc.SetTextForeground(m_fontColor);
+	}
+	if (!m_borderFlag) {
+		dc.SetPen(*wxTRANSPARENT_PEN);
 	}
 	if (0 == m_borderRadius) {
 		dc.DrawRectangle(0, 0, size.x, size.y);

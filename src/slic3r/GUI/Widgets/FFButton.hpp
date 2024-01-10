@@ -6,7 +6,7 @@
 class FFButton : public wxButton
 {
 public:
-	FFButton(wxWindow* parent, const wxString& label = "", wxWindowID id = wxID_ANY, int borderRadius = 4);
+	FFButton(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& label = "", int borderRadius = 4, bool borderFlag = true);
 	~FFButton() {};
 
 	void SetFontColor(const wxColour& color);
@@ -32,6 +32,7 @@ private:
 private:
 	bool		m_hoverFlag;
 	bool		m_pressFlag;
+	bool		m_borderFlag;
 	int			m_borderRadius;
 	wxColour	m_fontColor;
 	wxColour	m_fontHoverColor;

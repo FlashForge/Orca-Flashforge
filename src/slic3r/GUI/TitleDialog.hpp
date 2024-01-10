@@ -50,6 +50,7 @@ public:
 
 protected:    
     void OnPaint(wxPaintEvent& event);
+    void OnSize(wxSizeEvent& event);
     
 protected:
     int             m_borderRadius;

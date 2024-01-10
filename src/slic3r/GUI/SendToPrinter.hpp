@@ -76,14 +76,16 @@ private:
 private:
     wxColour		m_defaultColor { wxColour(255, 255, 255) };
     FFCheckBox*     m_checkBox;
-    ThumbnailPanel*	m_iconPanel;
+    wxPanel*        m_iconPanel;
+    wxBoxSizer*     m_iconSizer;
+    ThumbnailPanel*	m_thumbnailPanel;
     wxStaticText*   m_nameLbl;
     wxBoxSizer*     m_mainSizer;
     MachineData     m_data;
     static std::map<std::string, wxImage> m_machineBitmapMap;
 };
 
-class SendToPrinterDialog : public DPIDialog
+class SendToPrinterDialog : public TitleDialog//public DPIDialog
 {
 private:
 	void init_bind();
@@ -105,42 +107,23 @@ private:
 	std::string							m_printer_last_select;
     wxString							m_current_project_name;
 
-    TextInput*							m_rename_input{ nullptr };
-    wxSimplebook*						m_rename_switch_panel{ nullptr };
 	Plater*								m_plater{ nullptr };
+    wxPanel*                            m_topPanel {nullptr};
+    wxBoxSizer*							m_topSizer {nullptr};
+    wxPanel*                            m_imagePanel {nullptr};
 	wxStaticBitmap*						m_staticbitmap{ nullptr };
 	ThumbnailPanel*						m_thumbnailPanel{ nullptr };
-	ComboBox*							m_comboBox_printer{ nullptr };
-	ComboBox*							m_comboBox_bed{ nullptr };
-	Button*								m_rename_button{ nullptr };
-    Button*								m_button_refresh{ nullptr };
-    Button*								m_button_ensure{ nullptr };
-	wxPanel*							m_scrollable_region;
-	wxPanel*							m_line_schedule{ nullptr };
-	wxPanel*							m_panel_sending{ nullptr };
-	wxPanel*							m_panel_prepare{ nullptr };
-	wxPanel*							m_panel_finish{ nullptr };
-    wxPanel*							m_line_top{ nullptr };
-    wxPanel*							m_panel_image{ nullptr };
-    wxPanel*							m_rename_normal_panel{ nullptr };
-	wxSimplebook*						m_simplebook{ nullptr };
-	wxStaticText*						m_statictext_finish{ nullptr };
-    wxStaticText*						m_stext_sending{ nullptr };
-    wxStaticText*						m_staticText_bed_title{ nullptr };
-    wxStaticText*						m_statictext_printer_msg{ nullptr };
-    wxStaticText*						m_stext_printer_title{ nullptr };
-    wxStaticText*						m_rename_text{ nullptr };
-    wxStaticText*						m_stext_time{ nullptr };
-    wxStaticText*						m_stext_weight{ nullptr };
-    Label*                              m_st_txt_error_code{ nullptr };
-    Label*                              m_st_txt_error_desc{ nullptr };
-    Label*                              m_st_txt_extra_info{ nullptr };
-    Label *                             m_link_network_state;
-	StateColor							btn_bg_enable;
+    wxStaticText*                       m_stext_weight {nullptr};
+    wxStaticText*                       m_stext_time = {nullptr};
     wxBoxSizer*							rename_sizer_v{ nullptr };
     wxBoxSizer*							rename_sizer_h{ nullptr };
 	wxBoxSizer*							sizer_thumbnail;
-	wxBoxSizer*							m_sizer_scrollable_region;
+    TextInput*							m_rename_input{ nullptr };
+    wxSimplebook*						m_rename_switch_panel{ nullptr };
+    wxPanel*                            m_renamePanel;
+    wxStaticText*                       m_renameText { nullptr };
+    Button*                             m_renameBtn {nullptr};
+
 	wxBoxSizer*							m_sizer_main;
 	wxStaticText*						m_file_name;
     PrintDialogStatus					m_print_status{ PrintStatusInit };
@@ -149,10 +132,13 @@ private:
     wxStaticText*                       m_selectPrinterLbl;
     FFToggleButton*                     m_netBtn;
     FFToggleButton*                     m_lanBtn;
-    wxScrolledWindow*                   m_machinePanel;
-    wxGridSizer*                        m_machineSizer;
     FFCheckBox*                         m_selectAll;
     wxStaticText*                       m_selectAllLbl;
+    wxPanel*                            m_machinePanel {nullptr};
+    wxBoxSizer*                         m_machineSizer {nullptr};
+    wxScrolledWindow*                   m_machineListWindow;
+    wxGridSizer*                        m_machineListSizer;
+    wxPanel*                            m_machineLine {nullptr};
     wxPanel*                            m_errorMsgPanel {nullptr};
     wxStaticText*                       m_errorMsgLbl {nullptr};
     wxPanel*                            m_progressPanel {nullptr};
@@ -170,7 +156,7 @@ private:
     wxColour							m_colour_def_color{ wxColour(255, 255, 255) };
     wxColour							m_colour_bold_color{ wxColour(38, 46, 48) };
 	wxTimer*							m_refresh_timer{ nullptr };
-    std::shared_ptr<BBLStatusBarSend>   m_status_bar;
+    //std::shared_ptr<BBLStatusBarSend>   m_status_bar;
 	wxScrolledWindow*                   m_sw_print_failed_info{nullptr};
    
 public:
@@ -192,7 +178,7 @@ public:
     void check_fcous_state(wxWindow* window);
     void update_priner_status_msg(wxString msg, bool is_warning = false);
     void update_print_status_msg(wxString msg, bool is_warning = false, bool is_printer = true);
-	void update_printer_combobox(wxCommandEvent& event);
+	void update_printer_list(wxCommandEvent& event);
 	void on_cancel(wxCloseEvent& event);
 	void on_ok(wxCommandEvent& event);
 	void clear_ip_address_config(wxCommandEvent& e);
@@ -214,6 +200,7 @@ public:
 
 private:
     void onNetworkToggled(wxCommandEvent& event);
+    void updateVisible();
 };
 
 wxDECLARE_EVENT(EVT_CLEAR_IPADDRESS, wxCommandEvent);
