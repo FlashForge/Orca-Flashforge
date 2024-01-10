@@ -3524,7 +3524,7 @@ void GUI_App::ShowUserLogin(bool show)
                 delete m_login_dlg;
                 m_login_dlg = new LoginDialog();
             }
-        Slic3r::GUI::MultiComMgr::inst()->Bind(COM_GET_USER_PROFILE_EVENT, [this](const ComGetUserProfileEvent &event){
+        Slic3r::GUI::MultiComMgr::inst()->Bind(COM_GET_USER_PROFILE_EVENT, [this](ComGetUserProfileEvent &event){
             if(event.ret == ComErrno::COM_OK){
                 if(app_config){
                     app_config->set("usr_pic",event.userProfile.headImgUrl);
@@ -3533,6 +3533,7 @@ void GUI_App::ShowUserLogin(bool show)
                     app_config->save();
                 }
             }
+            event.Skip();
         });    
         m_login_dlg->ShowModal();
         }catch(std::exception &e){
