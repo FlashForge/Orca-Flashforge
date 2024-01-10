@@ -240,17 +240,20 @@ LoginDialog::LoginDialog()
     wxPanel* page1 = new wxPanel(this, wxID_ANY);
     wxBoxSizer* page1Sizer = new wxBoxSizer(wxVERTICAL);
     setupLayoutPage1(page1Sizer,page1);
+    page1Sizer->AddSpacer(FromDIP(63));
     page1->SetSizer(page1Sizer);
 
     // 创建第二个标签页
     wxPanel* page2 = new wxPanel(this, wxID_ANY);
     wxBoxSizer* page2Sizer = new wxBoxSizer(wxVERTICAL);
     setupLayoutPage2(page2Sizer,page2);
+    page2Sizer->AddSpacer(FromDIP(63));
     page2->SetSizer(page2Sizer);
 
     // 添加 wxPanel 控件
     sizer->Add(page1, 1, wxEXPAND | wxALL, 10);
     sizer->Add(page2, 1, wxEXPAND | wxALL, 10);
+    //sizer->AddSpacer(FromDIP(63));
     page2->Hide(); 
 
     // 创建 wxStaticText 控件
@@ -281,11 +284,12 @@ LoginDialog::LoginDialog()
         m_login_check_box_page2->Refresh();
         m_protocol_page2->Refresh();
         m_service_link_page2->Refresh();
-        m_privacy_policy_link_page2->Refresh();
+        m_privacy_policy_page2->Refresh();
         m_staticLine_verify->Hide();
         m_staticLine_verify->Refresh();
         m_staticLine_password->Show();
         m_staticLine_password->Refresh();
+        m_panel_checkbox_page2->Refresh();
         Layout();
         m_password->RefreshEyePicPosition();
         });
@@ -455,71 +459,56 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
 
     //check box
     wxBoxSizer* checkbox_sizer = new wxBoxSizer(wxHORIZONTAL);
+    auto m_panel_checkbox_page1 = new wxPanel(parent, wxID_ANY,wxDefaultPosition,wxSize(FromDIP(209), -1), wxTAB_TRAVERSAL);
 
-    m_login_check_box_page1 = new wxCheckBox(parent, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, 0);
+    m_login_check_box_page1 = new wxCheckBox(m_panel_checkbox_page1, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, 0);
     m_login_check_box_page1->Bind(wxEVT_CHECKBOX, &LoginDialog::onAgreeCheckBoxChangedPage1, this);
 
-    wxStaticText* protocol = new  wxStaticText(parent, wxID_ANY,_L("Read and Agree to Accept"));
-    protocol->SetFont((wxFont(wxFontInfo(14))));
+    m_protocol_page1 = new  wxStaticText(m_panel_checkbox_page1, wxID_ANY,_L("Read and Agree to Accept"));
+    m_protocol_page1->SetFont((wxFont(wxFontInfo(14))));
 
     //Service Item
-    wxStaticText* service_link = new wxStaticText(parent, wxID_ANY, _L("《Term of Sevrvice》"));
-    service_link->SetFont((wxFont(wxFontInfo(14))));
-    //service_link->Wrap(100);
-
-    service_link->Bind(wxEVT_LEFT_UP, [this,parent](wxMouseEvent& e){
-
-         wxDialog* dialog = new wxDialog(nullptr, wxID_ANY, _L("Term of Sevrvice"), wxDefaultPosition, wxSize(400, 300));
-
-        auto m_panel_service_link = new wxPanel(dialog, wxID_ANY, wxDefaultPosition,wxSize(FromDIP(240), FromDIP(180)), wxTAB_TRAVERSAL);
-        wxTextCtrl* textCtrl = new wxTextCtrl(m_panel_service_link, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
-        textCtrl->LoadFile("");
-        wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
-
-        sizer->Add(textCtrl, wxSizerFlags(1).Expand());
-
-        m_panel_service_link->SetSizer(sizer);
-        m_panel_service_link->Layout();
-        sizer->Fit(m_panel_service_link);
-        
-        //dialog->SetSizer(sizer);
-        dialog->ShowModal();
+    m_service_link_page1 = new wxHyperlinkCtrl(m_panel_checkbox_page1, wxID_ANY, _L("《Term of Sevrvice》"), wxEmptyString, wxDefaultPosition, wxDefaultSize, wxHL_DEFAULT_STYLE);
+    m_service_link_page1->Bind(wxEVT_HYPERLINK, [this](wxCommandEvent& e){
+        wxString url = "http://dev.auth.flashforge.shop/en/userAgreement";
+        AppConfig *app_config = wxGetApp().app_config;
+        if(app_config){
+            std::string language = app_config->get("language");
+            if(language.compare("zh_CN") == 0){
+                url = "http://dev.auth.flashforge.shop/userAgreement";
+            }
+        }
+        wxLaunchDefaultBrowser(url);
     });
 
-    //Privacy Policy
-    wxStaticText* privacy_policy_link = new wxStaticText(parent, wxID_ANY, _L("《Privacy Policy》"));
-    privacy_policy_link->SetFont((wxFont(wxFontInfo(14))));
-    //privacy_policy_link->Wrap(100);
-
-    privacy_policy_link->Bind(wxEVT_LEFT_UP, [this,parent](wxMouseEvent& e){
-
-        wxDialog* dialog = new wxDialog(nullptr, wxID_ANY, _L("Privacy Policy"), wxDefaultPosition, wxSize(400, 300));
-
-        auto m_panel_policy_link = new wxPanel(dialog, wxID_ANY, wxDefaultPosition,wxSize(FromDIP(240), FromDIP(180)), wxTAB_TRAVERSAL);
-        wxTextCtrl* textCtrl = new wxTextCtrl(m_panel_policy_link, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
-        textCtrl->LoadFile("");
-        wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
-
-        sizer->Add(textCtrl, wxSizerFlags(1).Expand());
-
-        m_panel_policy_link->SetSizer(sizer);
-        m_panel_policy_link->Layout();
-        sizer->Fit(m_panel_policy_link);
-        
-        //dialog->SetSizer(sizer);
-        dialog->ShowModal();
+    //privacy Policy
+    m_privacy_policy_page1 = new wxHyperlinkCtrl(m_panel_checkbox_page1, wxID_ANY, _L("《Privacy Policy》"), wxEmptyString, wxDefaultPosition, wxDefaultSize, wxHL_DEFAULT_STYLE);
+    m_privacy_policy_page1->Bind(wxEVT_HYPERLINK, [this](wxCommandEvent& e){
+        wxString url = "http://dev.auth.flashforge.shop/en/privacyPolicy";
+        AppConfig *app_config = wxGetApp().app_config;
+        if(app_config){
+            std::string language = app_config->get("language");
+            if(language.compare("zh_CN") == 0){
+                url = "http://dev.auth.flashforge.shop/privacyPolicy";
+            }
+        }
+        wxLaunchDefaultBrowser(url);
     });
 
     //left gaption
     checkbox_sizer->Add(FromDIP(50), 0, 0, 0);
     checkbox_sizer->Add(m_login_check_box_page1, 0, wxALIGN_CENTER_HORIZONTAL | wxTOP, FromDIP(5));
-    checkbox_sizer->Add(protocol,0, wxALIGN_CENTER_HORIZONTAL | wxTOP, FromDIP(5));
-    //checkbox_sizer->Add(service_link,0, wxTOP, FromDIP(5));
-    //checkbox_sizer->Add(privacy_policy_link,0, wxTOP, FromDIP(5));
+    checkbox_sizer->Add(m_protocol_page1,0, wxALIGN_CENTER_HORIZONTAL | wxTOP, FromDIP(5));
+    checkbox_sizer->Add(m_service_link_page1,0, wxTOP, FromDIP(5));
+    checkbox_sizer->Add(m_privacy_policy_page1,0, wxTOP, FromDIP(5));
 
-    page1Sizer->Add(checkbox_sizer, 0, wxEXPAND, 0);
-    page1Sizer->Add(service_link, 0,  wxTOP, FromDIP(5));
-    page1Sizer->Add(privacy_policy_link, 0,  wxTOP, FromDIP(5));
+    m_panel_checkbox_page1->SetSizer(checkbox_sizer);
+    m_panel_checkbox_page1->Layout();
+    checkbox_sizer->Fit(m_panel_checkbox_page1);
+
+    page1Sizer->Add(m_panel_checkbox_page1, 0, wxEXPAND, 0);
+    //page1Sizer->Add(m_service_link_page1, 0,  wxTOP, FromDIP(5));
+    //page1Sizer->Add(m_privacy_policy_page1, 0,  wxTOP, FromDIP(5));
 }
 
 void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
@@ -627,71 +616,55 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
 
     //check box
     wxBoxSizer* checkbox_sizer = new wxBoxSizer(wxHORIZONTAL);
+    m_panel_checkbox_page2 = new wxPanel(parent, wxID_ANY,wxDefaultPosition,wxSize(FromDIP(209), -1), wxTAB_TRAVERSAL);
 
-    m_login_check_box_page2 = new wxCheckBox(parent, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, 0);
-    // m_login_check_box_page2->Bind(wxEVT_COMMAND_CHECKBOX_CLICKED, [this](wxCommandEvent& e) {
-    // });
+    m_login_check_box_page2 = new wxCheckBox(m_panel_checkbox_page2, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, 0);
     m_login_check_box_page2->Bind(wxEVT_CHECKBOX, &LoginDialog::onAgreeCheckBoxChangedPage2, this);
 
-    m_protocol_page2 = new  wxStaticText(parent, wxID_ANY,_L("Read and Agree to Accept"));
+    m_protocol_page2 = new  wxStaticText(m_panel_checkbox_page2, wxID_ANY,_L("Read and Agree to Accept"));
     m_protocol_page2->SetFont((wxFont(wxFontInfo(14))));
     //protocol->SetMinSize(wxSize(46,28));
 
     //Service Item
-    m_service_link_page2 = new wxStaticText(parent, wxID_ANY, _L("《Term of Sevrvice》"));
-    m_service_link_page2->SetFont((wxFont(wxFontInfo(14))));
-
-    m_service_link_page2->Bind(wxEVT_LEFT_UP, [this,parent](wxMouseEvent& e){
-
-         wxDialog* dialog = new wxDialog(nullptr, wxID_ANY, _L("Term of Sevrvice"), wxDefaultPosition, wxSize(400, 300));
-
-        auto m_panel_service_link = new wxPanel(dialog, wxID_ANY, wxDefaultPosition,wxSize(FromDIP(240), FromDIP(180)), wxTAB_TRAVERSAL);
-        wxTextCtrl* textCtrl = new wxTextCtrl(m_panel_service_link, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
-        textCtrl->LoadFile("");
-        wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
-
-        sizer->Add(textCtrl, wxSizerFlags(1).Expand());
-
-        m_panel_service_link->SetSizer(sizer);
-        m_panel_service_link->Layout();
-        sizer->Fit(m_panel_service_link);
-        
-        //dialog->SetSizer(sizer);
-        dialog->ShowModal();
+    m_service_link_page2 = new wxHyperlinkCtrl(m_panel_checkbox_page2, wxID_ANY, _L("《Term of Sevrvice》"), wxEmptyString, wxDefaultPosition, wxDefaultSize, wxHL_DEFAULT_STYLE);
+    m_service_link_page2->Bind(wxEVT_HYPERLINK, [this](wxCommandEvent& e){
+        wxString url = "http://dev.auth.flashforge.shop/en/userAgreement";
+        AppConfig *app_config = wxGetApp().app_config;
+        if(app_config){
+            std::string language = app_config->get("language");
+            if(language.compare("zh_CN") == 0){
+                url = "http://dev.auth.flashforge.shop/userAgreement";
+            }
+        }
+        wxLaunchDefaultBrowser(url);
     });
 
-    //Privacy Policy
-    m_privacy_policy_link_page2 = new wxStaticText(parent, wxID_ANY, _L("《Privacy Policy》"));
-    m_privacy_policy_link_page2->SetFont((wxFont(wxFontInfo(14))));
-    m_privacy_policy_link_page2->Bind(wxEVT_LEFT_UP, [this,parent](wxMouseEvent& e){
-
-        wxDialog* dialog = new wxDialog(nullptr, wxID_ANY, _L("Privacy Policy"), wxDefaultPosition, wxSize(400, 300));
-
-        auto m_panel_policy_link = new wxPanel(dialog, wxID_ANY, wxDefaultPosition,wxSize(FromDIP(240), FromDIP(180)), wxTAB_TRAVERSAL);
-        wxTextCtrl* textCtrl = new wxTextCtrl(m_panel_policy_link, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
-        textCtrl->LoadFile("");
-        wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
-
-        sizer->Add(textCtrl, wxSizerFlags(1).Expand());
-
-        m_panel_policy_link->SetSizer(sizer);
-        m_panel_policy_link->Layout();
-        sizer->Fit(m_panel_policy_link);
-        
-        //dialog->SetSizer(sizer);
-        dialog->ShowModal();
+    //privacy Policy
+    m_privacy_policy_page2 = new wxHyperlinkCtrl(m_panel_checkbox_page2, wxID_ANY, _L("《Privacy Policy》"), wxEmptyString, wxDefaultPosition, wxDefaultSize, wxHL_DEFAULT_STYLE);
+    m_privacy_policy_page2->Bind(wxEVT_HYPERLINK, [this](wxCommandEvent& e){
+        wxString url = "http://dev.auth.flashforge.shop/en/privacyPolicy";
+        AppConfig *app_config = wxGetApp().app_config;
+        if(app_config){
+            std::string language = app_config->get("language");
+            if(language.compare("zh_CN") == 0){
+                url = "http://dev.auth.flashforge.shop/privacyPolicy";
+            }
+        }
+        wxLaunchDefaultBrowser(url);
     });
 
     //left gaption
     checkbox_sizer->Add(FromDIP(50), 0, 0, 0);
     checkbox_sizer->Add(m_login_check_box_page2, 0, wxALIGN_CENTER_HORIZONTAL | wxTOP, FromDIP(5));
     checkbox_sizer->Add(m_protocol_page2,0, wxALIGN_CENTER_HORIZONTAL | wxTOP, FromDIP(5));
-    //checkbox_sizer->Add(m_service_link_page2,0, wxTOP, FromDIP(5));
-    //checkbox_sizer->Add(m_privacy_policy_link_page2,0, wxTOP, FromDIP(5));
+    checkbox_sizer->Add(m_service_link_page2,0, wxTOP, FromDIP(5));
+    checkbox_sizer->Add(m_privacy_policy_page2,0, wxTOP, FromDIP(5));
 
-    page2Sizer->Add(checkbox_sizer, 0, wxEXPAND, 0);
-    page2Sizer->Add(m_service_link_page2, 0,  wxTOP, FromDIP(5));
-    page2Sizer->Add(m_privacy_policy_link_page2, 0,  wxTOP, FromDIP(5));
+    m_panel_checkbox_page2->SetSizer(checkbox_sizer);
+    m_panel_checkbox_page2->Layout();
+    checkbox_sizer->Fit(m_panel_checkbox_page2);
+
+    page2Sizer->Add(m_panel_checkbox_page2, 0, wxEXPAND, 0);
 }
 
 void LoginDialog::onUsrNameOrPasswordChangedPage1(wxCommandEvent& event)
@@ -786,7 +759,7 @@ void LoginDialog::onPage1Login(wxCommandEvent& event)
              Slic3r::GUI::MultiComMgr::inst()->setWanDevToken(usrname.ToStdString(),token_data.accessToken);
         } 
     }
-    else if (login_result == ComErrno::COM_ERROR){
+    else if (login_result == ComErrno::COM_INVALID_VALIDATION){
         m_timer.Bind(wxEVT_TIMER, &LoginDialog::OnTimer, this);
         //账号、验证码错误
         m_error_label->Show(true);
@@ -814,7 +787,7 @@ void LoginDialog::onPage2Login(wxCommandEvent& event)
         }
         
     }
-    else if (login_result == ComErrno::COM_ERROR){
+    else if (login_result == ComErrno::COM_INVALID_VALIDATION){
         m_timer.Bind(wxEVT_TIMER, &LoginDialog::OnTimer, this);
         //账号、密码错误
         m_error_label_page2->Show(true);

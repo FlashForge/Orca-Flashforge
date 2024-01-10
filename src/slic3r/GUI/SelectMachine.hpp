@@ -203,7 +203,6 @@ public:
     virtual bool Show(bool show = true) wxOVERRIDE;
 
     void update_machine_list(wxCommandEvent &event);
-    void start_ssdp(bool on_off);
     bool was_dismiss() { return m_dismiss; }
 
 private:
@@ -222,9 +221,9 @@ private:
     boost::thread*                    get_print_info_thread{ nullptr };
     std::string                       m_print_info;
     bool                              m_dismiss { false };
+    bool                              m_updateConnect { false };
 
-    std::map<std::string, DeviceObject *> m_bind_machine_list; 
-    //std::map<std::string, MachineObject*> m_free_machine_list;
+    std::map<std::string, DeviceObject *> m_bind_machine_list;
     std::map<std::string, DeviceObject*>  m_free_device_list;
 
 private:

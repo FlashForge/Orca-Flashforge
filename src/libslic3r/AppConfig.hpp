@@ -33,6 +33,9 @@ public:
 		GCodeViewer
 	};
 
+    typedef std::map<std::string, std::string> MacInfoMap;
+    typedef std::vector<MacInfoMap *>          LocalMacInfo; 
+
     //BBS: remove GCodeViewer as seperate APP logic
 	explicit AppConfig() :
 		m_dirty(false),
@@ -42,6 +45,8 @@ public:
 	{
 		this->reset();
 	}
+
+    ~AppConfig();
 
 	std::string get_language_code();
 	std::string get_hms_host();
@@ -230,6 +235,10 @@ public:
 	std::string         get_country_code();
     bool				is_engineering_region();
 
+    void                get_local_mahcines(LocalMacInfo &local_machines);
+    void                save_bind_machine_to_config(const std::string& dev_id, const std::string& dev_name);
+    void                erase_local_machine(const std::string &dev_id, const std::string &dev_name);
+
 	// reset the current print / filament / printer selections, so that 
 	// the  PresetBundle::load_selections(const AppConfig &config) call will select
 	// the first non-default preset when called.
@@ -288,6 +297,7 @@ public:
 
 	static const std::string SECTION_FILAMENTS;
     static const std::string SECTION_MATERIALS;
+    static const std::string SECTION_LOCAL_MACHINES;
 
 private:
 	template<typename T>
@@ -320,6 +330,9 @@ private:
 	Semver                                                      m_orig_version;
 	// Whether the existing version is before system profiles & configuration updating
 	bool                                                        m_legacy_datadir;
+
+    // Used connected machine's information
+    LocalMacInfo                                                m_local_machines;
 
 	std::string                                                 m_loading_path;
 
