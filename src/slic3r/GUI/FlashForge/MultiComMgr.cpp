@@ -4,7 +4,7 @@
 namespace Slic3r { namespace GUI {
 
 MultiComMgr::MultiComMgr()
-    : m_idNum(0)
+    : m_idNum(-1)
 {
     m_datMap.emplace(ComInvalidId, com_dev_data_t{COM_CONNECT_LAN, nullptr});
 }
@@ -48,7 +48,7 @@ com_id_t MultiComMgr::addLanDev(const fnet_lan_dev_info &devInfo, const std::str
     if (networkIntfc() == nullptr) {
         return ComInvalidId;
     }
-    initConnection(com_ptr_t(new ComConnection(m_idNum++, checkCode, devInfo, networkIntfc())));
+    initConnection(com_ptr_t(new ComConnection(++m_idNum, checkCode, devInfo, networkIntfc())));
     return m_idNum;
 }
 

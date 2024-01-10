@@ -371,7 +371,7 @@ void MachineObjectPanel::on_mouse_left_up(wxMouseEvent &evt)
 }
 
 SelectMachinePopup::SelectMachinePopup(wxWindow *parent)
-    : PopupWindow(parent, wxBORDER_NONE | wxPU_CONTAINS_CONTROLS), m_dismiss(false)
+    : PopupWindow(parent, wxBORDER_NONE | wxPU_CONTAINS_CONTROLS), m_dismiss(false), m_updateConnect(false)
 {
 #ifdef __WINDOWS__
     SetDoubleBuffered(true);
@@ -434,6 +434,20 @@ SelectMachinePopup::SelectMachinePopup(wxWindow *parent)
     Bind(EVT_UPDATE_USER_MACHINE_LIST, &SelectMachinePopup::update_machine_list, this);
     Bind(wxEVT_TIMER, &SelectMachinePopup::on_timer, this);
     Bind(EVT_DISSMISS_MACHINE_LIST, &SelectMachinePopup::on_dissmiss_win, this);
+
+    MultiComMgr::inst()->Bind(COM_CONNECTION_EXIT_EVENT, [this](ComConnectionExitEvent &event) {
+        if (this->IsShown() && m_refresh_timer && !m_refresh_timer->IsRunning()) {
+            m_refresh_timer->Start(MACHINE_LIST_REFRESH_INTERVAL);
+        }
+        event.Skip();
+    });
+
+    MultiComMgr::inst()->Bind(COM_CONNECTION_READY_EVENT, [this](ComConnectionReadyEvent &event) {
+        if (this->IsShown() && m_refresh_timer && !m_refresh_timer->IsRunning()) {
+            m_refresh_timer->Start(MACHINE_LIST_REFRESH_INTERVAL);
+        }
+        event.Skip();
+    });
 }
 
 SelectMachinePopup::~SelectMachinePopup() { delete m_refresh_timer;}
@@ -441,7 +455,7 @@ SelectMachinePopup::~SelectMachinePopup() { delete m_refresh_timer;}
 void SelectMachinePopup::Popup(wxWindow *WXUNUSED(focus))
 {
     BOOST_LOG_TRIVIAL(trace) << "get_print_info: start";
-    start_ssdp(true);
+    m_updateConnect = true;
     if (m_refresh_timer) {
         m_refresh_timer->Stop();
         m_refresh_timer->Start(MACHINE_LIST_REFRESH_INTERVAL);
@@ -473,7 +487,6 @@ void SelectMachinePopup::Popup(wxWindow *WXUNUSED(focus))
 void SelectMachinePopup::OnDismiss()
 {
     BOOST_LOG_TRIVIAL(trace) << "get_print_info: dismiss";
-    start_ssdp(false);
     m_dismiss = true;
 
     if (m_refresh_timer) {
@@ -539,14 +552,7 @@ void SelectMachinePopup::on_timer(wxTimerEvent &event)
 
 void SelectMachinePopup::update_other_devices()
 {
-    /*DeviceManager *dev = wxGetApp().getDeviceManager();
-    if (!dev)
-        return;
-    m_free_machine_list = dev->get_local_machine_list();*/
-
-
     DeviceObjectOpr *devOpr = wxGetApp().getDeviceObjectOpr();
-    devOpr->update_scan_machine();
     m_free_device_list.clear();
     devOpr->get_local_machine(m_free_device_list);
 
@@ -562,7 +568,7 @@ void SelectMachinePopup::update_other_devices()
         //if (!mobj->is_avaliable()) continue;
 
         /*if (!wxGetApp().is_user_login())
-            continue;*/
+            continue; */
 
         /* do not show printer in my list */
         auto it = m_bind_machine_list.find(deviceObj->get_dev_id());
@@ -699,8 +705,14 @@ void SelectMachinePopup::update_user_devices()
         //set in lan
         if (devObj->is_lan_mode_printer()) {
             if (!devObj->is_online()) {
+                op->SetToolTip(_L(""));
                 if (devObj->is_lan_mode_in_scan_print()) {
                     op->set_printer_state(PrinterState::OFFLINE_LAN);
+                    if (m_updateConnect && devObj->get_lan_dev_info() != nullptr) {
+                        m_updateConnect = false;
+                        m_refresh_timer->Stop();
+                        devOpr->set_selected_machine(devObj->get_dev_id());
+                    }
                 } else {
                     op->set_printer_state(PrinterState::OFFLINE_WAN);
                 }
@@ -813,15 +825,12 @@ void SelectMachinePopup::on_dissmiss_win(wxCommandEvent &event)
 
 void SelectMachinePopup::update_machine_list(wxCommandEvent &event)
 {
+    DeviceObjectOpr *devOpr = wxGetApp().getDeviceObjectOpr();
+    devOpr->update_scan_machine();
+
     update_user_devices();
     update_other_devices();
     BOOST_LOG_TRIVIAL(trace) << "SelectMachinePopup update_machine_list end";
-}
-
-void SelectMachinePopup::start_ssdp(bool start)
-{
-    return;
-    //if (wxGetApp().getAgent()) { wxGetApp().getAgent()->start_discovery(true, start); }
 }
 
 void SelectMachinePopup::OnLeftUp(wxMouseEvent &event)
