@@ -8,10 +8,8 @@ FFCheckBox::FFCheckBox(wxWindow *parent, int id)
     , m_off(this, "ff_check_off", 16)
     , m_on_focused(this, "ff_check_on_hover", 16)
     , m_off_focused(this, "ff_check_off_hover", 16)
-    , m_on_pressed(this, "ff_check_on_hover", 16)
-    , m_off_pressed(this, "ff_check_off_hover", 16)
-    , m_on_disabled(this, "ff_check_on", 16)
-    , m_off_disabled(this, "ff_check_off", 16)
+    , m_on_pressed(this, "ff_check_on_press", 16)
+    , m_off_pressed(this, "ff_check_off_press", 16)
 {
 	//SetBackgroundStyle(wxBG_STYLE_TRANSPARENT);
 	if (parent)
@@ -38,8 +36,6 @@ void FFCheckBox::Rescale()
 {
     m_on.msw_rescale();
     m_off.msw_rescale();
-    m_on_disabled.msw_rescale();
-    m_off_disabled.msw_rescale();
     m_on_pressed.msw_rescale();
     m_off_pressed.msw_rescale();
     m_on_focused.msw_rescale();
@@ -51,7 +47,7 @@ void FFCheckBox::Rescale()
 void FFCheckBox::update()
 {
 	SetBitmapLabel((GetValue() ? m_on : m_off).bmp());
-    SetBitmapDisabled((GetValue() ? m_on_disabled : m_off_disabled).bmp());
+    SetBitmapDisabled((GetValue() ? m_on : m_off).bmp());
     SetBitmapPressed((GetValue() ? m_on_pressed : m_off_pressed).bmp());
 #ifdef __WXMSW__
     SetBitmapFocus((GetValue() ? m_on_focused : m_off_focused).bmp());

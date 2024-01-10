@@ -44,8 +44,6 @@ private:
     ScalableBitmap m_off_focused;
     ScalableBitmap m_on_pressed;
     ScalableBitmap m_off_pressed;
-    ScalableBitmap m_on_disabled;
-    ScalableBitmap m_off_disabled;
 };
 
 #endif // !slic3r_GUI_FFCheckBox_hpp_
