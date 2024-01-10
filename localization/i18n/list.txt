@@ -148,3 +148,4 @@ src/slic3r/GUI/PhysicalPrinterDialog.cpp
 src/slic3r/Utils/CalibUtils.cpp
 src/slic3r/GUI/FlashForge/LoginDialog.cpp
 src/slic3r/GUI/FlashForge/DeviceListPanel.cpp
+src/slic3r/GUI/FlashForge/ReLoginDialog.cpp

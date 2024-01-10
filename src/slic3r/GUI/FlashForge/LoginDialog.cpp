@@ -759,7 +759,7 @@ void LoginDialog::onPage1Login(wxCommandEvent& event)
              Slic3r::GUI::MultiComMgr::inst()->setWanDevToken(usrname.ToStdString(),token_data.accessToken);
         } 
     }
-    else if (login_result == ComErrno::COM_ERROR){
+    else if (login_result == ComErrno::COM_INVALID_VALIDATION){
         m_timer.Bind(wxEVT_TIMER, &LoginDialog::OnTimer, this);
         //账号、验证码错误
         m_error_label->Show(true);
@@ -787,7 +787,7 @@ void LoginDialog::onPage2Login(wxCommandEvent& event)
         }
         
     }
-    else if (login_result == ComErrno::COM_ERROR){
+    else if (login_result == ComErrno::COM_INVALID_VALIDATION){
         m_timer.Bind(wxEVT_TIMER, &LoginDialog::OnTimer, this);
         //账号、密码错误
         m_error_label_page2->Show(true);

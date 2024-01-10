@@ -111,7 +111,7 @@ private:
     void onPage1Login(wxCommandEvent& event);
     void onPage2Login(wxCommandEvent& event);
 
-    inline void startTimer(){ m_timer.Start(5000);}
+    inline void startTimer(){ m_timer.Start(2000);}
     void OnTimer(wxTimerEvent& event);
 
 private:
