@@ -137,10 +137,10 @@ ComErrno MultiComUtils::fnetRet2ComErrno(int networkRet)
         return COM_DEVICE_IS_BUSY;
     case FNET_VERIFY_LAN_DEV_FAILED:
         return COM_VERIFY_LAN_DEV_FAILED;
+    case FNET_UNAUTHORIZED:
+        return COM_UNAUTHORIZED;
     case FNET_INVALID_VALIDATION:
         return COM_INVALID_VALIDATION;
-    case FNET_INVALID_TOKEN:
-        return COM_INVALID_TOKEN;
     default:
         return COM_ERROR;
     }

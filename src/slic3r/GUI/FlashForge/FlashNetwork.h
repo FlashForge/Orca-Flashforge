@@ -75,6 +75,7 @@ typedef struct fnet_wan_dev_info {
 
 typedef struct fnet_dev_detail {
     char *model;
+    int pid;
     int nozzleCnt;
     int nozzleStyle;            // 0 independent, 1 non-independent
     char *measure;
@@ -131,10 +132,10 @@ typedef struct fnet_dev_detail {
 
 #define FNET_OK 0
 #define FNET_ERROR -1
-#define FNET_DIVICE_IS_BUSY 1
-#define FNET_VERIFY_LAN_DEV_FAILED 1001
-#define FNET_INVALID_VALIDATION 2001 // account/password/SMS code
-#define FNET_INVALID_TOKEN 2002
+#define FNET_DIVICE_IS_BUSY 2
+#define FNET_VERIFY_LAN_DEV_FAILED 1001 // invalid serialNumber/checkCode
+#define FNET_UNAUTHORIZED 2001          // invalid accessToken/clientAccessToken
+#define FNET_INVALID_VALIDATION 2002    // invalid userName/password/SMSCode
 
 #ifdef __cplusplus
 extern "C" {
@@ -189,7 +190,7 @@ FNET_API int fnet_getUserProfile(const char *accessToken, fnet_user_profile_t **
 FNET_API void fnet_freeUserProfile(fnet_user_profile_t *profile);
 
 FNET_API int fnet_bindWanDev(const char *accessToken, const char *serialNumber,
-    const char *model, const char *name, fnet_wan_dev_bind_data_t **bindData);
+    unsigned short pid, const char *name, fnet_wan_dev_bind_data_t **bindData);
 
 FNET_API void fent_freeBindData(fnet_wan_dev_bind_data_t *bindData);
 

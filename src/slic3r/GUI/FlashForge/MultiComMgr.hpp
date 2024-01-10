@@ -36,7 +36,7 @@ public:
 
     void removeWanDev();
 
-    ComErrno bindWanDev(const std::string &serialNumber, const std::string &model,
+    ComErrno bindWanDev(const std::string &serialNumber, unsigned short pid,
         const std::string &name);
 
     ComErrno unbindWanDev(const std::string &serialNumber, const std::string &devId);

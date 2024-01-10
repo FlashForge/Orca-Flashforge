@@ -82,7 +82,7 @@ void MultiComMgr::removeWanDev()
     }
 }
 
-ComErrno MultiComMgr::bindWanDev(const std::string &serialNumber, const std::string &model,
+ComErrno MultiComMgr::bindWanDev(const std::string &serialNumber, unsigned short pid,
     const std::string &name)
 {
     if (networkIntfc() == nullptr) {
@@ -95,7 +95,7 @@ ComErrno MultiComMgr::bindWanDev(const std::string &serialNumber, const std::str
     }
     fnet_wan_dev_bind_data_t *bindData;
     int ret = m_networkIntfc->bindWanDev(
-        accessToken.c_str(), serialNumber.c_str(), model.c_str(), name.c_str(), &bindData);
+        accessToken.c_str(), serialNumber.c_str(), pid, name.c_str(), &bindData);
     if (ret == FNET_OK) {
         initConnection(com_ptr_t(new ComConnection(
             m_idNum++, accessToken, bindData->serialNumber, bindData->devId, m_networkIntfc.get())));

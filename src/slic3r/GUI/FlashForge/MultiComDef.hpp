@@ -16,9 +16,9 @@ enum ComErrno {
     COM_ERROR,
     COM_UNINITIALIZED,
     COM_DEVICE_IS_BUSY,
-    COM_VERIFY_LAN_DEV_FAILED,
-    COM_INVALID_VALIDATION, // account/password/SMS code
-    COM_INVALID_TOKEN,
+    COM_VERIFY_LAN_DEV_FAILED,  // invalid serialNumber/checkCode
+    COM_UNAUTHORIZED,           // invalid accessToken/clientAccessToken
+    COM_INVALID_VALIDATION,     // invalid userName/password/SMSCode
 };
 
 enum ComConnectMode {
