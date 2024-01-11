@@ -14,7 +14,8 @@
 #define MAX_DEVICE_SN_LEN 128
 #define MAX_DEVICE_NAME_LEN 128
 
-typedef void (*fnet_progress_call_back_t)(long long now, long long total, void *data);
+// returning a non-zero value from the callback aborts the transfer
+typedef int (*fnet_progress_call_back_t)(long long now, long long total, void *data);
 
 #pragma pack(push, 4)
 
@@ -132,6 +133,7 @@ typedef struct fnet_dev_detail {
 
 #define FNET_OK 0
 #define FNET_ERROR -1
+#define FNET_ABORTED_BY_CALLBACK 1
 #define FNET_DIVICE_IS_BUSY 2
 #define FNET_VERIFY_LAN_DEV_FAILED 1001 // invalid serialNumber/checkCode
 #define FNET_UNAUTHORIZED 2001          // invalid accessToken/clientAccessToken

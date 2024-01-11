@@ -47,6 +47,8 @@ public:
 
     void putCommand(com_id_t id, ComCommand *command); // this method takes ownership of the command, i.e. it will delete it itself
 
+    void abortSendGcode(com_id_t id, int commandId);
+
 private:
     typedef std::shared_ptr<ComConnection> com_ptr_t;
 

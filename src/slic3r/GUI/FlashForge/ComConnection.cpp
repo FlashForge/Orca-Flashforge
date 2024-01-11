@@ -62,6 +62,20 @@ void ComConnection::putCommand(const ComCommandPtr &command, int priority/* =3 *
     m_commandQue.pushBack(command, priority, false);
 }
 
+bool ComConnection::abortSendGcode(int commandId)
+{
+    ComCommandPtr command = m_commandQue.get(commandId);
+    if (command.get() == nullptr) {
+        return false;
+    }
+    ComSendGcode *sendGcode = dynamic_cast<ComSendGcode *>(command.get());
+    if (sendGcode == nullptr) {
+        return false;
+    }
+    sendGcode->abort();
+    return true;
+}
+
 void ComConnection::run()
 {
     ComGetDevDetail getDevDetail;
@@ -84,8 +98,8 @@ ComErrno ComConnection::commandLoop()
 {
     int errorCnt = 0;
     while (!m_exitThread) {
-        ComCommandPtr frontCommand = m_commandQue.popFront(100);
-        if (frontCommand.get() != nullptr) {
+        ComCommandPtr frontCommand = m_commandQue.getFront(100);
+        if (frontCommand != nullptr) {
             ComErrno ret;
             if (m_connectMode == COM_CONNECT_LAN) {
                 ret = frontCommand->exec(m_networkIntfc, m_ip, m_port, m_serialNumber, m_checkCode);
@@ -101,6 +115,7 @@ ComErrno ComConnection::commandLoop()
                 }
             }
         }
+        m_commandQue.pop(frontCommand->commandId());
         if ((clock() - m_getDetailClock) / (double)CLOCKS_PER_SEC > 5) {
             m_commandQue.pushBack(ComCommandPtr(new ComGetDevDetail), 5, true);
             m_getDetailClock = clock();

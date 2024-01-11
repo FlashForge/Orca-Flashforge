@@ -42,6 +42,8 @@ public:
 
     void putCommand(const ComCommandPtr &command, int priority = 3);
 
+    bool abortSendGcode(int commandId);
+
 private:
     void run();
 

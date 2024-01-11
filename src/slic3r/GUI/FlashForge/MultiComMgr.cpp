@@ -160,6 +160,15 @@ void MultiComMgr::putCommand(com_id_t id, ComCommand *command)
     m_ptrMap.left.at(id)->putCommand(commandPtr);
 }
 
+void MultiComMgr::abortSendGcode(com_id_t id, int commandId)
+{
+    auto it = m_ptrMap.left.find(id);
+    if (it == m_ptrMap.left.end()) {
+        return;
+    }
+    m_ptrMap.left.at(id)->abortSendGcode(commandId);
+}
+
 std::string MultiComMgr::initLogFiles(const std::string &logFileDir)
 {
     boost::filesystem::path path(logFileDir);

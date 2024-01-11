@@ -1,6 +1,7 @@
 #ifndef slic3r_GUI_ComCommand_hpp_
 #define slic3r_GUI_ComCommand_hpp_
 
+#include <atomic>
 #include <wx/event.h>
 #include "FlashNetworkIntfc.h"
 #include "MultiComDef.hpp"
@@ -73,6 +74,7 @@ public:
     ComSendGcode(const std::string &gcodeFileName, const std::string &thumbFileName,
         bool printNow, bool levelingBeforePrint)
         : m_progress(0)
+        , m_callbackRet(0)
         , m_comId(ComInvalidId)
         , m_evtHandler(nullptr)
         , m_gcodeFileName(gcodeFileName)
@@ -99,6 +101,10 @@ public:
             accessToken.c_str(), deviceId.c_str(), &m_sendGcodeData);
         return MultiComUtils::fnetRet2ComErrno(ret);
     }
+    void abort()
+    {
+        m_callbackRet = 1;
+    }
     void setConectionData(com_id_t comId, wxEvtHandler *evtHandler)
     {
         m_comId = comId;
@@ -106,24 +112,28 @@ public:
     }
 
 private:
-    static void callback(long long now, long long total, void *callbackData)
+    static int callback(long long now, long long total, void *callbackData)
     {
-        double progress = (double)now / total;
         ComSendGcode *inst = (ComSendGcode *) callbackData;
-        if (progress - inst->m_progress > 0.025 && inst->m_evtHandler != nullptr) {
-            inst->m_evtHandler->QueueEvent(new ComSendGcodeProgressEvent(
-                COM_SEND_GCODE_PROGRESS_EVENT, inst->m_comId, inst->m_commandId, now, total));
-            inst->m_progress = progress;
+        if (total != 0) {
+            double progress = (double)now / total;
+            if (progress - inst->m_progress > 0.025 && inst->m_evtHandler != nullptr) {
+                inst->m_evtHandler->QueueEvent(new ComSendGcodeProgressEvent(
+                    COM_SEND_GCODE_PROGRESS_EVENT, inst->m_comId, inst->m_commandId, now, total));
+                inst->m_progress = progress;
+            }
         }
+        return inst->m_callbackRet;
     }
 
 private:
-    double m_progress;
-    com_id_t m_comId;
-    wxEvtHandler *m_evtHandler;
-    std::string m_gcodeFileName;
-    std::string m_thumbFileName;
-    fnet_send_gcode_data_t m_sendGcodeData;
+    double                  m_progress;
+    std::atomic<int>        m_callbackRet;
+    com_id_t                m_comId;
+    wxEvtHandler           *m_evtHandler;
+    std::string             m_gcodeFileName;
+    std::string             m_thumbFileName;
+    fnet_send_gcode_data_t  m_sendGcodeData;
 };
 
 }} // namespace Slic3r::GUI

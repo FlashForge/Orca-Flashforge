@@ -5,26 +5,45 @@ namespace Slic3r { namespace GUI {
 
 void ComCommandQue::clear()
 {
-    boost::mutex::scoped_lock lock(m_stateMutex);
+    boost::mutex::scoped_lock lock(m_mutex);
     m_commandList.clear();
 }
 
-ComCommandPtr ComCommandQue::popFront(unsigned int milliseconds /* = -1 */)
+ComCommandPtr ComCommandQue::get(int commandId)
+ {
+     for (auto &item : m_commandList) {
+        if (item.command->commandId() == commandId) {
+            return item.command;
+        }
+     }
+     return nullptr;
+ }
+
+ComCommandPtr ComCommandQue::getFront(unsigned int milliseconds /* = -1 */)
 {
-    boost::mutex::scoped_lock lock(m_stateMutex);
+    boost::mutex::scoped_lock lock(m_mutex);
     m_condition.wait_for(lock, boost::chrono::milliseconds(milliseconds));
     if (m_commandList.empty()) {
-        return ComCommandPtr();
+        return nullptr;
     } else {
-        ComCommandPtr front = m_commandList.front().command;
-        m_commandList.pop_front();
-        return front;
+        return m_commandList.front().command;
+    }
+}
+
+void ComCommandQue::pop(int commandId)
+{
+    boost::mutex::scoped_lock lock(m_mutex);
+    for (auto it = m_commandList.begin(); it != m_commandList.end(); ++it) {
+        if (it->command->commandId() == commandId) {
+            m_commandList.erase(it);
+            break;
+        }
     }
 }
 
 void ComCommandQue::pushBack(const ComCommandPtr &command, int priority, bool checkDup/* = false */)
 {
-    boost::mutex::scoped_lock lock(m_stateMutex);
+    boost::mutex::scoped_lock lock(m_mutex);
     if (checkDup) {
         for (auto it = m_commandList.begin(); it != m_commandList.end(); ++it) {
             if (command->isDup(it->command.get())) {
