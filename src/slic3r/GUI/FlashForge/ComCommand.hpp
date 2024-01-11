@@ -12,8 +12,8 @@ namespace Slic3r { namespace GUI {
 class ComCommand
 {
 public:
-    ComCommand(int commandId = -1)
-        : m_commandId(commandId)
+    ComCommand()
+        : m_commandId(s_commandNum++)
     {
     }
     virtual ~ComCommand()
@@ -35,13 +35,14 @@ public:
 
 protected:
     int m_commandId;
+    static int s_commandNum;
 };
 
 class ComGetDevDetail : public ComCommand
 {
 public:
-    ComGetDevDetail(int commandId = -1)
-        : ComCommand(commandId), m_devDetail(nullptr)
+    ComGetDevDetail()
+        : m_devDetail(nullptr)
     {
     }
     ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &ip,
@@ -70,9 +71,8 @@ class ComSendGcode : public ComCommand
 {
 public:
     ComSendGcode(const std::string &gcodeFileName, const std::string &thumbFileName,
-        bool printNow, bool levelingBeforePrint, int commandId = -1)
-        : ComCommand(commandId)
-        , m_progress(0)
+        bool printNow, bool levelingBeforePrint)
+        : m_progress(0)
         , m_comId(ComInvalidId)
         , m_evtHandler(nullptr)
         , m_gcodeFileName(gcodeFileName)

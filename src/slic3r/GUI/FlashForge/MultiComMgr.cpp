@@ -150,13 +150,14 @@ const com_dev_data_t &MultiComMgr::devData(com_id_t id, bool *valid /* = nullptr
     }
 }
 
-void MultiComMgr::putCommand(com_id_t id, const ComCommandPtr &command)
+void MultiComMgr::putCommand(com_id_t id, ComCommand *command)
 {
+    ComCommandPtr commandPtr(command);
     auto it = m_ptrMap.left.find(id);
     if (it == m_ptrMap.left.end()) {
         return;
     }
-    m_ptrMap.left.at(id)->putCommand(command);
+    m_ptrMap.left.at(id)->putCommand(commandPtr);
 }
 
 std::string MultiComMgr::initLogFiles(const std::string &logFileDir)

@@ -45,7 +45,7 @@ public:
 
     const com_dev_data_t &devData(com_id_t id, bool *valid = nullptr);
 
-    void putCommand(com_id_t id, const ComCommandPtr &command);
+    void putCommand(com_id_t id, ComCommand *command); // this method takes ownership of the command, i.e. it will delete it itself
 
 private:
     typedef std::shared_ptr<ComConnection> com_ptr_t;
