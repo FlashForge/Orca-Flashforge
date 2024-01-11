@@ -12,6 +12,7 @@
 #include "MultiComMgr.hpp"
 
 #include <wx/clipbrd.h>
+#include <wx/dcgraph.h>
 
 #include <regex>
 
@@ -223,114 +224,18 @@ namespace GUI {
     }
 
 LoginDialog::LoginDialog()
-    : DPIDialog(static_cast<wxWindow *>(wxGetApp().mainframe),wxID_ANY,from_u8((boost::format(_utf8(_L("Login")))).str()),wxDefaultPosition,
-        wxDefaultSize, /*wxCAPTION*/wxDEFAULT_DIALOG_STYLE)
+    :TitleDialog(static_cast<wxWindow *>(wxGetApp().mainframe),_L("Login"),6)
 {
     SetFont(wxGetApp().normal_font());
 	SetBackgroundColour(*wxWHITE);
-    //Centre(wxBOTH);
 
     //std::string icon_path = (boost::format("%1%/images/Orca-FlashforgeTitle.ico") % resources_dir()).str();
     //SetIcon(wxIcon(encode_path(icon_path.c_str()), wxBITMAP_TYPE_ICO));
  
-    wxSizer* sizer_frame = new wxBoxSizer(wxVERTICAL);
-    wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
-
-    // 创建第一个标签页
-    wxPanel* page1 = new wxPanel(this, wxID_ANY);
-    wxBoxSizer* page1Sizer = new wxBoxSizer(wxVERTICAL);
-    setupLayoutPage1(page1Sizer,page1);
-    page1Sizer->AddSpacer(FromDIP(63));
-    page1->SetSizer(page1Sizer);
-
-    // 创建第二个标签页
-    wxPanel* page2 = new wxPanel(this, wxID_ANY);
-    wxBoxSizer* page2Sizer = new wxBoxSizer(wxVERTICAL);
-    setupLayoutPage2(page2Sizer,page2);
-    page2Sizer->AddSpacer(FromDIP(63));
-    page2->SetSizer(page2Sizer);
-
-    // 添加 wxPanel 控件
-    sizer->Add(page1, 1, wxEXPAND | wxALL, 10);
-    sizer->Add(page2, 1, wxEXPAND | wxALL, 10);
-    //sizer->AddSpacer(FromDIP(63));
-    page2->Hide(); 
-
-    // 创建 wxStaticText 控件
-    wxStaticText* label1 = new wxStaticText(this, wxID_ANY, _L("Verify Code Login/ Register"));
-    label1->SetForegroundColour(wxColour(51,51,51));
-    wxStaticText* label2 = new wxStaticText(this, wxID_ANY, _L("Password Login"));
-    label2->SetForegroundColour(wxColour(153,153,153));
-    
-    // 绑定事件处理函数
-    label1->Bind(wxEVT_LEFT_DOWN, [this,page1,page2,label2,label1](wxMouseEvent& e){
-        page1->Show();page2->Hide();
-        label1->SetForegroundColour(wxColour(51,51,51));
-        label2->SetForegroundColour(wxColour(153,153,153));
-        label1->Refresh();
-        label2->Refresh();
-        m_staticLine_verify->Show();
-        m_staticLine_verify->Refresh();
-        m_staticLine_password->Hide();
-        m_staticLine_password->Refresh();
-        Layout();
-        });
-    label2->Bind(wxEVT_LEFT_DOWN, [this,page1,page2,label1,label2](wxMouseEvent& e){
-        page2->Show();page1->Hide();
-        label2->SetForegroundColour(wxColour(51,51,51));
-        label1->SetForegroundColour(wxColour(153,153,153));
-        label1->Refresh();
-        label2->Refresh();
-        m_login_check_box_page2->Refresh();
-        m_protocol_page2->Refresh();
-        m_service_link_page2->Refresh();
-        m_privacy_policy_page2->Refresh();
-        m_staticLine_verify->Hide();
-        m_staticLine_verify->Refresh();
-        m_staticLine_password->Show();
-        m_staticLine_password->Refresh();
-        m_panel_checkbox_page2->Refresh();
-        Layout();
-        m_password->RefreshEyePicPosition();
-        });
-
-    //add line
-   wxBoxSizer* verify_line_sizer = new wxBoxSizer(wxVERTICAL);
-
-   m_staticLine_verify = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxSize(90, 4));
-   m_staticLine_verify->SetBackgroundStyle(wxBG_STYLE_CUSTOM);
-   m_staticLine_verify->SetBackgroundColour(wxColour(255, 255, 255));
-   m_staticLine_verify->SetForegroundColour((wxColour(50,141,251)));
-   verify_line_sizer->Add(label1, 1, wxALL |wxALIGN_CENTER,0);
-   verify_line_sizer->Add(m_staticLine_verify, 0, wxALL |wxALIGN_CENTER, 0);
-
-   wxBoxSizer* password_line_sizer = new wxBoxSizer(wxVERTICAL);
-
-   
-   m_staticLine_password = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxSize(90, 4));
-   m_staticLine_password->SetBackgroundStyle(wxBG_STYLE_CUSTOM);
-   m_staticLine_password->SetBackgroundColour(wxColour(255, 255, 255));
-   m_staticLine_password->SetForegroundColour((wxColour(50,141,251)));
-   m_staticLine_password->Hide();
-   password_line_sizer->Add(label2, 1, wxALL |wxALIGN_CENTER,0);
-   password_line_sizer->Add(m_staticLine_password, 0, wxALL |wxALIGN_CENTER, 0);
-
-    // 创建 wxBoxSizer 布局管理器并添加 wxStaticText 控件
-    wxBoxSizer* labelSizer = new wxBoxSizer(wxHORIZONTAL);
-    //labelSizer->Add(label1, 0, wxALIGN_CENTER);
-    labelSizer->Add(verify_line_sizer, 0, wxALIGN_CENTER);
-    labelSizer->AddSpacer(FromDIP(33));
-    //labelSizer->Add(label2, 0, wxALIGN_CENTER);
-    labelSizer->Add(password_line_sizer, 0, wxALIGN_CENTER);
-
-    // 添加 wxStaticText 控件和 wxPanel 控件
-    sizer_frame->AddSpacer(FromDIP(53));
-    sizer_frame->Add(labelSizer, 0, wxALIGN_CENTER);
-    sizer_frame->Add(sizer, 0, wxALIGN_CENTER);
-
-    SetSizerAndFit(sizer_frame);
-
     initWidget();
+
+    initBindEvent();
+    initData();
 
 }
 
@@ -354,18 +259,214 @@ void LoginDialog::on_dpi_changed(const wxRect &suggested_rect)
     Refresh();
 }
 
+void LoginDialog::OnPaint(wxPaintEvent& event)
+{
+    return;
+    wxPaintDC dc(this);
+
+    // 获取对话框的客户区域
+    wxRect rect = GetClientRect();
+
+    // 绘制标题背景色
+    wxColour titleBgColor(0xE1, 0xE2, 0xE6);
+    dc.SetBrush(wxBrush(titleBgColor));
+    dc.SetPen(wxPen(titleBgColor));
+    dc.DrawRectangle(rect.x, rect.y, rect.width, FromDIP(29));
+
+    // 绘制正文背景色
+    wxColour bodyBgColor(0xFF, 0xFF, 0xFF);
+    dc.SetBrush(wxBrush(bodyBgColor));
+    dc.SetPen(wxPen(bodyBgColor));
+    dc.DrawRectangle(rect.x, rect.y + FromDIP(29), rect.width, rect.height - FromDIP(29));
+
+    // 绘制标题
+    wxFont font(wxFontInfo(18).Bold());
+    wxString title = GetTitle();
+    wxSize titleSize = dc.GetTextExtent(title);
+    int x = rect.x + (rect.width - titleSize.GetWidth()) / 2;
+    int y = rect.y + (FromDIP(29) - titleSize.GetHeight()) / 2;
+    dc.SetFont(font);
+    dc.SetTextForeground(wxColour(0, 0, 0));
+    dc.DrawText(title, x, y);
+}
+
 void LoginDialog::initWidget()
 {
-   ComErrno get_result = MultiComUtils::getClientToken(m_client_SMS_token);
+    m_sizer_main = MainSizer();
+    m_sizer_main->SetMinSize(wxSize(0, -1));
+
+    createSwitchTitle();
+    createBodyWidget();
+
+    m_sizer_main->AddSpacer(FromDIP(53));
+    m_sizer_main->Add(m_page_title_sizer, 0, wxALIGN_CENTER);
+    m_sizer_main->Add(m_page_body_sizer, 0, wxALIGN_CENTER);
+
+    Layout();
+    Fit();
+    Thaw();
+    Centre(wxBOTH);
+    Layout();
+}
+
+void LoginDialog::initData()
+{
+    ComErrno get_result = MultiComUtils::getClientToken(m_client_SMS_token);
    if(get_result == ComErrno::COM_ERROR){
         BOOST_LOG_TRIVIAL(warning) << boost::format("MultiComUtils::getClientToken Failed!");
    }
 }
 
+void LoginDialog::initBindEvent()
+{
+    m_switch_title_1->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e){
+        m_page_body_page1_panel->Show();
+        m_page_body_page2_panel->Hide();
+        m_switch_title_1->SetForegroundColour(wxColour(51,51,51));
+        m_switch_title_2->SetForegroundColour(wxColour(153,153,153));
+        m_switch_title_1->Refresh();
+        m_switch_title_2->Refresh();
+        m_title_1_underline->Show();
+        //m_staticLine_verify->SetForegroundColour(wxColour(51,51,51));
+
+        m_switch_title_1_line_panel->SetMinSize(wxSize(-1,FromDIP(4)));
+        m_switch_title_1_sizer->Layout();
+
+        m_title_1_underline->Refresh();
+        m_title_2_underline->Hide();
+
+        m_switch_title_2_line_panel->SetMinSize(wxSize(-1, FromDIP(4)));
+        m_switch_title_2_sizer->Layout();
+
+        m_title_2_underline->Refresh();
+        Layout();
+        });
+    m_switch_title_2->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e){
+        m_page_body_page2_panel->Show();
+        m_page_body_page1_panel->Hide();
+        m_switch_title_2->SetForegroundColour(wxColour(51,51,51));
+        m_switch_title_1->SetForegroundColour(wxColour(153,153,153));
+        m_switch_title_1->Refresh();
+        m_switch_title_2->Refresh();
+        m_page2_checkBox->Refresh();
+        m_protocol_page2->Refresh();
+        m_service_link_page2->Refresh();
+        m_privacy_policy_page2->Refresh();
+        m_title_1_underline->Hide();
+
+        m_switch_title_1_line_panel->SetMinSize(wxSize(-1,  FromDIP(4)));
+        m_switch_title_1_sizer->Layout();
+
+        m_title_1_underline->Refresh();
+        m_title_2_underline->Show();
+
+        m_switch_title_2_line_panel->SetMinSize(wxSize(-1,  FromDIP(4)));
+        m_switch_title_2_sizer->Layout();
+
+        m_title_2_underline->Refresh();
+        m_panel_checkbox_page2->Refresh();
+        Layout();
+        m_password->RefreshEyePicPosition();
+        });
+    
+    //Bind(wxEVT_PAINT, &LoginDialog::OnPaint, this);
+}
+
+void LoginDialog::createBodyWidget()
+{
+    m_page_body_sizer = new wxBoxSizer(wxVERTICAL);
+
+    // 创建第一个标签页
+    m_page_body_page1_panel = new wxPanel(this, wxID_ANY);
+    wxBoxSizer* page1Sizer = new wxBoxSizer(wxVERTICAL);
+    setupLayoutPage1(page1Sizer,m_page_body_page1_panel);
+    page1Sizer->AddSpacer(FromDIP(63));
+
+    m_page_body_page1_panel->SetSizer(page1Sizer);
+    m_page_body_page1_panel->Layout();
+    page1Sizer->Fit(m_page_body_page1_panel);
+
+    // 创建第二个标签页
+    m_page_body_page2_panel = new wxPanel(this, wxID_ANY);
+    wxBoxSizer* page2Sizer = new wxBoxSizer(wxVERTICAL);
+    setupLayoutPage2(page2Sizer,m_page_body_page2_panel);
+    page2Sizer->AddSpacer(FromDIP(63));
+
+    m_page_body_page2_panel->SetSizer(page2Sizer);
+    m_page_body_page2_panel->Layout();
+    page2Sizer->Fit(m_page_body_page2_panel);
+
+    // 添加 wxPanel 控件
+    m_page_body_sizer->Add(m_page_body_page1_panel, 1, wxEXPAND | wxALL, 10);
+    m_page_body_sizer->Add(m_page_body_page2_panel, 1, wxEXPAND | wxALL, 10);
+    m_page_body_page2_panel->Hide(); 
+    Layout();
+    Fit();
+}
+
+void LoginDialog::createSwitchTitle()
+{
+    const auto font_title = GetFont().MakeBold();
+    
+    //title 1
+    m_switch_title_1_sizer = new wxBoxSizer(wxVERTICAL);
+
+    m_switch_title_1_panel = new wxPanel(this, wxID_ANY);
+
+    m_switch_title_1 = new wxStaticText(m_switch_title_1_panel, wxID_ANY, _L("Verify Code Login/ Register"));
+    m_switch_title_1->SetForegroundColour(wxColour(51,51,51));
+    m_switch_title_1->SetFont(font_title);
+
+    m_title_1_underline = new wxPanel(m_switch_title_1_panel, wxID_ANY, wxDefaultPosition, wxSize(90, 4),wxTAB_TRAVERSAL);
+    m_title_1_underline->SetBackgroundColour(wxColour(50,141,251));
+    m_title_1_underline->SetForegroundColour(wxColour(50,141,251));
+
+    //auto adjust height
+    m_switch_title_1_line_panel = new wxPanel(m_switch_title_1_panel, wxID_ANY);
+
+    m_switch_title_1_sizer->Add(m_switch_title_1, 1, wxALL |wxALIGN_CENTER,0);
+    m_switch_title_1_sizer->Add(m_switch_title_1_line_panel, 0, wxEXPAND);
+    m_switch_title_1_sizer->Add(m_title_1_underline, 0, wxALL |wxALIGN_CENTER, 0);
+
+    m_switch_title_1_panel->SetSizer(m_switch_title_1_sizer);
+    m_switch_title_1_panel->Layout();
+    m_switch_title_1_sizer->Fit(m_switch_title_1_panel);
+
+    //title 2
+    m_switch_title_2_sizer = new wxBoxSizer(wxVERTICAL);
+
+    m_switch_title_2_panel = new wxPanel(this, wxID_ANY);
+
+    m_switch_title_2 = new wxStaticText(m_switch_title_2_panel, wxID_ANY, _L("Password Login"));
+    m_switch_title_2->SetForegroundColour(wxColour(153,153,153));
+    m_switch_title_2->SetFont(font_title);
+    //auto adjust height
+    m_switch_title_2_line_panel = new wxPanel(m_switch_title_2_panel, wxID_ANY);
+   
+    m_title_2_underline = new wxPanel(m_switch_title_2_panel, wxID_ANY, wxDefaultPosition, wxSize(90, 4),wxTAB_TRAVERSAL);
+    m_title_2_underline->SetBackgroundColour(wxColour(50,141,251));
+    m_title_2_underline->SetForegroundColour(wxColour(50,141,251));
+    m_title_2_underline->Hide();
+
+    // m_staticLine_password->Hide();
+    m_switch_title_2_sizer->Add(m_switch_title_2, 1, wxALL |wxALIGN_CENTER,0);
+    m_switch_title_2_sizer->Add(m_switch_title_2_line_panel, 0, wxEXPAND);
+    m_switch_title_2_sizer->Add(m_title_2_underline, 0, wxALL |wxALIGN_CENTER, 0);
+
+    m_switch_title_2_panel->SetSizer(m_switch_title_2_sizer);
+    m_switch_title_2_panel->Layout();
+    m_switch_title_2_sizer->Fit(m_switch_title_2_panel);
+
+    // 创建 wxBoxSizer 布局管理器并添加 wxStaticText 控件
+    m_page_title_sizer = new wxBoxSizer(wxHORIZONTAL);
+    m_page_title_sizer->Add(m_switch_title_1_panel, 0, wxALIGN_CENTER);
+    m_page_title_sizer->AddSpacer(FromDIP(33));
+    m_page_title_sizer->Add(m_switch_title_2_panel, 0, wxALIGN_CENTER);
+}
+
 void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
 {
-    page1Sizer->Add(FromDIP(40), 0, 0, FromDIP(52));
-    wxPanel* panel = new wxPanel(this, wxID_ANY);
+    wxPanel* panel = new wxPanel(parent, wxID_ANY);
 
     //phone number / email
     wxBitmap usr_pic = create_scaled_bitmap("login-usr", this, 18);
@@ -447,10 +548,15 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     m_error_label->Show(false); 
 
     //login button
-    m_login_button_page1 = new wxButton(parent, wxID_ANY, _L("Login"));
+    m_login_button_page1 = new FFButton(parent, wxID_ANY,_L("Login"));
+    //m_login_button_page1->SetFontDisableColor(wxColour(255, 255, 255));
+    //m_login_button_page1->SetBorderDisableColor(wxColour(221,221,221));
+    //m_login_button_page1->SetFontColor(wxColour(255, 255, 255));
+    //m_login_button_page1->SetBorderColor(wxColour(50,141,251));
+
     m_login_button_page1->SetForegroundColour(wxColour(255, 255, 255));
     m_login_button_page1->SetBackgroundColour(wxColour(221,221,221)); 
-    m_login_button_page1->SetWindowStyleFlag(wxBORDER_NONE); 
+    //m_login_button_page1->SetWindowStyleFlag(wxBORDER_NONE); 
     m_login_button_page1->SetMinSize(wxSize(101,44));
     m_login_button_page1->SetFont((wxFont(wxFontInfo(16))));
     m_login_button_page1->Bind(wxEVT_BUTTON,&LoginDialog::onPage1Login, this);
@@ -461,8 +567,9 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     wxBoxSizer* checkbox_sizer = new wxBoxSizer(wxHORIZONTAL);
     auto m_panel_checkbox_page1 = new wxPanel(parent, wxID_ANY,wxDefaultPosition,wxSize(FromDIP(209), -1), wxTAB_TRAVERSAL);
 
-    m_login_check_box_page1 = new wxCheckBox(m_panel_checkbox_page1, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, 0);
-    m_login_check_box_page1->Bind(wxEVT_CHECKBOX, &LoginDialog::onAgreeCheckBoxChangedPage1, this);
+    m_page1_checkBox = new FFCheckBox(m_panel_checkbox_page1, wxID_ANY);
+    m_page1_checkBox->SetValue(false);
+    m_page1_checkBox->Bind(wxEVT_CHECKBOX, &LoginDialog::onAgreeCheckBoxChangedPage1, this);
 
     m_protocol_page1 = new  wxStaticText(m_panel_checkbox_page1, wxID_ANY,_L("Read and Agree to Accept"));
     m_protocol_page1->SetFont((wxFont(wxFontInfo(14))));
@@ -497,7 +604,7 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
 
     //left gaption
     checkbox_sizer->Add(FromDIP(50), 0, 0, 0);
-    checkbox_sizer->Add(m_login_check_box_page1, 0, wxALIGN_CENTER_HORIZONTAL | wxTOP, FromDIP(5));
+    checkbox_sizer->Add(m_page1_checkBox, 0, wxALIGN_CENTER_HORIZONTAL | wxTOP, FromDIP(5));
     checkbox_sizer->Add(m_protocol_page1,0, wxALIGN_CENTER_HORIZONTAL | wxTOP, FromDIP(5));
     checkbox_sizer->Add(m_service_link_page1,0, wxTOP, FromDIP(5));
     checkbox_sizer->Add(m_privacy_policy_page1,0, wxTOP, FromDIP(5));
@@ -513,8 +620,7 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
 
 void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
 {
-    page2Sizer->Add(FromDIP(40), 0, 0, FromDIP(52));
-    wxPanel* panel = new wxPanel(this, wxID_ANY);
+    wxPanel* panel = new wxPanel(parent, wxID_ANY);
 
     //phone number / email
     // bitmap
@@ -604,7 +710,7 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     m_error_label_page2->Show(false); 
 
     //login button
-    m_login_button_page2 = new wxButton(parent, wxID_ANY, _L("Login"));
+    m_login_button_page2 = new FFButton(parent, wxID_ANY,_L("Login"));
     m_login_button_page2->SetMinSize(wxSize(101,44));
     m_login_button_page2->SetFont((wxFont(wxFontInfo(16))));
     m_login_button_page2->SetForegroundColour(wxColour(255, 255, 255));
@@ -618,8 +724,9 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     wxBoxSizer* checkbox_sizer = new wxBoxSizer(wxHORIZONTAL);
     m_panel_checkbox_page2 = new wxPanel(parent, wxID_ANY,wxDefaultPosition,wxSize(FromDIP(209), -1), wxTAB_TRAVERSAL);
 
-    m_login_check_box_page2 = new wxCheckBox(m_panel_checkbox_page2, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, 0);
-    m_login_check_box_page2->Bind(wxEVT_CHECKBOX, &LoginDialog::onAgreeCheckBoxChangedPage2, this);
+    m_page2_checkBox = new FFCheckBox(m_panel_checkbox_page2, wxID_ANY);
+    m_page2_checkBox->SetValue(false);
+    m_page2_checkBox->Bind(wxEVT_CHECKBOX, &LoginDialog::onAgreeCheckBoxChangedPage2, this);
 
     m_protocol_page2 = new  wxStaticText(m_panel_checkbox_page2, wxID_ANY,_L("Read and Agree to Accept"));
     m_protocol_page2->SetFont((wxFont(wxFontInfo(14))));
@@ -655,7 +762,7 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
 
     //left gaption
     checkbox_sizer->Add(FromDIP(50), 0, 0, 0);
-    checkbox_sizer->Add(m_login_check_box_page2, 0, wxALIGN_CENTER_HORIZONTAL | wxTOP, FromDIP(5));
+    checkbox_sizer->Add(m_page2_checkBox, 0, wxALIGN_CENTER_HORIZONTAL | wxTOP, FromDIP(5));
     checkbox_sizer->Add(m_protocol_page2,0, wxALIGN_CENTER_HORIZONTAL | wxTOP, FromDIP(5));
     checkbox_sizer->Add(m_service_link_page2,0, wxTOP, FromDIP(5));
     checkbox_sizer->Add(m_privacy_policy_page2,0, wxTOP, FromDIP(5));
@@ -672,7 +779,7 @@ void LoginDialog::onUsrNameOrPasswordChangedPage1(wxCommandEvent& event)
     //
         wxString username = m_usrname_page1->GetValue();
         wxString verifycode = m_verify_code->GetValue();
-        bool agree = m_login_check_box_page1->GetValue();
+        bool agree = m_page1_checkBox->GetValue();
         if (!username.IsEmpty() && !verifycode.IsEmpty() && agree)
         {
             m_login_button_page1->Enable();
@@ -690,7 +797,7 @@ void LoginDialog::onAgreeCheckBoxChangedPage1(wxCommandEvent& event)
 {
         wxString username = m_usrname_page1->GetValue();
         wxString verifycode = m_verify_code->GetValue();
-        bool agree = m_login_check_box_page1->GetValue();
+        bool agree = m_page1_checkBox->GetValue();
         if (!username.IsEmpty() && !verifycode.IsEmpty() && agree)
         {
             m_login_button_page1->Enable();
@@ -708,7 +815,7 @@ void LoginDialog::onUsrNameOrPasswordChangedPage2(wxCommandEvent& event)
 {
         wxString username = m_usrname_page2->GetValue();
         wxString password = m_password->GetValue();
-        bool agree = m_login_check_box_page2->GetValue();
+        bool agree = m_page2_checkBox->GetValue();
         if (!username.IsEmpty() && !password.IsEmpty() && agree)
         {
             m_login_button_page2->Enable();
@@ -726,7 +833,7 @@ void LoginDialog::onAgreeCheckBoxChangedPage2(wxCommandEvent& event)
 {
         wxString username = m_usrname_page2->GetValue();
         wxString password = m_password->GetValue();
-        bool agree = m_login_check_box_page2->GetValue();
+        bool agree = m_page2_checkBox->GetValue();
         if (!username.IsEmpty() && !password.IsEmpty() && agree)
         {
             m_login_button_page2->Enable();
