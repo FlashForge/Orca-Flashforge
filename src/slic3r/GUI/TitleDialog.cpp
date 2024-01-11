@@ -124,8 +124,8 @@ TitleDialog::TitleDialog(wxWindow* parent, const wxString& title, int borderRadi
     , m_mainSizer(new wxBoxSizer(wxVERTICAL))
 {
     wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
-    sizer->Add(m_titleBar, wxSizerFlags(0).Expand());
-    sizer->Add(m_mainSizer, wxSizerFlags(0).Expand());
+    sizer->Add(m_titleBar, 0, wxEXPAND);
+    sizer->Add(m_mainSizer, 1, wxEXPAND);
     SetSizer(sizer);
     Layout();
 
