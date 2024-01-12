@@ -168,6 +168,11 @@ bool DeviceObject::is_in_printing()
     return false;
 }
 
+string DeviceObject::get_printer_thumbnail_img_str()
+{
+    return "printer_thumbnail";
+}
+
 
 
 
@@ -414,7 +419,7 @@ void DeviceObjectOpr::onConnectExit(ComConnectionExitEvent &event)
             // first bind
             if (event.ret == COM_VERIFY_LAN_DEV_FAILED) {
                 // popop input access code dialog again.
-                ConnectPrinterDialog dlg(wxGetApp().mainframe, wxID_ANY, _L("Input access code"));
+                ConnectPrinterDialog dlg(wxGetApp().mainframe, wxID_ANY, _L("Input access code"), true);
                 dlg.set_device_object(devObj);
                 if (dlg.ShowModal() == wxID_OK) {
                     wxGetApp().mainframe->jump_to_monitor(devObj->get_dev_id());
