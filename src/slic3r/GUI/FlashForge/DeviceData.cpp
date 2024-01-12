@@ -168,6 +168,11 @@ bool DeviceObject::is_in_printing()
     return false;
 }
 
+string DeviceObject::get_printer_thumbnail_img_str()
+{
+    return "printer_thumbnail";
+}
+
 
 
 

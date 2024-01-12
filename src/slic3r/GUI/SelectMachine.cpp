@@ -357,7 +357,7 @@ void MachineObjectPanel::on_mouse_left_up(wxMouseEvent &evt)
             event.SetEventObject(this);
             wxPostEvent(this, event);
         } else {
-            if (!wxGetApp().is_user_login()) {
+            if (wxGetApp().is_user_login()) {
                 MessageDialog msg_wingow(nullptr, _L("Please login first."), "", wxAPPLY | wxOK);
                 msg_wingow.ShowModal();
             } else {
@@ -628,12 +628,11 @@ void SelectMachinePopup::update_other_devices()
         });
 
         op->Bind(EVT_BIND_MACHINE, [this, deviceObj](wxCommandEvent &e) {
-            int test = 0;
-            /*BindMachineDialog dlg;
-            dlg.update_machine_info(mobj);
+            BindMachineDialog dlg;
+            dlg.update_device_info(deviceObj);
             int dlg_result = wxID_CANCEL;
             dlg_result     = dlg.ShowModal();
-            if (dlg_result == wxID_OK) { wxGetApp().mainframe->jump_to_monitor(mobj->dev_id); }*/
+            if (dlg_result == wxID_OK) { wxGetApp().mainframe->jump_to_monitor(deviceObj->get_dev_id()); }
         });
     }
 

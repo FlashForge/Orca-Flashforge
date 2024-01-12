@@ -64,6 +64,8 @@ public:
     /* common apis */
     bool is_in_printing();
 
+    string get_printer_thumbnail_img_str();
+
 private:
     fnet_lan_dev_info *m_devInfo;
     string             m_dev_id;

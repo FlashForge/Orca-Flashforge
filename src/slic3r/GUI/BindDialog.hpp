@@ -19,6 +19,7 @@
 #include <wx/webrequest.h>
 #include "wxExtensions.hpp"
 #include "Plater.hpp"
+#include "FlashForge/DeviceData.hpp"
 #include "Widgets/StepCtrl.hpp"
 #include "Widgets/ProgressDialog.hpp"
 #include "Widgets/Button.hpp"
@@ -76,6 +77,7 @@ private:
     int             m_result_code;
 
     MachineObject *                   m_machine_info{nullptr};
+    DeviceObject                     *m_device_info {nullptr};
     std::shared_ptr<BindJob>          m_bind_job;
     std::shared_ptr<BBLStatusBarBind> m_status_bar;
 
@@ -91,6 +93,7 @@ public:
     void     on_bind_printer(wxCommandEvent &event);
     void     on_dpi_changed(const wxRect &suggested_rect) override;
     void     update_machine_info(MachineObject *info);
+    void     update_device_info(DeviceObject *info);
     void     on_show(wxShowEvent &event);
     void     on_close(wxCloseEvent& event);
     void     on_destroy();
