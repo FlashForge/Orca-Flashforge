@@ -16,7 +16,11 @@ class ComCommandQue
 public:
     void clear();
 
-    ComCommandPtr popFront(unsigned int milliseconds = -1);
+    ComCommandPtr get(int commandId);
+
+    ComCommandPtr getFront(unsigned int milliseconds = -1);
+
+    void pop(int commandId);
 
     void pushBack(const ComCommandPtr &command, int priority, bool checkDup = false);
 
@@ -29,7 +33,7 @@ private:
     void increasePriority(const std::list<QueItem>::iterator &it, int priority);
 
 private:
-    boost::mutex              m_stateMutex;
+    boost::mutex              m_mutex;
     boost::condition_variable m_condition;
     std::list<QueItem>        m_commandList;
 };

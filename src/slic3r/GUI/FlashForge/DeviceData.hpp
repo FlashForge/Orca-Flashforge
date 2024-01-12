@@ -36,11 +36,9 @@ public:
     bool        is_lan_mode_in_scan_print();
     bool        is_lan_mode_printer();
     bool        has_access_right();
-    void        set_access_code(const string &code, bool only_refresh = true);
-    string      get_access_code();
 
     void        set_user_access_code(const string& code, bool only_refresh = true);
-    string      get_user_access_code();
+    string      get_user_access_code(bool inner = false);
     void        erase_user_access_code();
 
     bool        is_avaliable();
@@ -66,12 +64,13 @@ public:
     /* common apis */
     bool is_in_printing();
 
+    string get_printer_thumbnail_img_str();
+
 private:
     fnet_lan_dev_info *m_devInfo;
     string             m_dev_id;
     string             m_dev_name;
 
-    string              m_access_code;
     string              m_user_access_code;
     string              m_bind_state; /* free | occupied */
     ActiveState         m_active_state = NotActive; // 0 - not active, 1 - active, 2 - update-to-date
@@ -108,6 +107,9 @@ public:
 
 private:
     DeviceObject *get_scan_device(const string &dev_id);
+
+    // before connect, scan machine's access code which hasn't written in config file
+    void get_my_machine_list_v2(map<string, DeviceObject *> &devList);
 
 private:
     void onConnectExit(ComConnectionExitEvent &event);

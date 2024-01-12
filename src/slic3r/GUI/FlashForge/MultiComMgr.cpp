@@ -99,7 +99,7 @@ ComErrno MultiComMgr::bindWanDev(const std::string &serialNumber, unsigned short
     }
     fnet_wan_dev_bind_data_t *bindData;
     int ret = m_networkIntfc->bindWanDev(
-        accessToken.c_str(), serialNumber.c_str(), pid, name.c_str(), &bindData);
+        accessToken.c_str(), serialNumber.c_str(), pid, name.c_str(), &bindData, ComTimeoutWan);
     if (ret == FNET_OK) {
         initConnection(com_ptr_t(new ComConnection(
             m_idNum++, accessToken, bindData->serialNumber, bindData->devId, m_networkIntfc.get())));
@@ -117,7 +117,7 @@ ComErrno MultiComMgr::unbindWanDev(const std::string &serialNumber, const std::s
     if (accessToken.empty()) {
         return COM_ERROR;
     }
-    int ret = m_networkIntfc->unbindWanDev(accessToken.c_str(), devId.c_str());
+    int ret = m_networkIntfc->unbindWanDev(accessToken.c_str(), devId.c_str(), ComTimeoutWan);
     if (ret == FNET_OK) {
         for (auto &comPtr : m_comPtrs) {
             if (comPtr->deviceId() == devId) {
@@ -150,13 +150,23 @@ const com_dev_data_t &MultiComMgr::devData(com_id_t id, bool *valid /* = nullptr
     }
 }
 
-void MultiComMgr::putCommand(com_id_t id, const ComCommandPtr &command)
+void MultiComMgr::putCommand(com_id_t id, ComCommand *command)
+{
+    ComCommandPtr commandPtr(command);
+    auto it = m_ptrMap.left.find(id);
+    if (it == m_ptrMap.left.end()) {
+        return;
+    }
+    m_ptrMap.left.at(id)->putCommand(commandPtr);
+}
+
+void MultiComMgr::abortSendGcode(com_id_t id, int commandId)
 {
     auto it = m_ptrMap.left.find(id);
     if (it == m_ptrMap.left.end()) {
         return;
     }
-    m_ptrMap.left.at(id)->putCommand(command);
+    m_ptrMap.left.at(id)->abortSendGcode(commandId);
 }
 
 std::string MultiComMgr::initLogFiles(const std::string &logFileDir)

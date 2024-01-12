@@ -5,7 +5,7 @@
 #include "libslic3r/AppConfig.hpp"
 
 namespace Slic3r { namespace GUI {
-ConnectPrinterDialog::ConnectPrinterDialog(wxWindow *parent, wxWindowID id, const wxString &title, const wxPoint &pos, const wxSize &size, long style)
+ConnectPrinterDialog::ConnectPrinterDialog(wxWindow *parent, wxWindowID id, const wxString &title, bool err_hint, const wxPoint &pos, const wxSize &size, long style)
     : DPIDialog(parent, id, _L("ConnectPrinter(LAN)"), pos, size, style)
 {
     SetBackgroundColour(*wxWHITE);
@@ -80,6 +80,13 @@ ConnectPrinterDialog::ConnectPrinterDialog(wxWindow *parent, wxWindowID id, cons
     m_staticText_hints->Wrap(-1);
     sizer_top->Add(m_staticText_hints, 0, wxALL, 0);
 
+    m_label_error_info = new Label(this, _L("The access code is wrong, please input again."));
+    m_label_error_info->SetFont(Label::Body_15);
+    m_label_error_info->SetForegroundColour(wxColour(234, 53, 34));
+    m_label_error_info->Wrap(-1);
+    sizer_top->Add(m_label_error_info, 0, wxALL, 0);
+    m_label_error_info->Show(err_hint);
+
     sizer_top->Add(0, FromDIP(25));
 
     sizer_top->Add(0, FromDIP(40), 0, wxEXPAND, 0);
@@ -129,7 +136,7 @@ void ConnectPrinterDialog::on_button_confirm(wxCommandEvent &event)
         }
     }
     if (m_devObj) {
-        m_devObj->set_user_access_code(code.ToStdString());
+        m_devObj->set_user_access_code(code.ToStdString(), false);
         if (m_need_connect) {
             //wxGetApp().getDeviceManager()->set_selected_machine(m_obj->dev_id);
             wxGetApp().getDeviceObjectOpr()->set_selected_machine(m_devObj->get_dev_id());

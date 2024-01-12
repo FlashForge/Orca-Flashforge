@@ -7,9 +7,10 @@
 
 #include "slic3r/GUI/GUI_Utils.hpp"
 #include "slic3r/GUI/Widgets/Button.hpp"
-//#include "slic3r/GUI/Widgets/TextInput.hpp"
-//#include "slic3r/GUI/Widgets/StaticLine.hpp"
+#include "slic3r/GUI/Widgets/FFButton.hpp"
+#include "slic3r/GUI/Widgets/FFCheckBox.hpp"
 #include "slic3r/GUI/FlashForge/MultiComDef.hpp"
+#include "slic3r/GUI/TitleDialog.hpp"
 
 namespace Slic3r { 
 namespace GUI {
@@ -85,7 +86,7 @@ private:
     wxPoint          m_eye_pic_position;
 };
 
-class LoginDialog : public DPIDialog
+class LoginDialog : public TitleDialog
 {
 public:
     LoginDialog();
@@ -95,9 +96,15 @@ public:
 
 protected:
     void on_dpi_changed(const wxRect &suggested_rect) override;
+    void OnPaint(wxPaintEvent& event);
 
 private:
     void initWidget();
+    void initData();
+    void initBindEvent();
+
+    void createBodyWidget();
+    void createSwitchTitle();
 
     void setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent);
     void setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent);
@@ -117,8 +124,30 @@ private:
 private:
     com_clinet_token_data_t m_client_SMS_token;
 
+    wxBoxSizer*	m_sizer_main {nullptr};
+    wxBoxSizer* m_page_title_sizer {nullptr};
+    wxBoxSizer* m_page_body_sizer {nullptr};
+
+    wxStaticText* m_switch_title_1 {nullptr};
+    wxStaticText* m_switch_title_2 {nullptr};
+
+    wxBoxSizer* m_switch_title_1_sizer {nullptr};
+    wxBoxSizer* m_switch_title_2_sizer {nullptr};
+
+    wxPanel* m_switch_title_1_panel {nullptr};
+    wxPanel* m_switch_title_2_panel {nullptr};
+
+    wxPanel* m_switch_title_1_line_panel {nullptr};
+    wxPanel* m_switch_title_2_line_panel {nullptr};
+
+    wxPanel* m_page_body_page1_panel {nullptr};
+    wxPanel* m_page_body_page2_panel {nullptr};
+
+
+
     wxStaticText* m_error_label {nullptr};
-    wxButton* m_login_button_page1 {nullptr};
+    //wxButton* m_login_button_page1 {nullptr};
+    FFButton* m_login_button_page1 {nullptr};
     UsrnameTextCtrl* m_usrname_page1 {nullptr};
     VerifycodeTextCtrl* m_verify_code {nullptr};
     wxCheckBox* m_login_check_box_page1 {nullptr};
@@ -130,7 +159,8 @@ private:
     UsrnameTextCtrl* m_usrname_page2 {nullptr};
     PasswordTextCtrl* m_password {nullptr};
     wxStaticText* m_error_label_page2 {nullptr};
-    wxButton* m_login_button_page2 {nullptr};
+    //wxButton* m_login_button_page2 {nullptr};
+    FFButton* m_login_button_page2 {nullptr};
     wxCheckBox* m_login_check_box_page2 {nullptr};
     wxPanel* m_panel_checkbox_page2 {nullptr};
 
@@ -140,9 +170,12 @@ private:
 
     wxStaticLine* m_staticLine_verify{nullptr};
     wxStaticLine* m_staticLine_password{nullptr};
+    
+    wxPanel* m_title_1_underline {nullptr};
+    wxPanel* m_title_2_underline {nullptr};
 
-    //StaticLine* m_staticLine_verify{nullptr};
-    //StaticLine* m_staticLine_password{nullptr};
+    FFCheckBox*     m_page1_checkBox {nullptr};
+    FFCheckBox*     m_page2_checkBox {nullptr};
     
     static com_token_data_t  m_token_data;
 

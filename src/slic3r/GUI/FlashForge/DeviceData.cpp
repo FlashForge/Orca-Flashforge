@@ -1,6 +1,8 @@
 #include "DeviceData.hpp"
 #include "slic3r/GUI/GUI_App.hpp"
 #include "MultiComMgr.hpp"
+#include "slic3r/GUI/ConnectPrinter.hpp"
+#include "slic3r/GUI/MainFrame.hpp"
 
 namespace Slic3r {
 
@@ -48,25 +50,7 @@ bool DeviceObject::is_lan_mode_printer()
 
 bool DeviceObject::has_access_right()
 {
-    return !get_access_code().empty();
-}
-
-void DeviceObject::set_access_code(const string &code, bool only_refresh /* = true*/)
-{
-    m_access_code = code;
-    if (only_refresh) {
-        AppConfig *config = GUI::wxGetApp().app_config;
-        if (config && !code.empty()) {
-            GUI::wxGetApp().app_config->set_str("access_code", m_dev_id, code);
-        }
-    }
-}
-
-string DeviceObject::get_access_code() 
-{
-    if (get_user_access_code().empty())
-        return m_access_code;
-    return get_user_access_code();
+    return !get_user_access_code().empty();
 }
 
 void DeviceObject::set_user_access_code(const string &code, bool only_refresh /* = true*/)
@@ -80,8 +64,11 @@ void DeviceObject::set_user_access_code(const string &code, bool only_refresh /*
     }
 }
 
-string DeviceObject::get_user_access_code()
+string DeviceObject::get_user_access_code(bool inner/* = false*/)
 {
+    if (inner)
+        return m_user_access_code;
+
     AppConfig *config = GUI::wxGetApp().app_config;
     if (config) {
         return GUI::wxGetApp().app_config->get("user_access_code", m_dev_id);
@@ -181,6 +168,11 @@ bool DeviceObject::is_in_printing()
     return false;
 }
 
+string DeviceObject::get_printer_thumbnail_img_str()
+{
+    return "printer_thumbnail";
+}
+
 
 
 
@@ -231,6 +223,10 @@ void DeviceObjectOpr::update_scan_machine()
         if (m_scan_devices.find(dev_id) == m_scan_devices.end()) {
             DeviceObject *devObj = new DeviceObject(elem);
             devObj->set_connection_type(CONNECTTYPE_LAN);
+            auto it = m_local_devices.find(dev_id);
+            if (it != m_local_devices.end()) {
+                devObj->set_user_access_code(it->second->get_user_access_code(), false);
+            }
             m_scan_devices.insert(make_pair(dev_id, devObj));
         }
     }
@@ -297,24 +293,19 @@ bool DeviceObjectOpr::set_selected_machine(const string &dev_id)
 {
     BOOST_LOG_TRIVIAL(info) << "set_selected_machine=" << dev_id;
     map<string, DeviceObject *> my_machine_list;
-    get_my_machine_list(my_machine_list);
+    get_my_machine_list_v2(my_machine_list);
     auto it = my_machine_list.find(dev_id);
 
     if (it != my_machine_list.end()) {
         DeviceObject *devObj = it->second;
         if (devObj->get_lan_dev_info() != nullptr) {
-            com_id_t id = MultiComMgr::inst()->addLanDev(*devObj->get_lan_dev_info(), devObj->get_user_access_code());
+            com_id_t id = MultiComMgr::inst()->addLanDev(*devObj->get_lan_dev_info(), devObj->get_user_access_code(true));
             if (id != ComInvalidId) {
                 auto it = m_dev_connect_map.find(dev_id);
                 if (it != m_dev_connect_map.end())
                     m_dev_connect_map.erase(it);
 
                 m_dev_connect_map.emplace(dev_id, id);
-
-                AppConfig *config = GUI::wxGetApp().app_config;
-                if (config) {
-                    config->save_bind_machine_to_config(dev_id, devObj->get_dev_name());
-                }
             }
         }
 
@@ -329,25 +320,31 @@ void DeviceObjectOpr::unbind_machine(DeviceObject* obj)
         return;
     }
 
-    obj->set_access_code("");
+    string dev_id = obj->get_dev_id();
     obj->erase_user_access_code();
     AppConfig *config = GUI::wxGetApp().app_config;
     if (config) {
-        config->erase_local_machine(obj->get_dev_id(), obj->get_dev_name());
+        config->erase_local_machine(dev_id, obj->get_dev_name());
     }
-    auto it = m_dev_connect_map.find(obj->get_dev_id());
+    auto it = m_dev_connect_map.find(dev_id);
     if (it != m_dev_connect_map.end()) {
         MultiComMgr::inst()->removeLanDev(it->second);
     }
 
-    auto devIt = m_user_devices.find(obj->get_dev_id());
+    auto devIt = m_local_devices.find(dev_id);
+    if (devIt != m_local_devices.end()) {
+        delete devIt->second;
+        m_local_devices.erase(devIt);
+    }
+
+    devIt = m_user_devices.find(dev_id);
     if (devIt != m_user_devices.end()) {
         delete devIt->second;
         m_user_devices.erase(devIt);
     }
 }
 
-void DeviceObjectOpr::get_my_machine_list(map<string, DeviceObject*>& devList)
+void DeviceObjectOpr::get_my_machine_list(map<string, DeviceObject *> &devList)
 {
     for (auto it = m_user_devices.begin(); it != m_user_devices.end(); it++) {
         if (!it->second)
@@ -386,14 +383,65 @@ DeviceObject* DeviceObjectOpr::get_scan_device(const string& dev_id)
     return it->second;
 }
 
+void DeviceObjectOpr::get_my_machine_list_v2(map<string, DeviceObject*>& devList)
+{
+    for (auto it = m_user_devices.begin(); it != m_user_devices.end(); it++) {
+        if (!it->second)
+            continue;
+        devList.insert(make_pair(it->first, it->second));
+    }
+
+    for (auto it = m_scan_devices.begin(); it != m_scan_devices.end(); it++) {
+        if (!it->second)
+            continue;
+        if (!it->second->get_user_access_code(true).empty()) {
+            // remove redundant in userMachineList
+            if (devList.find(it->first) == devList.end()) {
+                devList.emplace(make_pair(it->first, it->second));
+            }
+        }
+    }
+
+    for (auto it = m_local_devices.begin(); it != m_local_devices.end(); it++) {
+        if (devList.find(it->first) == devList.end()) {
+            devList.emplace(make_pair(it->first, it->second));
+        }
+    }
+}
+
 void DeviceObjectOpr::onConnectExit(ComConnectionExitEvent &event)
 {
-    auto it = m_user_devices.find(m_selected_machine);
-    if (it == m_user_devices.end())
-        return;
-
-    DeviceObject *devObj = it->second;
-    devObj->set_online_state(false);
+    DeviceObject *devObj = nullptr;
+    auto          it     = m_scan_devices.find(m_selected_machine);
+    if (it != m_scan_devices.end()) {
+        devObj = it->second;
+        if (devObj->get_user_access_code().empty()) {
+            // first bind
+            if (event.ret == COM_VERIFY_LAN_DEV_FAILED) {
+                // popop input access code dialog again.
+                ConnectPrinterDialog dlg(wxGetApp().mainframe, wxID_ANY, _L("Input access code"), true);
+                dlg.set_device_object(devObj);
+                if (dlg.ShowModal() == wxID_OK) {
+                    wxGetApp().mainframe->jump_to_monitor(devObj->get_dev_id());
+                }
+            } else {
+                // do nothing, this device still belongs to other device.
+            }
+        } else {
+            auto local_it = m_local_devices.find(m_selected_machine);
+            if (event.ret == COM_VERIFY_LAN_DEV_FAILED && local_it != m_local_devices.end()) {
+                // notify the device access code has changed, this device should unbind and move to other device.
+                unbind_machine(devObj);
+            } else {
+                devObj->set_online_state(false);
+            }
+        }
+    } else {
+        it = m_user_devices.find(m_selected_machine);
+        if (it != m_user_devices.end()) {
+            it->second->set_online_state(false);
+        }
+    }
 }
 
 void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
@@ -406,7 +454,13 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
     if (it == m_user_devices.end()) {
         DeviceObject *userObj = new DeviceObject(*devObj);
         userObj->set_online_state(true);
+        userObj->set_user_access_code(devObj->get_user_access_code(true));
         m_user_devices.emplace(make_pair(m_selected_machine, userObj));
+
+        AppConfig *config = GUI::wxGetApp().app_config;
+        if (config) {
+            config->save_bind_machine_to_config(devObj->get_dev_id(), devObj->get_dev_name());
+        }
     } else {
         DeviceObject *userObj = it->second;
         userObj->set_online_state(true);

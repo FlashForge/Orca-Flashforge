@@ -357,7 +357,7 @@ void MachineObjectPanel::on_mouse_left_up(wxMouseEvent &evt)
             event.SetEventObject(this);
             wxPostEvent(this, event);
         } else {
-            if (!wxGetApp().is_user_login()) {
+            if (wxGetApp().is_user_login()) {
                 MessageDialog msg_wingow(nullptr, _L("Please login first."), "", wxAPPLY | wxOK);
                 msg_wingow.ShowModal();
             } else {
@@ -628,12 +628,11 @@ void SelectMachinePopup::update_other_devices()
         });
 
         op->Bind(EVT_BIND_MACHINE, [this, deviceObj](wxCommandEvent &e) {
-            int test = 0;
-            /*BindMachineDialog dlg;
-            dlg.update_machine_info(mobj);
+            BindMachineDialog dlg;
+            dlg.update_device_info(deviceObj);
             int dlg_result = wxID_CANCEL;
             dlg_result     = dlg.ShowModal();
-            if (dlg_result == wxID_OK) { wxGetApp().mainframe->jump_to_monitor(mobj->dev_id); }*/
+            if (dlg_result == wxID_OK) { wxGetApp().mainframe->jump_to_monitor(deviceObj->get_dev_id()); }
         });
     }
 
@@ -706,6 +705,7 @@ void SelectMachinePopup::update_user_devices()
         if (devObj->is_lan_mode_printer()) {
             if (!devObj->is_online()) {
                 op->SetToolTip(_L(""));
+                op->show_printer_bind(true, PrinterBindState::ALLOW_UNBIND);
                 if (devObj->is_lan_mode_in_scan_print()) {
                     op->set_printer_state(PrinterState::OFFLINE_LAN);
                     if (m_updateConnect && devObj->get_lan_dev_info() != nullptr) {

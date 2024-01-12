@@ -629,6 +629,11 @@ void BindMachineDialog::update_machine_info(MachineObject* info)
     Fit();
 }
 
+void BindMachineDialog::update_device_info(DeviceObject* info)
+{
+    m_device_info = info;
+}
+
 void BindMachineDialog::on_show(wxShowEvent &event)
 {
     m_allow_privacy = false;
@@ -638,14 +643,14 @@ void BindMachineDialog::on_show(wxShowEvent &event)
     m_result_info   = wxEmptyString;
 
     if (event.IsShown()) {
-        auto img = m_machine_info->get_printer_thumbnail_img_str();
+        auto img = m_device_info->get_printer_thumbnail_img_str();
         if (wxGetApp().dark_mode()) { img += "_dark"; }
         auto bitmap = create_scaled_bitmap(img, this, FromDIP(100));
         m_printer_img->SetBitmap(bitmap);
         m_printer_img->Refresh();
         m_printer_img->Show();
 
-        m_printer_name->SetLabelText(from_u8(m_machine_info->dev_name));
+        m_printer_name->SetLabelText(from_u8(m_device_info->get_dev_name()));
 
         if (wxGetApp().is_user_login()) {
             wxString username_text = from_u8(wxGetApp().getAgent()->get_user_nickanme());
