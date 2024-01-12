@@ -12,7 +12,7 @@ ComErrno MultiComUtils::getLanDevList(std::vector<fnet_lan_dev_info> &devInfos)
     }
     int devCnt;
     fnet_lan_dev_info *fnetDevInfos;
-    int ret = intfc->getLanDevList(&fnetDevInfos, &devCnt);
+    int ret = intfc->getLanDevList(&fnetDevInfos, &devCnt, 500);
     if (ret != COM_OK) {
         return fnetRet2ComErrno(ret);
     }
@@ -32,7 +32,7 @@ ComErrno MultiComUtils::getTokenByPassword(const std::string &userName, const st
         return COM_UNINITIALIZED;
     }
     fnet_token_data_t *fnetTokenData;
-    int ret = intfc->getTokenByPassword(userName.c_str(), password.c_str(), &fnetTokenData);
+    int ret = intfc->getTokenByPassword(userName.c_str(), password.c_str(), &fnetTokenData, ComTimeoutWan);
     if (ret != COM_OK) {
         return fnetRet2ComErrno(ret);
     }
@@ -50,7 +50,7 @@ ComErrno MultiComUtils::refreshToken(const std::string &refreshToken, com_token_
         return COM_UNINITIALIZED;
     }
     fnet_token_data_t *fnetTokenData;
-    int ret = intfc->refreshToken(refreshToken.c_str(), &fnetTokenData);
+    int ret = intfc->refreshToken(refreshToken.c_str(), &fnetTokenData, ComTimeoutWan);
     if (ret != COM_OK) {
         return fnetRet2ComErrno(ret);
     }
@@ -68,7 +68,7 @@ ComErrno MultiComUtils::getClientToken(com_clinet_token_data_t &clinetTokenData)
         return COM_UNINITIALIZED;
     }
     fnet_client_token_data *fnetClientTokenData;
-    int ret = intfc->getClientToken(&fnetClientTokenData);
+    int ret = intfc->getClientToken(&fnetClientTokenData, ComTimeoutWan);
     if (ret != COM_OK) {
         return fnetRet2ComErrno(ret);
     }
@@ -84,7 +84,7 @@ ComErrno MultiComUtils::sendSMSCode(const std::string &clinetAccessToken, const 
     if (intfc == nullptr) {
         return COM_UNINITIALIZED;
     }
-    int ret = intfc->sendSMSCode(clinetAccessToken.c_str(), phoneNumber.c_str(), "zh");
+    int ret = intfc->sendSMSCode(clinetAccessToken.c_str(), phoneNumber.c_str(), "zh", ComTimeoutWan);
     if (ret != COM_OK) {
         return fnetRet2ComErrno(ret);
     }
@@ -99,7 +99,7 @@ ComErrno MultiComUtils::getTokenBySMSCode(const std::string &userName, const std
         return COM_UNINITIALIZED;
     }
     fnet_token_data_t *fnetTokenData;
-    int ret = intfc->getTokenBySMSCode(userName.c_str(), SMSCode.c_str(), &fnetTokenData);
+    int ret = intfc->getTokenBySMSCode(userName.c_str(), SMSCode.c_str(), &fnetTokenData, ComTimeoutWan);
     if (ret != COM_OK) {
         return fnetRet2ComErrno(ret);
     }
@@ -116,7 +116,7 @@ ComErrno MultiComUtils::checkToken(const std::string &accessToken)
     if (intfc == nullptr) {
         return COM_UNINITIALIZED;
     }
-    return fnetRet2ComErrno(intfc->checkToken(accessToken.c_str()));
+    return fnetRet2ComErrno(intfc->checkToken(accessToken.c_str(), ComTimeoutWan));
 }
 
 ComErrno MultiComUtils::signOut(const std::string &accessToken)
@@ -125,7 +125,7 @@ ComErrno MultiComUtils::signOut(const std::string &accessToken)
     if (intfc == nullptr) {
         return COM_UNINITIALIZED;
     }
-    return fnetRet2ComErrno(intfc->signOut(accessToken.c_str()));
+    return fnetRet2ComErrno(intfc->signOut(accessToken.c_str(), ComTimeoutWan));
 }
 
 ComErrno MultiComUtils::fnetRet2ComErrno(int networkRet)

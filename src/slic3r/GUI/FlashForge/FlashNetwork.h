@@ -149,65 +149,65 @@ FNET_API void fnet_uninitlize();
 
 FNET_API const char *fnet_getVersion();
 
-FNET_API int fnet_getLanDevList(fnet_lan_dev_info_t **infos, int *devCnt);
+FNET_API int fnet_getLanDevList(fnet_lan_dev_info_t **infos, int *devCnt, int msWaitTime);
 
 FNET_API void fnet_freeLanDevInfos(fnet_lan_dev_info_t *infos);
 
 FNET_API int fnet_getLanDevDetail(const char *ip, unsigned short port, const char *serialNumber,
-    const char *checkCode, fnet_dev_detail_t **detail);
+    const char *checkCode, fnet_dev_detail_t **detail, int msTimeout);
 
 FNET_API void fnet_freeDevDetail(fnet_dev_detail_t *detail);
 
 FNET_API int fnet_lanDevSendGcode(const char *ip, unsigned short port, const char *serialNumber,
-    const char *checkCode, const fnet_send_gcode_data_t *sendGcodeData);
+    const char *checkCode, const fnet_send_gcode_data_t *sendGcodeData, int msTimeout);
 
 FNET_API int fnet_downloadFile(const char *url, fnet_file_data_t **fileData,
-    fnet_progress_call_back_t callback, void *callbackData);
+    fnet_progress_call_back_t callback, void *callbackData, int msTimeout);
 
 FNET_API void fnet_freeFileData(fnet_file_data_t *fileData);
 
 FNET_API int fnet_getTokenByPassword(const char *userName, const char *password,
-    fnet_token_data_t **tokenData);
+    fnet_token_data_t **tokenData, int msTimeout);
 
-FNET_API int fnet_refreshToken(const char *refreshToken, fnet_token_data_t **tokenData);
+FNET_API int fnet_refreshToken(const char *refreshToken, fnet_token_data_t **tokenData, int msTimeout);
 
 FNET_API void fnet_freeToken(fnet_token_data_t *tokenData);
 
-FNET_API int fnet_getClientToken(fnet_client_token_data_t **clientTokenData);
+FNET_API int fnet_getClientToken(fnet_client_token_data_t **clientTokenData, int msTimeout);
 
 FNET_API void fnet_freeClientToken(fnet_client_token_data_t *clientTokenData);
 
 FNET_API int fnet_sendSMSCode(const char *clientAccessToken, const char *phoneNumber,
-    const char *language); // en/zh
+    const char *language, int msTimeout); // en/zh
 
 FNET_API int fnet_getTokenBySMSCode(const char *userName, const char *SMSCode,
-    fnet_token_data_t **tokenData);
+    fnet_token_data_t **tokenData, int msTimeout);
 
-FNET_API int fnet_checkToken(const char *accessToken);
+FNET_API int fnet_checkToken(const char *accessToken, int msTimeout);
 
-FNET_API int fnet_signOut(const char *accessToken);
+FNET_API int fnet_signOut(const char *accessToken, int msTimeout);
 
-FNET_API int fnet_getUserProfile(const char *accessToken, fnet_user_profile_t **profile);
+FNET_API int fnet_getUserProfile(const char *accessToken, fnet_user_profile_t **profile, int msTimeout);
 
 FNET_API void fnet_freeUserProfile(fnet_user_profile_t *profile);
 
 FNET_API int fnet_bindWanDev(const char *accessToken, const char *serialNumber,
-    unsigned short pid, const char *name, fnet_wan_dev_bind_data_t **bindData);
+    unsigned short pid, const char *name, fnet_wan_dev_bind_data_t **bindData, int msTimeout);
 
 FNET_API void fent_freeBindData(fnet_wan_dev_bind_data_t *bindData);
 
-FNET_API int fnet_unbindWanDev(const char *accessToken, const char *devId);
+FNET_API int fnet_unbindWanDev(const char *accessToken, const char *devId, int msTimeout);
 
 FNET_API int fnet_getWanDevList(const char *accessToken, fnet_wan_dev_info_t **infos,
-    int *devCnt);
+    int *devCnt, int msTimeout);
 
 FNET_API void fnet_freeWanDevList(fnet_wan_dev_info_t *infos, int devCnt);
 
 FNET_API int fnet_getWanDevDetail(const char *accessToken, const char *devId,
-    fnet_dev_detail_t **detail);
+    fnet_dev_detail_t **detail, int msTimeout);
 
 FNET_API int fnet_wanDevSendGcode(const char *accessToken, const char *devId,
-    const fnet_send_gcode_data_t *sendGcodeData);
+    const fnet_send_gcode_data_t *sendGcodeData, int msTimeout);
 
 #ifdef __cplusplus
 }

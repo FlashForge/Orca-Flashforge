@@ -77,7 +77,7 @@ ComErrno UserDataUpdateThd::updateUserProfile(const std::string &accessToken)
     com_user_profile_t userProfile;
     for (int i = 0; i < tryCnt; ++i) {
         fnet_user_profile_t *fnetProfile;
-        int fnetRet = m_networkIntfc->getUserProfile(accessToken.c_str(), &fnetProfile);
+        int fnetRet = m_networkIntfc->getUserProfile(accessToken.c_str(), &fnetProfile, ComTimeoutWan);
         fnet::FreeInDestructor freeProfile(fnetProfile, m_networkIntfc->freeUserProfile);
         if (fnetRet == FNET_OK) {
             userProfile.nickname = fnetProfile->nickname;
@@ -99,7 +99,7 @@ ComErrno UserDataUpdateThd::updateWanDev(const std::string &accessToken)
     for (int i = 0; i < tryCnt && !m_exitThread; ++i) {
         int devCnt;
         fnet_wan_dev_info_t *devInfos;
-        fnetRet = m_networkIntfc->getWanDevList(accessToken.c_str(), &devInfos, &devCnt);
+        fnetRet = m_networkIntfc->getWanDevList(accessToken.c_str(), &devInfos, &devCnt, ComTimeoutWan);
         if (fnetRet == FNET_OK) {
             QueueEvent(new WanDevUpdateEvent(WAN_DEV_UPDATE_EVENT, accessToken, devInfos, devCnt));
             break;
