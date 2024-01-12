@@ -18,6 +18,7 @@
 #include <wx/statbmp.h>
 #include "Widgets/Button.hpp"
 #include "Widgets/TextInput.hpp"
+#include "Widgets/Label.hpp"
 #include "DeviceManager.hpp"
 #include "FlashForge/DeviceData.hpp"
 
@@ -31,17 +32,19 @@ protected:
     TextInput *     m_textCtrl_code;
     Button *        m_button_confirm;
     wxStaticText*   m_staticText_hints;
+    Label*          m_label_error_info;
 
     MachineObject*  m_obj{ nullptr };
     DeviceObject*   m_devObj {nullptr};
     wxString        m_input_access_code;
 public:
-    ConnectPrinterDialog(wxWindow *      parent,
-                         wxWindowID      id    = wxID_ANY,
-                         const wxString &title = wxEmptyString,
-                         const wxPoint & pos   = wxDefaultPosition,
-                         const wxSize &  size  = wxDefaultSize,
-                         long            style = wxCLOSE_BOX | wxCAPTION);
+    ConnectPrinterDialog(wxWindow       *parent,
+                         wxWindowID      id       = wxID_ANY,
+                         const wxString &title    = wxEmptyString,
+                         bool            err_hint = false,
+                         const wxPoint  &pos      = wxDefaultPosition,
+                         const wxSize   &size     = wxDefaultSize,
+                         long            style    = wxCLOSE_BOX | wxCAPTION);
 
     ~ConnectPrinterDialog();
 

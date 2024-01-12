@@ -706,6 +706,7 @@ void SelectMachinePopup::update_user_devices()
         if (devObj->is_lan_mode_printer()) {
             if (!devObj->is_online()) {
                 op->SetToolTip(_L(""));
+                op->show_printer_bind(true, PrinterBindState::ALLOW_UNBIND);
                 if (devObj->is_lan_mode_in_scan_print()) {
                     op->set_printer_state(PrinterState::OFFLINE_LAN);
                     if (m_updateConnect && devObj->get_lan_dev_info() != nullptr) {
