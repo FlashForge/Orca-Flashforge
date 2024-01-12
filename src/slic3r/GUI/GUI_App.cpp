@@ -73,6 +73,8 @@
 #include "../Utils/Http.hpp"
 #include "../Utils/UndoRedo.hpp"
 #include "slic3r/Config/Snapshot.hpp"
+#include "slic3r/GUI/FlashForge/LoginDialog.hpp"
+#include "slic3r/GUI/FlashForge/ReLoginDialog.hpp"
 #include "slic3r/GUI/FlashForge/MultiComEvent.hpp"
 #include "slic3r/GUI/FlashForge/MultiComMgr.hpp"
 #include "Preferences.hpp"
@@ -4065,6 +4067,7 @@ std::string GUI_App::handle_web_request(std::string cmd)
 
 void GUI_App::handle_login_result(std::string url, std::string name)
 {
+    LoginDialog::SetUsrLogin(true);
     // 原始的JSON字符串
     std::string jsonStr = R"({"command": "studio_userlogin","data": {"avatar": "default.jpg","name": "ShanZhu"},"sequence_id": "10001"})";
 
@@ -4089,6 +4092,7 @@ void GUI_App::handle_login_result(std::string url, std::string name)
 
 void GUI_App::handle_login_out()
 {
+    LoginDialog::SetUsrLogin(false);
     // 原始的JSON字符串
     std::string jsonStr = R"({"command":"studio_useroffline","sequence_id":"10001"})";
     wxString strJS = wxString::Format("window.postMessage(%s)", jsonStr);

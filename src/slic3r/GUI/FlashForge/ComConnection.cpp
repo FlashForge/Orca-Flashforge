@@ -114,8 +114,8 @@ ComErrno ComConnection::commandLoop()
                     return ret;
                 }
             }
+            m_commandQue.pop(frontCommand->commandId());
         }
-        m_commandQue.pop(frontCommand->commandId());
         if ((clock() - m_getDetailClock) / (double)CLOCKS_PER_SEC > 3) {
             m_commandQue.pushBack(ComCommandPtr(new ComGetDevDetail), 5, true);
             m_getDetailClock = clock();

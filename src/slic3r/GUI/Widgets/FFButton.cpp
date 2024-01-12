@@ -24,8 +24,8 @@ FFButton::FFButton(wxWindow* parent, wxWindowID id/*= wxID_ANY*/, const wxString
 {
 	Bind(wxEVT_ENTER_WINDOW, [this](wxMouseEvent&) { m_hoverFlag = true; Update(); });
 	Bind(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent&) { m_hoverFlag = false; m_pressFlag = false; Update(); });
-	Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e) { m_pressFlag = true; Refresh(); });
-	Bind(wxEVT_LEFT_UP, [this](wxMouseEvent& e) { m_pressFlag = false; Update(); });
+	Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e) { m_pressFlag = true; Refresh(); e.Skip(); });
+	Bind(wxEVT_LEFT_UP, [this](wxMouseEvent& e) { m_pressFlag = false; Update(); e.Skip(); });
 	Bind(wxEVT_PAINT, &FFButton::OnPaint, this);
 	updateState();
 }

@@ -16,10 +16,10 @@ FFCheckBox::FFCheckBox(wxWindow *parent, int id)
 		SetBackgroundColour(parent->GetBackgroundColour());
 	Bind(wxEVT_TOGGLEBUTTON, [this](auto& e) { update(); e.Skip(); });
 #ifdef __WXOSX__ // State not fully implement on MacOS
-    Bind(wxEVT_SET_FOCUS, &CheckBox::updateBitmap, this);
-    Bind(wxEVT_KILL_FOCUS, &CheckBox::updateBitmap, this);
-    Bind(wxEVT_ENTER_WINDOW, &CheckBox::updateBitmap, this);
-    Bind(wxEVT_LEAVE_WINDOW, &CheckBox::updateBitmap, this);
+    Bind(wxEVT_SET_FOCUS, &FFCheckBox::updateBitmap, this);
+    Bind(wxEVT_KILL_FOCUS, &FFCheckBox::updateBitmap, this);
+    Bind(wxEVT_ENTER_WINDOW, &FFCheckBox::updateBitmap, this);
+    Bind(wxEVT_LEAVE_WINDOW, &FFCheckBox::updateBitmap, this);
 #endif
 	SetSize(m_on.GetBmpSize());
 	SetMinSize(m_on.GetBmpSize());
