@@ -812,6 +812,7 @@ void LoginDialog::onAgreeCheckBoxChangedPage1(wxCommandEvent& event)
         wxString username = m_usrname_page1->GetValue();
         wxString verifycode = m_verify_code->GetValue();
         bool agree = m_page1_checkBox->GetValue();
+        m_page1_checkBox->SetValue(agree);
         if (!username.IsEmpty() && !verifycode.IsEmpty() && agree)
         {
             m_login_button_page1->Enable();
@@ -848,6 +849,7 @@ void LoginDialog::onAgreeCheckBoxChangedPage2(wxCommandEvent& event)
         wxString username = m_usrname_page2->GetValue();
         wxString password = m_password->GetValue();
         bool agree = m_page2_checkBox->GetValue();
+        m_page2_checkBox->SetValue(agree);
         if (!username.IsEmpty() && !password.IsEmpty() && agree)
         {
             m_login_button_page2->Enable();

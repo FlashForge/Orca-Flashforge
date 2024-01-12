@@ -43,6 +43,7 @@
 #include <wx/richmsgdlg.h>
 #include <wx/log.h>
 #include <wx/intl.h>
+#include <wx/url.h>
 
 #include <wx/dialog.h>
 #include <wx/textctrl.h>
@@ -3902,9 +3903,19 @@ std::string GUI_App::handle_web_request(std::string cmd)
                         std::string usr_pic = app_config->get("usr_pic");
                         if(!access_token.empty() && !refresh_token.empty()){
                             //判断时间是否过期，当前有效期31天
+                            //判断是否有网络(连接官网)
+                             wxURL url(_T("http://www.flashforge.com/en"));
+                            std::string region = app_config->get("region");
+                             if(region.compare("China") == 0){
+                                url.SetURL(_T("http://www.sz3dp.com/"));
+                             }
+                             if(!url.IsOk()){
+                                return;
+                             }
                             //未过期，自动登录
                             handle_login_result(usr_pic,usr_name);
                             LoginDialog::SetToken(access_token,refresh_token);
+                            Slic3r::GUI::MultiComMgr::inst()->setWanDevToken(usr_name,access_token);
                         }
                         //get_login_info();
                     });
