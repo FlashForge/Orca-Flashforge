@@ -93,6 +93,8 @@ public:
 
     static com_token_data_t GetLoginToken();
     static void SetToken(std::string accessToken, std::string refreshToken);
+    static void SetUsrLogin(bool loginState);
+    static bool IsUsrLogin();
 
 protected:
     void on_dpi_changed(const wxRect &suggested_rect) override;
@@ -117,6 +119,7 @@ private:
 
     void onPage1Login(wxCommandEvent& event);
     void onPage2Login(wxCommandEvent& event);
+    void onPage3Login(wxMouseEvent& event);
 
     inline void startTimer(){ m_timer.Start(2000);}
     void OnTimer(wxTimerEvent& event);
@@ -146,8 +149,8 @@ private:
 
 
     wxStaticText* m_error_label {nullptr};
-    //wxButton* m_login_button_page1 {nullptr};
-    FFButton* m_login_button_page1 {nullptr};
+    wxButton* m_login_button_page1 {nullptr};
+    //FFButton* m_login_button_page1 {nullptr};
     UsrnameTextCtrl* m_usrname_page1 {nullptr};
     VerifycodeTextCtrl* m_verify_code {nullptr};
     wxCheckBox* m_login_check_box_page1 {nullptr};
@@ -159,8 +162,8 @@ private:
     UsrnameTextCtrl* m_usrname_page2 {nullptr};
     PasswordTextCtrl* m_password {nullptr};
     wxStaticText* m_error_label_page2 {nullptr};
-    //wxButton* m_login_button_page2 {nullptr};
-    FFButton* m_login_button_page2 {nullptr};
+    wxButton* m_login_button_page2 {nullptr};
+    //FFButton* m_login_button_page2 {nullptr};
     wxCheckBox* m_login_check_box_page2 {nullptr};
     wxPanel* m_panel_checkbox_page2 {nullptr};
 
@@ -178,6 +181,7 @@ private:
     FFCheckBox*     m_page2_checkBox {nullptr};
     
     static com_token_data_t  m_token_data;
+    static bool m_usr_is_login;
 
     wxTimer m_timer;
 

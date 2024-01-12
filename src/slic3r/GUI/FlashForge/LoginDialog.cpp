@@ -22,6 +22,7 @@ namespace GUI {
     wxDEFINE_EVENT(EVT_UPDATE_TEXT_LOGIN, wxCommandEvent);
 
     com_token_data_t LoginDialog::m_token_data = {};
+    bool LoginDialog::m_usr_is_login = false;
 
     CountdownButton::CountdownButton(wxWindow* parent, wxString text, wxString icon /*= ""*/, long style /*= 0*/, int iconSize /*= 0*/, wxWindowID btn_id /*= wxID_ANY*/)
         : Button(parent,text,icon,style,iconSize,btn_id)
@@ -248,6 +249,16 @@ void LoginDialog::SetToken(std::string accessToken, std::string refreshToken)
 {
     m_token_data.accessToken = accessToken;
     m_token_data.refreshToken = refreshToken;
+}
+
+void LoginDialog::SetUsrLogin(bool loginState)
+{
+    m_usr_is_login = loginState;
+}
+
+bool LoginDialog::IsUsrLogin()
+{
+    return m_usr_is_login;
 }
 
 void LoginDialog::on_dpi_changed(const wxRect &suggested_rect)
@@ -548,7 +559,7 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     m_error_label->Show(false); 
 
     //login button
-    m_login_button_page1 = new FFButton(parent, wxID_ANY,_L("Login"));
+    m_login_button_page1 = new wxButton(parent, wxID_ANY,_L("Login"));
     //m_login_button_page1->SetFontDisableColor(wxColour(255, 255, 255));
     //m_login_button_page1->SetBorderDisableColor(wxColour(221,221,221));
     //m_login_button_page1->SetFontColor(wxColour(255, 255, 255));
@@ -556,7 +567,7 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
 
     m_login_button_page1->SetForegroundColour(wxColour(255, 255, 255));
     m_login_button_page1->SetBackgroundColour(wxColour(221,221,221)); 
-    //m_login_button_page1->SetWindowStyleFlag(wxBORDER_NONE); 
+    m_login_button_page1->SetWindowStyleFlag(wxBORDER_NONE); 
     m_login_button_page1->SetMinSize(wxSize(101,44));
     m_login_button_page1->SetFont((wxFont(wxFontInfo(16))));
     m_login_button_page1->Bind(wxEVT_BUTTON,&LoginDialog::onPage1Login, this);
@@ -569,7 +580,7 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
 
     m_page1_checkBox = new FFCheckBox(m_panel_checkbox_page1, wxID_ANY);
     m_page1_checkBox->SetValue(false);
-    m_page1_checkBox->Bind(wxEVT_CHECKBOX, &LoginDialog::onAgreeCheckBoxChangedPage1, this);
+    m_page1_checkBox->Bind(wxEVT_TOGGLEBUTTON, &LoginDialog::onAgreeCheckBoxChangedPage1, this);
 
     m_protocol_page1 = new  wxStaticText(m_panel_checkbox_page1, wxID_ANY,_L("Read and Agree to Accept"));
     m_protocol_page1->SetFont((wxFont(wxFontInfo(14))));
@@ -674,15 +685,16 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     verify_last_sizer->Add(usr_name_space2, 0, wxEXPAND ,0);
 
     page2Sizer->Add(verify_last_sizer, 0, wxEXPAND ,0);
+    page2Sizer->AddSpacer(FromDIP(10));
 
     //register / forget password
-    wxHyperlinkCtrl* register_link = new wxHyperlinkCtrl(parent, wxID_ANY, _L("Register"), wxEmptyString, wxDefaultPosition, wxDefaultSize, wxHL_DEFAULT_STYLE);
+    wxHyperlinkCtrl* register_link = new wxHyperlinkCtrl(parent, wxID_ANY, _L("Register"), wxEmptyString, wxDefaultPosition, wxDefaultSize, wxHL_ALIGN_LEFT);
     register_link->Bind(wxEVT_HYPERLINK, [this](wxCommandEvent& e){
         wxString url = "https://www.baidu.com/";
         wxLaunchDefaultBrowser(url);
     });
 
-    wxHyperlinkCtrl* forget_password_link = new wxHyperlinkCtrl(parent, wxID_ANY, _L("Forget Password"), wxEmptyString, wxDefaultPosition, wxDefaultSize, wxHL_DEFAULT_STYLE);
+    wxHyperlinkCtrl* forget_password_link = new wxHyperlinkCtrl(parent, wxID_ANY, _L("Forget Password"), wxEmptyString, wxDefaultPosition, wxDefaultSize, wxHL_ALIGN_RIGHT);
     forget_password_link->Bind(wxEVT_HYPERLINK, [this](wxCommandEvent& e){
         wxString url = "https://www.youku.com/";
         wxLaunchDefaultBrowser(url);
@@ -692,11 +704,12 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     regist_forget_hor_sizer->SetMinSize(250,-1);
 
     regist_forget_hor_sizer->Add(usr_name_space1, 0, wxEXPAND|wxLeft, 0);
-    regist_forget_hor_sizer->Add(register_link, 0, wxALIGN_CENTER_HORIZONTAL | wxTOP, FromDIP(10));
-    regist_forget_hor_sizer->AddSpacer(135);
-    regist_forget_hor_sizer->Add(forget_password_link, 0, wxALIGN_CENTER_HORIZONTAL | wxTOP, FromDIP(10));
+    regist_forget_hor_sizer->Add(register_link, 0, wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL, 0);
+    regist_forget_hor_sizer->AddStretchSpacer(1);
+    regist_forget_hor_sizer->Add(forget_password_link, 0, wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL, 0);
+    regist_forget_hor_sizer->Add(usr_name_space2, 0, wxEXPAND ,0);
 
-    page2Sizer->Add(regist_forget_hor_sizer, 0, wxEXPAND | wxALIGN_CENTER_HORIZONTAL,0);
+    page2Sizer->Add(regist_forget_hor_sizer, 0, wxEXPAND,0);
 
 //****error tips ***
     m_error_label_page2 = new wxStaticText(parent,wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize);
@@ -710,13 +723,14 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     m_error_label_page2->Show(false); 
 
     //login button
-    m_login_button_page2 = new FFButton(parent, wxID_ANY,_L("Login"));
+    m_login_button_page2 = new wxButton(parent, wxID_ANY,_L("Login"));
     m_login_button_page2->SetMinSize(wxSize(101,44));
     m_login_button_page2->SetFont((wxFont(wxFontInfo(16))));
     m_login_button_page2->SetForegroundColour(wxColour(255, 255, 255));
     m_login_button_page2->SetBackgroundColour(wxColour(221,221,221)); 
     m_login_button_page2->SetWindowStyleFlag(wxBORDER_NONE); 
     m_login_button_page2->Bind(wxEVT_BUTTON,&LoginDialog::onPage2Login, this);
+    //m_login_button_page2->Bind(wxEVT_LEFT_DOWN,&LoginDialog::onPage3Login, this);
 
     page2Sizer->Add(m_login_button_page2, 0, wxALIGN_CENTER_HORIZONTAL | wxUP, FromDIP(30));
 
@@ -726,7 +740,7 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
 
     m_page2_checkBox = new FFCheckBox(m_panel_checkbox_page2, wxID_ANY);
     m_page2_checkBox->SetValue(false);
-    m_page2_checkBox->Bind(wxEVT_CHECKBOX, &LoginDialog::onAgreeCheckBoxChangedPage2, this);
+    m_page2_checkBox->Bind(wxEVT_TOGGLEBUTTON, &LoginDialog::onAgreeCheckBoxChangedPage2, this);
 
     m_protocol_page2 = new  wxStaticText(m_panel_checkbox_page2, wxID_ANY,_L("Read and Agree to Accept"));
     m_protocol_page2->SetFont((wxFont(wxFontInfo(14))));
@@ -875,6 +889,34 @@ void LoginDialog::onPage1Login(wxCommandEvent& event)
 }
 
 void LoginDialog::onPage2Login(wxCommandEvent& event)
+{
+    wxString usrname = m_usrname_page2->GetValue();
+    wxString password = m_password->GetValue();
+    com_token_data_t token_data;
+    ComErrno login_result =  MultiComUtils::getTokenByPassword(usrname.ToStdString(),password.ToStdString(),token_data);
+    if(login_result == ComErrno::COM_OK){
+        LoginDialog::m_token_data = token_data;
+        wxGetApp().handle_login_result("default.jpg",usrname.ToStdString());
+        this->Hide();
+        AppConfig *app_config = wxGetApp().app_config;
+        if(app_config){
+            //主动点击登录，设置token值
+            app_config->set("access_token",token_data.accessToken);
+            app_config->set("refresh_token",token_data.refreshToken);
+            app_config->set("expire_time",std::to_string(token_data.expiresIn));
+             Slic3r::GUI::MultiComMgr::inst()->setWanDevToken(usrname.ToStdString(),token_data.accessToken);
+        }
+        
+    }
+    else if (login_result == ComErrno::COM_INVALID_VALIDATION){
+        m_timer.Bind(wxEVT_TIMER, &LoginDialog::OnTimer, this);
+        //账号、密码错误
+        m_error_label_page2->Show(true);
+        startTimer();
+    }
+}
+
+void LoginDialog::onPage3Login(wxMouseEvent& event)
 {
     wxString usrname = m_usrname_page2->GetValue();
     wxString password = m_password->GetValue();

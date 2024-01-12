@@ -15,8 +15,6 @@
 #include "slic3r/GUI/HMS.hpp"
 #include "slic3r/GUI/Jobs/UpgradeNetworkJob.hpp"
 #include "slic3r/GUI/HttpServer.hpp"
-#include "slic3r/GUI/FlashForge/LoginDialog.hpp"
-#include "slic3r/GUI/FlashForge/ReLoginDialog.hpp"
 #include "../Utils/PrintHost.hpp"
 
 #include <wx/app.h>
@@ -77,6 +75,8 @@ class ParamsDialog;
 class HMSQuery;
 class ModelMallDialog;
 class DeviceObjectOpr;
+class LoginDialog;
+class ReLoginDialog;
 
 
 enum FileType
