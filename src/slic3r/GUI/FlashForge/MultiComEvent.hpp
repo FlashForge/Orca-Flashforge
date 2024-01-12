@@ -6,10 +6,10 @@
 
 namespace Slic3r { namespace GUI {
 
-struct ComConnectionEvent : public wxEvent
+struct ComConnectionEvent : public wxCommandEvent
 {
     ComConnectionEvent(wxEventType type, com_id_t _id, int _commandId)
-        : wxEvent(type)
+        : wxCommandEvent(type)
         , id(_id)
         , commandId(_commandId)
     {
@@ -88,10 +88,10 @@ struct ComSendGcodeFinishEvent : public ComConnectionEvent
     ComErrno ret;
 };
 
-struct ComWanDevMaintainEvent : public wxEvent
+struct ComWanDevMaintainEvent : public wxCommandEvent
 {
     ComWanDevMaintainEvent(wxEventType type, ComErrno _ret)
-        : wxEvent(type)
+        : wxCommandEvent(type)
         , ret(_ret)
     {
     }
@@ -102,10 +102,10 @@ struct ComWanDevMaintainEvent : public wxEvent
     ComErrno ret;
 };
 
-struct ComGetUserProfileEvent : public wxEvent
+struct ComGetUserProfileEvent : public wxCommandEvent
 {
     ComGetUserProfileEvent(wxEventType type, const com_user_profile_t &_userProfile, ComErrno _ret)
-        : wxEvent(type)
+        : wxCommandEvent(type)
         , userProfile(_userProfile)
         , ret(_ret)
     {
