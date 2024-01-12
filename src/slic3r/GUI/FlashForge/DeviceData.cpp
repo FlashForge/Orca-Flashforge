@@ -144,6 +144,13 @@ string DeviceObject::get_dev_id()
     return m_dev_id;
 }
 
+unsigned short DeviceObject::get_dev_pid()
+{
+    if(m_devInfo == nullptr)
+        return 0;
+    return m_devInfo->pid;
+}
+
 bool DeviceObject::is_in_printing_status(const string& status)
 {
     if (status.compare("PAUSE") == 0 || status.compare("RUNNING") == 0 || status.compare("SLICING") == 0 || status.compare("PREPARE") == 0) {

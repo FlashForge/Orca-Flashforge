@@ -57,6 +57,7 @@ public:
     fnet_lan_dev_info *get_lan_dev_info();
     string      get_dev_name();
     string      get_dev_id();
+    unsigned short     get_dev_pid();
 
     static bool is_in_printing_status(const string& status);
     void set_print_state(const string &status);
