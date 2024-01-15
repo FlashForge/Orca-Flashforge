@@ -46,6 +46,8 @@ struct com_user_profile_t {
 
 struct com_dev_data_t {
     ComConnectMode connectMode;
+    std::string serialNumber;
+    std::string deviceId;
     fnet_dev_detail_t *devDetail;
 };
 
