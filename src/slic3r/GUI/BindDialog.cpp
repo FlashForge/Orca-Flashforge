@@ -14,6 +14,8 @@
 #include "GUI_App.hpp"
 #include "Plater.hpp"
 #include "Widgets/WebView.hpp"
+#include "FlashForge/MultiComMgr.hpp"
+#include "FlashForge/LoginDialog.hpp"
 
 namespace Slic3r {
 namespace GUI {
@@ -584,28 +586,15 @@ wxString get_fail_reason(int code)
      show_bind_failed_info(false);
 
      //check isset info
-     if (m_machine_info == nullptr || m_machine_info == NULL) return;
+     if (m_device_info == nullptr || m_device_info == NULL)
+         return;
 
      //check dev_id
-     if (m_machine_info->dev_id.empty()) return;
+     string dev_id = m_device_info->get_dev_id();
+     if (dev_id.empty())
+         return;
 
-     // update ota version
-     NetworkAgent* agent = wxGetApp().getAgent();
-     if (agent)
-         agent->track_update_property("dev_ota_version", m_machine_info->get_ota_version());
-
-     m_simplebook->SetSelection(0);
-     m_bind_job = std::make_shared<BindJob>(m_status_bar, wxGetApp().plater(), m_machine_info->dev_id, m_machine_info->dev_ip, m_machine_info->bind_sec_link);
-
-     if (m_machine_info && (m_machine_info->printer_type == "BL-P001" || m_machine_info->printer_type == "BL-P002")) {
-         m_bind_job->set_improved(false);
-     }
-     else {
-         m_bind_job->set_improved(m_allow_notice);
-     }
-
-     m_bind_job->set_event_handle(this);
-     m_bind_job->start();
+     MultiComMgr::inst()->bindWanDev(dev_id, m_device_info->get_dev_pid(), m_device_info->get_dev_name());
  }
 
 void BindMachineDialog::on_dpi_changed(const wxRect &suggested_rect)
@@ -652,16 +641,16 @@ void BindMachineDialog::on_show(wxShowEvent &event)
 
         m_printer_name->SetLabelText(from_u8(m_device_info->get_dev_name()));
 
-        if (wxGetApp().is_user_login()) {
-            wxString username_text = from_u8(wxGetApp().getAgent()->get_user_nickanme());
-            m_user_name->SetLabelText(username_text);
-            web_request = wxWebSession::GetDefault().CreateRequest(this, wxGetApp().getAgent()->get_user_avatar());
-            if (!web_request.IsOk()) {
-                // todo request fail
-            }
-            // Start the request
-            web_request.Start();
-        }
+        //if (LoginDialog::IsUsrLogin()) {
+        //    wxString username_text = from_u8(wxGetApp().getAgent()->get_user_nickanme());
+        //    m_user_name->SetLabelText(username_text);
+        //    web_request = wxWebSession::GetDefault().CreateRequest(this, wxGetApp().getAgent()->get_user_avatar());
+        //    if (!web_request.IsOk()) {
+        //        // todo request fail
+        //    }
+        //    // Start the request
+        //    web_request.Start();
+        //}
 
         Layout();
         event.Skip();
@@ -823,34 +812,27 @@ void UnBindMachineDialog::on_cancel(wxCommandEvent &event)
 
 void UnBindMachineDialog::on_unbind_printer(wxCommandEvent &event)
 {
-    if (!wxGetApp().is_user_login()) {
+     if (!LoginDialog::IsUsrLogin()) {
         m_status_text->SetLabelText(_L("Please log in first."));
         return;
     }
 
-    if (!m_machine_info) {
+    if (!m_device_info) {
         m_status_text->SetLabelText(_L("There was a problem connecting to the printer. Please try again."));
         return;
     }
 
-    m_machine_info->set_access_code("");
-    int result = wxGetApp().request_user_unbind(m_machine_info->dev_id);
-    if (result == 0) {
-        DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
-        if (!dev) return;
-        // clean local machine access code info
-        MachineObject* obj = dev->get_local_machine(m_machine_info->dev_id);
-        if (obj) {
-            obj->set_access_code("");
-        }
-        dev->erase_user_machine(m_machine_info->dev_id);
+    DeviceObjectOpr *devOpr = wxGetApp().getDeviceObjectOpr();
+    if (devOpr == nullptr)
+        return;
 
+    ComErrno ret = devOpr->unbind_wan_machine(m_device_info);
+    if (ret == COM_OK) {
         m_status_text->SetLabelText(_L("Log out successful."));
         m_button_cancel->SetLabel(_L("Close"));
         m_button_unbind->Hide();
         EndModal(wxID_OK);
-    }
-    else {
+    } else {
         m_status_text->SetLabelText(_L("Failed to log out."));
         EndModal(wxID_CANCEL);
         return;
@@ -863,29 +845,34 @@ void UnBindMachineDialog::on_unbind_printer(wxCommandEvent &event)
       m_button_cancel->SetMinSize(BIND_DIALOG_BUTTON_SIZE);
 }
 
+ void UnBindMachineDialog::update_device_info(DeviceObject *info)
+ {
+     m_device_info = info;
+ }
+
 void UnBindMachineDialog::on_show(wxShowEvent &event)
 {
     if (event.IsShown()) {
-        auto img = m_machine_info->get_printer_thumbnail_img_str();
+        auto img = m_device_info->get_printer_thumbnail_img_str();
         if (wxGetApp().dark_mode()) { img += "_dark"; }
         auto bitmap = create_scaled_bitmap(img, this, FromDIP(100));
         m_printer_img->SetBitmap(bitmap);
         m_printer_img->Refresh();
         m_printer_img->Show();
 
-        m_printer_name->SetLabelText(from_u8(m_machine_info->dev_name));
+        m_printer_name->SetLabelText(from_u8(m_device_info->get_dev_name()));
 
 
-        if (wxGetApp().is_user_login()) {
-            wxString username_text = from_u8(wxGetApp().getAgent()->get_user_name());
-            m_user_name->SetLabelText(username_text);
-            wxString avatar_url = wxGetApp().getAgent()->get_user_avatar();
-            web_request = wxWebSession::GetDefault().CreateRequest(this, avatar_url);
-            if (!web_request.IsOk()) {
-                // todo request fail
-            }
-            web_request.Start();
-        }
+        //if (LoginDialog::IsUsrLogin()) {
+        //    wxString username_text = from_u8(wxGetApp().getAgent()->get_user_name());
+        //    m_user_name->SetLabelText(username_text);
+        //    wxString avatar_url = wxGetApp().getAgent()->get_user_avatar();
+        //    web_request = wxWebSession::GetDefault().CreateRequest(this, avatar_url);
+        //    if (!web_request.IsOk()) {
+        //        // todo request fail
+        //    }
+        //    web_request.Start();
+        //}
 
         Layout();
         event.Skip();

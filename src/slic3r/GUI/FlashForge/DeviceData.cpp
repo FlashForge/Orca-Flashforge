@@ -9,7 +9,7 @@ namespace Slic3r {
 namespace GUI {
 
 DeviceObject::DeviceObject(const string &dev_id, const string &dev_name)
-    : m_devInfo(nullptr)
+    : m_lan_info(nullptr)
     , m_dev_id(dev_id)
     , m_dev_name(dev_name)
     , m_is_online(false)
@@ -20,18 +20,18 @@ DeviceObject::DeviceObject(const string &dev_id, const string &dev_name)
 DeviceObject::DeviceObject(const fnet_lan_dev_info &devInfo)
     :m_is_online(false)
 {
-    m_devInfo = new fnet_lan_dev_info(devInfo);
-    m_dev_id = m_devInfo->serialNumber;
-    m_dev_name = m_devInfo->name;
+    m_lan_info   = new fnet_lan_dev_info(devInfo);
+    m_dev_id     = m_lan_info->serialNumber;
+    m_dev_name   = m_lan_info->name;
     m_bind_state = "free";
 }
 
 bool DeviceObject::is_lan_mode_in_scan_print()
 {
-    if (m_devInfo == nullptr)
+    if (m_lan_info == nullptr)
         return true;
     else {
-        if (m_devInfo->connectMode == 0)
+        if (m_lan_info->connectMode == 0)
             return true;
     }
     return false;
@@ -131,7 +131,7 @@ void DeviceObject::reset_update_time()
 
 fnet_lan_dev_info * DeviceObject::get_lan_dev_info()
 {
-    return m_devInfo;
+    return m_lan_info;
 }
 
 string DeviceObject::get_dev_name()
@@ -146,9 +146,19 @@ string DeviceObject::get_dev_id()
 
 unsigned short DeviceObject::get_dev_pid()
 {
-    if(m_devInfo == nullptr)
+    if (m_lan_info == nullptr)
         return 0;
-    return m_devInfo->pid;
+    return m_lan_info->pid;
+}
+
+string DeviceObject::get_wan_dev_id()
+{
+    return m_bind_dev_id;
+}
+
+void DeviceObject::set_wan_dev_id(const string &devId)
+{
+    m_bind_dev_id = devId;
 }
 
 bool DeviceObject::is_in_printing_status(const string& status)
@@ -257,12 +267,6 @@ void DeviceObjectOpr::update_scan_machine()
     }
 }
 
-// connect_type: cloud
-void DeviceObjectOpr::update_user_machine()
-{
-
-}
-
 // connect_type: lan
 void DeviceObjectOpr::read_local_machine_from_config()
 {
@@ -321,7 +325,7 @@ bool DeviceObjectOpr::set_selected_machine(const string &dev_id)
     return true;
 }
 
-void DeviceObjectOpr::unbind_machine(DeviceObject* obj)
+void DeviceObjectOpr::unbind_lan_machine(DeviceObject *obj)
 {
     if (obj == nullptr) {
         return;
@@ -351,13 +355,26 @@ void DeviceObjectOpr::unbind_machine(DeviceObject* obj)
     }
 }
 
+ComErrno DeviceObjectOpr::unbind_wan_machine(DeviceObject *obj)
+{
+    if (obj == nullptr) {
+        return COM_ERROR;
+    }
+
+    ComErrno ret = MultiComMgr::inst()->unbindWanDev(obj->get_dev_id(), obj->get_wan_dev_id());
+    if (ret == COM_OK) {
+        auto devIt = m_user_devices.find(obj->get_dev_id());
+        if (devIt != m_user_devices.end()) {
+            delete devIt->second;
+            m_user_devices.erase(devIt);
+        }
+    }
+    return ret;
+}
+
 void DeviceObjectOpr::get_my_machine_list(map<string, DeviceObject *> &devList)
 {
-    for (auto it = m_user_devices.begin(); it != m_user_devices.end(); it++) {
-        if (!it->second)
-            continue;
-        devList.insert(make_pair(it->first, it->second));
-    }
+    devList.insert(m_user_devices.begin(), m_user_devices.end());
 
     for (auto it = m_scan_devices.begin(); it != m_scan_devices.end(); it++) {
         if (!it->second)
@@ -438,7 +455,7 @@ void DeviceObjectOpr::onConnectExit(ComConnectionExitEvent &event)
             auto local_it = m_local_devices.find(m_selected_machine);
             if (event.ret == COM_VERIFY_LAN_DEV_FAILED && local_it != m_local_devices.end()) {
                 // notify the device access code has changed, this device should unbind and move to other device.
-                unbind_machine(devObj);
+                unbind_lan_machine(devObj);
             } else {
                 devObj->set_online_state(false);
             }
@@ -453,24 +470,38 @@ void DeviceObjectOpr::onConnectExit(ComConnectionExitEvent &event)
 
 void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
 {
-    DeviceObject *devObj = get_scan_device(m_selected_machine);
-    if (devObj == nullptr)
-        return;
-
-    auto it = m_user_devices.find(m_selected_machine);
-    if (it == m_user_devices.end()) {
-        DeviceObject *userObj = new DeviceObject(*devObj);
-        userObj->set_online_state(true);
-        userObj->set_user_access_code(devObj->get_user_access_code(true));
-        m_user_devices.emplace(make_pair(m_selected_machine, userObj));
-
-        AppConfig *config = GUI::wxGetApp().app_config;
-        if (config) {
-            config->save_bind_machine_to_config(devObj->get_dev_id(), devObj->get_dev_name());
+    int connectId = event.id ;
+    const com_dev_data_t &data      = MultiComMgr::inst()->devData(connectId);
+    if (data.connectMode == COM_CONNECT_WAN) {
+        string macSN = data.wanDevInfo.serialNumber;
+        auto   it    = m_user_devices.find(macSN);
+        if (it == m_user_devices.end()) {
+            DeviceObject *devObj = new DeviceObject(macSN, data.wanDevInfo.name);
+            devObj->set_connection_type(CONNECTTYPE_CLOUD);
+            devObj->set_online_state(true);
+            devObj->set_wan_dev_id(data.wanDevInfo.devId);
+            m_user_devices.emplace(make_pair(macSN, devObj));
         }
     } else {
-        DeviceObject *userObj = it->second;
-        userObj->set_online_state(true);
+        DeviceObject *devObj = get_scan_device(m_selected_machine);
+        if (devObj == nullptr)
+            return;
+
+        auto it = m_user_devices.find(m_selected_machine);
+        if (it == m_user_devices.end()) {
+            DeviceObject *userObj = new DeviceObject(*devObj);
+            userObj->set_online_state(true);
+            userObj->set_user_access_code(devObj->get_user_access_code(true));
+            m_user_devices.emplace(make_pair(m_selected_machine, userObj));
+
+            AppConfig *config = GUI::wxGetApp().app_config;
+            if (config) {
+                config->save_bind_machine_to_config(devObj->get_dev_id(), devObj->get_dev_name());
+            }
+        } else {
+            DeviceObject *userObj = it->second;
+            userObj->set_online_state(true);
+        }
     }
 }
 

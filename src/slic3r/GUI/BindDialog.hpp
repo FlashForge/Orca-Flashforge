@@ -109,6 +109,7 @@ protected:
     Button *      m_button_unbind;
     Button *      m_button_cancel;
     MachineObject *m_machine_info{nullptr};
+    DeviceObject   *m_device_info {nullptr};
     wxStaticBitmap *m_avatar;
     wxStaticBitmap *m_printer_img;
     wxWebRequest    web_request;
@@ -121,6 +122,7 @@ public:
     void on_unbind_printer(wxCommandEvent &event);
     void on_dpi_changed(const wxRect &suggested_rect) override;
     void update_machine_info(MachineObject *info) { m_machine_info = info; };
+    void update_device_info(DeviceObject *info);
     void on_show(wxShowEvent &event);
 };
 

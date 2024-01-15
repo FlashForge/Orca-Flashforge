@@ -154,7 +154,6 @@ public:
     
     ~MachineObjectPanel();
 
-    void show_bind_dialog();
     void set_printer_state(PrinterState state);
     void show_printer_bind(bool show, PrinterBindState state);
     void show_edit_printer_name(bool show);
