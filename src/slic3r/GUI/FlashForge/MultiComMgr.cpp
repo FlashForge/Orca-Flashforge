@@ -208,16 +208,13 @@ void MultiComMgr::initConnection(const com_ptr_t &comPtr, const com_dev_data_t &
     m_datMap.emplace(comPtr->id(), devData);
     m_serialNumberSet.insert(comPtr->serialNumber());
 
-    comPtr->Bind(COM_CONNECTION_READY_EVENT, [this](const ComConnectionReadyEvent &event) {
-        m_readyIdSet.insert(event.id);
-        QueueEvent(event.Clone());
-    });
     comPtr->Bind(COM_SEND_GCODE_PROGRESS_EVENT, [this](const ComSendGcodeProgressEvent &event) {
         QueueEvent(event.Clone());
     });
     comPtr->Bind(COM_SEND_GCODE_FINISH_EVENT, [this](const ComSendGcodeFinishEvent &event) {
         QueueEvent(event.Clone());
     });
+    comPtr->Bind(COM_CONNECTION_READY_EVENT, &MultiComMgr::onConnectionReady, this);
     comPtr->Bind(COM_CONNECTION_EXIT_EVENT, &MultiComMgr::onConnectionExit, this);
     comPtr->Bind(COM_DEV_DETAIL_UPDATE_EVENT, &MultiComMgr::onDevDetailUpdate, this);
     comPtr->connect();
@@ -262,6 +259,15 @@ void MultiComMgr::onWanDevUpdated(const WanDevUpdateEvent &event)
             initConnection(comPtr, makeDevData(&event.devInfos[i]));
         }
     }
+}
+
+void MultiComMgr::onConnectionReady(const ComConnectionReadyEvent &event)
+{
+    fnet_dev_detail_t *&devDetail = m_datMap.at(event.id).devDetail;
+    m_networkIntfc->freeDevDetail(devDetail);
+    devDetail = event.devDetail;
+    m_readyIdSet.insert(event.id);
+    QueueEvent(event.Clone());
 }
 
 void MultiComMgr::onConnectionExit(const ComConnectionExitEvent &event)

@@ -20,20 +20,22 @@ struct ComConnectionEvent : public wxCommandEvent
 
 struct ComConnectionReadyEvent : public ComConnectionEvent
 {
-    ComConnectionReadyEvent(wxEventType type, com_id_t _id)
-        : ComConnectionEvent(type, _id, 0)
+    ComConnectionReadyEvent(wxEventType type, com_id_t _id, fnet_dev_detail_t *_devDetail)
+        : ComConnectionEvent(type, _id, ComInvalidCommandId)
+        , devDetail(_devDetail)
     {
     }
     ComConnectionReadyEvent *Clone() const
     {
-        return new ComConnectionReadyEvent(GetEventType(), id);
+        return new ComConnectionReadyEvent(GetEventType(), id, devDetail);
     }
+    fnet_dev_detail_t *devDetail;
 };
 
 struct ComConnectionExitEvent : public ComConnectionEvent
 {
     ComConnectionExitEvent(wxEventType type, com_id_t _id, ComErrno _ret)
-        : ComConnectionEvent(type, _id, 0)
+        : ComConnectionEvent(type, _id, ComInvalidCommandId)
         , ret(_ret)
     {
     }
