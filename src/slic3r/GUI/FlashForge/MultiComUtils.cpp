@@ -133,6 +133,8 @@ ComErrno MultiComUtils::fnetRet2ComErrno(int networkRet)
     switch (networkRet) {
     case FNET_OK:
         return COM_OK;
+    case FNET_ABORTED_BY_CALLBACK:
+        return COM_ABORTED_BY_USER;
     case FNET_DIVICE_IS_BUSY:
         return COM_DEVICE_IS_BUSY;
     case FNET_VERIFY_LAN_DEV_FAILED:
