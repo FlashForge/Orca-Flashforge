@@ -44,10 +44,20 @@ struct com_user_profile_t {
     std::string headImgUrl;
 };
 
+struct com_wan_dev_info_t {
+    std::string devId;
+    std::string name;
+    std::string model;
+    std::string imageUrl;
+    std::string status;
+    std::string location;
+    std::string serialNumber;
+};
+
 struct com_dev_data_t {
     ComConnectMode connectMode;
-    std::string serialNumber;
-    std::string deviceId;
+    fnet_lan_dev_info_t lanDevInfo;
+    com_wan_dev_info_t wanDevInfo;
     fnet_dev_detail_t *devDetail;
 };
 

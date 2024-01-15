@@ -45,6 +45,11 @@ void UserDataUpdateThd::clearToken()
     m_oldUserName.clear();
 }
 
+void UserDataUpdateThd::setUpdateWanDev()
+{
+    m_loopWaitEvent.set(true);
+}
+
 void UserDataUpdateThd::run()
 {
     std::string oldUserName, userName, accessToken;

@@ -58,7 +58,7 @@ private:
 
     std::string initLogFiles(const std::string &logFileDir);
 
-    void initConnection(const com_ptr_t &comPtr);
+    void initConnection(const com_ptr_t &comPtr, const com_dev_data_t &devData);
 
     void onWanDevMaintian(const ComWanDevMaintainEvent &event);
 
@@ -67,6 +67,8 @@ private:
     void onConnectionExit(const ComConnectionExitEvent &event);
 
     void onDevDetailUpdate(const ComDevDetailUpdateEvent &event);
+
+    com_dev_data_t makeDevData(const fnet_wan_dev_info_t *wanDevInfo);
 
 private:
     int                                      m_idNum;

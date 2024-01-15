@@ -40,6 +40,8 @@ public:
 
     void clearToken();
 
+    void setUpdateWanDev();
+
 private:
     void run();
 
