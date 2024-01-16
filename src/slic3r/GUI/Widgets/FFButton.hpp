@@ -13,6 +13,7 @@ public:
 	void SetFontHoverColor(const wxColour& color);
 	void SetFontPressColor(const wxColour& color);
 	void SetFontDisableColor(const wxColour& color);
+	void SetFontUniformColor(const wxColour& color);
 	void SetBorderColor(const wxColour& color);
 	void SetBorderHoverColor(const wxColour& color);
 	void SetBorderPressColor(const wxColour& color);
@@ -21,6 +22,7 @@ public:
 	void SetBGHoverColor(const wxColour& color);
 	void SetBGPressColor(const wxColour& color);
 	void SetBGDisableColor(const wxColour& color);
+	void SetBGUniformColor(const wxColour& color);
 
 protected:
 	void OnPaint(wxPaintEvent& event);	

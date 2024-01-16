@@ -28,6 +28,9 @@
 #include "Jobs/BindJob.hpp"
 #include "BBLStatusBar.hpp"
 #include "BBLStatusBarBind.hpp"
+#include "TitleDialog.hpp"
+#include "Widgets/FFButton.hpp"
+#include "Widgets/FFCheckBox.hpp"
 
 #define BIND_DIALOG_GREY200 wxColour(248, 248, 248)
 #define BIND_DIALOG_GREY800 wxColour(50, 58, 61)
@@ -44,51 +47,53 @@ struct MemoryStruct
     size_t size;
 };
 
-class BindMachineDialog : public DPIDialog
+class BindMachineDialog : public TitleDialog
 {
 private:
+    class LinkLabel : public Label
+    {
+    public:
+        LinkLabel(wxWindow *parent, const wxString &text, const wxString& cn_link, const wxString& other_link);
+
+    private:
+        wxString m_cn_link;
+        wxString m_other_link;
+    };
+
+private:
     wxWindow*      m_panel_agreement;
-    wxStaticText * m_printer_name;
-    wxStaticText * m_user_name;
-    StaticBox *   m_panel_left;
-    StaticBox *   m_panel_right;
-    wxStaticText *m_status_text;
-    wxStaticText* m_link_show_error;
-    Button *      m_button_bind;
-    Button *      m_button_cancel;
+
     wxSimplebook *m_simplebook;
-    wxStaticBitmap *m_avatar;
+    wxPanel*       m_normal_panel;
+    wxSizer*       m_machine_sizer;
     wxStaticBitmap *m_printer_img;
-    wxStaticBitmap *m_static_bitmap_show_error;
-    wxBitmap      m_bitmap_show_error_close;
-    wxBitmap      m_bitmap_show_error_open;
-    wxWebRequest  web_request;
-    wxScrolledWindow* m_sw_bind_failed_info;
-    Label*          m_bind_failed_info;
-    Label*          m_st_txt_error_code{ nullptr };
-    Label*          m_st_txt_error_desc{ nullptr };
-    Label*          m_st_txt_extra_info{ nullptr };
-    Label*          m_link_network_state{ nullptr };
-    wxString        m_result_info;
-    wxString        m_result_extra;
-    bool            m_show_error_info_state = true;
-    bool            m_allow_privacy{false};
-    bool            m_allow_notice{false};
+    wxStaticText * m_printer_name;
+    wxSizer*       m_user_sizer;
+    wxStaticText * m_user_name;
+    wxStaticBitmap *m_user_img;
+    wxStaticText * m_bind_text;
+    FFCheckBox*    m_checkbox_privacy;
+    LinkLabel*     m_privacy_title;
+    LinkLabel*     m_terms_title;
+    FFButton*      m_bind_btn;
+    FFButton*      m_cancel_btn;
+    wxPanel*       m_result_panel;
+    wxBoxSizer*    m_result_sizer;
+    wxStaticText*  m_result_text;
+    FFButton*      m_result_btn;
+
     int             m_result_code;
 
     MachineObject *                   m_machine_info{nullptr};
     DeviceObject                     *m_device_info {nullptr};
     std::shared_ptr<BindJob>          m_bind_job;
-    std::shared_ptr<BBLStatusBarBind> m_status_bar;
 
 public:
-    BindMachineDialog(Plater *plater = nullptr);
+    BindMachineDialog();
     ~BindMachineDialog();
 
-    void     show_bind_failed_info(bool show, int code = 0, wxString description = wxEmptyString, wxString extra = wxEmptyString);
     void     on_cancel(wxCommandEvent& event);
     void     on_bind_fail(wxCommandEvent &event);
-    void     on_update_message(wxCommandEvent &event);
     void     on_bind_success(wxCommandEvent &event);
     void     on_bind_printer(wxCommandEvent &event);
     void     on_dpi_changed(const wxRect &suggested_rect) override;
@@ -97,7 +102,7 @@ public:
     void     on_show(wxShowEvent &event);
     void     on_close(wxCloseEvent& event);
     void     on_destroy();
-    wxString get_print_error(wxString str);
+    void     on_result_ok(wxCommandEvent& event);
 };
 
 class UnBindMachineDialog : public DPIDialog

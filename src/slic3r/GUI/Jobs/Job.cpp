@@ -32,12 +32,16 @@ void GUI::Job::update_status(int st, const wxString &msg)
 
 void GUI::Job::update_percent_finish()
 {
-    m_progress->clear_percent();
+    if (m_progress) {
+        m_progress->clear_percent();
+    }
 }
 
 void GUI::Job::show_error_info(wxString msg, int code, wxString description, wxString extra)
 {
-    m_progress->show_error_info(msg, code, description, extra);
+    if (m_progress) {
+        m_progress->show_error_info(msg, code, description, extra);
+    }
 }
 
 GUI::Job::Job(std::shared_ptr<ProgressIndicator> pri)
@@ -49,25 +53,29 @@ GUI::Job::Job(std::shared_ptr<ProgressIndicator> pri)
         if (m_finalizing)  return;
 
         auto msg = evt.GetString();
-        if (!msg.empty() && !m_worker_error)
+        if (!msg.empty() && !m_worker_error && m_progress)
             m_progress->set_status_text(msg.ToUTF8().data());
 
         if (m_finalized) return;
 
-        m_progress->set_progress(evt.GetInt());
+        if (m_progress) m_progress->set_progress(evt.GetInt());
         if (evt.GetInt() == status_range() || m_worker_error) {
-            // set back the original range and cancel callback
-            m_progress->set_range(m_range);
-            // Make sure progress indicators get the last value of their range
-            // to make sure they close, fade out, whathever
-            m_progress->set_progress(m_range);
-            m_progress->set_cancel_callback();
+            if (m_progress) {
+                // set back the original range and cancel callback
+                m_progress->set_range(m_range);
+                // Make sure progress indicators get the last value of their range
+                // to make sure they close, fade out, whathever
+                m_progress->set_progress(m_range);
+                m_progress->set_cancel_callback();
+            }
             wxEndBusyCursor();
 
             if (m_worker_error) {
                 m_finalized = true;
-                m_progress->set_status_text("");
-                m_progress->set_progress(m_range);
+                if (m_progress) {
+                    m_progress->set_status_text("");
+                    m_progress->set_progress(m_range);
+                }
                 on_exception(m_worker_error);
             }
             else {
@@ -99,13 +107,16 @@ void GUI::Job::start()
         prepare();
 
         // Save the current status indicatior range and push the new one
-        m_range = m_progress->get_range();
-        m_progress->set_range(status_range());
+        if (m_progress) {
+            m_range = m_progress->get_range();
+            m_progress->set_range(status_range());
+        } else {
+            m_range = 100;
+        }
 
         // init cancellation flag and set the cancel callback
         m_canceled.store(false);
-        m_progress->set_cancel_callback(
-                    [this]() { m_canceled.store(true); });
+        if (m_progress) m_progress->set_cancel_callback([this]() { m_canceled.store(true); });
 
         m_finalized  = false;
         m_finalizing = false;
