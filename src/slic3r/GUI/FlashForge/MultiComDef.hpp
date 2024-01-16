@@ -23,6 +23,7 @@ enum ComErrno {
     COM_VERIFY_LAN_DEV_FAILED,  // invalid serialNumber/checkCode
     COM_UNAUTHORIZED,           // invalid accessToken/clientAccessToken
     COM_INVALID_VALIDATION,     // invalid userName/password/SMSCode
+    COM_DEVICE_HAS_BEEN_BOUND,
 };
 
 enum ComConnectMode {

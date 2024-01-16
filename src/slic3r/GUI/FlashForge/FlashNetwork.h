@@ -36,6 +36,7 @@ typedef struct fnet_lan_dev_info {
     unsigned short vid;
     unsigned short pid;
     unsigned short connectMode; // 0 lan mode, 1 wan mode
+    unsigned short bindStatus; // 0 unbound, 1 bound
 } fnet_lan_dev_info_t;
 
 typedef struct fnet_file_data {
@@ -138,6 +139,7 @@ typedef struct fnet_dev_detail {
 #define FNET_VERIFY_LAN_DEV_FAILED 1001 // invalid serialNumber/checkCode
 #define FNET_UNAUTHORIZED 2001          // invalid accessToken/clientAccessToken
 #define FNET_INVALID_VALIDATION 2002    // invalid userName/password/SMSCode
+#define FNET_DEVICE_HAS_BEEN_BOUND 2003
 
 #ifdef __cplusplus
 extern "C" {
