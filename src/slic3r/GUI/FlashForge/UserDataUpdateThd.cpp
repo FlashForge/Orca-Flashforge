@@ -45,6 +45,11 @@ void UserDataUpdateThd::clearToken()
     m_oldUserName.clear();
 }
 
+void UserDataUpdateThd::setUpdateWanDev()
+{
+    m_loopWaitEvent.set(true);
+}
+
 void UserDataUpdateThd::run()
 {
     std::string oldUserName, userName, accessToken;
@@ -55,15 +60,13 @@ void UserDataUpdateThd::run()
         if (!accessToken.empty()) {
             if (oldUserName != userName) {
                 updateUserProfile(accessToken);
+                setOldUserName(userName);
             }
             ComErrno ret = updateWanDev(accessToken);
             if (ret != COM_OK) {
-                QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, ret));
                 clearToken();
-            } else if (oldUserName != userName) {
-                QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, ret));
             }
-            setOldUserName(userName);
+            QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, ret));
         }
         int elapsedTime = (clock() - startClock) / CLOCKS_PER_SEC;
         m_loopWaitEvent.waitTrue(std::max(5000 - elapsedTime, 100));
@@ -72,22 +75,15 @@ void UserDataUpdateThd::run()
 
 ComErrno UserDataUpdateThd::updateUserProfile(const std::string &accessToken)
 {
-    int fnetRet = FNET_OK;
-    int tryCnt = 3;
+    fnet_user_profile_t *fnetProfile;
+    int fnetRet = m_networkIntfc->getUserProfile(accessToken.c_str(), &fnetProfile, ComTimeoutWan);
+    fnet::FreeInDestructor freeProfile(fnetProfile, m_networkIntfc->freeUserProfile);
     com_user_profile_t userProfile;
-    for (int i = 0; i < tryCnt; ++i) {
-        fnet_user_profile_t *fnetProfile;
-        int fnetRet = m_networkIntfc->getUserProfile(accessToken.c_str(), &fnetProfile, ComTimeoutWan);
-        fnet::FreeInDestructor freeProfile(fnetProfile, m_networkIntfc->freeUserProfile);
-        if (fnetRet == FNET_OK) {
-            userProfile.nickname = fnetProfile->nickname;
-            userProfile.headImgUrl = fnetProfile->headImgUrl;
-            break;
-        } else if (i + 1 < tryCnt) {
-            boost::this_thread::sleep_for(boost::chrono::milliseconds(50));
-        }
-    }
     ComErrno ret = MultiComUtils::fnetRet2ComErrno(fnetRet);
+    if (ret == COM_OK) {
+        userProfile.nickname = fnetProfile->nickname;
+        userProfile.headImgUrl = fnetProfile->headImgUrl;
+    }
     QueueEvent(new ComGetUserProfileEvent(COM_GET_USER_PROFILE_EVENT, userProfile, ret));
     return ret;
 }

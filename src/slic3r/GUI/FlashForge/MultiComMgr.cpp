@@ -1,4 +1,5 @@
 #include "MultiComMgr.hpp"
+#include <memory>
 #include <strstream>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/filesystem.hpp>
@@ -10,7 +11,11 @@ namespace Slic3r { namespace GUI {
 MultiComMgr::MultiComMgr()
     : m_idNum(ComInvalidId + 1)
 {
-    m_datMap.emplace(ComInvalidId, com_dev_data_t{COM_CONNECT_LAN, nullptr});
+    com_dev_data_t devData;
+    devData.connectMode = COM_CONNECT_LAN;
+    devData.devDetail = nullptr;
+    memset(&devData.lanDevInfo, 0, sizeof(devData.lanDevInfo));
+    m_datMap.emplace(ComInvalidId, devData);
 }
 
 bool MultiComMgr::initalize(const std::string &newtworkDllPath, const std::string &logFileDir)
@@ -52,7 +57,9 @@ com_id_t MultiComMgr::addLanDev(const fnet_lan_dev_info &devInfo, const std::str
     if (networkIntfc() == nullptr) {
         return ComInvalidId;
     }
-    initConnection(com_ptr_t(new ComConnection(m_idNum, checkCode, devInfo, networkIntfc())));
+    com_ptr_t comPtr = std::make_shared<ComConnection>(m_idNum, checkCode, devInfo, networkIntfc());
+    com_dev_data_t devData = { COM_CONNECT_LAN, devInfo, com_wan_dev_info_t(), nullptr };
+    initConnection(comPtr, devData);
     return m_idNum++;
 }
 
@@ -101,8 +108,7 @@ ComErrno MultiComMgr::bindWanDev(const std::string &serialNumber, unsigned short
     int ret = m_networkIntfc->bindWanDev(
         accessToken.c_str(), serialNumber.c_str(), pid, name.c_str(), &bindData, ComTimeoutWan);
     if (ret == FNET_OK) {
-        initConnection(com_ptr_t(new ComConnection(
-            m_idNum++, accessToken, bindData->serialNumber, bindData->devId, m_networkIntfc.get())));
+        m_userDataUpdateThd->setUpdateWanDev();
     }
     return MultiComUtils::fnetRet2ComErrno(ret);
 }
@@ -195,23 +201,20 @@ std::string MultiComMgr::initLogFiles(const std::string &logFileDir)
     return (boost::format("%s/%s.log") % logFileDir % oss.str()).str();
 }
 
-void MultiComMgr::initConnection(const com_ptr_t &comPtr)
+void MultiComMgr::initConnection(const com_ptr_t &comPtr, const com_dev_data_t &devData)
 {
     m_comPtrs.push_back(comPtr);
     m_ptrMap.insert(com_ptr_map_val_t(comPtr->id(), comPtr.get()));
-    m_datMap.emplace(comPtr->id(), com_dev_data_t{comPtr->connectMode(), nullptr});
+    m_datMap.emplace(comPtr->id(), devData);
     m_serialNumberSet.insert(comPtr->serialNumber());
 
-    comPtr->Bind(COM_CONNECTION_READY_EVENT, [this](const ComConnectionReadyEvent &event) {
-        m_readyIdSet.insert(event.id);
-        QueueEvent(event.Clone());
-    });
     comPtr->Bind(COM_SEND_GCODE_PROGRESS_EVENT, [this](const ComSendGcodeProgressEvent &event) {
         QueueEvent(event.Clone());
     });
     comPtr->Bind(COM_SEND_GCODE_FINISH_EVENT, [this](const ComSendGcodeFinishEvent &event) {
         QueueEvent(event.Clone());
     });
+    comPtr->Bind(COM_CONNECTION_READY_EVENT, &MultiComMgr::onConnectionReady, this);
     comPtr->Bind(COM_CONNECTION_EXIT_EVENT, &MultiComMgr::onConnectionExit, this);
     comPtr->Bind(COM_DEV_DETAIL_UPDATE_EVENT, &MultiComMgr::onDevDetailUpdate, this);
     comPtr->connect();
@@ -251,10 +254,20 @@ void MultiComMgr::onWanDevUpdated(const WanDevUpdateEvent &event)
     }
     for (int i = 0; i < event.devCnt; ++i) {
         if (m_serialNumberSet.find(event.devInfos[i].serialNumber) == m_serialNumberSet.end()) {
-            initConnection(com_ptr_t(new ComConnection(m_idNum++, event.accessToken,
-                event.devInfos[i].serialNumber, event.devInfos[i].devId, m_networkIntfc.get())));
+            com_ptr_t comPtr = std::make_shared<ComConnection>(m_idNum++, event.accessToken,
+                event.devInfos[i].serialNumber, event.devInfos[i].devId, networkIntfc());
+            initConnection(comPtr, makeDevData(&event.devInfos[i]));
         }
     }
+}
+
+void MultiComMgr::onConnectionReady(const ComConnectionReadyEvent &event)
+{
+    fnet_dev_detail_t *&devDetail = m_datMap.at(event.id).devDetail;
+    m_networkIntfc->freeDevDetail(devDetail);
+    devDetail = event.devDetail;
+    m_readyIdSet.insert(event.id);
+    QueueEvent(event.Clone());
 }
 
 void MultiComMgr::onConnectionExit(const ComConnectionExitEvent &event)
@@ -276,6 +289,23 @@ void MultiComMgr::onDevDetailUpdate(const ComDevDetailUpdateEvent &event)
     m_networkIntfc->freeDevDetail(devDetail);
     devDetail = event.devDetail;
     QueueEvent(event.Clone());
+}
+
+com_dev_data_t MultiComMgr::makeDevData(const fnet_wan_dev_info_t *wanDevInfo)
+{
+    com_dev_data_t devData;
+    devData.connectMode = COM_CONNECT_WAN;
+    devData.wanDevInfo.devId = wanDevInfo->devId;
+    devData.wanDevInfo.name = wanDevInfo->name;
+    devData.wanDevInfo.name = wanDevInfo->name;
+    devData.wanDevInfo.model = wanDevInfo->model;
+    devData.wanDevInfo.imageUrl = wanDevInfo->imageUrl;
+    devData.wanDevInfo.status = wanDevInfo->status;
+    devData.wanDevInfo.location = wanDevInfo->location;
+    devData.wanDevInfo.serialNumber = wanDevInfo->serialNumber;
+    devData.devDetail = nullptr;
+    memset(&devData.lanDevInfo, 0, sizeof(devData.lanDevInfo));
+    return devData;
 }
 
 }} // namespace Slic3r::GUI

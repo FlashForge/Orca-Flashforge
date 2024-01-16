@@ -89,7 +89,7 @@ void ComConnection::run()
         QueueEvent(new ComConnectionExitEvent(COM_CONNECTION_EXIT_EVENT, m_id, ret));
         return;
     }
-    QueueEvent(new ComConnectionReadyEvent(COM_CONNECTION_READY_EVENT, m_id));
+    QueueEvent(new ComConnectionReadyEvent(COM_CONNECTION_READY_EVENT, m_id, getDevDetail.devDetail()));
     ret = commandLoop();
     QueueEvent(new ComConnectionExitEvent(COM_CONNECTION_EXIT_EVENT, m_id, ret));
 }

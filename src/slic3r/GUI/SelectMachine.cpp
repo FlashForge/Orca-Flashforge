@@ -13,6 +13,7 @@
 #include "Widgets/StaticBox.hpp"
 #include "ConnectPrinter.hpp"
 #include "FlashForge/MultiComMgr.hpp"
+#include "FlashForge/LoginDialog.hpp"
 
 
 #include <wx/progdlg.h>
@@ -144,15 +145,6 @@ MachineObjectPanel::MachineObjectPanel(wxWindow *parent, wxWindowID id, const wx
 
 
 MachineObjectPanel::~MachineObjectPanel() {}
-
-void MachineObjectPanel::show_bind_dialog()
-{
-    if (wxGetApp().is_user_login()) {
-        BindMachineDialog dlg;
-        dlg.update_machine_info(m_info);
-        dlg.ShowModal();
-    }
-}
 
 void MachineObjectPanel::set_printer_state(PrinterState state)
 {
@@ -357,7 +349,7 @@ void MachineObjectPanel::on_mouse_left_up(wxMouseEvent &evt)
             event.SetEventObject(this);
             wxPostEvent(this, event);
         } else {
-            if (wxGetApp().is_user_login()) {
+            if (!LoginDialog::IsUsrLogin()) {
                 MessageDialog msg_wingow(nullptr, _L("Please login first."), "", wxAPPLY | wxOK);
                 msg_wingow.ShowModal();
             } else {
@@ -512,12 +504,12 @@ bool SelectMachinePopup::ProcessLeftDown(wxMouseEvent &event) {
 bool SelectMachinePopup::Show(bool show) {
     if (show) {
         for (int i = 0; i < m_user_list_machine_panel.size(); i++) {
-            m_user_list_machine_panel[i]->mPanel->update_machine_info(nullptr);
+            m_user_list_machine_panel[i]->mPanel->update_device_info(nullptr);
             m_user_list_machine_panel[i]->mPanel->Hide();
         }
 
          for (int j = 0; j < m_other_list_machine_panel.size(); j++) {
-            m_other_list_machine_panel[j]->mPanel->update_machine_info(nullptr);
+            m_other_list_machine_panel[j]->mPanel->update_device_info(nullptr);
             m_other_list_machine_panel[j]->mPanel->Hide();
         }
     }
@@ -637,7 +629,7 @@ void SelectMachinePopup::update_other_devices()
     }
 
     for (int j = i; j < m_other_list_machine_panel.size(); j++) {
-        m_other_list_machine_panel[j]->mPanel->update_machine_info(nullptr);
+        m_other_list_machine_panel[j]->mPanel->update_device_info(nullptr);
         m_other_list_machine_panel[j]->mPanel->Hide();
     }
 
@@ -719,7 +711,7 @@ void SelectMachinePopup::update_user_devices()
             }
             else {
                 op->show_printer_bind(false, PrinterBindState::NONE);
-                op->show_edit_printer_name(false);
+                //op->show_edit_printer_name(false);
                 if (devObj->has_access_right() && devObj->is_avaliable()) {
                     op->set_printer_state(PrinterState::ONLINE_LAN);
                     op->show_printer_bind(true, PrinterBindState::ALLOW_UNBIND);
@@ -730,7 +722,7 @@ void SelectMachinePopup::update_user_devices()
                 }
             }
             op->Bind(EVT_UNBIND_MACHINE, [this, devOpr, devObj](wxCommandEvent &e) {
-                devOpr->unbind_machine(devObj);
+                devOpr->unbind_lan_machine(devObj);
 
                 MessageDialog msg_wingow(nullptr, _L("Log out successful."), "", wxAPPLY | wxOK);
                 if (msg_wingow.ShowModal() == wxOK) { return; }
@@ -740,10 +732,11 @@ void SelectMachinePopup::update_user_devices()
             op->show_printer_bind(true, PrinterBindState::ALLOW_UNBIND);
             op->Bind(EVT_UNBIND_MACHINE, [this, devObj, devOpr](wxCommandEvent& e) {
                 // show_unbind_dialog
-                /*UnBindMachineDialog dlg;
-                dlg.update_machine_info(mobj);
-                if (dlg.ShowModal() == wxID_OK) {
-                    dev->set_selected_machine("");
+                UnBindMachineDialog dlg;
+                dlg.update_device_info(devObj);
+                dlg.ShowModal();
+                /*if (dlg.ShowModal() == wxID_OK) {
+                    devOpr->set_selected_machine("");
                 }*/
                 });
 
@@ -752,7 +745,7 @@ void SelectMachinePopup::update_user_devices()
                 op->set_printer_state(PrinterState::OFFLINE_WAN);
             }
             else {
-                op->show_edit_printer_name(true);
+                //op->show_edit_printer_name(true);
                 op->show_printer_bind(true, PrinterBindState::ALLOW_UNBIND);
                 if (devObj->is_in_printing()) {
                     op->SetToolTip(_L("Busy"));
@@ -785,7 +778,7 @@ void SelectMachinePopup::update_user_devices()
     }
 
     for (int j = i; j < m_user_list_machine_panel.size(); j++) {
-        m_user_list_machine_panel[j]->mPanel->update_machine_info(nullptr);
+        m_user_list_machine_panel[j]->mPanel->update_device_info(nullptr);
         m_user_list_machine_panel[j]->mPanel->Hide();
     }
     //m_sizer_my_devices->Layout();
