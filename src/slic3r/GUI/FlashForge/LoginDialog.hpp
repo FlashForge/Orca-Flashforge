@@ -9,6 +9,9 @@
 #include "slic3r/GUI/Widgets/Button.hpp"
 #include "slic3r/GUI/Widgets/FFButton.hpp"
 #include "slic3r/GUI/Widgets/FFCheckBox.hpp"
+#include "slic3r/GUI/FlashForge/UserNameCtrl.hpp"
+#include "slic3r/GUI/FlashForge/VerifyCodeCtrl.hpp"
+#include "slic3r/GUI/FlashForge/PasswordCtrl.hpp"
 #include "slic3r/GUI/FlashForge/MultiComDef.hpp"
 #include "slic3r/GUI/TitleDialog.hpp"
 
@@ -35,70 +38,20 @@ private:
     wxWindow* m_parent;
 };
 
-class VerifycodeTextCtrl : public wxPanel
-{
-public:
-    VerifycodeTextCtrl(wxBitmap verifycodebitmap,wxWindow *parent, wxWindowID id = wxID_ANY);
-
-    wxString GetValue(){
-        return m_verify_code_text_ctrl->GetValue();
-    }
-
-private:
-    wxTextCtrl*      m_verify_code_text_ctrl;
-    wxStaticBitmap*  m_verify_staticbitmap;
-};
-
-class UsrnameTextCtrl : public wxPanel
-{
-public:
-    UsrnameTextCtrl(wxBitmap usrnamebitmap,wxWindow *parent, wxWindowID id = wxID_ANY);
-
-    wxString GetValue(){
-        return m_user_name_text_ctrl->GetValue();
-    }
-
-private:
-    wxTextCtrl*      m_user_name_text_ctrl;
-    wxStaticBitmap*  m_usr_staticbitmap;
-};
-
-class PasswordTextCtrl : public wxPanel
-{
-public:
-    PasswordTextCtrl(wxBitmap lockbitmap,wxBitmap eyeoffbitmapBtn,wxBitmap eyeonbitmapBtn,wxWindow *parent, wxWindowID id = wxID_ANY);
-
-    wxString GetValue();
-
-    void RefreshEyePicPosition();
-
-private:
-    void OnShowPasswordButtonClicked(wxMouseEvent& event);
-
-private:
-    wxTextCtrl*      m_password_text_ctrl{nullptr};
-    wxTextCtrl*      m_plain_text_ctrl{nullptr};
-    wxBitmap         m_eye_off_bitmap;
-    wxBitmap         m_eye_on_bitmap;
-    wxStaticBitmap*  m_lock_staticbitmap{nullptr};
-    wxStaticBitmap*  m_showPassword_staticbitmap{nullptr};
-    bool             m_encrypt = true;
-    wxPoint          m_eye_pic_position;
-};
-
 class LoginDialog : public TitleDialog
 {
 public:
     LoginDialog();
 
     static com_token_data_t GetLoginToken();
-    static void SetToken(std::string accessToken, std::string refreshToken);
+    static void SetToken(const std::string& accessToken, const std::string& refreshToken);
     static void SetUsrLogin(bool loginState);
     static bool IsUsrLogin();
+    static void SetUsrInfo(const com_user_profile_t& usrInfo);
+    static const com_user_profile_t& GetUsrInfo();
 
 protected:
     void on_dpi_changed(const wxRect &suggested_rect) override;
-    void OnPaint(wxPaintEvent& event);
 
 private:
     void initWidget();
@@ -146,25 +99,17 @@ private:
     wxPanel* m_page_body_page1_panel {nullptr};
     wxPanel* m_page_body_page2_panel {nullptr};
 
-
-
     wxStaticText* m_error_label {nullptr};
     wxButton* m_login_button_page1 {nullptr};
     //FFButton* m_login_button_page1 {nullptr};
-    UsrnameTextCtrl* m_usrname_page1 {nullptr};
-    VerifycodeTextCtrl* m_verify_code {nullptr};
-    wxCheckBox* m_login_check_box_page1 {nullptr};
     CountdownButton* m_get_code_button {nullptr};
     wxStaticText* m_protocol_page1{nullptr};
     wxHyperlinkCtrl* m_service_link_page1{nullptr};
     wxHyperlinkCtrl* m_privacy_policy_page1{nullptr};
 
-    UsrnameTextCtrl* m_usrname_page2 {nullptr};
-    PasswordTextCtrl* m_password {nullptr};
     wxStaticText* m_error_label_page2 {nullptr};
     wxButton* m_login_button_page2 {nullptr};
     //FFButton* m_login_button_page2 {nullptr};
-    wxCheckBox* m_login_check_box_page2 {nullptr};
     wxPanel* m_panel_checkbox_page2 {nullptr};
 
     wxStaticText* m_protocol_page2{nullptr};
@@ -182,8 +127,14 @@ private:
     
     static com_token_data_t  m_token_data;
     static bool m_usr_is_login;
+    static com_user_profile_t m_usr_info;
 
     wxTimer m_timer;
+
+    UserNameCtrl* m_username_ctrl_page1 {nullptr};
+    VerifyCodeCtrl* m_verifycode_ctrl_page1 {nullptr};
+    UserNameCtrl* m_username_ctrl_page2 {nullptr};
+    PasswordCtrl* m_password_ctrl_page2 {nullptr};
 
 };
 } // namespace GUI
