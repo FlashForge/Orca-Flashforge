@@ -56,8 +56,10 @@ public:
 
     fnet_lan_dev_info *get_lan_dev_info();
     string      get_dev_name();
-    string      get_dev_id();
+    string      get_dev_id();  // serialNumber
     unsigned short     get_dev_pid();
+    string      get_wan_dev_id();
+    void               set_wan_dev_id(const string &devId);
 
     static bool is_in_printing_status(const string& status);
     void set_print_state(const string &status);
@@ -68,9 +70,10 @@ public:
     string get_printer_thumbnail_img_str();
 
 private:
-    fnet_lan_dev_info *m_devInfo;
+    fnet_lan_dev_info *m_lan_info {nullptr };
     string             m_dev_id;
     string             m_dev_name;
+    string             m_bind_dev_id; /*used in bind or unbind */
 
     string              m_user_access_code;
     string              m_bind_state; /* free | occupied */
@@ -94,14 +97,14 @@ public:
 
 public:
     void update_scan_machine();
-    void update_user_machine();
     void read_local_machine_from_config();
 
     void get_local_machine(map<string, DeviceObject *>& macList);
 
     bool set_selected_machine(const string &dev_id);
 
-    void unbind_machine(DeviceObject *obj);
+    void unbind_lan_machine(DeviceObject *obj);
+    ComErrno unbind_wan_machine(DeviceObject *obj);
 
     /* return machine has access code and user machine if login*/
     void get_my_machine_list(map<string, DeviceObject *> &devList);

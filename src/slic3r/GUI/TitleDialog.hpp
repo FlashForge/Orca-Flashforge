@@ -42,7 +42,7 @@ private:
 class TitleDialog : public DPIDialog
 {
 public:
-    TitleDialog(wxWindow* parent, const wxString& title, int borderRadius = 6);
+    TitleDialog(wxWindow* parent, const wxString& title, int borderRadius = 6, const wxSize &size = wxDefaultSize);
 
     void SetTitleBackgroundColor(const wxColour& color);
 

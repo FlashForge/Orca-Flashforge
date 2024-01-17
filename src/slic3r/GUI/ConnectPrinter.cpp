@@ -32,9 +32,12 @@ ConnectPrinterDialog::ConnectPrinterDialog(wxWindow *parent, wxWindowID id, cons
     wxBoxSizer *sizer_connect;
     sizer_connect = new wxBoxSizer(wxHORIZONTAL);
 
+    StateColor btn_bd(std::pair<wxColour, int>(wxColour(50, 141, 251), StateColor::Normal));
+
     m_textCtrl_code = new TextInput(this, wxEmptyString);
     m_textCtrl_code->GetTextCtrl()->SetMaxLength(10);
     m_textCtrl_code->SetFont(Label::Body_14);
+    m_textCtrl_code->SetBorderColor(btn_bd);
     m_textCtrl_code->SetCornerRadius(FromDIP(5));
     m_textCtrl_code->SetSize(wxSize(FromDIP(330), FromDIP(40)));
     m_textCtrl_code->SetMinSize(wxSize(FromDIP(330), FromDIP(40)));
@@ -46,25 +49,10 @@ ConnectPrinterDialog::ConnectPrinterDialog(wxWindow *parent, wxWindowID id, cons
 
     sizer_connect->Add(FromDIP(20), 0);
 
-    m_button_confirm = new Button(this, _L("Confirm"));
-    m_button_confirm->SetFont(Label::Body_12);
-    m_button_confirm->SetMinSize(wxSize(-1, FromDIP(24)));
-    m_button_confirm->SetCornerRadius(FromDIP(12));
-    m_button_confirm->SetTextColor(wxColour("#FFFFFE"));
-
-    StateColor btn_bg(
-        std::pair<wxColour, int>(wxColour(0, 137, 123), StateColor::Pressed),
-        std::pair<wxColour, int>(wxColour(38, 166, 154), StateColor::Hovered),
-        std::pair<wxColour, int>(wxColour(0, 150, 136), StateColor::Normal)
-    );
-
-    StateColor btn_bd(std::pair<wxColour, int>(wxColour(0, 150, 136), StateColor::Normal));
+    m_button_confirm = new Button(this, _L(""), "access_code_confirm");
 
     StateColor btn_text(std::pair<wxColour, int>(wxColour(255, 255, 255), StateColor::Normal));
-
-    m_button_confirm->SetBackgroundColor(btn_bg);
-    m_button_confirm->SetBorderColor(btn_bd);
-    m_button_confirm->SetTextColor(btn_text);
+    m_button_confirm->SetBorderColor(btn_text);
 
     sizer_connect->Add(m_button_confirm, 0, wxALL | wxALIGN_CENTER_VERTICAL, 0);
     
@@ -74,20 +62,21 @@ ConnectPrinterDialog::ConnectPrinterDialog(wxWindow *parent, wxWindowID id, cons
 
     sizer_top->Add(0, FromDIP(35));
 
-    m_staticText_hints = new wxStaticText(this, wxID_ANY, _L("You can find it in \"Settings > Network > Connection code\"\non the printer, as shown in the figure:"), wxDefaultPosition, wxDefaultSize, 0);
+    m_staticText_hints = new wxStaticText(this, wxID_ANY, _L("You can find it in \"Settings > Network > Connection code\"\non the printer; To facilitate device identification, \nyou can change the device name on the device page."), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText_hints->SetFont(Label::Body_15);
     m_staticText_hints->SetForegroundColour(wxColour(50, 58, 61));
     m_staticText_hints->Wrap(-1);
     sizer_top->Add(m_staticText_hints, 0, wxALL, 0);
 
+    sizer_top->Add(0, FromDIP(15));
+
     m_label_error_info = new Label(this, _L("The access code is wrong, please input again."));
     m_label_error_info->SetFont(Label::Body_15);
+    m_label_error_info->SetBackgroundColour(wxColour(250, 207, 202));
     m_label_error_info->SetForegroundColour(wxColour(234, 53, 34));
     m_label_error_info->Wrap(-1);
     sizer_top->Add(m_label_error_info, 0, wxALL, 0);
     m_label_error_info->Show(err_hint);
-
-    sizer_top->Add(0, FromDIP(25));
 
     sizer_top->Add(0, FromDIP(40), 0, wxEXPAND, 0);
 

@@ -14,9 +14,9 @@ TitleBar::TitleBar(wxWindow *parent, const wxString& title, const wxColour& colo
     , m_title(title)
 {
     SetBackgroundColour(m_bgColor);
-    m_titleLbl = new wxStaticText(this, wxID_ANY, m_title, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER | wxALIGN_CENTER_VERTICAL);
+    m_titleLbl = new wxStaticText(this, wxID_ANY, m_title, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
     m_titleLbl->Bind(wxEVT_LEFT_DOWN, &TitleBar::OnMouseLeftDown, this);
-    m_titleLbl->SetBackgroundColour(m_bgColor);
+    m_titleLbl->SetBackgroundColour(m_bgColor/*wxColour("#ff0000")*/);
 
     m_closeBtn = new wxBitmapButton(this, -1, create_scaled_bitmap("title_close", this, 12), wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
     m_closeBtn->SetBitmapHover(create_scaled_bitmap("title_closeHover", this, 12));
@@ -26,10 +26,11 @@ TitleBar::TitleBar(wxWindow *parent, const wxString& title, const wxColour& colo
 
     wxBoxSizer* mainSizer = new wxBoxSizer(wxHORIZONTAL);
     //mainSizer->AddStretchSpacer(1);
-    mainSizer->Add(m_titleLbl, 1, wxLEFT | wxALIGN_CENTER_VERTICAL, 8);
+    mainSizer->Add(m_titleLbl, 1, wxLEFT | wxRIGHT | wxALIGN_CENTER_VERTICAL, 8);
     //mainSizer->AddStretchSpacer(1);
-    mainSizer->Add(m_closeBtn, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 8);
+    mainSizer->Add(m_closeBtn, 0, wxRIGHT | wxALIGN_CENTER, 8);
     SetSizer(mainSizer);
+    Layout();
     
     Bind(wxEVT_PAINT, &TitleBar::OnPaint, this);
     Bind(wxEVT_LEFT_DOWN, &TitleBar::OnMouseLeftDown, this);
@@ -117,14 +118,14 @@ void TitleBar::FinishDrag()
 
 
 // TitleDialog
-TitleDialog::TitleDialog(wxWindow* parent, const wxString& title, int borderRadius/*=6*/)
-    : DPIDialog(parent, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxFRAME_SHAPED | wxNO_BORDER)
+TitleDialog::TitleDialog(wxWindow* parent, const wxString& title, int borderRadius/*=6*/, const wxSize &size/*=wxDefaultSize*/)
+    : DPIDialog(parent, wxID_ANY, "", wxDefaultPosition, size, wxFRAME_SHAPED | wxNO_BORDER)
     , m_borderRadius(borderRadius)
     , m_titleBar(new TitleBar(this, title, "#E1E2E6", borderRadius))
     , m_mainSizer(new wxBoxSizer(wxVERTICAL))
 {
     wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
-    sizer->Add(m_titleBar, 0, wxEXPAND);
+    sizer->Add(m_titleBar, 0, wxEXPAND | wxALIGN_TOP);
     sizer->Add(m_mainSizer, 1, wxEXPAND);
     SetSizer(sizer);
     Layout();
