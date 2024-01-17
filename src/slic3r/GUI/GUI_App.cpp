@@ -3540,6 +3540,7 @@ void GUI_App::ShowUserLogin(bool show)
             }
         Slic3r::GUI::MultiComMgr::inst()->Bind(COM_GET_USER_PROFILE_EVENT, [this](ComGetUserProfileEvent &event){
             if(event.ret == ComErrno::COM_OK){
+                LoginDialog::SetUsrInfo(com_user_profile_t{event.userProfile.nickname,event.userProfile.headImgUrl});
                 if(app_config){
                     app_config->set("usr_pic",event.userProfile.headImgUrl);
                     app_config->set("usr_name",event.userProfile.nickname);
@@ -3915,6 +3916,7 @@ std::string GUI_App::handle_web_request(std::string cmd)
                             //未过期，自动登录
                             handle_login_result(usr_pic,usr_name);
                             LoginDialog::SetToken(access_token,refresh_token);
+                            LoginDialog::SetUsrInfo(com_user_profile_t{usr_name,usr_pic});
                             Slic3r::GUI::MultiComMgr::inst()->setWanDevToken(usr_name,access_token);
                         }
                         //get_login_info();

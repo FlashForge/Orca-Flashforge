@@ -23,6 +23,7 @@ namespace GUI {
 
     com_token_data_t LoginDialog::m_token_data = {};
     bool LoginDialog::m_usr_is_login = false;
+    com_user_profile_t LoginDialog::m_usr_info = {};
 
     CountdownButton::CountdownButton(wxWindow* parent, wxString text, wxString icon /*= ""*/, long style /*= 0*/, int iconSize /*= 0*/, wxWindowID btn_id /*= wxID_ANY*/)
         : Button(parent,text,icon,style,iconSize,btn_id)
@@ -52,24 +53,6 @@ namespace GUI {
             // 恢复按钮上原来的文本
             SetLabel(_L("Get Code"));
         }
-    }
-
-    VerifycodeTextCtrl::VerifycodeTextCtrl(wxBitmap verifycodebitmap,wxWindow *parent, wxWindowID id/* = wxID_ANY*/)
-                       : wxPanel(parent, id)
-    {
-        // 创建验证码输入框和锁图标
-        m_verify_staticbitmap = new wxStaticBitmap(this, wxID_ANY,verifycodebitmap);
-        m_verify_code_text_ctrl = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_LEFT | wxBORDER_NONE);
-        m_verify_code_text_ctrl->SetHint(_L("Code"));
-        m_verify_code_text_ctrl->SetMinSize(wxSize(171,33));
-
-        // 创建垂直布局并添加控件
-        wxBoxSizer *hbox = new wxBoxSizer(wxHORIZONTAL);
-        hbox->Add(m_verify_staticbitmap,wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT, 5));
-        hbox->Add(m_verify_code_text_ctrl, wxSizerFlags().Expand().Border(wxTOP, 12));
-
-        // 设置面板的布局
-        SetSizerAndFit(hbox);
     }
 
     //增加正则过滤
@@ -106,138 +89,15 @@ namespace GUI {
         std::vector<std::regex> m_regexps;
     };
 
-    UsrnameTextCtrl::UsrnameTextCtrl(wxBitmap usrnamebitmap,wxWindow *parent, wxWindowID id /*= wxID_ANY*/)
-                    : wxPanel(parent, id)
-    {
-        // 创建账号输入框和人像图标
-        m_usr_staticbitmap = new wxStaticBitmap(this, wxID_ANY,usrnamebitmap);
-        m_user_name_text_ctrl = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_LEFT | wxBORDER_NONE);
-        m_user_name_text_ctrl->SetHint(_L("Phone Number / email"));
-        m_user_name_text_ctrl->SetMinSize(wxSize(295,33));
-        // wxTextValidator validator(wxFILTER_INCLUDE_CHAR_LIST);
-        // validator.SetCharIncludes("^[\w\.-]+@[\w\.-]+\.\w+$|^1[3-9]\d{9}$");
-        // m_user_name_text_ctrl->SetValidator(validator);
-
-        // 创建垂直布局并添加控件
-        wxBoxSizer *hbox = new wxBoxSizer(wxHORIZONTAL);
-        hbox->Add(m_usr_staticbitmap,wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT, 5));
-        hbox->Add(m_user_name_text_ctrl, wxSizerFlags().Expand().Border(wxTOP, 12));
-
-        // 设置面板的布局
-        SetSizerAndFit(hbox);
-    }
-
-    PasswordTextCtrl::PasswordTextCtrl(wxBitmap lockbitmap,wxBitmap eyeoffbitmapBtn,wxBitmap eyeonbitmapBtn,wxWindow *parent, wxWindowID id /*= wxID_ANY*/)
-                    : wxPanel(parent, id)
-    {
-        m_eye_off_bitmap = eyeoffbitmapBtn;
-        m_eye_on_bitmap = eyeonbitmapBtn;
-
-        // 创建密码输入框和眼睛图标按钮
-        m_lock_staticbitmap = new wxStaticBitmap(this, wxID_ANY,lockbitmap);
-        m_password_text_ctrl = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_PASSWORD | wxTE_PROCESS_ENTER | wxTE_LEFT | wxBORDER_NONE);
-        m_password_text_ctrl->SetHint(_L("Password"));
-        m_password_text_ctrl->SetMinSize(wxSize(241,33));
-
-        m_showPassword_staticbitmap = new wxStaticBitmap(this, wxID_ANY,eyeoffbitmapBtn);
-
-        // 设置眼睛图标按钮的大小和工具提示文本
-        m_showPassword_staticbitmap->SetSize(wxSize(20, 16));
-
-        // 创建垂直布局并添加控件
-        wxBoxSizer *hbox = new wxBoxSizer(wxHORIZONTAL);
-        hbox->Add(m_lock_staticbitmap,wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT, 5));
-        hbox->Add(m_password_text_ctrl, wxSizerFlags().Expand().Border(wxTOP, 12));
-        hbox->Add(m_showPassword_staticbitmap, wxSizerFlags().Center().Border(wxLEFT | wxRIGHT, 5));
-
-        // 设置面板的布局
-        SetSizerAndFit(hbox);
-
-        // 连接信号和槽函数
-        m_showPassword_staticbitmap->Bind(wxEVT_LEFT_UP, [this](wxMouseEvent& e){OnShowPasswordButtonClicked(e);});
-
-		m_plain_text_ctrl = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER | wxTE_LEFT | wxBORDER_NONE);
-        m_plain_text_ctrl->Hide();
-    }
-
-    wxString PasswordTextCtrl::GetValue(){
-        if(m_encrypt){
-            return m_password_text_ctrl->GetValue();
-        }
-        else{
-            return m_plain_text_ctrl->GetValue();
-        }
-    }
-
-    void PasswordTextCtrl::RefreshEyePicPosition()
-    {
-        if(!m_encrypt){
-            //明文显示时调整眼睛图标位置
-            //m_lock_staticbitmap->SetPosition(m_eye_pic_position);
-            m_showPassword_staticbitmap->SetPosition(m_eye_pic_position);
-            m_showPassword_staticbitmap->Refresh();
-            m_showPassword_staticbitmap->Update();
-        }
-    }
-
-    void PasswordTextCtrl::OnShowPasswordButtonClicked(wxMouseEvent& event)
-    {
-        if (m_encrypt) {
-            m_encrypt = false;
-            wxString password = m_password_text_ctrl->GetValue();
-            //获取眼睛图标位置(明文显示时，因为密文控件被隐藏，会导致图标显示位置变更)
-            m_eye_pic_position = m_showPassword_staticbitmap->GetPosition();
-            // 如果密码输入框当前为密码模式，则切换为明文模式
-            m_password_text_ctrl->SetWindowStyle(wxTE_PROCESS_ENTER | wxTE_LEFT | wxBORDER_NONE);
-            m_password_text_ctrl->SetValue(password);
-            m_showPassword_staticbitmap->SetBitmap(m_eye_on_bitmap);
-            m_password_text_ctrl->Refresh();
-            m_password_text_ctrl->Update();
-
-        //替换为明文控件
-            m_password_text_ctrl->Hide();
-		    wxPoint point = m_password_text_ctrl->GetPosition();
-            wxSize size = m_password_text_ctrl->GetSize();
-            m_plain_text_ctrl->SetPosition(point);
-            m_plain_text_ctrl->SetSize(size);
-            m_plain_text_ctrl->SetValue(wxEmptyString);
-            m_plain_text_ctrl->SetValue(password);
-            m_plain_text_ctrl->Show();
-        } else {
-            m_encrypt = true;
-            m_password_text_ctrl->Refresh();
-            m_password_text_ctrl->SetWindowStyle(wxTE_PASSWORD | wxTE_LEFT | wxBORDER_NONE);
-            //MarkedText();
-            // 如果密码输入框当前为明文模式，则切换为密码模式
-            m_password_text_ctrl->SetValue(m_password_text_ctrl->GetValue());
-            m_showPassword_staticbitmap->SetBitmap(m_eye_off_bitmap);
-            m_password_text_ctrl->Refresh();
-            m_password_text_ctrl->Update();
-
-        //替换为密文控件
-            wxString plain_text = m_plain_text_ctrl->GetValue();
-            m_plain_text_ctrl->Hide();
-            m_password_text_ctrl->SetValue(wxEmptyString);
-            m_password_text_ctrl->SetValue(plain_text);
-            m_password_text_ctrl->Show();
-
-        }
-    }
-
 LoginDialog::LoginDialog()
     :TitleDialog(static_cast<wxWindow *>(wxGetApp().mainframe),_L("Login"),6)
 {
     SetFont(wxGetApp().normal_font());
 	SetBackgroundColour(*wxWHITE);
-
-    //std::string icon_path = (boost::format("%1%/images/Orca-FlashforgeTitle.ico") % resources_dir()).str();
-    //SetIcon(wxIcon(encode_path(icon_path.c_str()), wxBITMAP_TYPE_ICO));
  
     initWidget();
-
     initBindEvent();
     initData();
-
 }
 
 com_token_data_t LoginDialog::GetLoginToken()
@@ -245,7 +105,7 @@ com_token_data_t LoginDialog::GetLoginToken()
     return m_token_data;
 }
 
-void LoginDialog::SetToken(std::string accessToken, std::string refreshToken)
+void LoginDialog::SetToken(const std::string& accessToken, const std::string& refreshToken)
 {
     m_token_data.accessToken = accessToken;
     m_token_data.refreshToken = refreshToken;
@@ -261,6 +121,16 @@ bool LoginDialog::IsUsrLogin()
     return m_usr_is_login;
 }
 
+void LoginDialog::SetUsrInfo(const com_user_profile_t& usrInfo)
+{
+    m_usr_info = usrInfo;
+}
+
+const com_user_profile_t& LoginDialog::GetUsrInfo()
+{
+    return m_usr_info;
+}
+
 void LoginDialog::on_dpi_changed(const wxRect &suggested_rect)
 {
     const int& em = em_unit();
@@ -268,37 +138,6 @@ void LoginDialog::on_dpi_changed(const wxRect &suggested_rect)
     SetMinSize(size);
     Fit();
     Refresh();
-}
-
-void LoginDialog::OnPaint(wxPaintEvent& event)
-{
-    return;
-    wxPaintDC dc(this);
-
-    // 获取对话框的客户区域
-    wxRect rect = GetClientRect();
-
-    // 绘制标题背景色
-    wxColour titleBgColor(0xE1, 0xE2, 0xE6);
-    dc.SetBrush(wxBrush(titleBgColor));
-    dc.SetPen(wxPen(titleBgColor));
-    dc.DrawRectangle(rect.x, rect.y, rect.width, FromDIP(29));
-
-    // 绘制正文背景色
-    wxColour bodyBgColor(0xFF, 0xFF, 0xFF);
-    dc.SetBrush(wxBrush(bodyBgColor));
-    dc.SetPen(wxPen(bodyBgColor));
-    dc.DrawRectangle(rect.x, rect.y + FromDIP(29), rect.width, rect.height - FromDIP(29));
-
-    // 绘制标题
-    wxFont font(wxFontInfo(18).Bold());
-    wxString title = GetTitle();
-    wxSize titleSize = dc.GetTextExtent(title);
-    int x = rect.x + (rect.width - titleSize.GetWidth()) / 2;
-    int y = rect.y + (FromDIP(29) - titleSize.GetHeight()) / 2;
-    dc.SetFont(font);
-    dc.SetTextForeground(wxColour(0, 0, 0));
-    dc.DrawText(title, x, y);
 }
 
 void LoginDialog::initWidget()
@@ -377,10 +216,8 @@ void LoginDialog::initBindEvent()
         m_title_2_underline->Refresh();
         m_panel_checkbox_page2->Refresh();
         Layout();
-        m_password->RefreshEyePicPosition();
+        m_password_ctrl_page2->RefreshEyePicPosition();
         });
-    
-    //Bind(wxEVT_PAINT, &LoginDialog::OnPaint, this);
 }
 
 void LoginDialog::createBodyWidget()
@@ -479,9 +316,6 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
 {
     wxPanel* panel = new wxPanel(parent, wxID_ANY);
 
-    //phone number / email
-    wxBitmap usr_pic = create_scaled_bitmap("login-usr", this, 18);
-
     //left space
     wxPanel* usr_name_space1 = new wxPanel(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER | wxTAB_TRAVERSAL);
     usr_name_space1->SetMinSize(wxSize(66, -1));
@@ -489,44 +323,35 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     wxPanel* usr_name_space2 = new wxPanel(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER | wxTAB_TRAVERSAL);
     usr_name_space2->SetMinSize(wxSize(86, -1));
 
-    m_usrname_page1 = new UsrnameTextCtrl(usr_pic,parent,wxID_ANY);
-    m_usrname_page1->Bind(wxEVT_TEXT, &LoginDialog::onUsrNameOrPasswordChangedPage1, this);
-    wxStaticBoxSizer* border_sizer = new wxStaticBoxSizer(wxVERTICAL, parent, wxEmptyString);
-    border_sizer->Add(m_usrname_page1);
-    //add border
-    border_sizer->GetStaticBox()->SetSizeHints(-1, -1, -1, 100);
+    m_username_ctrl_page1 = new UserNameCtrl(panel,wxID_ANY,_L("Phone Number / email"));
+    m_username_ctrl_page1->SetRadius(10);
 
     //adjust layout
     wxBoxSizer *last_sizer = new wxBoxSizer(wxHORIZONTAL);
     last_sizer->Add(usr_name_space1, 0, wxEXPAND|wxLeft, 0);
-    last_sizer->Add(border_sizer, 0, wxALL, 0);
+    last_sizer->Add(m_username_ctrl_page1, 0, wxALL, 0);
     last_sizer->Add(usr_name_space2, 0, wxEXPAND ,0);
 
+    // 设置布局
+    panel->SetSizer(last_sizer);
+    panel->Layout();
+    last_sizer->Fit(panel);
+
     page1Sizer->Add(0,FromDIP(23),0, 0);
-    page1Sizer->Add(last_sizer, 0, wxEXPAND ,0);
+    page1Sizer->Add(panel, 0, wxEXPAND ,0);
+    page1Sizer->AddSpacer(20);
 
 //*******verify code******** 
-
-    // bitmap
-    wxBitmap verify_pic = create_scaled_bitmap("login-verify", this, 18);
-
-    wxStaticBoxSizer* verify_border_sizer = new wxStaticBoxSizer(wxVERTICAL, parent, wxEmptyString);
-    verify_border_sizer->SetMinSize(wxSize(190,45));
-
-    m_verify_code = new VerifycodeTextCtrl(verify_pic,parent,wxID_ANY);
-    m_verify_code->Bind(wxEVT_TEXT, &LoginDialog::onUsrNameOrPasswordChangedPage1, this);
-    verify_border_sizer->Add(m_verify_code);
-    //add border
-    verify_border_sizer->GetStaticBox()->SetSizeHints(-1, -1, -1, 100);
+    m_verifycode_ctrl_page1 = new VerifyCodeCtrl(parent,wxID_ANY);
+    m_verifycode_ctrl_page1->Bind(wxEVT_TEXT, &LoginDialog::onUsrNameOrPasswordChangedPage1, this);
 
     m_get_code_button = new CountdownButton(parent,_L("Get Code"));
-    m_get_code_button->SetForegroundColour(wxColour(255, 255, 255));// 设置字体颜色
-    m_get_code_button->SetBackgroundColour(wxColour(221,221,221)); // 设置背景色
-    m_get_code_button->SetWindowStyleFlag(wxBORDER_NONE); //去除边框线
-    m_get_code_button->SetMinSize(wxSize(114,54));
+    m_get_code_button->SetForegroundColour(wxColour(255, 255, 255));
+    m_get_code_button->SetBackgroundColour(wxColour(221,221,221));
+    m_get_code_button->SetWindowStyleFlag(wxBORDER_NONE); 
+    m_get_code_button->SetMinSize(wxSize(114,52));
     m_get_code_button->Bind(wxEVT_BUTTON, [this](wxCommandEvent& event){
-        //发送验证码
-        ComErrno send_result =MultiComUtils::sendSMSCode(m_client_SMS_token.accessToken,m_usrname_page1->GetValue().ToStdString());
+        ComErrno send_result =MultiComUtils::sendSMSCode(m_client_SMS_token.accessToken,m_username_ctrl_page1->GetValue().ToStdString());
         if(send_result == ComErrno::COM_ERROR){
             BOOST_LOG_TRIVIAL(warning) << boost::format("MultiComUtils::sendSMSCode Failed!");
         }
@@ -540,8 +365,9 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     //verify_last_sizer->SetMinSize(250,-1);
 
     verify_last_sizer->Add(usr_name_space1, 0, wxEXPAND|wxLeft, 0);
-    verify_last_sizer->Add(verify_border_sizer);
-    verify_last_sizer->Add(m_get_code_button,0, wxALL,10);
+    verify_last_sizer->Add(m_verifycode_ctrl_page1);
+    verify_last_sizer->AddSpacer(15);
+    verify_last_sizer->Add(m_get_code_button);
     verify_last_sizer->Add(usr_name_space2, 0, wxEXPAND ,0);
 
     page1Sizer->Add(verify_last_sizer, 0, wxEXPAND ,0);
@@ -550,8 +376,8 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     m_error_label = new wxStaticText(parent,wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize);
     m_error_label->SetLabel(_L("Verify code is incorrect"));
     m_error_label->SetFont((wxFont(wxFontInfo(16))));
-    m_error_label->SetBackgroundColour(wxColour(250, 207, 202)); // #FACFCA
-    m_error_label->SetForegroundColour(wxColour(234, 53, 34)); // #EA3522
+    m_error_label->SetBackgroundColour(wxColour(250, 207, 202));
+    m_error_label->SetForegroundColour(wxColour(234, 53, 34));
     m_error_label->SetWindowStyle(wxALIGN_CENTER_VERTICAL | wxALIGN_CENTER_HORIZONTAL);
     m_error_label->SetMinSize(wxSize(348,55));
 
@@ -633,10 +459,6 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
 {
     wxPanel* panel = new wxPanel(parent, wxID_ANY);
 
-    //phone number / email
-    // bitmap
-    wxBitmap usr_pic = create_scaled_bitmap("login-usr", this, 18);
-
     //left space
     wxPanel* usr_name_space1 = new wxPanel(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER | wxTAB_TRAVERSAL);
     usr_name_space1->SetMinSize(wxSize(66, -1));
@@ -644,44 +466,29 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     wxPanel* usr_name_space2 = new wxPanel(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER | wxTAB_TRAVERSAL);
     usr_name_space2->SetMinSize(wxSize(86, -1));
 
-    wxStaticBoxSizer* border_sizer = new wxStaticBoxSizer(wxVERTICAL, parent, wxEmptyString);
-
-    m_usrname_page2 = new UsrnameTextCtrl(usr_pic,parent,wxID_ANY);
-    m_usrname_page2->Bind(wxEVT_TEXT, &LoginDialog::onUsrNameOrPasswordChangedPage2, this);
-
-    //add border
-    border_sizer->Add(m_usrname_page2);
-    border_sizer->GetStaticBox()->SetSizeHints(-1, -1, -1, 100);
+    m_username_ctrl_page2 = new UserNameCtrl(parent,wxID_ANY,_L("Phone Number / email"));
+    m_username_ctrl_page2->Bind(wxEVT_TEXT, &LoginDialog::onUsrNameOrPasswordChangedPage2, this);
 
     //adjust layout
     wxBoxSizer *last_sizer = new wxBoxSizer(wxHORIZONTAL);
     //last_sizer->SetMinSize(250,-1);
 
     last_sizer->Add(usr_name_space1, 0, wxEXPAND|wxLeft, 0);
-    last_sizer->Add(border_sizer, 0, wxALL, 0);
+    last_sizer->Add(m_username_ctrl_page2);
     last_sizer->Add(usr_name_space2, 0, wxEXPAND ,0);
 
     page2Sizer->Add(0,FromDIP(23),0, 0);
     page2Sizer->Add(last_sizer, 0, wxEXPAND ,0);
+    page2Sizer->AddSpacer(20);
 
 //*******password******** 
-    wxBitmap login_lock_pic = create_scaled_bitmap("login-lock", this, 18);
-    wxBitmap login_eye_off_pic = create_scaled_bitmap("login-eye-off", this, 18);
-    wxBitmap login_eye_on_pic = create_scaled_bitmap("login-eye-on", this, 18);
-
-    m_password = new PasswordTextCtrl(login_lock_pic,login_eye_off_pic,login_eye_on_pic,parent,wxID_ANY);
-    m_password->Bind(wxEVT_TEXT, &LoginDialog::onUsrNameOrPasswordChangedPage2, this);
-    wxStaticBoxSizer* verify_border_sizer = new wxStaticBoxSizer(wxVERTICAL, parent, wxEmptyString);
-    verify_border_sizer->SetMinSize(wxSize(190,45));
-    verify_border_sizer->Add(m_password);
-    
-    //add border
-    verify_border_sizer->GetStaticBox()->SetSizeHints(-1, -1, -1, 100);
+    m_password_ctrl_page2 = new PasswordCtrl(parent,wxID_ANY);
+    m_password_ctrl_page2->Bind(wxEVT_TEXT, &LoginDialog::onUsrNameOrPasswordChangedPage2, this);
 
     //adjust layout
     wxBoxSizer *verify_last_sizer = new wxBoxSizer(wxHORIZONTAL);
     verify_last_sizer->Add(usr_name_space1, 0, wxEXPAND|wxLeft, 0);
-    verify_last_sizer->Add(verify_border_sizer);
+    verify_last_sizer->Add(m_password_ctrl_page2);
     verify_last_sizer->Add(usr_name_space2, 0, wxEXPAND ,0);
 
     page2Sizer->Add(verify_last_sizer, 0, wxEXPAND ,0);
@@ -791,8 +598,8 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
 void LoginDialog::onUsrNameOrPasswordChangedPage1(wxCommandEvent& event)
 {
     //
-        wxString username = m_usrname_page1->GetValue();
-        wxString verifycode = m_verify_code->GetValue();
+        wxString username = m_username_ctrl_page1->GetValue();
+        wxString verifycode = m_verifycode_ctrl_page1->GetValue();
         bool agree = m_page1_checkBox->GetValue();
         if (!username.IsEmpty() && !verifycode.IsEmpty() && agree)
         {
@@ -809,8 +616,8 @@ void LoginDialog::onUsrNameOrPasswordChangedPage1(wxCommandEvent& event)
 
 void LoginDialog::onAgreeCheckBoxChangedPage1(wxCommandEvent& event)
 {
-        wxString username = m_usrname_page1->GetValue();
-        wxString verifycode = m_verify_code->GetValue();
+        wxString username = m_username_ctrl_page1->GetValue();
+        wxString verifycode = m_verifycode_ctrl_page1->GetValue();
         bool agree = m_page1_checkBox->GetValue();
         m_page1_checkBox->SetValue(agree);
         if (!username.IsEmpty() && !verifycode.IsEmpty() && agree)
@@ -828,8 +635,8 @@ void LoginDialog::onAgreeCheckBoxChangedPage1(wxCommandEvent& event)
 
 void LoginDialog::onUsrNameOrPasswordChangedPage2(wxCommandEvent& event)
 {
-        wxString username = m_usrname_page2->GetValue();
-        wxString password = m_password->GetValue();
+        wxString username = m_username_ctrl_page2->GetValue();
+        wxString password = m_password_ctrl_page2->GetValue();
         bool agree = m_page2_checkBox->GetValue();
         if (!username.IsEmpty() && !password.IsEmpty() && agree)
         {
@@ -846,8 +653,8 @@ void LoginDialog::onUsrNameOrPasswordChangedPage2(wxCommandEvent& event)
 
 void LoginDialog::onAgreeCheckBoxChangedPage2(wxCommandEvent& event)
 {
-        wxString username = m_usrname_page2->GetValue();
-        wxString password = m_password->GetValue();
+        wxString username = m_username_ctrl_page2->GetValue();
+        wxString password = m_password_ctrl_page2->GetValue();
         bool agree = m_page2_checkBox->GetValue();
         m_page2_checkBox->SetValue(agree);
         if (!username.IsEmpty() && !password.IsEmpty() && agree)
@@ -865,8 +672,8 @@ void LoginDialog::onAgreeCheckBoxChangedPage2(wxCommandEvent& event)
 
 void LoginDialog::onPage1Login(wxCommandEvent& event)
 {
-    wxString usrname = m_usrname_page1->GetValue();
-    wxString verify_code = m_verify_code->GetValue();
+    wxString usrname = m_username_ctrl_page1->GetValue();
+    wxString verify_code = m_verifycode_ctrl_page1->GetValue();
     com_token_data_t token_data;
     ComErrno login_result =  MultiComUtils::getTokenBySMSCode(usrname.ToStdString(),verify_code.ToStdString(),token_data);
     if(login_result == ComErrno::COM_OK){
@@ -892,8 +699,8 @@ void LoginDialog::onPage1Login(wxCommandEvent& event)
 
 void LoginDialog::onPage2Login(wxCommandEvent& event)
 {
-    wxString usrname = m_usrname_page2->GetValue();
-    wxString password = m_password->GetValue();
+    wxString usrname = m_username_ctrl_page2->GetValue();
+    wxString password = m_password_ctrl_page2->GetValue();
     com_token_data_t token_data;
     ComErrno login_result =  MultiComUtils::getTokenByPassword(usrname.ToStdString(),password.ToStdString(),token_data);
     if(login_result == ComErrno::COM_OK){
@@ -920,8 +727,8 @@ void LoginDialog::onPage2Login(wxCommandEvent& event)
 
 void LoginDialog::onPage3Login(wxMouseEvent& event)
 {
-    wxString usrname = m_usrname_page2->GetValue();
-    wxString password = m_password->GetValue();
+    wxString usrname = m_username_ctrl_page2->GetValue();
+    wxString password = m_password_ctrl_page2->GetValue();
     com_token_data_t token_data;
     ComErrno login_result =  MultiComUtils::getTokenByPassword(usrname.ToStdString(),password.ToStdString(),token_data);
     if(login_result == ComErrno::COM_OK){

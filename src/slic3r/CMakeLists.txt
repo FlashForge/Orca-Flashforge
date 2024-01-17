@@ -181,6 +181,12 @@ set(SLIC3R_GUI_SOURCES
     GUI/FlashForge/WaitEvent.hpp
     GUI/FlashForge/ReLoginDialog.cpp
     GUI/FlashForge/ReLoginDialog.hpp
+    GUI/FlashForge/UserNameCtrl.cpp
+    GUI/FlashForge/UserNameCtrl.hpp
+    GUI/FlashForge/VerifyCodeCtrl.cpp
+    GUI/FlashForge/VerifyCodeCtrl.hpp
+    GUI/FlashForge/PasswordCtrl.cpp
+    GUI/FlashForge/PasswordCtrl.hpp
 	GUI/GLModel.hpp
     GUI/GLModel.cpp
     GUI/GLTexture.hpp
