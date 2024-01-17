@@ -22,6 +22,7 @@ public:
 
 private:
     void OnPaint(wxPaintEvent& event);
+    void render(wxDC& dc);
 
 private:
     wxTextCtrl* m_text_ctrl{nullptr};

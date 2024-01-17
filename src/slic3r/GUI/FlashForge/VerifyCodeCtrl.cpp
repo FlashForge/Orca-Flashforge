@@ -48,6 +48,11 @@ VerifyCodeCtrl::~VerifyCodeCtrl()
 void VerifyCodeCtrl::OnPaint(wxPaintEvent& event)
 {
     wxPaintDC dc(this);
+    render(dc);
+}
+
+void VerifyCodeCtrl::render(wxDC& dc)
+{
     wxSize size = GetSize();
 
     dc.SetPen(wxPen(wxColour(153,153,153), 1));

@@ -73,6 +73,7 @@ private:
     void onPage1Login(wxCommandEvent& event);
     void onPage2Login(wxCommandEvent& event);
     void onPage3Login(wxMouseEvent& event);
+    void onPage4Login(wxMouseEvent& event);
 
     inline void startTimer(){ m_timer.Start(2000);}
     void OnTimer(wxTimerEvent& event);
@@ -100,24 +101,20 @@ private:
     wxPanel* m_page_body_page2_panel {nullptr};
 
     wxStaticText* m_error_label {nullptr};
-    wxButton* m_login_button_page1 {nullptr};
-    //FFButton* m_login_button_page1 {nullptr};
+    FFButton* m_login_button_page1 {nullptr};
     CountdownButton* m_get_code_button {nullptr};
     wxStaticText* m_protocol_page1{nullptr};
-    wxHyperlinkCtrl* m_service_link_page1{nullptr};
-    wxHyperlinkCtrl* m_privacy_policy_page1{nullptr};
+    wxStaticText* m_service_link_page1 {nullptr};
+    wxStaticText* m_privacy_policy_page1 {nullptr};
+    wxPanel* m_panel_checkbox_page1 {nullptr};
 
     wxStaticText* m_error_label_page2 {nullptr};
-    wxButton* m_login_button_page2 {nullptr};
-    //FFButton* m_login_button_page2 {nullptr};
+    FFButton* m_login_button_page2 {nullptr};
     wxPanel* m_panel_checkbox_page2 {nullptr};
 
     wxStaticText* m_protocol_page2{nullptr};
-    wxHyperlinkCtrl* m_service_link_page2{nullptr};
-    wxHyperlinkCtrl* m_privacy_policy_page2{nullptr};
-
-    wxStaticLine* m_staticLine_verify{nullptr};
-    wxStaticLine* m_staticLine_password{nullptr};
+    wxStaticText* m_service_link_page2 {nullptr};
+    wxStaticText* m_privacy_policy_page2 {nullptr};
     
     wxPanel* m_title_1_underline {nullptr};
     wxPanel* m_title_2_underline {nullptr};

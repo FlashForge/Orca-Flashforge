@@ -48,6 +48,11 @@ UserNameCtrl::~UserNameCtrl()
 void UserNameCtrl::OnPaint(wxPaintEvent& event)
 {
     wxPaintDC dc(this);
+    render(dc);
+}
+
+void UserNameCtrl::render(wxDC& dc)
+{
     wxSize size = GetSize();
 
     dc.SetPen(wxPen(wxColour(153,153,153), 1));

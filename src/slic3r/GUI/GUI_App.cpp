@@ -3914,10 +3914,21 @@ std::string GUI_App::handle_web_request(std::string cmd)
                                 return;
                              }
                             //未过期，自动登录
-                            handle_login_result(usr_pic,usr_name);
-                            LoginDialog::SetToken(access_token,refresh_token);
-                            LoginDialog::SetUsrInfo(com_user_profile_t{usr_name,usr_pic});
-                            Slic3r::GUI::MultiComMgr::inst()->setWanDevToken(usr_name,access_token);
+                            //校验token是否有效
+                            ComErrno login_result = MultiComUtils::checkToken(access_token);
+                            if(login_result == ComErrno::COM_OK){
+                                handle_login_result(usr_pic,usr_name);
+                                LoginDialog::SetToken(access_token,refresh_token);
+                                LoginDialog::SetUsrInfo(com_user_profile_t{usr_name,usr_pic});
+                                Slic3r::GUI::MultiComMgr::inst()->setWanDevToken(usr_name,access_token);
+                            }
+                            else{
+                                app_config->set("access_token","");
+                                app_config->set("refresh_token","");
+                                app_config->set("expire_time","");
+                                app_config->set("usr_name","");
+                                app_config->set("usr_pic","");
+                            }
                         }
                         //get_login_info();
                     });

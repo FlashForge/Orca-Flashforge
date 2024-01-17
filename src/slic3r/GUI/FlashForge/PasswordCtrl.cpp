@@ -20,8 +20,8 @@ PasswordCtrl::PasswordCtrl(wxWindow* parent, wxWindowID id/* = wxID_ANY*/, const
     m_text_ctrl->SetHint(_L("Password"));
     m_text_ctrl->SetMinSize(wxSize(FromDIP(200),FromDIP(20)));
     m_icon = create_scaled_bitmap("login-lock", this, 18);
-    m_eye_off_bitmap = create_scaled_bitmap("login-eye-off", this, 18);
-    m_eye_on_bitmap = create_scaled_bitmap("login-eye-on", this, 18);
+    m_eye_off_bitmap = create_scaled_bitmap("login-eye-off", this, 16);
+    m_eye_on_bitmap = create_scaled_bitmap("login-eye-on", this, 16);
 
     m_eye_show_icon = new wxStaticBitmap(m_panel_page, wxID_ANY, m_eye_off_bitmap);
 
@@ -58,6 +58,11 @@ PasswordCtrl::~PasswordCtrl()
 void PasswordCtrl::OnPaint(wxPaintEvent& event)
 {
     wxPaintDC dc(this);
+    render(dc);
+}
+
+void PasswordCtrl::render(wxDC& dc)
+{
     wxSize size = GetSize();
 
     dc.SetPen(wxPen(wxColour(153,153,153), 1));

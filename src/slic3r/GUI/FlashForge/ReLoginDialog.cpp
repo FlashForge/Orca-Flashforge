@@ -158,6 +158,8 @@ void ReLoginDialog::onLoginoutBtnClicked(wxCommandEvent& event)
         app_config->set("access_token","");
         app_config->set("refresh_token","");
         app_config->set("expire_time","");
+        app_config->set("usr_name","");
+        app_config->set("usr_pic","");
         Slic3r::GUI::MultiComMgr::inst()->removeWanDev();
     }
 }

@@ -23,6 +23,7 @@ public:
 
 private:
     void OnPaint(wxPaintEvent& event);
+    void render(wxDC& dc);
     void OnShowPasswordButtonClicked(wxMouseEvent& event);
 
 private:

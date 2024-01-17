@@ -98,6 +98,7 @@ LoginDialog::LoginDialog()
     initWidget();
     initBindEvent();
     initData();
+    this->SetMinSize(wxSize(FromDIP(330), FromDIP(439)));
 }
 
 com_token_data_t LoginDialog::GetLoginToken()
@@ -143,7 +144,7 @@ void LoginDialog::on_dpi_changed(const wxRect &suggested_rect)
 void LoginDialog::initWidget()
 {
     m_sizer_main = MainSizer();
-    m_sizer_main->SetMinSize(wxSize(0, -1));
+    m_sizer_main->SetMinSize(wxSize(FromDIP(330), FromDIP(439)));
 
     createSwitchTitle();
     createBodyWidget();
@@ -165,6 +166,11 @@ void LoginDialog::initData()
    if(get_result == ComErrno::COM_ERROR){
         BOOST_LOG_TRIVIAL(warning) << boost::format("MultiComUtils::getClientToken Failed!");
    }
+   m_panel_checkbox_page1->Refresh();
+   m_privacy_policy_page1->Refresh();
+   m_service_link_page1->Refresh();
+   Layout();
+   Refresh();
 }
 
 void LoginDialog::initBindEvent()
@@ -177,7 +183,8 @@ void LoginDialog::initBindEvent()
         m_switch_title_1->Refresh();
         m_switch_title_2->Refresh();
         m_title_1_underline->Show();
-        //m_staticLine_verify->SetForegroundColour(wxColour(51,51,51));
+        m_service_link_page1->Refresh();
+        m_privacy_policy_page1->Refresh();
 
         m_switch_title_1_line_panel->SetMinSize(wxSize(-1,FromDIP(4)));
         m_switch_title_1_sizer->Layout();
@@ -189,6 +196,7 @@ void LoginDialog::initBindEvent()
         m_switch_title_2_sizer->Layout();
 
         m_title_2_underline->Refresh();
+        m_panel_checkbox_page1->Refresh();
         Layout();
         });
     m_switch_title_2->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e){
@@ -265,7 +273,11 @@ void LoginDialog::createSwitchTitle()
     m_switch_title_1->SetForegroundColour(wxColour(51,51,51));
     m_switch_title_1->SetFont(font_title);
 
-    m_title_1_underline = new wxPanel(m_switch_title_1_panel, wxID_ANY, wxDefaultPosition, wxSize(90, 4),wxTAB_TRAVERSAL);
+    wxString label_1 = m_switch_title_1->GetLabel();
+    wxWindowDC dc_1(m_switch_title_1);
+    wxCoord width_1, height_1;
+    dc_1.GetTextExtent(label_1, &width_1, &height_1);
+    m_title_1_underline = new wxPanel(m_switch_title_1_panel, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(width_1/2.7), FromDIP(4)),wxTAB_TRAVERSAL);
     m_title_1_underline->SetBackgroundColour(wxColour(50,141,251));
     m_title_1_underline->SetForegroundColour(wxColour(50,141,251));
 
@@ -291,12 +303,15 @@ void LoginDialog::createSwitchTitle()
     //auto adjust height
     m_switch_title_2_line_panel = new wxPanel(m_switch_title_2_panel, wxID_ANY);
    
-    m_title_2_underline = new wxPanel(m_switch_title_2_panel, wxID_ANY, wxDefaultPosition, wxSize(90, 4),wxTAB_TRAVERSAL);
+    wxString label_2 = m_switch_title_2->GetLabel();
+    wxWindowDC dc_2(m_switch_title_2);
+    wxCoord width_2, height_2;
+    dc_2.GetTextExtent(label_2, &width_2, &height_2);
+    m_title_2_underline = new wxPanel(m_switch_title_2_panel, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(width_2/2.7), FromDIP(4)),wxTAB_TRAVERSAL);
     m_title_2_underline->SetBackgroundColour(wxColour(50,141,251));
     m_title_2_underline->SetForegroundColour(wxColour(50,141,251));
     m_title_2_underline->Hide();
 
-    // m_staticLine_password->Hide();
     m_switch_title_2_sizer->Add(m_switch_title_2, 1, wxALL |wxALIGN_CENTER,0);
     m_switch_title_2_sizer->Add(m_switch_title_2_line_panel, 0, wxEXPAND);
     m_switch_title_2_sizer->Add(m_title_2_underline, 0, wxALL |wxALIGN_CENTER, 0);
@@ -385,24 +400,34 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     m_error_label->Show(false); 
 
     //login button
-    m_login_button_page1 = new wxButton(parent, wxID_ANY,_L("Login"));
-    //m_login_button_page1->SetFontDisableColor(wxColour(255, 255, 255));
-    //m_login_button_page1->SetBorderDisableColor(wxColour(221,221,221));
-    //m_login_button_page1->SetFontColor(wxColour(255, 255, 255));
-    //m_login_button_page1->SetBorderColor(wxColour(50,141,251));
+    m_login_button_page1 = new FFButton(parent, wxID_ANY,_L("Login"));
+    m_login_button_page1->SetFontDisableColor(wxColour(255, 255, 255));
+    m_login_button_page1->SetBorderDisableColor(wxColour(221,221,221));
+    m_login_button_page1->SetBGColor(wxColour(221,221,221));
 
-    m_login_button_page1->SetForegroundColour(wxColour(255, 255, 255));
-    m_login_button_page1->SetBackgroundColour(wxColour(221,221,221)); 
-    m_login_button_page1->SetWindowStyleFlag(wxBORDER_NONE); 
-    m_login_button_page1->SetMinSize(wxSize(101,44));
-    m_login_button_page1->SetFont((wxFont(wxFontInfo(16))));
-    m_login_button_page1->Bind(wxEVT_BUTTON,&LoginDialog::onPage1Login, this);
+    m_login_button_page1->SetFontHoverColor(wxColour(255, 255, 255));
+    m_login_button_page1->SetBGHoverColor(wxColour(149,197,255));
+    m_login_button_page1->SetBorderHoverColor(wxColour(149,197,255));
+
+    m_login_button_page1->SetFontPressColor(wxColour(255, 255, 255));
+    m_login_button_page1->SetBGPressColor(wxColour(17,111,223));
+    m_login_button_page1->SetBorderPressColor(wxColour(17,111,223));
+
+
+    m_login_button_page1->SetFontColor(wxColour(255, 255, 255));
+    m_login_button_page1->SetBorderColor(wxColour(50,141,251));
+    m_login_button_page1->SetBGColor(wxColour(50,141,251));
+    m_login_button_page1->Bind(wxEVT_LEFT_UP,&LoginDialog::onPage4Login, this);
+    m_login_button_page1->Disable();
+    m_login_button_page1->SetMinSize(wxSize(FromDIP(77),FromDIP(33)));
 
     page1Sizer->Add(m_login_button_page1, 0, wxALIGN_CENTER_HORIZONTAL| wxUP, FromDIP(36));
+    page1Sizer->AddSpacer(FromDIP(18));
 
     //check box
-    wxBoxSizer* checkbox_sizer = new wxBoxSizer(wxHORIZONTAL);
-    auto m_panel_checkbox_page1 = new wxPanel(parent, wxID_ANY,wxDefaultPosition,wxSize(FromDIP(209), -1), wxTAB_TRAVERSAL);
+    wxBoxSizer* checkbox_sizer = new wxBoxSizer(wxVERTICAL);
+    wxWrapSizer* wrapSizer_1 = new wxWrapSizer(wxHORIZONTAL);
+    m_panel_checkbox_page1 = new wxPanel(parent, wxID_ANY,wxDefaultPosition,wxSize(FromDIP(300), -1), wxTAB_TRAVERSAL);
 
     m_page1_checkBox = new FFCheckBox(m_panel_checkbox_page1, wxID_ANY);
     m_page1_checkBox->SetValue(false);
@@ -411,9 +436,9 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     m_protocol_page1 = new  wxStaticText(m_panel_checkbox_page1, wxID_ANY,_L("Read and Agree to Accept"));
     m_protocol_page1->SetFont((wxFont(wxFontInfo(14))));
 
-    //Service Item
-    m_service_link_page1 = new wxHyperlinkCtrl(m_panel_checkbox_page1, wxID_ANY, _L("《Term of Sevrvice》"), wxEmptyString, wxDefaultPosition, wxDefaultSize, wxHL_DEFAULT_STYLE);
-    m_service_link_page1->Bind(wxEVT_HYPERLINK, [this](wxCommandEvent& e){
+    m_service_link_page1 = new wxStaticText(m_panel_checkbox_page1, wxID_ANY,  _L("《Term of Sevrvice》"));
+    m_service_link_page1->SetForegroundColour(wxColour(50,141,251));
+    m_service_link_page1->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
         wxString url = "http://dev.auth.flashforge.shop/en/userAgreement";
         AppConfig *app_config = wxGetApp().app_config;
         if(app_config){
@@ -424,10 +449,11 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
         }
         wxLaunchDefaultBrowser(url);
     });
+    m_service_link_page1->Show(true);
 
-    //privacy Policy
-    m_privacy_policy_page1 = new wxHyperlinkCtrl(m_panel_checkbox_page1, wxID_ANY, _L("《Privacy Policy》"), wxEmptyString, wxDefaultPosition, wxDefaultSize, wxHL_DEFAULT_STYLE);
-    m_privacy_policy_page1->Bind(wxEVT_HYPERLINK, [this](wxCommandEvent& e){
+    m_privacy_policy_page1 = new wxStaticText(m_panel_checkbox_page1, wxID_ANY,  _L("《Privacy Policy》"));
+    m_privacy_policy_page1->SetForegroundColour(wxColour(50,141,251));
+    m_privacy_policy_page1->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e){
         wxString url = "http://dev.auth.flashforge.shop/en/privacyPolicy";
         AppConfig *app_config = wxGetApp().app_config;
         if(app_config){
@@ -438,21 +464,27 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
         }
         wxLaunchDefaultBrowser(url);
     });
+    m_privacy_policy_page1->Show(true);
 
     //left gaption
-    checkbox_sizer->Add(FromDIP(50), 0, 0, 0);
-    checkbox_sizer->Add(m_page1_checkBox, 0, wxALIGN_CENTER_HORIZONTAL | wxTOP, FromDIP(5));
-    checkbox_sizer->Add(m_protocol_page1,0, wxALIGN_CENTER_HORIZONTAL | wxTOP, FromDIP(5));
-    checkbox_sizer->Add(m_service_link_page1,0, wxTOP, FromDIP(5));
-    checkbox_sizer->Add(m_privacy_policy_page1,0, wxTOP, FromDIP(5));
+    //checkbox_sizer->Add(FromDIP(50), 0, 0, 0);
+    wrapSizer_1->Add(m_page1_checkBox);
+    wrapSizer_1->AddSpacer(FromDIP(6));
+    wrapSizer_1->Add(m_protocol_page1);
+    wrapSizer_1->Add(m_service_link_page1);
+    wrapSizer_1->Add(m_privacy_policy_page1);
+
+    checkbox_sizer->Add(wrapSizer_1, wxSizerFlags(1).Expand());
 
     m_panel_checkbox_page1->SetSizer(checkbox_sizer);
     m_panel_checkbox_page1->Layout();
     checkbox_sizer->Fit(m_panel_checkbox_page1);
 
-    page1Sizer->Add(m_panel_checkbox_page1, 0, wxEXPAND, 0);
-    //page1Sizer->Add(m_service_link_page1, 0,  wxTOP, FromDIP(5));
-    //page1Sizer->Add(m_privacy_policy_page1, 0,  wxTOP, FromDIP(5));
+    wxBoxSizer* checkbox_last_sizer = new wxBoxSizer(wxHORIZONTAL);
+    checkbox_last_sizer->Add(usr_name_space1, 0, wxEXPAND|wxLeft, 0);
+    checkbox_last_sizer->Add(m_panel_checkbox_page1);
+
+    page1Sizer->Add(checkbox_last_sizer, 0, wxEXPAND, 0);
 }
 
 void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
@@ -495,14 +527,16 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     page2Sizer->AddSpacer(FromDIP(10));
 
     //register / forget password
-    wxHyperlinkCtrl* register_link = new wxHyperlinkCtrl(parent, wxID_ANY, _L("Register"), wxEmptyString, wxDefaultPosition, wxDefaultSize, wxHL_ALIGN_LEFT);
-    register_link->Bind(wxEVT_HYPERLINK, [this](wxCommandEvent& e){
+    auto register_link = new wxStaticText(parent, wxID_ANY, _L("Register"));
+    register_link->SetForegroundColour(wxColour(50,141,251));
+    register_link->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
         wxString url = "https://www.baidu.com/";
         wxLaunchDefaultBrowser(url);
     });
 
-    wxHyperlinkCtrl* forget_password_link = new wxHyperlinkCtrl(parent, wxID_ANY, _L("Forget Password"), wxEmptyString, wxDefaultPosition, wxDefaultSize, wxHL_ALIGN_RIGHT);
-    forget_password_link->Bind(wxEVT_HYPERLINK, [this](wxCommandEvent& e){
+    auto forget_password_link = new wxStaticText(parent, wxID_ANY,  _L("Forget Password"));
+    forget_password_link->SetForegroundColour(wxColour(50,141,251));
+    forget_password_link->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
         wxString url = "https://www.youku.com/";
         wxLaunchDefaultBrowser(url);
     });
@@ -530,20 +564,35 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     m_error_label_page2->Show(false); 
 
     //login button
-    m_login_button_page2 = new wxButton(parent, wxID_ANY,_L("Login"));
-    m_login_button_page2->SetMinSize(wxSize(101,44));
-    m_login_button_page2->SetFont((wxFont(wxFontInfo(16))));
-    m_login_button_page2->SetForegroundColour(wxColour(255, 255, 255));
-    m_login_button_page2->SetBackgroundColour(wxColour(221,221,221)); 
-    m_login_button_page2->SetWindowStyleFlag(wxBORDER_NONE); 
-    m_login_button_page2->Bind(wxEVT_BUTTON,&LoginDialog::onPage2Login, this);
-    //m_login_button_page2->Bind(wxEVT_LEFT_DOWN,&LoginDialog::onPage3Login, this);
+    m_login_button_page2 = new FFButton(parent, wxID_ANY,_L("Login"));
+    m_login_button_page2->SetFontDisableColor(wxColour(255, 255, 255));
+    m_login_button_page2->SetBorderDisableColor(wxColour(221,221,221));
+    m_login_button_page2->SetBGColor(wxColour(221,221,221));
+
+    m_login_button_page2->SetFontHoverColor(wxColour(255, 255, 255));
+    m_login_button_page2->SetBGHoverColor(wxColour(149,197,255));
+    m_login_button_page2->SetBorderHoverColor(wxColour(149,197,255));
+
+    m_login_button_page2->SetFontPressColor(wxColour(255, 255, 255));
+    m_login_button_page2->SetBGPressColor(wxColour(17,111,223));
+    m_login_button_page2->SetBorderPressColor(wxColour(17,111,223));
+
+
+    m_login_button_page2->SetFontColor(wxColour(255, 255, 255));
+    m_login_button_page2->SetBorderColor(wxColour(50,141,251));
+    m_login_button_page2->SetBGColor(wxColour(50,141,251));
+    m_login_button_page2->Bind(wxEVT_LEFT_UP,&LoginDialog::onPage3Login, this);
+    m_login_button_page2->Disable();
+    m_login_button_page2->SetMinSize(wxSize(FromDIP(77),FromDIP(33)));
 
     page2Sizer->Add(m_login_button_page2, 0, wxALIGN_CENTER_HORIZONTAL | wxUP, FromDIP(30));
+    page2Sizer->AddSpacer(FromDIP(18));
 
     //check box
-    wxBoxSizer* checkbox_sizer = new wxBoxSizer(wxHORIZONTAL);
-    m_panel_checkbox_page2 = new wxPanel(parent, wxID_ANY,wxDefaultPosition,wxSize(FromDIP(209), -1), wxTAB_TRAVERSAL);
+    wxBoxSizer* checkbox_sizer = new wxBoxSizer(wxVERTICAL);
+    wxWrapSizer* wrapSizer = new wxWrapSizer(wxHORIZONTAL);
+    //m_panel_checkbox_page2 = new wxPanel(parent, wxID_ANY,wxDefaultPosition,wxSize(FromDIP(217), -1), wxTAB_TRAVERSAL);
+    m_panel_checkbox_page2 = new wxPanel(parent, wxID_ANY,wxDefaultPosition,wxSize(FromDIP(300), -1), wxTAB_TRAVERSAL);
 
     m_page2_checkBox = new FFCheckBox(m_panel_checkbox_page2, wxID_ANY);
     m_page2_checkBox->SetValue(false);
@@ -551,11 +600,26 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
 
     m_protocol_page2 = new  wxStaticText(m_panel_checkbox_page2, wxID_ANY,_L("Read and Agree to Accept"));
     m_protocol_page2->SetFont((wxFont(wxFontInfo(14))));
-    //protocol->SetMinSize(wxSize(46,28));
+/*
+    m_protocol_page2 = new  wxStaticText(m_panel_checkbox_page2, wxID_ANY,_L("Read "));
+    m_protocol_page2->SetFont((wxFont(wxFontInfo(14))));
 
+    auto and_txt = new  wxStaticText(m_panel_checkbox_page2, wxID_ANY,_L("and "));
+    and_txt->SetFont((wxFont(wxFontInfo(14))));
+
+    auto agree_txt = new  wxStaticText(m_panel_checkbox_page2, wxID_ANY,_L("Agree "));
+    agree_txt->SetFont((wxFont(wxFontInfo(14))));
+
+    auto to_txt = new  wxStaticText(m_panel_checkbox_page2, wxID_ANY,_L("to "));
+    to_txt->SetFont((wxFont(wxFontInfo(14))));
+
+    auto accept_txt = new  wxStaticText(m_panel_checkbox_page2, wxID_ANY,_L("Accept"));
+    accept_txt->SetFont((wxFont(wxFontInfo(14))));
+*/
     //Service Item
-    m_service_link_page2 = new wxHyperlinkCtrl(m_panel_checkbox_page2, wxID_ANY, _L("《Term of Sevrvice》"), wxEmptyString, wxDefaultPosition, wxDefaultSize, wxHL_DEFAULT_STYLE);
-    m_service_link_page2->Bind(wxEVT_HYPERLINK, [this](wxCommandEvent& e){
+    m_service_link_page2 = new wxStaticText(m_panel_checkbox_page2, wxID_ANY,  _L("《Term of Sevrvice》"));
+    m_service_link_page2->SetForegroundColour(wxColour(50,141,251));
+    m_service_link_page2->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
         wxString url = "http://dev.auth.flashforge.shop/en/userAgreement";
         AppConfig *app_config = wxGetApp().app_config;
         if(app_config){
@@ -568,8 +632,9 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     });
 
     //privacy Policy
-    m_privacy_policy_page2 = new wxHyperlinkCtrl(m_panel_checkbox_page2, wxID_ANY, _L("《Privacy Policy》"), wxEmptyString, wxDefaultPosition, wxDefaultSize, wxHL_DEFAULT_STYLE);
-    m_privacy_policy_page2->Bind(wxEVT_HYPERLINK, [this](wxCommandEvent& e){
+    m_privacy_policy_page2 = new wxStaticText(m_panel_checkbox_page2, wxID_ANY,  _L("《Privacy Policy》"));
+    m_privacy_policy_page2->SetForegroundColour(wxColour(50,141,251));
+    m_privacy_policy_page2->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
         wxString url = "http://dev.auth.flashforge.shop/en/privacyPolicy";
         AppConfig *app_config = wxGetApp().app_config;
         if(app_config){
@@ -582,17 +647,27 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     });
 
     //left gaption
-    checkbox_sizer->Add(FromDIP(50), 0, 0, 0);
-    checkbox_sizer->Add(m_page2_checkBox, 0, wxALIGN_CENTER_HORIZONTAL | wxTOP, FromDIP(5));
-    checkbox_sizer->Add(m_protocol_page2,0, wxALIGN_CENTER_HORIZONTAL | wxTOP, FromDIP(5));
-    checkbox_sizer->Add(m_service_link_page2,0, wxTOP, FromDIP(5));
-    checkbox_sizer->Add(m_privacy_policy_page2,0, wxTOP, FromDIP(5));
+    wrapSizer->Add(m_page2_checkBox);
+    wrapSizer->AddSpacer(FromDIP(6));
+    wrapSizer->Add(m_protocol_page2);
+    /*wrapSizer->Add(and_txt);
+    wrapSizer->Add(agree_txt);
+    wrapSizer->Add(to_txt);
+    wrapSizer->Add(accept_txt);*/
+    wrapSizer->Add(m_service_link_page2);
+    wrapSizer->Add(m_privacy_policy_page2);
+
+    checkbox_sizer->Add(wrapSizer, wxSizerFlags(1).Expand());
 
     m_panel_checkbox_page2->SetSizer(checkbox_sizer);
     m_panel_checkbox_page2->Layout();
     checkbox_sizer->Fit(m_panel_checkbox_page2);
 
-    page2Sizer->Add(m_panel_checkbox_page2, 0, wxEXPAND, 0);
+    wxBoxSizer* checkbox_last_sizer = new wxBoxSizer(wxHORIZONTAL);
+    checkbox_last_sizer->Add(usr_name_space1, 0, wxEXPAND|wxLeft, 0);
+    checkbox_last_sizer->Add(m_panel_checkbox_page2);
+
+    page2Sizer->Add(checkbox_last_sizer, 0, wxEXPAND, 0);
 }
 
 void LoginDialog::onUsrNameOrPasswordChangedPage1(wxCommandEvent& event)
@@ -604,13 +679,11 @@ void LoginDialog::onUsrNameOrPasswordChangedPage1(wxCommandEvent& event)
         if (!username.IsEmpty() && !verifycode.IsEmpty() && agree)
         {
             m_login_button_page1->Enable();
-            m_login_button_page1->SetForegroundColour(wxColour(255, 255, 255));
-            m_login_button_page1->SetBackgroundColour(wxColour(50,141,251)); 
+            m_login_button_page1->Refresh();
         }
         else{
             m_login_button_page1->Disable();
-            m_login_button_page1->SetForegroundColour(wxColour(255, 255, 255));
-            m_login_button_page1->SetBackgroundColour(wxColour(221,221,221)); 
+            m_login_button_page1->Refresh(); 
         }
 }
 
@@ -623,13 +696,11 @@ void LoginDialog::onAgreeCheckBoxChangedPage1(wxCommandEvent& event)
         if (!username.IsEmpty() && !verifycode.IsEmpty() && agree)
         {
             m_login_button_page1->Enable();
-            m_login_button_page1->SetForegroundColour(wxColour(255, 255, 255));
-            m_login_button_page1->SetBackgroundColour(wxColour(50,141,251)); 
+            m_login_button_page1->Refresh();
         }
         else{
             m_login_button_page1->Disable();
-            m_login_button_page1->SetForegroundColour(wxColour(255, 255, 255));
-            m_login_button_page1->SetBackgroundColour(wxColour(221,221,221)); 
+            m_login_button_page1->Refresh();
         }
 }
 
@@ -641,13 +712,11 @@ void LoginDialog::onUsrNameOrPasswordChangedPage2(wxCommandEvent& event)
         if (!username.IsEmpty() && !password.IsEmpty() && agree)
         {
             m_login_button_page2->Enable();
-            m_login_button_page2->SetForegroundColour(wxColour(255, 255, 255));
-            m_login_button_page2->SetBackgroundColour(wxColour(50,141,251));
+            m_login_button_page2->Refresh();
         }
         else{
             m_login_button_page2->Disable();
-            m_login_button_page2->SetForegroundColour(wxColour(255, 255, 255));
-            m_login_button_page2->SetBackgroundColour(wxColour(221,221,221)); 
+            m_login_button_page2->Refresh();
         }
 }
 
@@ -660,17 +729,42 @@ void LoginDialog::onAgreeCheckBoxChangedPage2(wxCommandEvent& event)
         if (!username.IsEmpty() && !password.IsEmpty() && agree)
         {
             m_login_button_page2->Enable();
-            m_login_button_page2->SetForegroundColour(wxColour(255, 255, 255));
-            m_login_button_page2->SetBackgroundColour(wxColour(50,141,251)); 
+            m_login_button_page2->Refresh();
         }
         else{
             m_login_button_page2->Disable();
-            m_login_button_page2->SetForegroundColour(wxColour(255, 255, 255));
-            m_login_button_page2->SetBackgroundColour(wxColour(221,221,221)); 
+            m_login_button_page2->Refresh();
         }
 }
 
 void LoginDialog::onPage1Login(wxCommandEvent& event)
+{
+    wxString usrname = m_username_ctrl_page1->GetValue();
+    wxString verify_code = m_verifycode_ctrl_page1->GetValue();
+    com_token_data_t token_data;
+    ComErrno login_result =  MultiComUtils::getTokenBySMSCode(usrname.ToStdString(),verify_code.ToStdString(),token_data);
+    if(login_result == ComErrno::COM_OK){
+        LoginDialog::m_token_data = token_data;
+        wxGetApp().handle_login_result("default.jpg",usrname.ToStdString());
+        this->Hide();
+        AppConfig *app_config = wxGetApp().app_config;
+        if(app_config){
+            //主动点击登录，设置token值
+            app_config->set("access_token",token_data.accessToken);
+            app_config->set("refresh_token",token_data.refreshToken);
+            app_config->set("expire_time",std::to_string(token_data.expiresIn));
+             Slic3r::GUI::MultiComMgr::inst()->setWanDevToken(usrname.ToStdString(),token_data.accessToken);
+        } 
+    }
+    else if (login_result == ComErrno::COM_INVALID_VALIDATION){
+        m_timer.Bind(wxEVT_TIMER, &LoginDialog::OnTimer, this);
+        //账号、验证码错误
+        m_error_label->Show(true);
+        startTimer();
+    }
+}
+
+void LoginDialog::onPage4Login(wxMouseEvent& event)
 {
     wxString usrname = m_username_ctrl_page1->GetValue();
     wxString verify_code = m_verifycode_ctrl_page1->GetValue();
