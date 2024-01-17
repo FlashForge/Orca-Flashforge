@@ -99,6 +99,8 @@ ComErrno UserDataUpdateThd::updateWanDev(const std::string &accessToken)
         if (fnetRet == FNET_OK) {
             QueueEvent(new WanDevUpdateEvent(WAN_DEV_UPDATE_EVENT, accessToken, devInfos, devCnt));
             break;
+        } else if (fnetRet == FNET_UNAUTHORIZED) {
+            break;
         } else if (i + 1 < tryCnt) {
             boost::this_thread::sleep_for(boost::chrono::milliseconds(50));
         }
