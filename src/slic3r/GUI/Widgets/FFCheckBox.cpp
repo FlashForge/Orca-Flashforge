@@ -46,6 +46,8 @@ void FFCheckBox::Rescale()
 
 void FFCheckBox::update()
 {
+    bool value = GetValue();
+	SetBitmap((GetValue() ? m_on : m_off).bmp());
 	SetBitmapLabel((GetValue() ? m_on : m_off).bmp());
     SetBitmapDisabled((GetValue() ? m_on : m_off).bmp());
     SetBitmapPressed((GetValue() ? m_on_pressed : m_off_pressed).bmp());
@@ -57,6 +59,7 @@ void FFCheckBox::update()
     wxCommandEvent e(wxEVT_UPDATE_UI);
     updateBitmap(e);
 #endif
+    Update();
 }
 
 #ifdef __WXMSW__

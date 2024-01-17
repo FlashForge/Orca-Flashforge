@@ -126,7 +126,7 @@ void FFButton::OnPaint(wxPaintEvent& event)
     wxSize size = GetSize();
 #ifdef __WXMSW__
     wxMemoryDC memdc;
-    wxBitmap   bmp(size.x, size.y);
+    wxBitmap bmp(size.x, size.y);
     memdc.SelectObject(bmp);
     memdc.Blit({0, 0}, size, &dc, {0, 0});
     {

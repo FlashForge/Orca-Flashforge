@@ -12,11 +12,11 @@ FFToggleButton::FFToggleButton(wxWindow* parent, const wxString& label/*= ""*/, 
 	, m_selectHoverColor("#116FDF")
 	, m_selectPressColor("#999999")
 {
-	Bind(wxEVT_ENTER_WINDOW, [this](wxMouseEvent&) { m_hoverFlag = true; updateState(); });
-	Bind(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent&) { m_hoverFlag = false; updateState(); });
-	//Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e) { m_pressFlag = true; updateState(); });
-	//Bind(wxEVT_LEFT_UP, [this](wxMouseEvent& e) { m_pressFlag = false; updateState(); });
-	Bind(wxEVT_TOGGLEBUTTON, [this](wxCommandEvent&) { updateState(); });
+	Bind(wxEVT_ENTER_WINDOW, [this](wxMouseEvent& e) { m_hoverFlag = true; updateState(); e.Skip(); });
+	Bind(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent& e) { m_hoverFlag = false; m_pressFlag = false; updateState(); e.Skip(); });
+	Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e) { m_pressFlag = true; updateState(); e.Skip(); });
+	Bind(wxEVT_LEFT_UP, [this](wxMouseEvent& e) { m_pressFlag = false; updateState(); e.Skip(); });
+	Bind(wxEVT_TOGGLEBUTTON, [this](wxCommandEvent& e) { updateState(); e.Skip(); });
 	updateState();
 }
 

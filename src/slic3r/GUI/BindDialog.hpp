@@ -60,15 +60,33 @@ private:
         wxString m_other_link;
     };
 
+    class RoundImagePanel : public wxPanel
+    {
+    public:
+        RoundImagePanel(wxWindow *parent, const wxSize& size = wxDefaultSize);
+
+        void SetImage(const wxImage& image);
+        
+    private:
+        void OnPaint(wxPaintEvent& event);
+        void OnSize(wxSizeEvent& event);
+        void CreateRegion(wxDC &dc);
+
+    private:
+        wxImage     m_image { wxNullImage };
+    };
+
 private:
     wxWindow*      m_panel_agreement;
 
     wxSimplebook *m_simplebook;
     wxPanel*       m_normal_panel;
     wxSizer*       m_machine_sizer;
+    wxPanel*       m_printer_img_panel;
     wxStaticBitmap *m_printer_img;
     wxStaticText * m_printer_name;
     wxSizer*       m_user_sizer;
+    RoundImagePanel* m_user_panel;
     wxStaticText * m_user_name;
     wxStaticBitmap *m_user_img;
     wxStaticText * m_bind_text;
@@ -82,7 +100,8 @@ private:
     wxStaticText*  m_result_text;
     FFButton*      m_result_btn;
 
-    int             m_result_code;
+    wxWebRequest   m_web_request;
+    int            m_result_code;
 
     MachineObject *                   m_machine_info{nullptr};
     DeviceObject                     *m_device_info {nullptr};

@@ -1,6 +1,8 @@
 #ifndef slic3r_GUI_SendToSDcard_hpp_
 #define slic3r_GUI_SendToSDcard_hpp_
-
+#include <map>
+#include <vector>
+#include <string>
 #include <wx/wx.h>
 #include <wx/intl.h>
 #include <wx/collpane.h>
@@ -44,18 +46,39 @@
 #include <wx/simplebook.h>
 #include <wx/hashmap.h>
 #include "TitleDialog.hpp"
+#include "FlashForge/MultiComDef.hpp"
 
 namespace Slic3r {
 namespace GUI {
+
+
+
+class SendToPrinterTipDialog : public TitleDialog
+{
+public:
+    SendToPrinterTipDialog(wxWindow* parent, const wxStringList& success, const wxStringList& fail, const wxSize &size = wxDefaultSize);
+
+    void on_dpi_changed(const wxRect& suggested_rect) override {};
+
+private:
+    wxBoxSizer* createItem(bool success, const wxString& name);
+    void onSize(wxSizeEvent& event);
+
+private:
+
+};
+
+
 
 class MachineItem : public wxPanel
 {
 public:
     struct MachineData
     {
-        int         flag;   // 0 network, 1 lan
+        int         flag;   // 0 wlan, 1 lan
         std::string model;
         wxString    name;
+        com_id_t    comId;
 
         MachineData() = default;
         MachineData(const MachineData& data) = default;//: flag(data.flag), model(data.model), name(data.name) {};
@@ -65,6 +88,7 @@ public:
     MachineItem(wxWindow* parent, const MachineData& data);
     ~MachineItem() {};
 
+    const MachineData& data() const;
     bool IsChecked() const;
     void SetChecked(bool checked);
     void SetDefaultColor(const wxColor& color);
@@ -88,6 +112,22 @@ private:
 class SendToPrinterDialog : public TitleDialog//public DPIDialog
 {
 private:
+    enum SendResultType
+    {
+        Result_None = -1,
+        Result_Ok,
+        Result_Fail,
+        Result_Fail_Busy,
+        Result_Fail_Canceled,
+    };
+
+    struct SendJobInfo {
+        int             cmdId;
+        SendResultType  result;
+        double          progress;
+    };
+
+private:
 	void init_bind();
 	void init_timer();
 
@@ -101,6 +141,7 @@ private:
     bool								m_need_adaptation_screen{ false };
     bool								m_export_3mf_cancel{ false };
     bool								m_is_canceled{ false };
+    bool                                m_sendAndPrint { false };
     std::string                         m_print_error_msg;
     std::string                         m_print_error_extra;
     std::string							m_print_info;
@@ -130,7 +171,7 @@ private:
     FFCheckBox*                         m_levelCkb;
     wxStaticText*                       m_levelLbl;
     wxStaticText*                       m_selectPrinterLbl;
-    FFToggleButton*                     m_netBtn;
+    FFToggleButton*                     m_wlanBtn;
     FFToggleButton*                     m_lanBtn;
     wxSimplebook*                       m_machineBook;
     wxPanel*                            m_machinePanel {nullptr};
@@ -155,11 +196,10 @@ private:
     wxStaticText*                       m_progressLbl {nullptr};
     FFButton*                           m_progressCancelBtn {nullptr};
 
-    std::shared_ptr<SendJob>			m_send_job{nullptr};
-    std::vector<wxString>               m_bedtype_list;
-    std::map<std::string, ::CheckBox*>	m_checkbox_list;
-    std::vector<MachineObject*>			m_list;
-    std::vector<MachineItem::MachineData> m_machineList;
+    std::map<com_id_t, MachineItem::MachineData> m_machineListMap;
+    std::vector<MachineItem*>           m_machineItemList;
+    std::map<com_id_t, SendJobInfo>     m_sendJobMap;
+
     wxColour							m_colour_def_color{ wxColour(255, 255, 255) };
     wxColour							m_colour_bold_color{ wxColour(38, 46, 48) };
 	wxTimer*							m_refresh_timer{ nullptr };
@@ -167,10 +207,10 @@ private:
 	wxScrolledWindow*                   m_sw_print_failed_info{nullptr};
    
 public:
-	SendToPrinterDialog(Plater* plater = nullptr);
+	SendToPrinterDialog(Plater* plater = nullptr, bool sendAndPrint = false);
     ~SendToPrinterDialog();
 
-	bool Show(bool show);
+    bool Show(bool show);
 	bool is_timeout();
     void on_rename_click(wxCommandEvent& event);
     void on_rename_enter();
@@ -186,10 +226,7 @@ public:
     void update_priner_status_msg(wxString msg, bool is_warning = false);
     void update_print_status_msg(wxString msg, bool is_warning = false, bool is_printer = true);
 	void update_printer_list(wxCommandEvent& event);
-	void on_cancel(wxCloseEvent& event);
-	void on_ok(wxCommandEvent& event);
 	void clear_ip_address_config(wxCommandEvent& e);
-	void on_refresh(wxCommandEvent& event);
 	void on_print_job_cancel(wxCommandEvent& evt);
 	void set_default();
 	void on_timer(wxTimerEvent& event);
@@ -206,11 +243,25 @@ public:
 	std::vector<std::string> sort_string(std::vector<std::string> strArray);
 
 private:
-    void onNetworkToggled(wxCommandEvent& event);
+    void onClose(wxCloseEvent& event);
+    void onNetworkTypeToggled(wxCommandEvent& event);
+    void onMachineSelectionToggled(wxCommandEvent& event);
+    void onSendClicked(wxCommandEvent& event);
+    void onCancelClicked(wxCommandEvent& event);
+    void onConnectionReady(ComConnectionReadyEvent& event);
+    void onConnectionExit(ComConnectionExitEvent& event);
+    void onSendGcodeFinished(ComSendGcodeFinishEvent& event);
+    void onSendGcodeProgress(ComSendGcodeProgressEvent& event);
+    void onSendMultiJobCompleted(wxCommandEvent& event);
     void updateVisible();
+    void updateSendButtonState();
+    void updateSendJobList(com_id_t id, bool complete, ComErrno err);
+    void updateSendStatusInfo(bool complete);
+    void clear_machine_list();
 };
 
 wxDECLARE_EVENT(EVT_CLEAR_IPADDRESS, wxCommandEvent);
+wxDECLARE_EVENT(EVT_SEND_MULTI_JOB_COMPLETED, wxCommandEvent);
 }
 }
 
