@@ -72,17 +72,17 @@ private:
 class ComSendGcode : public ComCommand
 {
 public:
-    ComSendGcode(const std::string &gcodeFileName, const std::string &thumbFileName,
+    ComSendGcode(const std::string &gcodeFilePath, const std::string &thumbFilePath,
         bool printNow, bool levelingBeforePrint)
         : m_progress(0)
         , m_callbackRet(0)
         , m_comId(ComInvalidId)
         , m_evtHandler(nullptr)
-        , m_gcodeFileName(gcodeFileName)
-        , m_thumbFileName(thumbFileName)
+        , m_gcodeFilePath(gcodeFilePath)
+        , m_thumbFilePath(thumbFilePath)
     {
-        m_sendGcodeData.gcodeFileName = m_gcodeFileName.c_str();
-        m_sendGcodeData.thumbFileName = m_thumbFileName.c_str();
+        m_sendGcodeData.gcodeFilePath = m_gcodeFilePath.c_str();
+        m_sendGcodeData.thumbFilePath = m_thumbFilePath.c_str();
         m_sendGcodeData.printNow = printNow;
         m_sendGcodeData.levelingBeforePrint = levelingBeforePrint;
         m_sendGcodeData.callback = callback;
@@ -132,8 +132,8 @@ private:
     std::atomic<int>        m_callbackRet;
     com_id_t                m_comId;
     wxEvtHandler           *m_evtHandler;
-    std::string             m_gcodeFileName;
-    std::string             m_thumbFileName;
+    std::string             m_gcodeFilePath;
+    std::string             m_thumbFilePath;
     fnet_send_gcode_data_t  m_sendGcodeData;
 };
 

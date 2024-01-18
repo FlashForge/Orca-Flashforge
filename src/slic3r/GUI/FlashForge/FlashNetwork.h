@@ -20,8 +20,8 @@ typedef int (*fnet_progress_call_back_t)(long long now, long long total, void *d
 #pragma pack(push, 4)
 
 typedef struct fnet_send_gcode_data {
-    const char *gcodeFileName;  // utf-8
-    const char *thumbFileName;  // utf-8, wan only
+    const char *gcodeFilePath;  // utf-8
+    const char *thumbFilePath;  // utf-8, wan only
     int printNow;               // 1 true, 0 false
     int levelingBeforePrint;    // 1 true, 0 false
     fnet_progress_call_back_t callback;
@@ -87,7 +87,7 @@ typedef struct fnet_dev_detail {
     char *ipAddr;
     char *name;
     char *location;
-    char *printStatus;
+    char *status;
     char *printFileName;
     char *printFileThumbUrl;
     int printLayer;
