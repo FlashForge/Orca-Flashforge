@@ -185,6 +185,26 @@ bool DeviceObject::is_in_printing()
     return false;
 }
 
+void DeviceObject::set_connecting(bool connecting)
+{
+    m_is_connecting = connecting;
+}
+
+bool DeviceObject::is_connecting()
+{
+    return m_is_connecting;
+}
+
+void DeviceObject::set_connected_ready(bool ready)
+{
+    m_is_connected_ready = ready;
+}
+
+bool DeviceObject::is_connected_ready()
+{
+    return m_is_connected_ready;
+}
+
 string DeviceObject::get_printer_thumbnail_img_str()
 {
     return "printer_thumbnail";
@@ -205,13 +225,7 @@ DeviceObjectOpr::DeviceObjectOpr()
 
 DeviceObjectOpr::~DeviceObjectOpr()
 {
-    for (auto it = m_scan_devices.begin(); it != m_scan_devices.end(); it++) {
-        if (it->second) {
-            delete it->second;
-            it->second = nullptr;
-        }
-    }
-    m_scan_devices.clear();
+    clear_scan_machine();
 
     for (auto it = m_user_devices.begin(); it != m_user_devices.end(); it++) {
         if (it->second) {
@@ -232,38 +246,20 @@ DeviceObjectOpr::~DeviceObjectOpr()
 
 void DeviceObjectOpr::update_scan_machine()
 {
+    clear_scan_machine();
+
     std::vector<fnet_lan_dev_info> devInfos;
     MultiComUtils::getLanDevList(devInfos);
 
     for (auto &elem : devInfos) {
-        string dev_id = elem.serialNumber;
-        if (m_scan_devices.find(dev_id) == m_scan_devices.end()) {
-            DeviceObject *devObj = new DeviceObject(elem);
-            devObj->set_connection_type(CONNECTTYPE_LAN);
-            auto it = m_local_devices.find(dev_id);
-            if (it != m_local_devices.end()) {
-                devObj->set_user_access_code(it->second->get_user_access_code(), false);
-            }
-            m_scan_devices.insert(make_pair(dev_id, devObj));
+        string        dev_id = elem.serialNumber;
+        DeviceObject *devObj = new DeviceObject(elem);
+        devObj->set_connection_type(CONNECTTYPE_LAN);
+        auto it = m_local_devices.find(dev_id);
+        if (it != m_local_devices.end()) {
+            devObj->set_user_access_code(it->second->get_user_access_code(), false);
         }
-    }
-
-    auto it = m_scan_devices.begin();
-    for (it; it != m_scan_devices.end();) {
-        string dev_id = it->first;
-        bool bFind = false;
-        for (int i = 0; i < devInfos.size(); ++i) {
-            if (devInfos[i].serialNumber == dev_id) {
-                bFind = true;
-                break;
-            }
-        }
-        if (!bFind) {
-            delete it->second;
-            it = m_scan_devices.erase(it);
-        } else {
-            ++it;
-        }
+        m_scan_devices.insert(make_pair(dev_id, devObj));
     }
 }
 
@@ -310,6 +306,7 @@ bool DeviceObjectOpr::set_selected_machine(const string &dev_id)
     if (it != my_machine_list.end()) {
         DeviceObject *devObj = it->second;
         if (devObj->get_lan_dev_info() != nullptr) {
+            devObj->set_connecting(true);
             com_id_t id = MultiComMgr::inst()->addLanDev(*devObj->get_lan_dev_info(), devObj->get_user_access_code(true));
             if (id != ComInvalidId) {
                 auto it = m_dev_connect_map.find(dev_id);
@@ -323,6 +320,24 @@ bool DeviceObjectOpr::set_selected_machine(const string &dev_id)
         m_selected_machine = dev_id;
     }
     return true;
+}
+
+DeviceObject* DeviceObjectOpr::get_selected_machine()
+{
+    if (m_selected_machine.empty())
+        return nullptr;
+
+    auto           it  = m_scan_devices.find(m_selected_machine);
+    if (it != m_scan_devices.end())
+        return it->second;
+
+    // return local machine has access code
+    it = m_local_devices.find(m_selected_machine);
+    if (it != m_local_devices.end()) {
+        if (it->second->has_access_right())
+            return it->second;
+    }
+    return nullptr;
 }
 
 void DeviceObjectOpr::unbind_lan_machine(DeviceObject *obj)
@@ -433,12 +448,24 @@ void DeviceObjectOpr::get_my_machine_list_v2(map<string, DeviceObject*>& devList
     }
 }
 
+void DeviceObjectOpr::clear_scan_machine()
+{
+    for (auto it = m_scan_devices.begin(); it != m_scan_devices.end(); it++) {
+        if (it->second) {
+            delete it->second;
+            it->second = nullptr;
+        }
+    }
+    m_scan_devices.clear();
+}
+
 void DeviceObjectOpr::onConnectExit(ComConnectionExitEvent &event)
 {
     DeviceObject *devObj = nullptr;
     auto          it     = m_scan_devices.find(m_selected_machine);
     if (it != m_scan_devices.end()) {
         devObj = it->second;
+        devObj->set_connecting(false);
         if (devObj->get_user_access_code().empty()) {
             // first bind
             if (event.ret == COM_VERIFY_LAN_DEV_FAILED) {
@@ -448,8 +475,10 @@ void DeviceObjectOpr::onConnectExit(ComConnectionExitEvent &event)
                 if (dlg.ShowModal() == wxID_OK) {
                     wxGetApp().mainframe->jump_to_monitor(devObj->get_dev_id());
                 }
+            } else if(event.ret == COM_ERROR){
+                devObj->set_connected_ready(false);  // connect finished, and failed.
             } else {
-                // do nothing, this device still belongs to other device.
+                // do nothing, this device still belongs to other device. (Including exit successfully)
             }
         } else {
             auto local_it = m_local_devices.find(m_selected_machine);
@@ -480,6 +509,8 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
             devObj->set_connection_type(CONNECTTYPE_CLOUD);
             devObj->set_online_state(true);
             devObj->set_wan_dev_id(data.wanDevInfo.devId);
+            devObj->set_connecting(false);
+            devObj->set_connected_ready(true);
             m_user_devices.emplace(make_pair(macSN, devObj));
         }
     } else {
@@ -487,10 +518,10 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
         if (devObj == nullptr)
             return;
 
+        DeviceObject *userObj = nullptr;
         auto it = m_user_devices.find(m_selected_machine);
         if (it == m_user_devices.end()) {
-            DeviceObject *userObj = new DeviceObject(*devObj);
-            userObj->set_online_state(true);
+            userObj = new DeviceObject(*devObj);
             userObj->set_user_access_code(devObj->get_user_access_code(true));
             m_user_devices.emplace(make_pair(m_selected_machine, userObj));
 
@@ -499,9 +530,11 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
                 config->save_bind_machine_to_config(devObj->get_dev_id(), devObj->get_dev_name());
             }
         } else {
-            DeviceObject *userObj = it->second;
-            userObj->set_online_state(true);
+            userObj = it->second;
         }
+        userObj->set_online_state(true);
+        userObj->set_connecting(false);
+        userObj->set_connected_ready(true);
     }
 }
 

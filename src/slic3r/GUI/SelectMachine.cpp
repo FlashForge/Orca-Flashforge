@@ -701,8 +701,8 @@ void SelectMachinePopup::update_user_devices()
                 if (devObj->is_lan_mode_in_scan_print()) {
                     op->set_printer_state(PrinterState::OFFLINE_LAN);
                     if (m_updateConnect && devObj->get_lan_dev_info() != nullptr) {
-                        m_updateConnect = false;
-                        m_refresh_timer->Stop();
+                        /*m_updateConnect = false;
+                        m_refresh_timer->Stop();*/
                         devOpr->set_selected_machine(devObj->get_dev_id());
                     }
                 } else {
@@ -722,11 +722,16 @@ void SelectMachinePopup::update_user_devices()
                 }
             }
             op->Bind(EVT_UNBIND_MACHINE, [this, devOpr, devObj](wxCommandEvent &e) {
-                devOpr->unbind_lan_machine(devObj);
+                MessageDialog msg_wingow(nullptr, _L("Are you sure to unbind this device?"), _("Question"), wxYES_NO);
+                if (wxID_YES == msg_wingow.ShowModal()) {
+                    devOpr->unbind_lan_machine(devObj);
 
-                MessageDialog msg_wingow(nullptr, _L("Log out successful."), "", wxAPPLY | wxOK);
-                if (msg_wingow.ShowModal() == wxOK) { return; }
-                });
+                    MessageDialog msg_wingow1(nullptr, _L("Log out successful."), "", wxAPPLY | wxOK);
+                    if (msg_wingow1.ShowModal() == wxOK) {
+                        return;
+                    }
+                }
+            });
         }
         else {
             op->show_printer_bind(true, PrinterBindState::ALLOW_UNBIND);
@@ -775,6 +780,11 @@ void SelectMachinePopup::update_user_devices()
             dlg.set_machine_obj(mobj);
             dlg.ShowModal();
          });*/
+    }
+
+    if (m_updateConnect) {
+        m_updateConnect = false;
+        m_refresh_timer->Stop();
     }
 
     for (int j = i; j < m_user_list_machine_panel.size(); j++) {

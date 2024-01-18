@@ -59,18 +59,24 @@ public:
     string      get_dev_id();  // serialNumber
     unsigned short     get_dev_pid();
     string      get_wan_dev_id();
-    void               set_wan_dev_id(const string &devId);
+    void        set_wan_dev_id(const string &devId);
 
     static bool is_in_printing_status(const string& status);
-    void set_print_state(const string &status);
+    void        set_print_state(const string &status);
 
     /* common apis */
-    bool is_in_printing();
+    bool        is_in_printing();
 
-    string get_printer_thumbnail_img_str();
+    void        set_connecting(bool connecting);
+    bool        is_connecting();
+
+    void        set_connected_ready(bool ready);
+    bool        is_connected_ready();
+
+    string      get_printer_thumbnail_img_str();
 
 private:
-    fnet_lan_dev_info *m_lan_info {nullptr };
+    fnet_lan_dev_info *m_lan_info { nullptr };
     string             m_dev_id;
     string             m_dev_name;
     string             m_bind_dev_id; /*used in bind or unbind */
@@ -79,6 +85,8 @@ private:
     string              m_bind_state; /* free | occupied */
     ActiveState         m_active_state = NotActive; // 0 - not active, 1 - active, 2 - update-to-date
     bool                m_is_online;
+    bool                m_is_connecting { false };
+    bool                m_is_connected_ready { true };
     string              m_dev_connection_type; /* lan | cloud */
 
     std::chrono::system_clock::time_point last_update_time; /* last received print data from machine */
@@ -102,6 +110,7 @@ public:
     void get_local_machine(map<string, DeviceObject *>& macList);
 
     bool set_selected_machine(const string &dev_id);
+    DeviceObject* get_selected_machine();
 
     void unbind_lan_machine(DeviceObject *obj);
     ComErrno unbind_wan_machine(DeviceObject *obj);
@@ -114,6 +123,8 @@ private:
 
     // before connect, scan machine's access code which hasn't written in config file
     void get_my_machine_list_v2(map<string, DeviceObject *> &devList);
+
+    void clear_scan_machine();
 
 private:
     void onConnectExit(ComConnectionExitEvent &event);

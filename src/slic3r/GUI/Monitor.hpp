@@ -101,6 +101,7 @@ private:
     int last_status;
     bool m_initialized { false };
     wxTimer* m_refresh_timer = nullptr;
+    DWORD m_connect_fail_time1;
 
 public:
     MonitorPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);

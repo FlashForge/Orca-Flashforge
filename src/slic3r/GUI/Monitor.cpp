@@ -96,7 +96,8 @@ AddMachinePanel::~AddMachinePanel() {
 
  MonitorPanel::MonitorPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
     : wxPanel(parent, id, pos, size, style),
-     m_select_machine(SelectMachinePopup(this))
+     m_select_machine(SelectMachinePopup(this)),
+     m_connect_fail_time1(0)
 {
 #ifdef __WINDOWS__
     SetDoubleBuffered(true);
@@ -258,20 +259,26 @@ void MonitorPanel::on_update_all(wxMouseEvent &event)
     Refresh();
 }
 
- void MonitorPanel::on_select_printer(wxCommandEvent& event)
+void MonitorPanel::on_select_printer(wxCommandEvent &event)
 {
+    /*DeviceObjectOpr *devOpr = wxGetApp().getDeviceObjectOpr();
+    if (!devOpr)
+        return;
+    if (!devOpr->set_selected_machine(event.GetString().ToStdString()))
+        return;
+
     Slic3r::DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
     if (!dev) return;
 
     if (!dev->set_selected_machine(event.GetString().ToStdString()))
-        return;
+        return;*/
 
     set_default();
     update_all();
 
-    MachineObject *obj_ = dev->get_selected_machine();
+    /*DeviceObject *obj_ = devOpr->get_selected_machine();
     if (obj_)
-        GUI::wxGetApp().sidebar().load_ams_list(obj_->dev_id, obj_);
+        GUI::wxGetApp().sidebar().load_ams_list(obj_->get_dev_id(), obj_);*/
 
     Layout();
     Refresh();
@@ -306,74 +313,69 @@ void MonitorPanel::on_size(wxSizeEvent &event)
 
 void MonitorPanel::update_all()
 {
-    NetworkAgent* m_agent = wxGetApp().getAgent();
-    Slic3r::DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
-    if (!dev)
+    DeviceObjectOpr       *devOpr  = wxGetApp().getDeviceObjectOpr();
+    if (!devOpr)
         return;
-    obj = dev->get_selected_machine();
+    DeviceObject *obj = devOpr->get_selected_machine();
 
-    // check valid machine
-    if (obj && dev->get_my_machine(obj->dev_id) == nullptr) {
-        dev->set_selected_machine("");
-        if (m_agent)
-            m_agent->set_user_selected_machine("");
-        show_status((int)MONITOR_NO_PRINTER);
-        return;
-    }
-
-    //BBS check mqtt connections if user is login
-    if (wxGetApp().is_user_login()) {
-        dev->check_pushing();
-        // check mqtt connection and reconnect if disconnected
-        try {
-            m_agent->refresh_connection();
-        }
-        catch (...) {
-            ;
-        }
-    }
+    // BBS check mqtt connections if user is login
+    //if (wxGetApp().is_user_login()) {
+    //    dev->check_pushing();
+    //    // check mqtt connection and reconnect if disconnected
+    //    try {
+    //        m_agent->refresh_connection();
+    //    } catch (...) {
+    //        ;
+    //    }
+    //}
 
     if (obj) {
-        wxGetApp().reset_to_active();
+        //wxGetApp().reset_to_active();
         if (obj->connection_type() != last_conn_type) {
             last_conn_type = obj->connection_type();
         }
     }
 
-    //m_status_info_panel->obj = obj;
-    //m_status_info_panel->m_media_play_ctrl->SetMachineObject(obj);
-    m_upgrade_panel->update(obj);
-    m_media_file_panel->SetMachineObject(obj);
-    m_side_tools->update_status(obj);
-    
+    // m_status_info_panel->obj = obj;
+    // m_status_info_panel->m_media_play_ctrl->SetMachineObject(obj);
+    //m_upgrade_panel->update(obj);
+    //m_media_file_panel->SetMachineObject(obj);
+    //m_side_tools->update_device_status(obj);
+
     if (!obj) {
-        show_status((int)MONITOR_NO_PRINTER);
+        show_status((int) MONITOR_NO_PRINTER);
         return;
+    }
+
+    if (m_connect_fail_time1 > 0) {
+        DWORD connect_failed_time2 = GetTickCount();
+        if (connect_failed_time2 - m_connect_fail_time1 > 3000) {
+            m_connect_fail_time1 = 0;
+            obj->set_connected_ready(true);
+        }
     }
 
     if (obj->is_connecting()) {
+        m_side_tools->update_device_status(obj);
         show_status(MONITOR_CONNECTING);
         return;
-    } else if (!obj->is_connected()) {
-        int server_status = 0;
-        // only disconnected server in cloud mode
-        if (obj->connection_type() != "lan") {
-            if (m_agent) {
-                server_status = m_agent->is_server_connected() ? 0 : (int)MONITOR_DISCONNECTED_SERVER;
-            }
-        }
-        show_status((int) MONITOR_DISCONNECTED + server_status);
+    } else if (!obj->is_connected_ready()) {  // connect failed
+        if (m_connect_fail_time1 == 0)
+            m_connect_fail_time1 = GetTickCount();
+        m_side_tools->update_device_status(obj);
+        show_status(MONITOR_CONNECTED_FAILED);
+        return;
+    } else {
+        m_side_tools->update_device_status(nullptr);
+        show_status(MONITOR_NORMAL);
         return;
     }
-
-    show_status(MONITOR_NORMAL);
-
 
     // if (m_status_info_panel->IsShown()) {
     //     m_status_info_panel->update(obj);
     // }
 
-    if (m_hms_panel->IsShown()) {
+    /*if (m_hms_panel->IsShown()) {
         m_hms_panel->update(obj);
     }
 
@@ -381,7 +383,7 @@ void MonitorPanel::update_all()
     if (m_upgrade_panel->IsShown()) {
         m_upgrade_panel->update(obj);
     }
-#endif
+#endif*/
 }
 
 bool MonitorPanel::Show(bool show)
@@ -437,7 +439,7 @@ void MonitorPanel::show_status(int status)
 {
     if (!m_initialized) return;
     if (last_status == status)return;
-    if (last_status & (int)MonitorStatus::MONITOR_CONNECTING != 0) {
+    /*if (last_status & (int)MonitorStatus::MONITOR_CONNECTING != 0) {
         NetworkAgent* agent = wxGetApp().getAgent();
         json j;
         j["dev_id"] = obj ? obj->dev_id : "obj_nullptr";
@@ -447,7 +449,7 @@ void MonitorPanel::show_status(int status)
         else if (status & (int)MonitorStatus::MONITOR_NORMAL != 0) {
             j["result"] = "success";
         }
-    }
+    }*/
     last_status = status;
 
     BOOST_LOG_TRIVIAL(info) << "monitor: show_status = " << status;
@@ -465,18 +467,27 @@ Freeze();
     m_upgrade_panel->show_status(status);
     m_media_file_panel->Enable(status == MonitorStatus::MONITOR_NORMAL);
 
+    if (m_select_machine.IsShown()) {
+        wxPoint pos = m_side_tools->ClientToScreen(wxPoint(0, 0));
+        pos.y += m_side_tools->GetRect().height;
+        // pos.x = pos.x < 0? 0:pos.x;
+        m_select_machine.Move(pos);
+    }
+
     if ((status & (int)MonitorStatus::MONITOR_NO_PRINTER) != 0) {
         set_default();
         m_tabpanel->Layout();
     } else if (((status & (int)MonitorStatus::MONITOR_NORMAL) != 0) 
         || ((status & (int)MonitorStatus::MONITOR_DISCONNECTED) != 0) 
         || ((status & (int) MonitorStatus::MONITOR_DISCONNECTED_SERVER) != 0) 
-        || ((status & (int)MonitorStatus::MONITOR_CONNECTING) != 0) ) 
+        || ((status & (int)MonitorStatus::MONITOR_CONNECTING) != 0)
+        || ((status & (int)MonitorStatus::MONITOR_CONNECTED_FAILED) != 0)) 
     {
 
         if (((status & (int) MonitorStatus::MONITOR_DISCONNECTED) != 0) 
             || ((status & (int) MonitorStatus::MONITOR_DISCONNECTED_SERVER) != 0) 
-            || ((status & (int)MonitorStatus::MONITOR_CONNECTING) != 0)) 
+            || ((status & (int)MonitorStatus::MONITOR_CONNECTING) != 0)
+            || ((status & (int)MonitorStatus::MONITOR_CONNECTED_FAILED) != 0)) 
         {
             set_default();
         }

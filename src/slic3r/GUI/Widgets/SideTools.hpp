@@ -10,6 +10,7 @@
 #include "../GUI/Tabbook.hpp"
 #include "../DeviceManager.hpp"
 #include "../wxExtensions.hpp"
+#include "../FlashForge/DeviceData.hpp"
 
 #define SIDE_TOOLS_GREY900 wxColour(38, 46, 48)
 #define SIDE_TOOLS_GREY600 wxColour(144, 144, 144)
@@ -32,6 +33,7 @@ enum MonitorStatus {
     MONITOR_DISCONNECTED = 1 << 3,
     MONITOR_DISCONNECTED_SERVER = 1 << 4,
     MONITOR_CONNECTING = 1 << 5,
+    MONITOR_CONNECTED_FAILED = 1 << 6,
 };
 
 #define SIDE_TOOL_CLICK_INTERVAL 20
@@ -119,6 +121,7 @@ public:
     void set_none_printer_mode();
     void start_interval();
     void update_status(MachineObject* obj);
+    void update_device_status(DeviceObject* obj);
     void update_connect_err_info(int code, wxString desc, wxString info);
     void show_status(int status);
 
