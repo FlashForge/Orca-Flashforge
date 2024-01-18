@@ -74,15 +74,26 @@ ReLoginDialog::ReLoginDialog() : DPIDialog(static_cast<wxWindow *>(wxGetApp().ma
     bSizer_mid->Add(m_panel_separotor_1, 0, wxEXPAND | wxALL, 0);
 
 //**登录按钮
-    m_re_login_button = new wxButton(m_panel_page, wxID_ANY, _L("Login"));
-    m_re_login_button->SetForegroundColour(wxColour(255, 255, 255));
-    m_re_login_button->SetBackgroundColour(wxColour(50,141,251)); 
-    m_re_login_button->SetWindowStyleFlag(wxBORDER_NONE); 
-    m_re_login_button->SetMinSize(wxSize(215,44));
-    m_re_login_button->SetFont((wxFont(wxFontInfo(16))));
-    m_re_login_button->Bind(wxEVT_BUTTON,&ReLoginDialog::onReloginBtnClicked, this);
+    m_re_login_button = new FFButton(m_panel_page, wxID_ANY,_L("Login"));
 
-    //m_re_login_button->Fit(m_panel_page);
+    m_re_login_button->SetFontDisableColor(wxColour(255, 255, 255));
+    m_re_login_button->SetBorderDisableColor(wxColour(221,221,221));
+    m_re_login_button->SetBGColor(wxColour(221,221,221));
+
+    m_re_login_button->SetFontHoverColor(wxColour(255, 255, 255));
+    m_re_login_button->SetBGHoverColor(wxColour(149,197,255));
+    m_re_login_button->SetBorderHoverColor(wxColour(149,197,255));
+
+    m_re_login_button->SetFontPressColor(wxColour(255, 255, 255));
+    m_re_login_button->SetBGPressColor(wxColour(17,111,223));
+    m_re_login_button->SetBorderPressColor(wxColour(17,111,223));
+
+    m_re_login_button->SetFontColor(wxColour(255, 255, 255));
+    m_re_login_button->SetBorderColor(wxColour(50,141,251));
+    m_re_login_button->SetBGColor(wxColour(50,141,251));
+    m_re_login_button->Bind(wxEVT_LEFT_UP,&ReLoginDialog::onRelogin2BtnClicked, this);
+    m_re_login_button->SetMinSize(wxSize(FromDIP(170),FromDIP(35)));
+    m_re_login_button->SetFont((wxFont(wxFontInfo(16))));
 
     bSizer_mid->Add(m_re_login_button,0, wxALIGN_CENTER,0);
 
@@ -162,6 +173,17 @@ void ReLoginDialog::onLoginoutBtnClicked(wxCommandEvent& event)
         app_config->set("usr_pic","");
         Slic3r::GUI::MultiComMgr::inst()->removeWanDev();
     }
+}
+
+void ReLoginDialog::onRelogin2BtnClicked(wxMouseEvent& event)
+{
+    AppConfig *app_config = wxGetApp().app_config;
+    if(app_config){
+        std::string usr_name = app_config->get("usr_name");
+        std::string usr_pic = app_config->get("usr_pic");
+        wxGetApp().handle_login_result(usr_pic,usr_name);
+    }
+    Hide();
 }
 
 void ReLoginDialog::on_dpi_changed(const wxRect &suggested_rect)

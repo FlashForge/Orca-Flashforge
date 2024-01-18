@@ -102,9 +102,21 @@ LoginDialog::LoginDialog()
     SetFont(wxGetApp().normal_font());
 	SetBackgroundColour(*wxWHITE);
  
-    initWidget();
-    initBindEvent();
-    initData();
+    AppConfig *app_config = wxGetApp().app_config;
+    std::string region = app_config->get("region");
+    if(region.compare("China") == 0){
+        initWidget();
+        initBindEvent();
+        initData();
+    }
+    else{
+        initOverseaWidget();
+        ComErrno get_result = MultiComUtils::getClientToken(m_client_SMS_token);
+        if(get_result == ComErrno::COM_ERROR){
+            BOOST_LOG_TRIVIAL(warning) << boost::format("MultiComUtils::getClientToken Failed!");
+        }
+    }
+
     this->SetMinSize(wxSize(FromDIP(330), FromDIP(439)));
 }
 
@@ -233,6 +245,42 @@ void LoginDialog::initBindEvent()
         Layout();
         m_password_ctrl_page2->RefreshEyePicPosition();
         });
+}
+
+void LoginDialog::initOverseaWidget()
+{
+    m_sizer_main = MainSizer();
+    m_sizer_main->SetMinSize(wxSize(FromDIP(330), FromDIP(439)));
+
+    //createBodyWidget();
+    m_page_body_sizer = new wxBoxSizer(wxVERTICAL);
+
+    m_page_body_page2_panel = new wxPanel(this, wxID_ANY);
+    wxBoxSizer* page2Sizer = new wxBoxSizer(wxVERTICAL);
+    setupLayoutPage2(page2Sizer,m_page_body_page2_panel);
+    page2Sizer->AddSpacer(FromDIP(63));
+
+    m_page_body_page2_panel->SetSizer(page2Sizer);
+    m_page_body_page2_panel->Layout();
+    page2Sizer->Fit(m_page_body_page2_panel);
+
+    m_page_body_sizer->Add(m_page_body_page2_panel, 1, wxEXPAND | wxALL, 10);
+
+
+    m_sizer_main->AddSpacer(FromDIP(50));
+    auto oversea_title = new wxStaticText(this,wxID_ANY,_L("Login"));
+    oversea_title->SetForegroundColour(wxColour(51,51,51));
+    const auto font_title = GetFont().MakeBold();
+    oversea_title->SetFont(font_title);
+    m_sizer_main->Add(oversea_title,0,wxALIGN_CENTER);
+    m_sizer_main->AddSpacer(FromDIP(28));
+    m_sizer_main->Add(m_page_body_sizer, 0, wxALIGN_CENTER);
+
+    Layout();
+    Fit();
+    Thaw();
+    Centre(wxBOTH);
+    Layout();
 }
 
 void LoginDialog::createBodyWidget()
@@ -413,7 +461,11 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     page1Sizer->Add(verify_last_sizer, 0, wxEXPAND ,0);
 
 //****error tips ***
-    m_error_label = new wxStaticText(parent,wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize);
+    m_error_label_panel = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(200), FromDIP(50)), wxBORDER_NONE);
+    m_error_label_panel->SetBackgroundColour(wxColour(250, 207, 202));
+    m_error_label_panel->SetMinSize(wxSize(FromDIP(200),FromDIP(50)));
+
+    m_error_label = new wxStaticText(m_error_label_panel,wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize);
     m_error_label->SetLabel(_L("Verify code is incorrect"));
     m_error_label->SetFont((wxFont(wxFontInfo(16))));
     m_error_label->SetBackgroundColour(wxColour(250, 207, 202));
@@ -421,8 +473,11 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     m_error_label->SetWindowStyle(wxALIGN_CENTER_VERTICAL | wxALIGN_CENTER_HORIZONTAL);
     m_error_label->SetMinSize(wxSize(348,55));
 
-    page1Sizer->Add(m_error_label, 0, wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
-    m_error_label->Show(false); 
+    wxBoxSizer *error_label_sizer = new wxBoxSizer(wxHORIZONTAL);
+    error_label_sizer->Add(m_error_label, 0, wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
+    m_error_label_panel->SetSizer(error_label_sizer);
+    error_label_sizer->Fit(m_error_label_panel);
+    m_error_label_panel->Show(false);
 
     //login button
     m_login_button_page1 = new FFButton(parent, wxID_ANY,_L("Login"));
@@ -575,6 +630,24 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     page2Sizer->Add(regist_forget_hor_sizer, 0, wxEXPAND,0);
 
 //****error tips ***
+    m_error_label_page2_panel = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(200), FromDIP(50)), wxBORDER_NONE);
+    m_error_label_page2_panel->SetBackgroundColour(wxColour(250, 207, 202));
+    m_error_label_page2_panel->SetMinSize(wxSize(FromDIP(200),FromDIP(50)));
+
+    m_error_label_page2 = new wxStaticText(m_error_label_page2_panel,wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize);
+    m_error_label_page2->SetLabel(_L("Verify code is incorrect"));
+    m_error_label_page2->SetFont((wxFont(wxFontInfo(16))));
+    m_error_label_page2->SetBackgroundColour(wxColour(250, 207, 202));
+    m_error_label_page2->SetForegroundColour(wxColour(234, 53, 34));
+    m_error_label_page2->SetWindowStyle(wxALIGN_CENTER_VERTICAL | wxALIGN_CENTER_HORIZONTAL);
+    m_error_label_page2->SetMinSize(wxSize(348,55));
+
+    wxBoxSizer *error_label_sizer = new wxBoxSizer(wxHORIZONTAL);
+    error_label_sizer->Add(m_error_label_page2, 0, wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
+    m_error_label_page2_panel->SetSizer(error_label_sizer);
+    error_label_sizer->Fit(m_error_label_page2_panel);
+    m_error_label_page2_panel->Show(false);
+/*
     m_error_label_page2 = new wxStaticText(parent,wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize);
     m_error_label_page2->SetLabel(_L("Account or Password Input Error"));
     m_error_label_page2->SetFont((wxFont(wxFontInfo(16))));
@@ -584,7 +657,7 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     m_error_label_page2->SetMinSize(wxSize(348,55));
     page2Sizer->Add(m_error_label_page2, 0, wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
     m_error_label_page2->Show(false); 
-
+*/
     //login button
     m_login_button_page2 = new FFButton(parent, wxID_ANY,_L("Login"));
     m_login_button_page2->SetFontDisableColor(wxColour(255, 255, 255));
@@ -816,9 +889,23 @@ void LoginDialog::onPage4Login(wxMouseEvent& event)
     else if (login_result == ComErrno::COM_INVALID_VALIDATION){
         m_timer.Bind(wxEVT_TIMER, &LoginDialog::OnTimer, this);
         //账号、验证码错误
+        wxPoint pt;
+        //获取登录按钮中心位置x坐标，然后减去错误码一半长度，即为x坐标
+        wxPoint loginX = m_login_button_page1->GetPosition();
+        int login_size_x = m_login_button_page1->GetSize().x;
+        int error_label_width = m_error_label_panel->GetSize().x;
+        pt.x = m_login_button_page1->GetPosition().x + m_login_button_page1->GetSize().x / 2 - m_error_label_panel->GetSize().x / 2;
+        pt.y  = m_verifycode_ctrl_page1->GetPosition().y + m_verifycode_ctrl_page1->GetSize().y + FromDIP(10);   
+        m_error_label_panel->SetPosition(pt);
+        m_error_label_panel->SetSize(wxSize(FromDIP(200),FromDIP(50)));
+        m_error_label_panel->Show(true);
+        m_error_label_panel->Layout();
+        m_error_label_panel->Refresh();
         m_error_label->Show(true);
+        m_error_label->Refresh();
         startTimer();
     }
+    event.Skip();
 }
 
 void LoginDialog::onPage2Login(wxCommandEvent& event)
@@ -872,13 +959,33 @@ void LoginDialog::onPage3Login(wxMouseEvent& event)
     else if (login_result == ComErrno::COM_INVALID_VALIDATION){
         m_timer.Bind(wxEVT_TIMER, &LoginDialog::OnTimer, this);
         //账号、密码错误
+        wxPoint pt;
+        //获取登录按钮中心位置x坐标，然后减去错误码一半长度，即为x坐标
+        wxPoint loginX = m_login_button_page2->GetPosition();
+        int login_size_x = m_login_button_page2->GetSize().x;
+        int error_label_width = m_error_label_page2_panel->GetSize().x;
+        pt.x = m_login_button_page2->GetPosition().x + m_login_button_page2->GetSize().x / 2 - m_error_label_page2_panel->GetSize().x / 2;
+        pt.y  = m_password_ctrl_page2->GetPosition().y + m_password_ctrl_page2->GetSize().y + FromDIP(10);   
+        m_error_label_page2_panel->SetPosition(pt);
+        m_error_label_page2_panel->SetSize(wxSize(FromDIP(200),FromDIP(50)));
+        m_error_label_page2_panel->Show(true);
+        m_error_label_page2_panel->Layout();
+        m_error_label_page2_panel->Refresh();
         m_error_label_page2->Show(true);
+        m_error_label_page2->Refresh();
         startTimer();
     }
+    event.Skip();
 }
 
 void LoginDialog::OnTimer(wxTimerEvent& event)
 {
+    if(m_error_label_panel->IsShown()){
+        m_error_label_panel->Show(false);
+    }
+    if(m_error_label_page2_panel->IsShown()){
+        m_error_label_page2_panel->Show(false);
+    }
     if(m_error_label->IsShown()){
         m_error_label->Show(false);
     }

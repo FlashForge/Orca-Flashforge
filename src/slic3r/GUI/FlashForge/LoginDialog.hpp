@@ -9,6 +9,7 @@
 #include "slic3r/GUI/Widgets/Button.hpp"
 #include "slic3r/GUI/Widgets/FFButton.hpp"
 #include "slic3r/GUI/Widgets/FFCheckBox.hpp"
+#include "slic3r/GUI/Widgets/Label.hpp"
 #include "slic3r/GUI/FlashForge/UserNameCtrl.hpp"
 #include "slic3r/GUI/FlashForge/VerifyCodeCtrl.hpp"
 #include "slic3r/GUI/FlashForge/PasswordCtrl.hpp"
@@ -62,6 +63,8 @@ private:
     void initData();
     void initBindEvent();
 
+    void initOverseaWidget();
+
     void createBodyWidget();
     void createSwitchTitle();
 
@@ -105,6 +108,8 @@ private:
     wxPanel* m_page_body_page2_panel {nullptr};
 
     wxStaticText* m_error_label {nullptr};
+    wxPanel* m_error_label_panel {nullptr};
+
     FFButton* m_login_button_page1 {nullptr};
     CountdownButton* m_get_code_button {nullptr};
     wxStaticText* m_protocol_page1{nullptr};
@@ -113,6 +118,7 @@ private:
     wxPanel* m_panel_checkbox_page1 {nullptr};
 
     wxStaticText* m_error_label_page2 {nullptr};
+    wxPanel* m_error_label_page2_panel {nullptr};
     FFButton* m_login_button_page2 {nullptr};
     wxPanel* m_panel_checkbox_page2 {nullptr};
 

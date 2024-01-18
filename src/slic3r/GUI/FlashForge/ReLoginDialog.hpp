@@ -8,6 +8,7 @@
 #include "slic3r/GUI/GUI_Utils.hpp"
 #include "slic3r/GUI/Widgets/Button.hpp"
 #include "slic3r/GUI/Widgets/Label.hpp"
+#include "slic3r/GUI/Widgets/FFButton.hpp"
 #include "slic3r/GUI/Widgets/WebView.hpp"
 
 #if wxUSE_WEBVIEW_IE
@@ -31,6 +32,8 @@ public:
     void onReloginBtnClicked(wxCommandEvent& event);
     void onLoginoutBtnClicked(wxCommandEvent& event);
 
+    void onRelogin2BtnClicked(wxMouseEvent& event);
+
 protected:
     void on_dpi_changed(const wxRect &suggested_rect) override;
 
@@ -42,7 +45,7 @@ private:
 
     wxStaticBitmap*  m_usr_pic_staticbitmap;
 
-    wxButton* m_re_login_button {nullptr};
+    FFButton* m_re_login_button {nullptr};
     wxButton* m_login_out_button {nullptr};
 
     wxWebView * m_user_pic_view {nullptr};
