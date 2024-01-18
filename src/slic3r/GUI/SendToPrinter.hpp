@@ -256,8 +256,8 @@ private:
     void updateVisible();
     void updateSendButtonState();
     void updateSendJobList(com_id_t id, bool complete, ComErrno err);
-    void updateSendStatusInfo(bool complete);
     void clear_machine_list();
+    void remove_temporary_file();
 };
 
 wxDECLARE_EVENT(EVT_CLEAR_IPADDRESS, wxCommandEvent);

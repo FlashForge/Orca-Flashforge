@@ -1,4 +1,6 @@
 #include "SendToPrinter.hpp"
+#include <algorithm>
+#include <filesystem>
 #include "I18N.hpp"
 
 #include "libslic3r/Utils.hpp"
@@ -17,7 +19,6 @@
 #include <wx/clipbrd.h>
 #include <wx/dcgraph.h>
 #include <miniz.h>
-#include <algorithm>
 #include "BitmapCache.hpp"
 
 namespace Slic3r {
@@ -41,13 +42,13 @@ SendToPrinterTipDialog::SendToPrinterTipDialog(wxWindow* parent, const wxStringL
     wxBoxSizer* sizer = MainSizer();//new wxBoxSizer(wxVERTICAL);
     sizer->AddSpacer(40);
 
-    wxStaticText* successText = new wxStaticText(this, wxID_ANY, _("File sent successfully"));
-    successText->SetMaxSize(wxSize(FromDIP(800), -1));
-    successText->Wrap(FromDIP(800));
-    successText->SetForegroundColour("#333333");
-    successText->SetBackgroundColour("#ffffff");
-    sizer->Add(successText, 0, wxEXPAND | wxALIGN_LEFT | wxLEFT | wxRIGHT, 40);
     if (!success.empty()) {
+        wxStaticText* successText = new wxStaticText(this, wxID_ANY, _("File sent successfully"));
+        successText->SetMaxSize(wxSize(FromDIP(800), -1));
+        successText->Wrap(FromDIP(800));
+        successText->SetForegroundColour("#333333");
+        successText->SetBackgroundColour("#ffffff");
+        sizer->Add(successText, 0, wxEXPAND | wxALIGN_LEFT | wxLEFT | wxRIGHT, 40);
         int row = (success.size() + 1) / 2;
         wxGridSizer* gridSizer = new wxGridSizer(row, 2, 10, 10);
         for (auto& suc : success) {
@@ -55,21 +56,23 @@ SendToPrinterTipDialog::SendToPrinterTipDialog(wxWindow* parent, const wxStringL
         }
         sizer->AddSpacer(20);
         sizer->Add(gridSizer, 1, wxEXPAND | wxLEFT | wxRIGHT, 40);
+        sizer->AddSpacer(20);
     }
-    sizer->AddSpacer(20);
 
-    wxPanel* line = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 1), wxTAB_TRAVERSAL);
-    line->SetBackgroundColour(wxColour("#DDDDDD"));
-    sizer->Add(line, 0, wxEXPAND | wxLEFT | wxRIGHT, 40);
-    sizer->AddSpacer(20);
-
-    wxStaticText* failText = new wxStaticText(this, wxID_ANY, _("File sending failure: inconsistent model and slicing configuration or network abnormality"));
-    failText->SetMaxSize(wxSize(FromDIP(800), -1));
-    failText->Wrap(FromDIP(800));
-    failText->SetForegroundColour("#333333");
-    failText->SetBackgroundColour("#ffffff");
-    sizer->Add(failText, 0, wxEXPAND | wxALIGN_LEFT | wxLEFT | wxRIGHT, 40);
     if (!fail.empty()) {
+        if (!success.empty()) {
+            wxPanel* line = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 1), wxTAB_TRAVERSAL);
+            line->SetBackgroundColour(wxColour("#DDDDDD"));
+            sizer->Add(line, 0, wxEXPAND | wxLEFT | wxRIGHT, 40);
+            sizer->AddSpacer(20);
+        }
+
+        wxStaticText* failText = new wxStaticText(this, wxID_ANY, _("File sending failure: inconsistent model and slicing configuration or network abnormality"));
+        failText->SetMaxSize(wxSize(FromDIP(600), -1));
+        failText->Wrap(FromDIP(600));
+        failText->SetForegroundColour("#333333");
+        failText->SetBackgroundColour("#ffffff");
+        sizer->Add(failText, 0, wxEXPAND | wxALIGN_LEFT | wxLEFT | wxRIGHT, 40);
         int row = (success.size() + 1) / 2;
         wxGridSizer* failSizer = new wxGridSizer(row, 2, 10, 10);
         for (auto& f : fail) {
@@ -478,6 +481,7 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/, bool sendAn
     m_sendBtn->SetMaxSize(wxSize(FromDIP(101), FromDIP(44)));
     wxBoxSizer* sendSizer = new wxBoxSizer(wxVERTICAL);
     sendSizer->Add(m_errorPanel, 0, wxEXPAND | wxALIGN_LEFT);
+    sendSizer->AddSpacer(FromDIP(10));
     sendSizer->Add(m_sendBtn, 0, wxALIGN_CENTER_HORIZONTAL);
     m_sendPanel->SetSizer(sendSizer);
     m_sendPanel->Layout();
@@ -521,7 +525,7 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/, bool sendAn
     m_sizer_main->Add(m_machineBook, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
     m_sizer_main->AddSpacer(FromDIP(10));
     m_sizer_main->Add(m_sendBook, 1, wxEXPAND | wxALIGN_LEFT | wxLEFT | wxRIGHT, FromDIP(40));
-    m_sizer_main->AddSpacer(FromDIP(10));
+    m_sizer_main->AddSpacer(FromDIP(45));
 
     show_print_failed_info(false);
     //SetSizer(m_sizer_main);
@@ -793,10 +797,10 @@ void SendToPrinterDialog::init_bind()
     Bind(EVT_SEND_MULTI_JOB_COMPLETED, &SendToPrinterDialog::onSendMultiJobCompleted, this);
     Bind(wxEVT_TIMER, &SendToPrinterDialog::on_timer, this);
     Bind(EVT_CLEAR_IPADDRESS, &SendToPrinterDialog::clear_ip_address_config, this);
-    Bind(COM_CONNECTION_READY_EVENT, &SendToPrinterDialog::onConnectionReady, this);
-    Bind(COM_CONNECTION_EXIT_EVENT, &SendToPrinterDialog::onConnectionExit, this);
-    Bind(COM_SEND_GCODE_FINISH_EVENT, &SendToPrinterDialog::onSendGcodeFinished, this);
-    Bind(COM_SEND_GCODE_PROGRESS_EVENT, &SendToPrinterDialog::onSendGcodeProgress, this);
+    MultiComMgr::inst()->Bind(COM_CONNECTION_READY_EVENT, &SendToPrinterDialog::onConnectionReady, this);
+    MultiComMgr::inst()->Bind(COM_CONNECTION_EXIT_EVENT, &SendToPrinterDialog::onConnectionExit, this);
+    MultiComMgr::inst()->Bind(COM_SEND_GCODE_FINISH_EVENT, &SendToPrinterDialog::onSendGcodeFinished, this);
+    MultiComMgr::inst()->Bind(COM_SEND_GCODE_PROGRESS_EVENT, &SendToPrinterDialog::onSendGcodeProgress, this);
 }
 
 void SendToPrinterDialog::init_timer()
@@ -1317,6 +1321,9 @@ void SendToPrinterDialog::set_default()
     m_wlanBtn->SetValue(true);
     m_lanBtn->SetValue(true);
     m_rename_switch_panel->SetSelection(0);
+    m_machineBook->SetSelection(0);
+    m_sendBook->SetSelection(0);
+    m_progressBar->SetProgress(0);
 
     wxString filename = m_plater->get_export_gcode_filename("", true, m_print_plate_idx == PLATE_ALL_IDX ? true : false);
 
@@ -1446,32 +1453,34 @@ void SendToPrinterDialog::onMachineSelectionToggled(wxCommandEvent& event)
         }
         m_selectAll->SetValue(event.IsChecked());
     } else {
-        bool check = event.IsChecked();
-        if (!event.IsChecked() && m_selectAll->GetValue()) {
-            m_selectAll->SetValue(false);
+        bool all_select = true;
+        for (auto& iter : m_machineItemList) {
+            if (!iter->IsChecked()) {
+                all_select = false;
+                break;
+            }
         }
+        m_selectAll->SetValue(all_select);
     }
     updateSendButtonState();
 }
 
 void SendToPrinterDialog::onSendClicked(wxCommandEvent& event)
 {
-    wxStringList successList, failList;
-    for (int i = 0; i < 6; ++i) successList.Add(_("Success"));
-    for (int i = 0; i < 7; ++i) failList.Add(_("Fail"));
-
-    SendToPrinterTipDialog dlg(nullptr, successList, failList, wxSize(FromDIP(442), -1));
-    dlg.ShowModal();
-
     m_is_in_sending_mode = true;
     m_sendJobMap.clear();
 
     auto pid = get_current_pid();
-    boost::filesystem::path parent_path(temporary_dir());
-    parent_path = parent_path / "orca-flashforge" / "3mf";
-    if (!boost::filesystem::exists(parent_path)) {
-        BOOST_LOG_TRIVIAL(info) << "create orca-flashforge 3mf path" << parent_path;
-        boost::filesystem::create_directories(parent_path);
+    std::filesystem::path parent_path(temporary_dir());
+    parent_path = parent_path / "orca-flashforge" / "slice";
+    if (!std::filesystem::exists(parent_path)) {
+        if (std::filesystem::create_directories(parent_path)) {
+            BOOST_LOG_TRIVIAL(info) << "create orca-flashforge slice path (" << parent_path << ") " << "success";
+        } else {
+            BOOST_LOG_TRIVIAL(info) << "create orca-flashforge slice path (" << parent_path << ") " << "fail";
+            return;
+        }
+        
     }
     std::stringstream buf;
     buf << pid;
@@ -1495,14 +1504,13 @@ void SendToPrinterDialog::onSendClicked(wxCommandEvent& event)
             }
         }
         image = image.Rescale(FromDIP(256), FromDIP(256));
-        image.SaveFile(thumb_path);
+        if (image.SaveFile(thumb_path)) {
+            BOOST_LOG_TRIVIAL(info) << "save thumb (" << thumb_path << ") success";
+        } else {
+            BOOST_LOG_TRIVIAL(info) << "save thumb (" << thumb_path << ") fail";
+            return;
+        }
     }
-
-    //int result = m_plater->send_gcode(m_print_plate_idx, nullptr);
-    //if (result < 0) {        
-    //    BOOST_LOG_TRIVIAL(info) << "Abnormal print file data. Please slice again" << result;
-    //    return;
-    //}
 
     wxString msg_text;
     int result = m_plater->export_3mf(gcode_path, SaveStrategy::Silence | SaveStrategy::SplitModel | SaveStrategy::WithGcode | SaveStrategy::SkipModel, m_print_plate_idx);
@@ -1529,6 +1537,9 @@ void SendToPrinterDialog::onSendClicked(wxCommandEvent& event)
             iter.second.cmdId = cmd->commandId();
             MultiComMgr::inst()->putCommand(iter.first, cmd);
         }
+        m_sendBook->SetSelection(1);
+        m_sendBook->Layout();
+        Layout();
     }
 }
 
@@ -1572,6 +1583,7 @@ void SendToPrinterDialog::onConnectionExit(ComConnectionExitEvent& event)
 
 void SendToPrinterDialog::onSendGcodeFinished(ComSendGcodeFinishEvent& event)
 {
+    BOOST_LOG_TRIVIAL(info) << "Send Gcode Finished: id (" << event.id << "), result (" << event.ret << ")";
     updateSendJobList(event.id, true, event.ret);
     event.Skip();
 }
@@ -1581,6 +1593,7 @@ void SendToPrinterDialog::onSendGcodeProgress(ComSendGcodeProgressEvent& event)
     if (m_sendJobMap.empty() || event.total <= 0) {
         return;
     }
+    BOOST_LOG_TRIVIAL(info) << "Send Gcode progress: event.total (" << event.total << "), now (" << event.now << ")";
     auto& iter = m_sendJobMap.find(event.id);
     if (iter != m_sendJobMap.end()) {
         iter->second.progress = event.now / event.total;
@@ -1589,7 +1602,7 @@ void SendToPrinterDialog::onSendGcodeProgress(ComSendGcodeProgressEvent& event)
     double preJobProgress = 100.0 / m_sendJobMap.size();
     double totalProgress = 0;
     for (auto& iter : m_sendJobMap) {
-        if (iter.second.result != Result_None) {
+        if (iter.second.result == Result_None) {
             totalProgress += preJobProgress * iter.second.progress;
         } else {
             totalProgress += preJobProgress;
@@ -1606,13 +1619,17 @@ void SendToPrinterDialog::onSendMultiJobCompleted(wxCommandEvent& event)
     for (auto& iter : m_sendJobMap) {
         wxString name;
         auto res = m_machineListMap.find(iter.first);
-        if (res == m_machineListMap.end()) {
+        if (res != m_machineListMap.end()) {
             name = res->second.name;
         }
         (iter.second.result == Result_Ok) ? successList.Add(name) : failList.Add(name);
     }
+    BOOST_LOG_TRIVIAL(info) << "Send multi job completed";
     SendToPrinterTipDialog dlg(this, successList, failList);
-    dlg.ShowModal();
+    if (dlg.ShowModal()) {
+        EndDialog(wxID_OK);
+        wxGetApp().mainframe->select_tab(size_t(MainFrame::tpMonitor));
+    }
 }
 
 void SendToPrinterDialog::updateVisible()
@@ -1671,6 +1688,8 @@ void SendToPrinterDialog::updateSendJobList(com_id_t id, bool complete, ComErrno
     }
     if (completed) {
         m_is_in_sending_mode = false;
+        remove_temporary_file();
+
         m_progressBar->SetValue(100);
         if (m_sendJobMap.size() == 1) {
             if (m_sendJobMap.begin()->second.result == Result_Ok) {
@@ -1680,6 +1699,8 @@ void SendToPrinterDialog::updateSendJobList(com_id_t id, bool complete, ComErrno
             } else {
                 m_progressInfoLbl->SetLabel(_("Send failed, please check network or device status"));
             }
+            EndModal(wxID_OK);
+            wxGetApp().mainframe->select_tab(size_t(MainFrame::tpMonitor));
         } else {
             m_progressInfoLbl->SetLabel(_("Send completed"));
             
@@ -1693,22 +1714,15 @@ void SendToPrinterDialog::updateSendJobList(com_id_t id, bool complete, ComErrno
     }
 }
 
-void SendToPrinterDialog::updateSendStatusInfo(bool complete)
+void SendToPrinterDialog::remove_temporary_file()
 {
-#if 0
-    if (completed) {
-        m_progressBar->SetValue(100);
-        if (m_sendJobMap.size() == 1) {
-            if (m_sendJobMap.begin()->second.result == Result_Ok) {
-            
-            } else {
-                
-            }
-        } else {
-        
-        }
-    }
-#endif
+    std::filesystem::path temp_path(temporary_dir());
+    temp_path = temp_path / "orca-flashforge" / "slice";
+    std::filesystem::directory_iterator dir(temp_path);
+	for (auto& p : dir) {
+        bool ret = std::filesystem::remove_all(p);
+        BOOST_LOG_TRIVIAL(info) << "remove path (" << p.path().filename() << ") " << (ret ? "success" : "fail");
+	}
 }
 
 SendToPrinterDialog::~SendToPrinterDialog()
