@@ -87,7 +87,7 @@ typedef struct fnet_dev_detail {
     char *ipAddr;
     char *name;
     char *location;
-    char *printStatus;
+    char *status;
     char *printFileName;
     char *printFileThumbUrl;
     int printLayer;
