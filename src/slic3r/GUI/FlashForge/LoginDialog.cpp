@@ -26,33 +26,40 @@ namespace GUI {
     com_user_profile_t LoginDialog::m_usr_info = {};
 
     CountdownButton::CountdownButton(wxWindow* parent, wxString text, wxString icon /*= ""*/, long style /*= 0*/, int iconSize /*= 0*/, wxWindowID btn_id /*= wxID_ANY*/)
-        : Button(parent,text,icon,style,iconSize,btn_id)
+        : FFButton(parent,wxID_ANY,text,10)
         , m_countdown(60)
-        , m_parent(parent)
     {
-        // 创建一个 wxTimer 对象，并将其绑定到当前控件上
         m_timer.Bind(wxEVT_TIMER, &CountdownButton::OnTimer, this);
-        //Bind(EVT_UPDATE_TEXT_LOGIN, &CountdownButton::OnUpdateText, this);
     }
 
     void CountdownButton::OnTimer(wxTimerEvent& event)
     {
-        // 更新倒计时
+        std::lock_guard lock(m_mutex);
         m_countdown--;
         if (m_countdown > 0)
         {
-            // 更新按钮上的文本
             SetLabel(wxString::Format("%d s", m_countdown));
+            Refresh();
         }
         else
         {
-            // 停止定时器
             m_timer.Stop();
             m_countdown = 60;
 
-            // 恢复按钮上原来的文本
             SetLabel(_L("Get Code"));
+            m_press = false;
+            Refresh();
         }
+    }
+
+    void CountdownButton::SetState(bool state)
+    {
+        m_press = state;
+    }
+
+    bool CountdownButton::GetState()
+    {
+        return m_press;
     }
 
     //增加正则过滤
@@ -333,13 +340,14 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
 
     //left space
     wxPanel* usr_name_space1 = new wxPanel(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER | wxTAB_TRAVERSAL);
-    usr_name_space1->SetMinSize(wxSize(66, -1));
+    usr_name_space1->SetMinSize(wxSize(FromDIP(53), -1));
     //right space
     wxPanel* usr_name_space2 = new wxPanel(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER | wxTAB_TRAVERSAL);
-    usr_name_space2->SetMinSize(wxSize(86, -1));
+    usr_name_space2->SetMinSize(wxSize(FromDIP(80), -1));
 
     m_username_ctrl_page1 = new UserNameCtrl(panel,wxID_ANY,_L("Phone Number / email"));
     m_username_ctrl_page1->SetRadius(10);
+    m_username_ctrl_page1->Bind(wxEVT_TEXT, &LoginDialog::onUsrNameOrPasswordChangedPage1, this);
 
     //adjust layout
     wxBoxSizer *last_sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -354,34 +362,51 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
 
     page1Sizer->Add(0,FromDIP(23),0, 0);
     page1Sizer->Add(panel, 0, wxEXPAND ,0);
-    page1Sizer->AddSpacer(20);
+    page1Sizer->AddSpacer(FromDIP(16));
 
 //*******verify code******** 
     m_verifycode_ctrl_page1 = new VerifyCodeCtrl(parent,wxID_ANY);
     m_verifycode_ctrl_page1->Bind(wxEVT_TEXT, &LoginDialog::onUsrNameOrPasswordChangedPage1, this);
 
     m_get_code_button = new CountdownButton(parent,_L("Get Code"));
-    m_get_code_button->SetForegroundColour(wxColour(255, 255, 255));
-    m_get_code_button->SetBackgroundColour(wxColour(221,221,221));
-    m_get_code_button->SetWindowStyleFlag(wxBORDER_NONE); 
-    m_get_code_button->SetMinSize(wxSize(114,52));
-    m_get_code_button->Bind(wxEVT_BUTTON, [this](wxCommandEvent& event){
+    m_get_code_button->SetMinSize(wxSize(FromDIP(89),FromDIP(40)));
+    m_get_code_button->Disable();
+    m_get_code_button->SetFontDisableColor(wxColour(255, 255, 255));
+    m_get_code_button->SetBorderDisableColor(wxColour(221,221,221));
+    m_get_code_button->SetBGColor(wxColour(221,221,221));
+
+    m_get_code_button->SetFontHoverColor(wxColour(255, 255, 255));
+    m_get_code_button->SetBGHoverColor(wxColour(149,197,255));
+    m_get_code_button->SetBorderHoverColor(wxColour(149,197,255));
+
+    m_get_code_button->SetFontPressColor(wxColour(255, 255, 255));
+    m_get_code_button->SetBGPressColor(wxColour(17,111,223));
+    m_get_code_button->SetBorderPressColor(wxColour(17,111,223));
+
+    m_get_code_button->SetFontColor(wxColour(255, 255, 255));
+    m_get_code_button->SetBorderColor(wxColour(50,141,251));
+    m_get_code_button->SetBGColor(wxColour(50,141,251));
+    m_get_code_button->Bind(wxEVT_LEFT_UP, [this](wxMouseEvent& event){
+        if(m_get_code_button->GetState()){
+            event.Skip();
+            return;
+        }
+        m_get_code_button->SetState(true);
+        m_get_code_button->startTimer();
         ComErrno send_result =MultiComUtils::sendSMSCode(m_client_SMS_token.accessToken,m_username_ctrl_page1->GetValue().ToStdString());
         if(send_result == ComErrno::COM_ERROR){
             BOOST_LOG_TRIVIAL(warning) << boost::format("MultiComUtils::sendSMSCode Failed!");
         }
-        m_get_code_button->startTimer();
+        event.Skip();
     });
-    //Bind(EVT_UPDATE_TEXT_LOGIN, &LoginDialog::OnUpdateText, this);
 
 
     //adjust layout
     wxBoxSizer *verify_last_sizer = new wxBoxSizer(wxHORIZONTAL);
-    //verify_last_sizer->SetMinSize(250,-1);
 
     verify_last_sizer->Add(usr_name_space1, 0, wxEXPAND|wxLeft, 0);
     verify_last_sizer->Add(m_verifycode_ctrl_page1);
-    verify_last_sizer->AddSpacer(15);
+    verify_last_sizer->AddSpacer(FromDIP(14));
     verify_last_sizer->Add(m_get_code_button);
     verify_last_sizer->Add(usr_name_space2, 0, wxEXPAND ,0);
 
@@ -412,7 +437,6 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     m_login_button_page1->SetFontPressColor(wxColour(255, 255, 255));
     m_login_button_page1->SetBGPressColor(wxColour(17,111,223));
     m_login_button_page1->SetBorderPressColor(wxColour(17,111,223));
-
 
     m_login_button_page1->SetFontColor(wxColour(255, 255, 255));
     m_login_button_page1->SetBorderColor(wxColour(50,141,251));
@@ -467,7 +491,6 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     m_privacy_policy_page1->Show(true);
 
     //left gaption
-    //checkbox_sizer->Add(FromDIP(50), 0, 0, 0);
     wrapSizer_1->Add(m_page1_checkBox);
     wrapSizer_1->AddSpacer(FromDIP(6));
     wrapSizer_1->Add(m_protocol_page1);
@@ -493,17 +516,16 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
 
     //left space
     wxPanel* usr_name_space1 = new wxPanel(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER | wxTAB_TRAVERSAL);
-    usr_name_space1->SetMinSize(wxSize(66, -1));
+    usr_name_space1->SetMinSize(wxSize(FromDIP(53), -1));
     //right space
     wxPanel* usr_name_space2 = new wxPanel(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER | wxTAB_TRAVERSAL);
-    usr_name_space2->SetMinSize(wxSize(86, -1));
+    usr_name_space2->SetMinSize(wxSize(FromDIP(80), -1));
 
     m_username_ctrl_page2 = new UserNameCtrl(parent,wxID_ANY,_L("Phone Number / email"));
     m_username_ctrl_page2->Bind(wxEVT_TEXT, &LoginDialog::onUsrNameOrPasswordChangedPage2, this);
 
     //adjust layout
     wxBoxSizer *last_sizer = new wxBoxSizer(wxHORIZONTAL);
-    //last_sizer->SetMinSize(250,-1);
 
     last_sizer->Add(usr_name_space1, 0, wxEXPAND|wxLeft, 0);
     last_sizer->Add(m_username_ctrl_page2);
@@ -511,7 +533,7 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
 
     page2Sizer->Add(0,FromDIP(23),0, 0);
     page2Sizer->Add(last_sizer, 0, wxEXPAND ,0);
-    page2Sizer->AddSpacer(20);
+    page2Sizer->AddSpacer(FromDIP(16));
 
 //*******password******** 
     m_password_ctrl_page2 = new PasswordCtrl(parent,wxID_ANY);
@@ -591,7 +613,6 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     //check box
     wxBoxSizer* checkbox_sizer = new wxBoxSizer(wxVERTICAL);
     wxWrapSizer* wrapSizer = new wxWrapSizer(wxHORIZONTAL);
-    //m_panel_checkbox_page2 = new wxPanel(parent, wxID_ANY,wxDefaultPosition,wxSize(FromDIP(217), -1), wxTAB_TRAVERSAL);
     m_panel_checkbox_page2 = new wxPanel(parent, wxID_ANY,wxDefaultPosition,wxSize(FromDIP(300), -1), wxTAB_TRAVERSAL);
 
     m_page2_checkBox = new FFCheckBox(m_panel_checkbox_page2, wxID_ANY);
@@ -666,6 +687,7 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     wxBoxSizer* checkbox_last_sizer = new wxBoxSizer(wxHORIZONTAL);
     checkbox_last_sizer->Add(usr_name_space1, 0, wxEXPAND|wxLeft, 0);
     checkbox_last_sizer->Add(m_panel_checkbox_page2);
+    checkbox_last_sizer->Add(usr_name_space2, 0, wxEXPAND ,0);
 
     page2Sizer->Add(checkbox_last_sizer, 0, wxEXPAND, 0);
 }
@@ -676,6 +698,14 @@ void LoginDialog::onUsrNameOrPasswordChangedPage1(wxCommandEvent& event)
         wxString username = m_username_ctrl_page1->GetValue();
         wxString verifycode = m_verifycode_ctrl_page1->GetValue();
         bool agree = m_page1_checkBox->GetValue();
+        if(username.IsEmpty()){
+            m_get_code_button->Disable();
+            m_get_code_button->Refresh();
+        }
+        else{
+            m_get_code_button->Enable();
+            m_get_code_button->Refresh();
+        }
         if (!username.IsEmpty() && !verifycode.IsEmpty() && agree)
         {
             m_login_button_page1->Enable();

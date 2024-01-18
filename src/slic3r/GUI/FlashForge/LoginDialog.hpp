@@ -21,7 +21,7 @@ namespace GUI {
 //wxDEFINE_EVENT(EVT_SET_FINISH_MAPPING, wxCommandEvent);
 wxDECLARE_EVENT(EVT_UPDATE_TEXT_LOGIN, wxCommandEvent);
 
-class CountdownButton : public Button
+class CountdownButton : public FFButton
 {
 public:
     CountdownButton(wxWindow* parent, wxString text, wxString icon = "", long style = 0, int iconSize = 0, wxWindowID btn_id = wxID_ANY);
@@ -29,13 +29,17 @@ public:
         // 启动定时器，每秒钟更新一次按钮上的文本
         m_timer.Start(1000);
     }
+    void SetState(bool state);
+    bool GetState();
 
 private:
     void OnTimer(wxTimerEvent& event);
 
+private:
+    std::mutex m_mutex;
     wxTimer m_timer;
     int m_countdown;
-    wxWindow* m_parent;
+    bool m_press = false;
 };
 
 class LoginDialog : public TitleDialog
