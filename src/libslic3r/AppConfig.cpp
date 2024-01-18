@@ -1290,9 +1290,9 @@ void AppConfig::save_bind_machine_to_config(const std::string& dev_id, const std
     bool update = false;
     for (auto& mac : m_local_machines) {
         auto it = mac->find("dev_id");
-        if (it != mac->end()) {
-            it = mac->find("dev_name");
-            if (it != mac->end() && it->second == dev_name) {
+        if (it != mac->end() && it->second == dev_id) {
+            auto it_name = mac->find("dev_name");
+            if (it_name != mac->end() && it_name->second == dev_name) {
                 return;  // no need to update or add
             }
             it->second = dev_name;

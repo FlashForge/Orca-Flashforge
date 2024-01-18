@@ -322,14 +322,20 @@ bool DeviceObjectOpr::set_selected_machine(const string &dev_id)
     return true;
 }
 
-DeviceObject* DeviceObjectOpr::get_selected_machine()
+DeviceObject *DeviceObjectOpr::get_selected_machine()
 {
     if (m_selected_machine.empty())
         return nullptr;
 
-    auto           it  = m_scan_devices.find(m_selected_machine);
-    if (it != m_scan_devices.end())
+    // get data from userData, if not found, then find in scan machine data
+    auto it = m_user_devices.find(m_selected_machine);
+    if (it != m_user_devices.end()) {
         return it->second;
+    } else {
+        it = m_scan_devices.find(m_selected_machine);
+        if (it != m_scan_devices.end())
+            return it->second;
+    }
 
     // return local machine has access code
     it = m_local_devices.find(m_selected_machine);
