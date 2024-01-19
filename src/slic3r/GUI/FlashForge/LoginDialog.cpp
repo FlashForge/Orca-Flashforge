@@ -15,6 +15,7 @@
 #include <wx/dcgraph.h>
 
 #include <regex>
+#include <wx/regex.h>
 
 namespace Slic3r {
 namespace GUI {
@@ -435,6 +436,37 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     m_get_code_button->SetBorderColor(wxColour(50,141,251));
     m_get_code_button->SetBGColor(wxColour(50,141,251));
     m_get_code_button->Bind(wxEVT_LEFT_UP, [this](wxMouseEvent& event){
+        wxString usrname_value = m_username_ctrl_page1->GetValue();
+        double num;
+        if(usrname_value.ToDouble(&num)){
+            //纯数字
+            wxRegEx regex(wxT("^1[34578]\\d{9}$"));
+            if (regex.IsValid() && regex.Compile(wxT("^1[34578]\\d{9}$"),wxRE_ADVANCED)) {
+                if(regex.Matches(usrname_value)){
+                    ;
+                }
+                else{
+                    page1ShowErrorLabel(_L("Mobile Phone Number Error"));
+                    event.Skip();
+                    return;
+                }
+            }
+        }
+        else{
+            //邮箱
+            wxRegEx regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+            if (regex.IsValid() && regex.Compile("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",wxRE_ADVANCED)) {
+                if(regex.Matches(usrname_value)){
+                    ;
+                }
+                else{
+                    page1ShowErrorLabel(_L("Email Address Error"));
+                    event.Skip();
+                    return;
+                }
+            }
+        }
+
         if(m_get_code_button->GetState()){
             event.Skip();
             return;
@@ -887,25 +919,31 @@ void LoginDialog::onPage4Login(wxMouseEvent& event)
         } 
     }
     else if (login_result == ComErrno::COM_INVALID_VALIDATION){
-        m_timer.Bind(wxEVT_TIMER, &LoginDialog::OnTimer, this);
-        //账号、验证码错误
-        wxPoint pt;
-        //获取登录按钮中心位置x坐标，然后减去错误码一半长度，即为x坐标
-        wxPoint loginX = m_login_button_page1->GetPosition();
-        int login_size_x = m_login_button_page1->GetSize().x;
-        int error_label_width = m_error_label_panel->GetSize().x;
-        pt.x = m_login_button_page1->GetPosition().x + m_login_button_page1->GetSize().x / 2 - m_error_label_panel->GetSize().x / 2;
-        pt.y  = m_verifycode_ctrl_page1->GetPosition().y + m_verifycode_ctrl_page1->GetSize().y + FromDIP(10);   
-        m_error_label_panel->SetPosition(pt);
-        m_error_label_panel->SetSize(wxSize(FromDIP(200),FromDIP(50)));
-        m_error_label_panel->Show(true);
-        m_error_label_panel->Layout();
-        m_error_label_panel->Refresh();
-        m_error_label->Show(true);
-        m_error_label->Refresh();
-        startTimer();
+        page1ShowErrorLabel(_L("Verify code is incorrect"));
     }
     event.Skip();
+}
+
+void LoginDialog::page1ShowErrorLabel(const wxString& labelInfo)
+{
+    m_timer.Bind(wxEVT_TIMER, &LoginDialog::OnTimer, this);
+    m_error_label->SetLabel(labelInfo);
+
+    wxPoint pt;
+    //获取登录按钮中心位置x坐标，然后减去错误码一半长度，即为x坐标
+    wxPoint loginX = m_login_button_page1->GetPosition();
+    int login_size_x = m_login_button_page1->GetSize().x;
+    int error_label_width = m_error_label_panel->GetSize().x;
+    pt.x = m_login_button_page1->GetPosition().x + m_login_button_page1->GetSize().x / 2 - m_error_label_panel->GetSize().x / 2;
+    pt.y  = m_verifycode_ctrl_page1->GetPosition().y + m_verifycode_ctrl_page1->GetSize().y + FromDIP(10);   
+    m_error_label_panel->SetPosition(pt);
+    m_error_label_panel->SetMinSize(wxSize(FromDIP(200),FromDIP(50)));
+    m_error_label_panel->Show(true);
+    m_error_label_panel->Layout();
+    m_error_label_panel->Refresh();
+    m_error_label->Show(true);
+    m_error_label->Refresh();
+    startTimer();
 }
 
 void LoginDialog::onPage2Login(wxCommandEvent& event)
@@ -940,6 +978,36 @@ void LoginDialog::onPage3Login(wxMouseEvent& event)
 {
     wxString usrname = m_username_ctrl_page2->GetValue();
     wxString password = m_password_ctrl_page2->GetValue();
+    double num;
+    if(usrname.ToDouble(&num)){
+        //纯数字
+        wxRegEx regex(wxT("^1[34578]\\d{9}$"));
+        if (regex.IsValid() && regex.Compile(wxT("^1[34578]\\d{9}$"),wxRE_ADVANCED)) {
+            if(regex.Matches(usrname)){
+                ;
+            }
+            else{
+                page2ShowErrorLabel(_L("Mobile Phone Number Error"));
+                event.Skip();
+                return;
+            }
+        }
+    }
+    else{
+        //邮箱
+        wxRegEx regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+        if (regex.IsValid() && regex.Compile("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",wxRE_ADVANCED)) {
+            if(regex.Matches(usrname)){
+                ;
+            }
+            else{
+                page2ShowErrorLabel(_L("Email Address Error"));
+                event.Skip();
+                return;
+            }
+        }
+    }
+
     com_token_data_t token_data;
     ComErrno login_result =  MultiComUtils::getTokenByPassword(usrname.ToStdString(),password.ToStdString(),token_data);
     if(login_result == ComErrno::COM_OK){
@@ -957,25 +1025,31 @@ void LoginDialog::onPage3Login(wxMouseEvent& event)
         
     }
     else if (login_result == ComErrno::COM_INVALID_VALIDATION){
-        m_timer.Bind(wxEVT_TIMER, &LoginDialog::OnTimer, this);
-        //账号、密码错误
-        wxPoint pt;
-        //获取登录按钮中心位置x坐标，然后减去错误码一半长度，即为x坐标
-        wxPoint loginX = m_login_button_page2->GetPosition();
-        int login_size_x = m_login_button_page2->GetSize().x;
-        int error_label_width = m_error_label_page2_panel->GetSize().x;
-        pt.x = m_login_button_page2->GetPosition().x + m_login_button_page2->GetSize().x / 2 - m_error_label_page2_panel->GetSize().x / 2;
-        pt.y  = m_password_ctrl_page2->GetPosition().y + m_password_ctrl_page2->GetSize().y + FromDIP(10);   
-        m_error_label_page2_panel->SetPosition(pt);
-        m_error_label_page2_panel->SetSize(wxSize(FromDIP(200),FromDIP(50)));
-        m_error_label_page2_panel->Show(true);
-        m_error_label_page2_panel->Layout();
-        m_error_label_page2_panel->Refresh();
-        m_error_label_page2->Show(true);
-        m_error_label_page2->Refresh();
-        startTimer();
+        page2ShowErrorLabel(_L("Verify code is incorrect"));
     }
     event.Skip();
+}
+
+void LoginDialog::page2ShowErrorLabel(const wxString& labelInfo)
+{
+    m_timer.Bind(wxEVT_TIMER, &LoginDialog::OnTimer, this);
+    m_error_label_page2->SetLabel(labelInfo);
+
+    wxPoint pt;
+    //获取登录按钮中心位置x坐标，然后减去错误码一半长度，即为x坐标
+    wxPoint loginX = m_login_button_page2->GetPosition();
+    int login_size_x = m_login_button_page2->GetSize().x;
+    int error_label_width = m_error_label_page2_panel->GetSize().x;
+    pt.x = m_login_button_page2->GetPosition().x + m_login_button_page2->GetSize().x / 2 - m_error_label_page2_panel->GetSize().x / 2;
+    pt.y  = m_password_ctrl_page2->GetPosition().y + m_password_ctrl_page2->GetSize().y + FromDIP(10);   
+    m_error_label_page2_panel->SetPosition(pt);
+    m_error_label_page2_panel->SetMinSize(wxSize(FromDIP(200),FromDIP(50)));
+    m_error_label_page2_panel->Show(true);
+    m_error_label_page2_panel->Layout();
+    m_error_label_page2_panel->Refresh();
+    m_error_label_page2->Show(true);
+    m_error_label_page2->Refresh();
+    startTimer();
 }
 
 void LoginDialog::OnTimer(wxTimerEvent& event)
