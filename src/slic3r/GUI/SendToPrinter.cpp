@@ -20,6 +20,7 @@
 #include <wx/dcgraph.h>
 #include <miniz.h>
 #include "BitmapCache.hpp"
+#include "Jobs/ExportSliceJob.hpp"
 
 namespace Slic3r {
 namespace GUI {
@@ -28,11 +29,254 @@ namespace GUI {
 #define LIST_REFRESH_INTERVAL 200
 #define MACHINE_LIST_REFRESH_INTERVAL 2000
 
-wxDEFINE_EVENT(EVT_UPDATE_USER_MACHINE_LIST, wxCommandEvent);
-wxDEFINE_EVENT(EVT_PRINT_JOB_CANCEL, wxCommandEvent);
-wxDEFINE_EVENT(EVT_SEND_JOB_SUCCESS, wxCommandEvent);
-wxDEFINE_EVENT(EVT_CLEAR_IPADDRESS, wxCommandEvent);
-wxDEFINE_EVENT(EVT_SEND_MULTI_JOB_COMPLETED, wxCommandEvent);
+
+wxDEFINE_EVENT(EVT_MULTI_SEND_COMPLETED, wxCommandEvent);
+wxDEFINE_EVENT(EVT_MULTI_SEND_PROGRESS, wxCommandEvent);
+MultiSend::MultiSend(wxWindow* event_handler, int sync_num/*=5*/)
+    : wxEvtHandler()
+    , m_sync_num(sync_num)
+    , m_event_handler(event_handler)
+{
+    //prepare();
+    MultiComMgr::inst()->Bind(COM_CONNECTION_EXIT_EVENT, &MultiSend::on_cnnection_exit, this);
+    MultiComMgr::inst()->Bind(COM_SEND_GCODE_FINISH_EVENT, &MultiSend::on_send_gcode_finished, this);
+    MultiComMgr::inst()->Bind(COM_SEND_GCODE_PROGRESS_EVENT, &MultiSend::on_send_gcode_progress, this);
+    Bind(EVT_EXPORT_SLICE_COMPLETED, &MultiSend::on_export_slice_completed, this);
+}
+
+MultiSend::~MultiSend()
+{
+    cancel_export_job();
+    remove_temp_path();
+}
+
+bool MultiSend::send_to_printer(int plate_idx, const com_id_list_t& com_ids, bool send_and_print, bool leveling)
+{
+    if (m_is_sending) {
+        return false;   
+    }
+    m_is_sending = true;
+    m_send_and_print = send_and_print;
+    m_leveling = leveling;
+    m_printers.clear();
+    m_send_jobs.clear();
+    m_plate_idx = plate_idx;
+    if (!prepare()) {
+        send_event(-1, _("send prepare fail"));
+        return false;
+    }
+    for (auto& id : com_ids) {
+        m_printers.emplace_back(id);
+        m_send_jobs.emplace(id, ResultInfo{-1, false, Result_Ok, 0.0});
+    }
+    m_export_job = std::make_shared<ExportSliceJob>(wxGetApp().plater(), m_slice_path, m_thumb_path, m_plate_idx);
+    m_export_job->set_event_handle(this);
+    m_export_job->start();
+    return true;
+}
+
+void MultiSend::cancel()
+{
+    cancel_export_job();
+    if (!m_printers.empty()) {
+        for (auto& iter : m_printers) {
+            m_send_jobs[iter].finish = true;
+            m_send_jobs[iter].result = Result_Fail_Canceled;
+        }
+        m_printers.clear();
+    }
+    bool cancel_flag = false;
+    for (auto& iter : m_send_jobs) {
+        if (iter.second.cmd_id > 0 && !iter.second.finish) {
+            cancel_flag = true;
+            MultiComMgr::inst()->abortSendGcode(iter.first, iter.second.cmd_id);
+        }
+    }
+    m_is_sending = false;
+    if (!cancel_flag) {
+        send_event(0, "");
+    }
+}
+
+bool MultiSend::get_multi_send_result(std::map<com_id_t, MultiSend::Result>& result)
+{
+    result.clear();
+    for (auto& iter : m_send_jobs) {
+        result.emplace(iter.first, iter.second.result);
+    }
+    return true;
+}
+
+bool MultiSend::prepare()
+{
+    auto pid = get_current_pid();
+    std::filesystem::path temp_path(temporary_dir());
+    temp_path = temp_path / "orca-flashforge" / "slice";
+    if (!std::filesystem::exists(temp_path)) {
+        if (std::filesystem::create_directories(temp_path)) {
+            BOOST_LOG_TRIVIAL(info) << "create orca-flashforge slice path (" << temp_path << ") " << "success";
+        } else {
+            BOOST_LOG_TRIVIAL(info) << "create orca-flashforge slice path (" << temp_path << ") " << "fail";
+            return false;
+        }
+    }
+    std::stringstream buf;
+    buf << pid;
+    std::string pidstr = buf.str();
+    m_slice_path = (temp_path / (pidstr + ".3mf")).string();
+    m_thumb_path = (temp_path / (pidstr + ".png")).string();
+    return true;
+}
+
+void MultiSend::cancel_export_job()
+{
+    if (m_export_job) {
+        m_export_job->cancel();
+        m_export_job->join();
+        //m_export_job.reset();
+    }
+}
+
+void MultiSend::remove_temp_path()
+{
+    std::filesystem::path temp_path(temporary_dir());
+    temp_path = temp_path / "orca-flashforge" / "slice";
+    std::filesystem::directory_iterator dir(temp_path);
+	for (auto& p : dir) {
+        bool ret = std::filesystem::remove_all(p);
+        BOOST_LOG_TRIVIAL(info) << "remove path (" << p.path().filename() << ") " << (ret ? "success" : "fail");
+	}
+}
+
+void MultiSend::send_next_job()
+{
+    if (m_printers.empty()) {
+        bool all_completed = true;
+        for (auto& iter : m_send_jobs) {
+            if (!iter.second.finish) {
+                all_completed = false;
+                break;
+            }
+        }
+        if (all_completed) {
+            return send_event(0, "finish");
+        }
+    } else {
+        auto com_id = m_printers.front();
+        m_printers.pop_front();
+        auto cmd = new ComSendGcode(m_slice_path, m_thumb_path, m_send_and_print, m_leveling);
+        m_send_jobs[com_id].cmd_id = cmd->commandId();
+        m_send_jobs[com_id].progress = 0;
+        MultiComMgr::inst()->putCommand(com_id, cmd);
+    }
+}
+
+void MultiSend::update_progress()
+{
+    double pre_job_progress = 100.0 / m_send_jobs.size();
+    double total_progress = 0;
+    BOOST_LOG_TRIVIAL(info) << "update progress: count: " << m_send_jobs.size();
+    for (auto& iter : m_send_jobs) {
+        if (iter.second.cmd_id > 0) {
+            if (iter.second.finish) {
+                total_progress += pre_job_progress;
+            } else {
+                total_progress += pre_job_progress * iter.second.progress;
+            }
+            BOOST_LOG_TRIVIAL(info) << "progress: " << iter.second.progress;
+        }
+    }
+    BOOST_LOG_TRIVIAL(info) << "update progress: " << total_progress;
+    if (m_event_handler) {
+        wxCommandEvent event(EVT_MULTI_SEND_PROGRESS);
+        event.SetInt((int)total_progress);
+        event.SetEventObject(m_event_handler);
+        wxPostEvent(m_event_handler, event);
+    }
+}
+
+void MultiSend::send_event(int code, const wxString& msg)
+{
+    m_is_sending = false;
+    if (m_event_handler) {
+        wxCommandEvent event(EVT_MULTI_SEND_COMPLETED);
+        event.SetInt(-1);
+        event.SetString(msg);
+        event.SetEventObject(m_event_handler);
+        wxPostEvent(m_event_handler, event);
+    }
+}
+
+void MultiSend::on_cnnection_exit(ComConnectionExitEvent& event)
+{
+    if (m_send_jobs.find(event.id) == m_send_jobs.end()) {
+        return;
+    }
+    BOOST_LOG_TRIVIAL(info) << "MultiSend: com connection exit, com_id: " << event.id;
+    auto iter = std::find(m_printers.begin(), m_printers.end(), event.id);
+    if (iter != m_printers.end()) {
+        m_printers.erase(iter);
+        m_send_jobs[event.id].finish = true;
+        m_send_jobs[event.id].result = Result_Fail_Network;
+    }
+    send_next_job();
+    update_progress();
+    event.Skip();
+}
+
+void MultiSend::on_send_gcode_finished(ComSendGcodeFinishEvent& event)
+{
+    auto& iter = m_send_jobs.find(event.id);
+    if (iter == m_send_jobs.end()) {
+        return;
+    }
+    BOOST_LOG_TRIVIAL(info) << "MultiSend: com send gcode finish, com_id: " << event.id;
+    iter->second.finish = true;
+    iter->second.progress = 100;
+    switch (event.ret) {
+    case COM_OK:
+        iter->second.result = Result_Ok;
+        break;
+    case COM_DEVICE_IS_BUSY:
+        iter->second.result = Result_Fail_Busy;
+        break;
+    case COM_ABORTED_BY_USER:
+        iter->second.result = Result_Fail_Canceled;
+        break;
+    default:
+        iter->second.result = Result_Fail;
+    }
+    send_next_job();
+    update_progress();
+    event.Skip();
+}
+
+void MultiSend::on_send_gcode_progress(ComSendGcodeProgressEvent& event)
+{
+    auto& iter = m_send_jobs.find(event.id);
+    if (iter == m_send_jobs.end()) {
+        return;
+    }
+    iter->second.finish = false;
+    iter->second.progress = event.now / event.total;
+    update_progress();
+    event.Skip();
+}
+
+void MultiSend::on_export_slice_completed(wxCommandEvent& event)
+{
+    if (event.GetId() != 0) {
+        BOOST_LOG_TRIVIAL(error) << "MultiSend: export temp slice/thumb file error, " << event.GetString();
+        send_event(-1, "prepare error");
+    } else {
+        int sync_num = (m_sync_num > m_printers.size() ? m_printers.size() : m_sync_num);
+        for (int i = 0; i < sync_num; ++i) {
+            send_next_job();
+        }
+        update_progress();
+    }
+    event.Skip();
+}
 
 
 SendToPrinterTipDialog::SendToPrinterTipDialog(wxWindow* parent, const wxStringList& success, const wxStringList& fail, const wxSize &size/*=xDefaultSize*/)
@@ -188,11 +432,12 @@ void MachineItem::initBitmap()
 
 
 
-SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/, bool sendAndPrint/*=false*/)
+wxDEFINE_EVENT(EVT_UPDATE_USER_MACHINE_LIST, wxCommandEvent);
+SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/)
     //: TitleDialog(static_cast<wxWindow *>(wxGetApp().mainframe), wxID_ANY, _L("Send to Printer SD card"), wxDefaultPosition, wxDefaultSize, wxCAPTION | wxCLOSE_BOX)
     : TitleDialog(static_cast<wxWindow *>(wxGetApp().mainframe), _L("Send to Printer SD card"), 6)
     , m_plater(plater), m_export_3mf_cancel(false)
-    , m_sendAndPrint(sendAndPrint)
+    , m_multiSend(std::make_shared<MultiSend>(this))
 {
 #ifdef __WINDOWS__
     SetDoubleBuffered(true);
@@ -244,11 +489,6 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/, bool sendAn
     m_stext_weight = new wxStaticText(m_topPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     m_sizer_basic_time->Add(m_stext_weight, 0, wxALL, FromDIP(5));
     m_sizer_basic->Add(m_sizer_basic_time, 0, wxALIGN_CENTER, 0);
-
-    // bind
-    Bind(EVT_SHOW_ERROR_INFO, [this](auto& e) {
-        show_print_failed_info(true);
-    });
 
     //file name
     //rename normal
@@ -492,9 +732,10 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/, bool sendAn
     m_progressBar = new ProgressBar(m_progressPanel, wxID_ANY, 100, wxDefaultPosition, wxSize(-1, FromDIP(8)));
     m_progressBar->ShowNumber(false);
     m_progressBar->SetValue(50);
-    m_progressInfoLbl = new wxStaticText(m_progressPanel, wxID_ANY, "Just For test");
-    m_progressLbl = new wxStaticText(m_progressPanel, wxID_ANY, "100%");
+    m_progressInfoLbl = new wxStaticText(m_progressPanel, wxID_ANY, wxEmptyString);
+    m_progressLbl = new wxStaticText(m_progressPanel, wxID_ANY, wxEmptyString);
     m_progressCancelBtn = new FFButton(m_progressPanel, wxID_ANY, _("Cancel"), FromDIP(4), true);
+    m_progressCancelBtn->Bind(wxEVT_BUTTON, &SendToPrinterDialog::on_cancel, this);
     wxBoxSizer* progressDownSizer = new wxBoxSizer(wxHORIZONTAL);
     progressDownSizer->Add(m_progressBar, 1, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxTOP | wxBOTTOM, FromDIP(6));
     progressDownSizer->AddSpacer(FromDIP(11));
@@ -527,34 +768,18 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/, bool sendAn
     m_sizer_main->Add(m_sendBook, 1, wxEXPAND | wxALIGN_LEFT | wxLEFT | wxRIGHT, FromDIP(40));
     m_sizer_main->AddSpacer(FromDIP(45));
 
-    show_print_failed_info(false);
+    m_redirect_timer = new wxTimer();
+    m_redirect_timer->SetOwner(this);
+
     //SetSizer(m_sizer_main);
     Layout();
     Fit();
     Thaw();
 
     init_bind();
-    init_timer();
     // CenterOnParent();
     Centre(wxBOTH);
     wxGetApp().UpdateDlgDarkUI(this);
-}
-
-void SendToPrinterDialog::stripWhiteSpace(std::string& str)
-{
-    if (str == "") { return; }
-
-    string::iterator cur_it;
-    cur_it = str.begin();
-
-    while (cur_it != str.end()) {
-        if ((*cur_it) == '\n' || (*cur_it) == ' ') {
-            cur_it = str.erase(cur_it);
-        }
-        else {
-            cur_it++;
-        }
-    }
 }
 
 wxString SendToPrinterDialog::format_text(wxString &m_msg)
@@ -672,74 +897,10 @@ void SendToPrinterDialog::update_print_error_info(int code, std::string msg, std
     m_print_error_extra = extra;
 }
 
-void SendToPrinterDialog::show_print_failed_info(bool show, int code, wxString description, wxString extra)
-{
-#if 0
-    if (show) {
-        if (!m_sw_print_failed_info->IsShown()) {
-            m_sw_print_failed_info->Show(true);
-
-            m_st_txt_error_code->SetLabelText(wxString::Format("%d", m_print_error_code));
-            m_st_txt_error_desc->SetLabelText( wxGetApp().filter_string(m_print_error_msg));
-            m_st_txt_extra_info->SetLabelText( wxGetApp().filter_string(m_print_error_extra));
-
-            m_st_txt_error_code->Wrap(FromDIP(260));
-            m_st_txt_error_desc->Wrap(FromDIP(260));
-            m_st_txt_extra_info->Wrap(FromDIP(260));
-        }
-        else {
-            m_sw_print_failed_info->Show(false);
-        }
-        Layout();
-        Fit();
-    }
-    else {
-        if (!m_sw_print_failed_info->IsShown()) { return; }
-        m_sw_print_failed_info->Show(false);
-        m_st_txt_error_code->SetLabelText(wxEmptyString);
-        m_st_txt_error_desc->SetLabelText(wxEmptyString);
-        m_st_txt_extra_info->SetLabelText(wxEmptyString);
-        Layout();
-        Fit();
-    }
-#endif
-}
-
-void SendToPrinterDialog::prepare_mode()
-{
-#if 0
-	m_is_in_sending_mode = false;
-	if (m_send_job) {
-		m_send_job->join();
-	}
-
-	if (wxIsBusy())
-		wxEndBusyCursor();
-	Enable_Send_Button(true);
-    show_print_failed_info(false);
-
-    m_status_bar->reset();
-	if (m_simplebook->GetSelection() != 0) {
-		m_simplebook->SetSelection(0);
-	}
-#endif
-}
-
-void SendToPrinterDialog::sending_mode()
-{
-#if 0
-    m_is_in_sending_mode = true;
-    if (m_simplebook->GetSelection() != 1){
-        m_simplebook->SetSelection(1);
-        Layout();
-        Fit();
-    }
-#endif
-}
-
-void SendToPrinterDialog::prepare(int print_plate_idx)
+void SendToPrinterDialog::prepare(int print_plate_idx, bool send_and_print)
 {
     m_print_plate_idx = print_plate_idx;
+    m_send_and_print = send_and_print;
 }
 
 void SendToPrinterDialog::update_priner_status_msg(wxString msg, bool is_warning) 
@@ -788,38 +949,23 @@ void SendToPrinterDialog::update_print_status_msg(wxString msg, bool is_warning,
     }
 }
 
-
 void SendToPrinterDialog::init_bind()
 {
-    Bind(wxEVT_CLOSE_WINDOW, &SendToPrinterDialog::onClose, this);
+    Bind(wxEVT_CLOSE_WINDOW, &SendToPrinterDialog::on_close, this);
     Bind(EVT_UPDATE_USER_MACHINE_LIST, &SendToPrinterDialog::update_printer_list, this);
-    Bind(EVT_PRINT_JOB_CANCEL, &SendToPrinterDialog::on_print_job_cancel, this);
-    Bind(EVT_SEND_MULTI_JOB_COMPLETED, &SendToPrinterDialog::onSendMultiJobCompleted, this);
-    Bind(wxEVT_TIMER, &SendToPrinterDialog::on_timer, this);
-    Bind(EVT_CLEAR_IPADDRESS, &SendToPrinterDialog::clear_ip_address_config, this);
     MultiComMgr::inst()->Bind(COM_CONNECTION_READY_EVENT, &SendToPrinterDialog::onConnectionReady, this);
-    MultiComMgr::inst()->Bind(COM_CONNECTION_EXIT_EVENT, &SendToPrinterDialog::onConnectionExit, this);
-    MultiComMgr::inst()->Bind(COM_SEND_GCODE_FINISH_EVENT, &SendToPrinterDialog::onSendGcodeFinished, this);
-    MultiComMgr::inst()->Bind(COM_SEND_GCODE_PROGRESS_EVENT, &SendToPrinterDialog::onSendGcodeProgress, this);
-}
-
-void SendToPrinterDialog::init_timer()
-{
-    m_refresh_timer = new wxTimer();
-    m_refresh_timer->SetOwner(this);
-}
-
-void SendToPrinterDialog::clear_ip_address_config(wxCommandEvent& e)
-{
-    enable_prepare_mode = true;
-    prepare_mode();
+    Bind(EVT_MULTI_SEND_COMPLETED, &SendToPrinterDialog::on_multi_send_completed, this);
+    Bind(EVT_MULTI_SEND_PROGRESS, &SendToPrinterDialog::on_multi_send_progress, this);
+    Bind(wxEVT_TIMER, &SendToPrinterDialog::on_redirect_timer, this);
+    //MultiComMgr::inst()->Bind(COM_CONNECTION_EXIT_EVENT, &SendToPrinterDialog::onConnectionExit, this);
+    //MultiComMgr::inst()->Bind(COM_SEND_GCODE_FINISH_EVENT, &SendToPrinterDialog::onSendGcodeFinished, this);
+    //MultiComMgr::inst()->Bind(COM_SEND_GCODE_PROGRESS_EVENT, &SendToPrinterDialog::onSendGcodeProgress, this);
 }
 
 void SendToPrinterDialog::update_user_machine_list()
 {
     m_selectAll->SetValue(false);
     m_machineListMap.clear();
-    m_sendJobMap.clear();
     com_id_list_t idList = MultiComMgr::inst()->getReadyDevList();
     if (!idList.empty()) {
         bool valid = false;
@@ -883,14 +1029,6 @@ void SendToPrinterDialog::update_user_machine_list()
 #endif
 }
 
-void SendToPrinterDialog::on_print_job_cancel(wxCommandEvent &evt)
-{
-    BOOST_LOG_TRIVIAL(info) << "print_job: canceled";
-    show_status(PrintDialogStatus::PrintStatusSendingCanceled);
-    // enter prepare mode
-    prepare_mode();
-}
-
 std::vector<std::string> SendToPrinterDialog::sort_string(std::vector<std::string> strArray)
 {
     std::vector<std::string> outputArray;
@@ -899,19 +1037,6 @@ std::vector<std::string> SendToPrinterDialog::sort_string(std::vector<std::strin
     for (st = strArray.begin(); st != strArray.end(); st++) { outputArray.push_back(*st); }
 
     return outputArray;
-}
-
-bool  SendToPrinterDialog::is_timeout()
-{
-    if (timeout_count > 15 * 1000 / LIST_REFRESH_INTERVAL) {
-        return true;
-    }
-    return false;
-}
-
-void  SendToPrinterDialog::reset_timeout()
-{
-    timeout_count = 0;
 }
 
 void SendToPrinterDialog::update_user_printer()
@@ -1040,272 +1165,7 @@ void SendToPrinterDialog::clear_machine_list()
 
 void SendToPrinterDialog::update_printer_list(wxCommandEvent &event)
 {
-    show_status(PrintDialogStatus::PrintStatusInit);
     update_user_printer();
-}
-
-void SendToPrinterDialog::on_timer(wxTimerEvent &event)
-{
-    wxGetApp().reset_to_active();
-    update_show_status();
-}
-
-void SendToPrinterDialog::on_selection_changed(wxCommandEvent &event)
-{
-#if 0
-    /* reset timeout and reading printer info */
-    //m_status_bar->reset();
-    timeout_count      = 0;
-
-    auto selection = m_comboBox_printer->GetSelection();
-    DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
-    if (!dev) return;
-
-    MachineObject* obj = nullptr;
-    for (int i = 0; i < m_list.size(); i++) {
-        if (i == selection) {
-            m_printer_last_select = m_list[i]->dev_id;
-            obj = m_list[i];
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << "for send task, current printer id =  " << m_printer_last_select << std::endl;
-            break;
-        }
-    }
-
-    if (obj && !obj->get_lan_mode_connection_state()) {
-        obj->command_get_version();
-        obj->command_request_push_all();
-        if (!dev->get_selected_machine()) {
-            dev->set_selected_machine(m_printer_last_select, true);
-        }else if (dev->get_selected_machine()->dev_id != m_printer_last_select) {
-            dev->set_selected_machine(m_printer_last_select, true);
-        }
-    }
-    else {
-        BOOST_LOG_TRIVIAL(error) << "on_selection_changed dev_id not found";
-        return;
-    }
-
-    update_show_status();
-#endif
-}
-
-void SendToPrinterDialog::update_show_status()
-{
-#if 0
-    NetworkAgent* agent = Slic3r::GUI::wxGetApp().getAgent();
-    DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
-    if (!agent) return;
-    if (!dev) return;
-    MachineObject* obj_ = dev->get_my_machine(m_printer_last_select);
-    if (!obj_) {
-        if (agent) {
-            if (agent->is_user_login()) {
-                show_status(PrintDialogStatus::PrintStatusInvalidPrinter);
-            }
-            else {
-                show_status(PrintDialogStatus::PrintStatusNoUserLogin);
-            }
-        }
-        return;
-    }
-
-    /* check cloud machine connections */
-    if (!obj_->is_lan_mode_printer()) {
-        if (!agent->is_server_connected()) {
-            agent->refresh_connection();
-            show_status(PrintDialogStatus::PrintStatusConnectingServer);
-            reset_timeout();
-            return;
-        }
-    }
-
-    if (!obj_->is_info_ready()) {
-        if (is_timeout()) {
-            (PrintDialogStatus::PrintStatusReadingTimeout);
-            return;
-        }
-        else {
-            timeout_count++;
-            show_status(PrintDialogStatus::PrintStatusReading);
-            return;
-        }
-        return;
-    }
-
-    reset_timeout();
-
-    bool is_suppt = obj_->is_function_supported(PrinterFunction::FUNC_SEND_TO_SDCARD);
-    if (!is_suppt) {
-        show_status(PrintDialogStatus::PrintStatusNotSupportedSendToSDCard);
-        return;
-    }
-
-    // reading done
-    if (obj_->is_in_upgrading()) {
-        show_status(PrintDialogStatus::PrintStatusInUpgrading);
-        return;
-    }
-    else if (obj_->is_system_printing()) {
-        show_status(PrintDialogStatus::PrintStatusInSystemPrinting);
-        return;
-    }
-
-    // check sdcard when if lan mode printer
-   /* if (obj_->is_lan_mode_printer()) {
-    }*/
-	if (obj_->get_sdcard_state() == MachineObject::SdcardState::NO_SDCARD) {
-		show_status(PrintDialogStatus::PrintStatusNoSdcard);
-		return;
-	}
-
-    if (obj_->dev_ip.empty()) {
-        show_status(PrintDialogStatus::PrintStatusNotOnTheSameLAN);
-        return;
-    }
-    
-    show_status(PrintDialogStatus::PrintStatusReadingFinished);
-#endif
-}
-
-void SendToPrinterDialog::Enable_Refresh_Button(bool en)
-{
-#if 0
-    if (!en) {
-        if (m_button_refresh->IsEnabled()) {
-            m_button_refresh->Disable();
-            m_button_refresh->SetBackgroundColor(wxColour(0x90, 0x90, 0x90));
-            m_button_refresh->SetBorderColor(wxColour(0x90, 0x90, 0x90));
-        }
-    } else {
-        if (!m_button_refresh->IsEnabled()) {
-            m_button_refresh->Enable();
-            m_button_refresh->SetBackgroundColor(btn_bg_enable);
-            m_button_refresh->SetBorderColor(btn_bg_enable);
-        }
-    }
-#endif
-}
-
-void SendToPrinterDialog::show_status(PrintDialogStatus status, std::vector<wxString> params)
-{
-#if 0
-	if (m_print_status != status)
-		BOOST_LOG_TRIVIAL(info) << "select_machine_dialog: show_status = " << status;
-	m_print_status = status;
-
-	// m_comboBox_printer
-	if (status == PrintDialogStatus::PrintStatusRefreshingMachineList)
-		m_comboBox_printer->Disable();
-	else
-		m_comboBox_printer->Enable();
-
-	// m_panel_warn m_simplebook
-	if (status == PrintDialogStatus::PrintStatusSending) {
-		sending_mode();
-	}
-
-	// other
-	if (status == PrintDialogStatus::PrintStatusInit) {
-		update_print_status_msg(wxEmptyString, false, false);
-		Enable_Send_Button(false);
-		Enable_Refresh_Button(true);
-	}
-	else if (status == PrintDialogStatus::PrintStatusNoUserLogin) {
-		wxString msg_text = _L("No login account, only printers in LAN mode are displayed");
-		update_print_status_msg(msg_text, false, true);
-		Enable_Send_Button(false);
-		Enable_Refresh_Button(true);
-	}
-	else if (status == PrintDialogStatus::PrintStatusInvalidPrinter) {
-		update_print_status_msg(wxEmptyString, true, true);
-		Enable_Send_Button(false);
-		Enable_Refresh_Button(true);
-	}
-	else if (status == PrintDialogStatus::PrintStatusConnectingServer) {
-		wxString msg_text = _L("Connecting to server");
-		update_print_status_msg(msg_text, true, true);
-		Enable_Send_Button(true);
-		Enable_Refresh_Button(true);
-	}
-	else if (status == PrintDialogStatus::PrintStatusReading) {
-		wxString msg_text = _L("Synchronizing device information");
-		update_print_status_msg(msg_text, false, true);
-		Enable_Send_Button(false);
-		Enable_Refresh_Button(true);
-	}
-	else if (status == PrintDialogStatus::PrintStatusReadingFinished) {
-		update_print_status_msg(wxEmptyString, false, true);
-		Enable_Send_Button(true);
-		Enable_Refresh_Button(true);
-	}
-	else if (status == PrintDialogStatus::PrintStatusReadingTimeout) {
-		wxString msg_text = _L("Synchronizing device information time out");
-		update_print_status_msg(msg_text, true, true);
-		Enable_Send_Button(true);
-		Enable_Refresh_Button(true);
-	}
-	else if (status == PrintDialogStatus::PrintStatusInUpgrading) {
-		wxString msg_text = _L("Cannot send the print task when the upgrade is in progress");
-		update_print_status_msg(msg_text, true, true);
-		Enable_Send_Button(false);
-		Enable_Refresh_Button(true);
-	}
-	else if (status == PrintDialogStatus::PrintStatusRefreshingMachineList) {
-		update_print_status_msg(wxEmptyString, false, true);
-		Enable_Send_Button(false);
-		Enable_Refresh_Button(false);
-	}
-	else if (status == PrintDialogStatus::PrintStatusSending) {
-		Enable_Send_Button(false);
-		Enable_Refresh_Button(false);
-	}
-	else if (status == PrintDialogStatus::PrintStatusSendingCanceled) {
-		Enable_Send_Button(true);
-		Enable_Refresh_Button(true);
-	}
-	else if (status == PrintDialogStatus::PrintStatusNoSdcard) {
-		wxString msg_text = _L("An SD card needs to be inserted before send to printer SD card.");
-		update_print_status_msg(msg_text, true, true);
-		Enable_Send_Button(false);
-		Enable_Refresh_Button(true);
-    }
-    else if (status == PrintDialogStatus::PrintStatusNotOnTheSameLAN) {
-        wxString msg_text = _L("The printer is required to be in the same LAN as Orca-Flashforge.");
-        update_print_status_msg(msg_text, true, true);
-        Enable_Send_Button(false);
-        Enable_Refresh_Button(true);
-    }
-    else if (status == PrintDialogStatus::PrintStatusNotSupportedSendToSDCard) {
-        wxString msg_text = _L("The printer does not support sending to printer SD card.");
-        update_print_status_msg(msg_text, true, true);
-        Enable_Send_Button(false);
-        Enable_Refresh_Button(true);
-    }
-    else {
-		Enable_Send_Button(true);
-		Enable_Refresh_Button(true);
-    }
-#endif
-}
-
-
-void SendToPrinterDialog::Enable_Send_Button(bool en)
-{
-#if 0
-    if (!en) {
-        if (m_button_ensure->IsEnabled()) {
-            m_button_ensure->Disable();
-            m_button_ensure->SetBackgroundColor(wxColour(0x90, 0x90, 0x90));
-            m_button_ensure->SetBorderColor(wxColour(0x90, 0x90, 0x90));
-        }
-    } else {
-        if (!m_button_ensure->IsEnabled()) {
-            m_button_ensure->Enable();
-            m_button_ensure->SetBackgroundColor(btn_bg_enable);
-            m_button_ensure->SetBorderColor(btn_bg_enable);
-        }
-    }
-#endif
 }
 
 void SendToPrinterDialog::on_dpi_changed(const wxRect &suggested_rect)
@@ -1324,6 +1184,9 @@ void SendToPrinterDialog::set_default()
     m_machineBook->SetSelection(0);
     m_sendBook->SetSelection(0);
     m_progressBar->SetProgress(0);
+    m_progressInfoLbl->SetLabel(wxEmptyString);
+    m_progressLbl->SetLabel("0%");
+    m_progressInfoLbl->SetForegroundColour(wxColour("#333333"));
 
     wxString filename = m_plater->get_export_gcode_filename("", true, m_print_plate_idx == PLATE_ALL_IDX ? true : false);
 
@@ -1346,7 +1209,6 @@ void SendToPrinterDialog::set_default()
     m_renamePanel->Layout();
 
     enable_prepare_mode = true;
-    prepare_mode();
 
     //wxBitmap bitmap;
     ThumbnailData &data   = m_plater->get_partplate_list().get_curr_plate()->thumbnail_data;
@@ -1406,31 +1268,27 @@ void SendToPrinterDialog::set_default()
 
 bool SendToPrinterDialog::Show(bool show)
 {
-    show_status(PrintDialogStatus::PrintStatusInit);
     // set default value when show this dialog
     if (show) {
         wxGetApp().reset_to_active();
         set_default();
         update_user_machine_list();
     }
-
-    if (show) {
-        m_refresh_timer->Start(LIST_REFRESH_INTERVAL);
-    } else {
-        m_refresh_timer->Stop();
-    }
-
     Layout();
     Fit();
     if (show) { CenterOnParent(); }
     return DPIDialog::Show(show);
 }
 
-void SendToPrinterDialog::onClose(wxCloseEvent& event)
+void SendToPrinterDialog::on_close(wxCloseEvent& event)
 {
     if (m_is_in_sending_mode) {
         MessageDialog msg_wingow(this, _L("Sending task, do you want to cancel it?"), _("Warning"), wxYES_NO);
         if (wxID_YES == msg_wingow.ShowModal()) {
+            if (m_multiSend) {
+                m_multiSend->cancel();
+            }
+            m_is_in_sending_mode = false;
             event.Skip();
         }
     } else {
@@ -1468,98 +1326,43 @@ void SendToPrinterDialog::onMachineSelectionToggled(wxCommandEvent& event)
 void SendToPrinterDialog::onSendClicked(wxCommandEvent& event)
 {
     m_is_in_sending_mode = true;
-    m_sendJobMap.clear();
-
-    auto pid = get_current_pid();
-    std::filesystem::path parent_path(temporary_dir());
-    parent_path = parent_path / "orca-flashforge" / "slice";
-    if (!std::filesystem::exists(parent_path)) {
-        if (std::filesystem::create_directories(parent_path)) {
-            BOOST_LOG_TRIVIAL(info) << "create orca-flashforge slice path (" << parent_path << ") " << "success";
-        } else {
-            BOOST_LOG_TRIVIAL(info) << "create orca-flashforge slice path (" << parent_path << ") " << "fail";
-            return;
-        }
-        
-    }
-    std::stringstream buf;
-    buf << pid;
-    std::string pidstr = buf.str();
-
-    std::string gcode_path = (parent_path / (pidstr + ".3mf")).string();
-    std::string thumb_path = (parent_path / (pidstr + ".png")).string();
-    
-    BOOST_LOG_TRIVIAL(info) << "send_job: gcode_path: " << gcode_path << ", thumb_path: " << thumb_path;
-
-    ThumbnailData &data   = m_plater->get_partplate_list().get_curr_plate()->thumbnail_data;
-    if (data.is_valid()) {
-        wxImage image(data.width, data.height);
-        image.InitAlpha();
-        for (unsigned int r = 0; r < data.height; ++r) {
-            unsigned int rr = (data.height - 1 - r) * data.width;
-            for (unsigned int c = 0; c < data.width; ++c) {
-                unsigned char *px = (unsigned char *) data.pixels.data() + 4 * (rr + c);
-                image.SetRGB((int) c, (int) r, px[0], px[1], px[2]);
-                image.SetAlpha((int) c, (int) r, px[3]);
-            }
-        }
-        image = image.Rescale(FromDIP(256), FromDIP(256));
-        if (image.SaveFile(thumb_path)) {
-            BOOST_LOG_TRIVIAL(info) << "save thumb (" << thumb_path << ") success";
-        } else {
-            BOOST_LOG_TRIVIAL(info) << "save thumb (" << thumb_path << ") fail";
-            return;
-        }
-    }
-
-    wxString msg_text;
-    int result = m_plater->export_3mf(gcode_path, SaveStrategy::Silence | SaveStrategy::SplitModel | SaveStrategy::WithGcode | SaveStrategy::SkipModel, m_print_plate_idx);
-    if (result < 0) {
-        BOOST_LOG_TRIVIAL(info) << "send_job: export 3mf error: " << result;
-        return;
-    }
-
-    if (m_is_canceled || m_export_3mf_cancel) {
-        BOOST_LOG_TRIVIAL(info) << "send_job: m_export_3mf_cancel or m_is_canceled";
-        return;
-    }
-
-    m_is_in_sending_mode = true;
-    m_sendJobMap.clear();
+    com_id_list_t com_ids;
     for (auto& iter : m_machineItemList) {
         if (iter->IsChecked()) {
-            m_sendJobMap.emplace(iter->data().comId, SendJobInfo{0, Result_None, 0.0});
+            com_ids.emplace_back(iter->data().comId);
+            //m_sendJobMap.emplace(iter->data().comId, SendJobInfo{0, Result_None, 0.0});
         }
     }
-    if (!m_sendJobMap.empty()) {
-        for (auto& iter : m_sendJobMap) {
-            auto cmd = new ComSendGcode(gcode_path, thumb_path, m_sendAndPrint, m_levelCkb->GetValue());
-            iter.second.cmdId = cmd->commandId();
-            MultiComMgr::inst()->putCommand(iter.first, cmd);
-        }
+    int ret = m_multiSend->send_to_printer(m_print_plate_idx, com_ids, m_send_and_print, m_levelCkb->GetValue());
+    if (!ret) {
+        m_is_in_sending_mode = false;
+        BOOST_LOG_TRIVIAL(info) << "send_to_printer error";
+        return;
+    } else {
+        m_progressInfoLbl->SetLabel(_("Preparing printing task"));
+        m_progressInfoLbl->SetForegroundColour(wxColour("#333333"));
+        m_progressBar->SetValue(0);
+        m_progressCancelBtn->Enable(true);
+        m_progressCancelBtn->Show(true);
+        m_progressLbl->SetLabel("0%");
         m_sendBook->SetSelection(1);
         m_sendBook->Layout();
         Layout();
     }
 }
 
-void SendToPrinterDialog::onCancelClicked(wxCommandEvent& event)
+void SendToPrinterDialog::on_cancel(wxCommandEvent& event)
 {
     if (!m_is_in_sending_mode) {
         return;
     }
     MessageDialog msg_wingow(nullptr, _L("Sending task, do you want to cancel it?"), _("Warning"), wxYES_NO);
     if (wxID_YES == msg_wingow.ShowModal()) {
-        bool cancelFlag = false;
-        for (auto& iter : m_sendJobMap) {
-            if (iter.second.result == Result_None) {
-                MultiComMgr::inst()->abortSendGcode(iter.first, iter.second.cmdId);
-                cancelFlag = true;
-            }
-        }
-        if (cancelFlag && m_progressInfoLbl->IsShown()) {
+        m_multiSend->cancel();
+        if (m_progressInfoLbl->IsShown()) {
             m_progressInfoLbl->SetLabel(_("Canceling the print job, please wait"));
         }
+        m_progressCancelBtn->Enable(false);
     }
 }
 
@@ -1571,65 +1374,92 @@ void SendToPrinterDialog::onConnectionReady(ComConnectionReadyEvent& event)
     event.Skip();
 }
 
+void SendToPrinterDialog::on_multi_send_progress(wxCommandEvent& event)
+{
+    if (m_is_in_sending_mode) {
+        int intv = event.GetInt();
+        wxString str = event.GetString();
+        m_progressBar->SetValue(event.GetInt());
+        m_progressLbl->SetLabel(wxString::Format("%d", event.GetInt()) + "%");
+    }
+    event.Skip();
+}
+
+void SendToPrinterDialog::on_multi_send_completed(wxCommandEvent& event)
+{
+    std::map<com_id_t, MultiSend::Result> send_result;
+    m_multiSend->get_multi_send_result(send_result);
+    if (send_result.empty()) {
+        BOOST_LOG_TRIVIAL(error) << "SendToPrinterDialog: result is empty";
+        return;
+    }
+    m_progressBar->SetValue(100);
+    m_progressCancelBtn->Show(false);
+    if (send_result.size() == 1) {
+        auto iter = send_result.begin();
+        if (iter->second == Result_Ok) {
+            m_progressInfoLbl->SetLabel(_("Send completed, automatically redirected to device status"));
+            m_progressInfoLbl->SetForegroundColour(wxColour("#333333"));
+            m_send_error = false;
+            m_redirect_timer->StartOnce(3000);
+        } else {
+            if (iter->second == Result_Fail_Busy) {
+                m_progressInfoLbl->SetLabel(_("The printer is busy and cannot receive printing commands."));
+                m_progressInfoLbl->SetForegroundColour(wxColour("#FB4747"));
+            } else if (iter->second == Result_Fail_Canceled) {
+                m_progressInfoLbl->SetLabel(_("Canceling the print job successfully."));
+                m_progressInfoLbl->SetForegroundColour(wxColour("#333333"));
+            } else {
+                m_progressInfoLbl->SetLabel(_("Send failed, please check network or device status"));
+                m_progressInfoLbl->SetForegroundColour(wxColour("#FB4747"));
+            }
+            m_send_error = true;
+            m_redirect_timer->StartOnce(3000);
+        }
+        //EndModal(wxID_OK);
+        //wxGetApp().mainframe->select_tab(size_t(MainFrame::tpMonitor));
+    } else {
+        m_progressInfoLbl->SetLabel(_("Send completed"));
+        m_progressInfoLbl->SetForegroundColour(wxColour("#333333"));
+
+        wxStringList successList, failList;
+        for (auto& iter : send_result) {
+            wxString name;
+            auto res = m_machineListMap.find(iter.first);
+            if (res != m_machineListMap.end()) {
+                name = res->second.name;
+            }
+            (iter.second == MultiSend::Result_Ok) ? successList.Add(name) : failList.Add(name);
+        }
+        BOOST_LOG_TRIVIAL(info) << "Send multi job completed";
+        SendToPrinterTipDialog dlg(this, successList, failList);
+        if (dlg.ShowModal()) {
+            EndDialog(wxID_OK);
+            wxGetApp().mainframe->select_tab(size_t(MainFrame::tpMonitor));
+        }
+    }
+    Layout();
+    Fit();
+}
+
+void SendToPrinterDialog::on_redirect_timer(wxTimerEvent& event)
+{
+    if (m_send_error) {
+        m_sendBook->SetSelection(0);
+        Layout();
+    } else {
+        EndModal(wxID_OK);
+        wxGetApp().mainframe->select_tab(size_t(MainFrame::tpMonitor));
+    }
+    m_redirect_timer->Stop();
+}
+
 void SendToPrinterDialog::onConnectionExit(ComConnectionExitEvent& event)
 {
     if (!m_is_in_sending_mode) {
         update_user_machine_list();
-    } else {
-        updateSendJobList(event.id, false, COM_ERROR);
     }
     event.Skip();
-}
-
-void SendToPrinterDialog::onSendGcodeFinished(ComSendGcodeFinishEvent& event)
-{
-    BOOST_LOG_TRIVIAL(info) << "Send Gcode Finished: id (" << event.id << "), result (" << event.ret << ")";
-    updateSendJobList(event.id, true, event.ret);
-    event.Skip();
-}
-
-void SendToPrinterDialog::onSendGcodeProgress(ComSendGcodeProgressEvent& event)
-{
-    if (m_sendJobMap.empty() || event.total <= 0) {
-        return;
-    }
-    BOOST_LOG_TRIVIAL(info) << "Send Gcode progress: event.total (" << event.total << "), now (" << event.now << ")";
-    auto& iter = m_sendJobMap.find(event.id);
-    if (iter != m_sendJobMap.end()) {
-        iter->second.progress = event.now / event.total;
-    }
-
-    double preJobProgress = 100.0 / m_sendJobMap.size();
-    double totalProgress = 0;
-    for (auto& iter : m_sendJobMap) {
-        if (iter.second.result == Result_None) {
-            totalProgress += preJobProgress * iter.second.progress;
-        } else {
-            totalProgress += preJobProgress;
-        }
-    }
-    m_progressBar->SetValue((int)totalProgress);
-    m_progressLbl->SetLabel(wxString());
-    event.Skip();
-}
-
-void SendToPrinterDialog::onSendMultiJobCompleted(wxCommandEvent& event)
-{
-    wxStringList successList, failList;
-    for (auto& iter : m_sendJobMap) {
-        wxString name;
-        auto res = m_machineListMap.find(iter.first);
-        if (res != m_machineListMap.end()) {
-            name = res->second.name;
-        }
-        (iter.second.result == Result_Ok) ? successList.Add(name) : failList.Add(name);
-    }
-    BOOST_LOG_TRIVIAL(info) << "Send multi job completed";
-    SendToPrinterTipDialog dlg(this, successList, failList);
-    if (dlg.ShowModal()) {
-        EndDialog(wxID_OK);
-        wxGetApp().mainframe->select_tab(size_t(MainFrame::tpMonitor));
-    }
 }
 
 void SendToPrinterDialog::updateVisible()
@@ -1659,61 +1489,6 @@ void SendToPrinterDialog::updateSendButtonState()
     m_sendBtn->Enable(enable);
 }
 
-void SendToPrinterDialog::updateSendJobList(com_id_t id, bool complete, ComErrno err)
-{
-    if (m_sendJobMap.empty()) {
-        return;
-    }
-    auto& iter = m_sendJobMap.find(id);
-    if (iter != m_sendJobMap.end()) {
-        if (complete) {
-            if (COM_OK == err) {
-                iter->second.result = Result_Ok;
-            } else if (COM_DEVICE_IS_BUSY == err) {
-                iter->second.result = Result_Fail_Busy;
-            } else {
-                iter->second.result = Result_Fail;
-            }
-        } else {
-            iter->second.result = Result_Fail;
-        }
-        iter->second.result = complete ? Result_Ok : Result_Fail;
-    }
-    bool completed = true;
-    for (auto &iter : m_sendJobMap) {
-        if (Result_None == iter.second.result) {
-            completed = false;
-            break;
-        }
-    }
-    if (completed) {
-        m_is_in_sending_mode = false;
-        remove_temporary_file();
-
-        m_progressBar->SetValue(100);
-        if (m_sendJobMap.size() == 1) {
-            if (m_sendJobMap.begin()->second.result == Result_Ok) {
-                m_progressInfoLbl->SetLabel(_("Send completed, automatically redirected to device status"));
-            } else if (m_sendJobMap.begin()->second.result == Result_Fail_Busy) {
-                m_progressInfoLbl->SetLabel(_("The printer is busy and cannot receive printing commands."));
-            } else {
-                m_progressInfoLbl->SetLabel(_("Send failed, please check network or device status"));
-            }
-            EndModal(wxID_OK);
-            wxGetApp().mainframe->select_tab(size_t(MainFrame::tpMonitor));
-        } else {
-            m_progressInfoLbl->SetLabel(_("Send completed"));
-            
-            wxCommandEvent event(EVT_SEND_MULTI_JOB_COMPLETED);
-            event.SetEventObject(this);
-            wxPostEvent(this, event);
-        }
-        m_progressCancelBtn->Show(false);
-        Layout();
-        Fit();
-    }
-}
-
 void SendToPrinterDialog::remove_temporary_file()
 {
     std::filesystem::path temp_path(temporary_dir());
@@ -1727,7 +1502,7 @@ void SendToPrinterDialog::remove_temporary_file()
 
 SendToPrinterDialog::~SendToPrinterDialog()
 {
-    delete m_refresh_timer;
+    delete m_redirect_timer;
 }
 
 
