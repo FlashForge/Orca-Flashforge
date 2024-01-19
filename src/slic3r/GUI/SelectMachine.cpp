@@ -497,7 +497,8 @@ void SelectMachinePopup::OnDismiss()
     wxPostEvent(this, event);
 }
 
-bool SelectMachinePopup::ProcessLeftDown(wxMouseEvent &event) {
+bool SelectMachinePopup::ProcessLeftDown(wxMouseEvent &event)
+{
     return PopupWindow::ProcessLeftDown(event);
 }
 

@@ -23,8 +23,8 @@ namespace Slic3r { namespace GUI {
     m_printing_img = ScalableBitmap(this, "printer", 16);
     m_arrow_img    = ScalableBitmap(this, "monitor_arrow", 14);
 
-    m_none_printing_img = ScalableBitmap(this, "monitor_device", 24);
-    m_none_add_img      = ScalableBitmap(this, "monitor_device_add", 14);
+    m_none_printing_img = ScalableBitmap(this, "monitor_device", 18);
+    m_none_add_img      = ScalableBitmap(this, "monitor_device_add", 18);
 
     m_wifi_none_img     = ScalableBitmap(this, "monitor_signal_no", 18);
     m_wifi_weak_img     = ScalableBitmap(this, "monitor_signal_weak", 18);
@@ -196,12 +196,12 @@ void SideToolsPanel::doRender(wxDC &dc)
 
         dc.DrawText(finally_name, wxPoint(left, (size.y - sizet.y) / 2));
 
-        left = size.x - FromDIP(18) - m_wifi_none_img.GetBmpSize().x;
+        /*left = size.x - FromDIP(18) - m_wifi_none_img.GetBmpSize().x;
         if (m_wifi_type == WifiSignal::NONE) dc.DrawBitmap(m_wifi_none_img.bmp(), left, (size.y - m_wifi_none_img.GetBmpSize().y) / 2);
         if (m_wifi_type == WifiSignal::WEAK) dc.DrawBitmap(m_wifi_weak_img.bmp(), left, (size.y - m_wifi_weak_img.GetBmpSize().y) / 2);
         if (m_wifi_type == WifiSignal::MIDDLE) dc.DrawBitmap(m_wifi_middle_img.bmp(), left, (size.y - m_wifi_middle_img.GetBmpSize().y) / 2);
         if (m_wifi_type == WifiSignal::STRONG) dc.DrawBitmap(m_wifi_strong_img.bmp(), left, (size.y - m_wifi_strong_img.GetBmpSize().y) / 2);
-        if (m_wifi_type == WifiSignal::WIRED)  dc.DrawBitmap(m_network_wired_img.bmp(), left, (size.y - m_network_wired_img.GetBmpSize().y) / 2);
+        if (m_wifi_type == WifiSignal::WIRED)  dc.DrawBitmap(m_network_wired_img.bmp(), left, (size.y - m_network_wired_img.GetBmpSize().y) / 2);*/
     }
 
     if (m_hover) {
@@ -519,8 +519,9 @@ void SideTools::show_status(int status)
     else if ((status & (int)MonitorStatus::MONITOR_CONNECTING) != 0) {
         m_hyperlink->Hide();
         m_connection_info->SetLabel(_L("Connecting..."));
-        m_connection_info->SetBackgroundColor(0x009688);
-        m_connection_info->SetBorderColor(0x009688);
+        m_connection_info->SetBackgroundColor(0xC8F1DE);
+        m_connection_info->SetBorderColor(0xC8F1DE);
+        m_connection_info->SetTextColor(0x1FD37F);
         m_connection_info->Show();
         m_more_button->Hide();
         m_side_error_panel->Hide();
@@ -528,8 +529,9 @@ void SideTools::show_status(int status)
     else if ((status & (int)MonitorStatus::MONITOR_CONNECTED_FAILED) != 0) {
         m_hyperlink->Hide();
         m_connection_info->SetLabel(_L("Connected Failed."));
-        m_connection_info->SetBackgroundColor(0x009688);
-        m_connection_info->SetBorderColor(0x009688);
+        m_connection_info->SetBackgroundColor(0xF6CBC6);
+        m_connection_info->SetBorderColor(0xF6CBC6);
+        m_connection_info->SetTextColor(0xEA3522);
         m_connection_info->Show();
         m_more_button->Hide();
         m_side_error_panel->Hide();
