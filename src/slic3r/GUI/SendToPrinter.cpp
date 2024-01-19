@@ -164,7 +164,7 @@ void MultiSend::send_next_job()
     } else {
         auto com_id = m_printers.front();
         m_printers.pop_front();
-        auto cmd = new ComSendGcode(m_slice_path, m_thumb_path, m_send_and_print, m_leveling);
+        auto cmd = new ComSendGcode(m_slice_path, m_thumb_path, m_slice_path, m_send_and_print, m_leveling);
         m_send_jobs[com_id].cmd_id = cmd->commandId();
         m_send_jobs[com_id].progress = 0;
         MultiComMgr::inst()->putCommand(com_id, cmd);

@@ -73,16 +73,18 @@ class ComSendGcode : public ComCommand
 {
 public:
     ComSendGcode(const std::string &gcodeFilePath, const std::string &thumbFilePath,
-        bool printNow, bool levelingBeforePrint)
+        const std::string &gcodeDstName, bool printNow, bool levelingBeforePrint)
         : m_progress(0)
         , m_callbackRet(0)
         , m_comId(ComInvalidId)
         , m_evtHandler(nullptr)
         , m_gcodeFilePath(gcodeFilePath)
         , m_thumbFilePath(thumbFilePath)
+        , m_gcodeDstName(gcodeDstName)
     {
         m_sendGcodeData.gcodeFilePath = m_gcodeFilePath.c_str();
         m_sendGcodeData.thumbFilePath = m_thumbFilePath.c_str();
+        m_sendGcodeData.gcodeDstName = m_gcodeDstName.c_str();
         m_sendGcodeData.printNow = printNow;
         m_sendGcodeData.levelingBeforePrint = levelingBeforePrint;
         m_sendGcodeData.callback = callback;
@@ -134,6 +136,7 @@ private:
     wxEvtHandler           *m_evtHandler;
     std::string             m_gcodeFilePath;
     std::string             m_thumbFilePath;
+    std::string             m_gcodeDstName;
     fnet_send_gcode_data_t  m_sendGcodeData;
 };
 
