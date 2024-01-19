@@ -297,7 +297,6 @@ com_dev_data_t MultiComMgr::makeDevData(const fnet_wan_dev_info_t *wanDevInfo)
     devData.connectMode = COM_CONNECT_WAN;
     devData.wanDevInfo.devId = wanDevInfo->devId;
     devData.wanDevInfo.name = wanDevInfo->name;
-    devData.wanDevInfo.name = wanDevInfo->name;
     devData.wanDevInfo.model = wanDevInfo->model;
     devData.wanDevInfo.imageUrl = wanDevInfo->imageUrl;
     devData.wanDevInfo.status = wanDevInfo->status;
