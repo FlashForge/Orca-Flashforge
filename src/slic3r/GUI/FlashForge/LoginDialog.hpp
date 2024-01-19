@@ -82,6 +82,9 @@ private:
     void onPage3Login(wxMouseEvent& event);
     void onPage4Login(wxMouseEvent& event);
 
+    void page1ShowErrorLabel(const wxString& labelInfo);
+    void page2ShowErrorLabel(const wxString& labelInfo);
+
     inline void startTimer(){ m_timer.Start(2000);}
     void OnTimer(wxTimerEvent& event);
 

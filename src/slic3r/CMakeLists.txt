@@ -376,6 +376,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/Jobs/SendJob.cpp
     GUI/Jobs/BindJob.hpp
     GUI/Jobs/BindJob.cpp
+    GUI/Jobs/ExportSliceJob.hpp
+    GUI/Jobs/ExportSliceJob.cpp
     GUI/Jobs/NotificationProgressIndicator.hpp
     GUI/Jobs/NotificationProgressIndicator.cpp
     GUI/PhysicalPrinterDialog.hpp

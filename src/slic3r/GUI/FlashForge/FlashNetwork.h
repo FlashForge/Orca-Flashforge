@@ -22,6 +22,7 @@ typedef int (*fnet_progress_call_back_t)(long long now, long long total, void *d
 typedef struct fnet_send_gcode_data {
     const char *gcodeFilePath;  // utf-8
     const char *thumbFilePath;  // utf-8, wan only
+    const char *gcodeDstName;   // utf-8
     int printNow;               // 1 true, 0 false
     int levelingBeforePrint;    // 1 true, 0 false
     fnet_progress_call_back_t callback;
@@ -171,7 +172,8 @@ FNET_API void fnet_freeFileData(fnet_file_data_t *fileData);
 FNET_API int fnet_getTokenByPassword(const char *userName, const char *password,
     fnet_token_data_t **tokenData, int msTimeout);
 
-FNET_API int fnet_refreshToken(const char *refreshToken, fnet_token_data_t **tokenData, int msTimeout);
+FNET_API int fnet_refreshToken(const char *refreshToken, fnet_token_data_t **tokenData,
+    int msTimeout);
 
 FNET_API void fnet_freeToken(fnet_token_data_t *tokenData);
 
@@ -189,7 +191,8 @@ FNET_API int fnet_checkToken(const char *accessToken, int msTimeout);
 
 FNET_API int fnet_signOut(const char *accessToken, int msTimeout);
 
-FNET_API int fnet_getUserProfile(const char *accessToken, fnet_user_profile_t **profile, int msTimeout);
+FNET_API int fnet_getUserProfile(const char *accessToken, fnet_user_profile_t **profile,
+    int msTimeout);
 
 FNET_API void fnet_freeUserProfile(fnet_user_profile_t *profile);
 

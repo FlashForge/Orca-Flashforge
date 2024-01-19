@@ -3504,6 +3504,8 @@ void GUI_App::ShowUserLogin(bool show)
         if(nullptr == app_config){
             return;
         }
+
+        /*
         //判断是否国内登录
         std::string region = app_config->get("region");
         if(region.compare("China") == 0){
@@ -3513,6 +3515,7 @@ void GUI_App::ShowUserLogin(bool show)
             //国外登录
             return;
         }
+        */
 
         //判断是否已经成功登录
         std::string access_token = app_config->get("access_token");
@@ -3902,6 +3905,7 @@ std::string GUI_App::handle_web_request(std::string cmd)
                         std::string refresh_token = app_config->get("refresh_token");
                         std::string usr_name = app_config->get("usr_name");
                         std::string usr_pic = app_config->get("usr_pic");
+                        std::string expire_time = app_config->get("expire_time");
                         if(!access_token.empty() && !refresh_token.empty()){
                             //判断时间是否过期，当前有效期31天
                             //判断是否有网络(连接官网)
@@ -3923,11 +3927,25 @@ std::string GUI_App::handle_web_request(std::string cmd)
                                 Slic3r::GUI::MultiComMgr::inst()->setWanDevToken(usr_name,access_token);
                             }
                             else{
-                                app_config->set("access_token","");
-                                app_config->set("refresh_token","");
-                                app_config->set("expire_time","");
-                                app_config->set("usr_name","");
-                                app_config->set("usr_pic","");
+                                //尝试更新token值，若还是无效，则清空已有信息
+                                com_token_data_t token_data{std::stoi(expire_time),access_token,refresh_token};
+                                ComErrno relogin_refresh_token = MultiComUtils::refreshToken(refresh_token,token_data);
+                                if(relogin_refresh_token == ComErrno::COM_OK){
+                                    handle_login_result(usr_pic,usr_name);
+                                    LoginDialog::SetToken(token_data.accessToken,token_data.refreshToken);
+                                    LoginDialog::SetUsrInfo(com_user_profile_t{usr_name,usr_pic});
+                                    Slic3r::GUI::MultiComMgr::inst()->setWanDevToken(usr_name,token_data.accessToken);
+                                    app_config->set("access_token",token_data.accessToken);
+                                    app_config->set("refresh_token",token_data.refreshToken);
+                                    app_config->set("expire_time",std::to_string(token_data.expiresIn));
+                                }
+                                else{
+                                    app_config->set("access_token","");
+                                    app_config->set("refresh_token","");
+                                    app_config->set("expire_time","");
+                                    app_config->set("usr_name","");
+                                    app_config->set("usr_pic","");
+                                }
                             }
                         }
                         //get_login_info();

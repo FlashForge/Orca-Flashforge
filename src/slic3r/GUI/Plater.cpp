@@ -6258,13 +6258,19 @@ void Plater::priv::on_action_print_plate(SimpleEvent&)
     if (q != nullptr) {
         BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << ":received print plate event\n" ;
     }
+    
+    if (!m_send_to_sdcard_dlg) m_send_to_sdcard_dlg = new SendToPrinterDialog(q);
+    m_send_to_sdcard_dlg->prepare(partplate_list.get_curr_plate_index(), true);
+	m_send_to_sdcard_dlg->ShowModal();
+    record_start_print_preset("print_plate");
 
+#if 0
     //BBS
     if (!m_select_machine_dlg) m_select_machine_dlg = new SelectMachineDialog(q);
     m_select_machine_dlg->set_print_type(PrintFromType::FROM_NORMAL);
     m_select_machine_dlg->prepare(partplate_list.get_curr_plate_index());
     m_select_machine_dlg->ShowModal();
-    record_start_print_preset("print_plate");
+#endif
 }
 
 void Plater::priv::on_action_print_plate_from_sdcard(SimpleEvent&)
@@ -6290,12 +6296,10 @@ void Plater::priv::on_action_send_to_printer(bool isall)
 {
 	if (!m_send_to_sdcard_dlg) m_send_to_sdcard_dlg = new SendToPrinterDialog(q);
     if (isall) {
-        m_send_to_sdcard_dlg->prepare(PLATE_ALL_IDX);
+        m_send_to_sdcard_dlg->prepare(PLATE_ALL_IDX, false);
+    } else {
+        m_send_to_sdcard_dlg->prepare(partplate_list.get_curr_plate_index(), false);
     }
-    else {
-        m_send_to_sdcard_dlg->prepare(partplate_list.get_curr_plate_index());
-    }
-
 	m_send_to_sdcard_dlg->ShowModal();
 }
 
@@ -6313,12 +6317,18 @@ void Plater::priv::on_action_print_all(SimpleEvent&)
         BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << ":received print all event\n" ;
     }
 
+    if (!m_send_to_sdcard_dlg) m_send_to_sdcard_dlg = new SendToPrinterDialog(q);
+    m_send_to_sdcard_dlg->prepare(PLATE_ALL_IDX, true);
+	m_send_to_sdcard_dlg->ShowModal();
+    record_start_print_preset("print_all");
+
+#if 0
     //BBS
     if (!m_select_machine_dlg) m_select_machine_dlg = new SelectMachineDialog(q);
     m_select_machine_dlg->set_print_type(PrintFromType::FROM_NORMAL);
     m_select_machine_dlg->prepare(PLATE_ALL_IDX);
     m_select_machine_dlg->ShowModal();
-    record_start_print_preset("print_all");
+#endif
 }
 
 void Plater::priv::on_action_export_gcode(SimpleEvent&)

@@ -45,12 +45,69 @@
 #include "FlashForge/MultiComMgr.hpp"
 #include <wx/simplebook.h>
 #include <wx/hashmap.h>
+#include <wx/event.h>
 #include "TitleDialog.hpp"
 #include "FlashForge/MultiComDef.hpp"
 
 namespace Slic3r {
 namespace GUI {
 
+class ExportSliceJob;
+class MultiSend : public wxEvtHandler
+{
+public:
+    enum Result {
+        Result_Ok,
+        Result_Fail,
+        Result_Fail_Busy,
+        Result_Fail_Canceled,
+        Result_Fail_Network,
+    };
+
+public:
+    MultiSend(wxWindow* event_handler, int sync_num = 5);
+    ~MultiSend();
+
+    bool send_to_printer(int plate_idx, const com_id_list_t& com_ids, bool send_and_print, bool leveling);
+    void cancel();
+    
+    bool get_multi_send_result(std::map<com_id_t, Result>& result);
+
+private:
+    bool prepare();
+    void remove_temp_path();
+    void cancel_export_job();
+    void send_next_job();
+    void do_send_next_job();
+    void update_progress();
+    void send_event(int code, const wxString& msg);
+
+    void on_cnnection_exit(ComConnectionExitEvent& event);
+    void on_send_gcode_finished(ComSendGcodeFinishEvent& event);
+    void on_send_gcode_progress(ComSendGcodeProgressEvent& event);
+    void on_export_slice_completed(wxCommandEvent& event);
+
+private:
+    struct ResultInfo {
+        int         cmd_id;
+        bool        finish;
+        Result      result;
+        double      progress;
+    };
+    bool            m_is_sending {false};
+    bool            m_send_and_print {false};
+    bool            m_leveling {false};
+    int             m_plate_idx {-1};
+    int             m_sync_num {5};
+    wxWindow*       m_event_handler {nullptr};
+    std::string     m_slice_path;
+    std::string     m_thumb_path;
+    std::deque<com_id_t>            m_printers;
+    std::map<com_id_t, ResultInfo>  m_send_jobs;
+    std::shared_ptr<ExportSliceJob> m_export_job;
+};
+wxDECLARE_EVENT(EVT_MULTI_SEND_COMPLETED, wxCommandEvent);
+wxDECLARE_EVENT(EVT_MULTI_SEND_PROGRESS, wxCommandEvent);
 
 
 class SendToPrinterTipDialog : public TitleDialog
@@ -63,11 +120,7 @@ public:
 private:
     wxBoxSizer* createItem(bool success, const wxString& name);
     void onSize(wxSizeEvent& event);
-
-private:
-
 };
-
 
 
 class MachineItem : public wxPanel
@@ -109,6 +162,7 @@ private:
     static std::map<std::string, wxImage> m_machineBitmapMap;
 };
 
+
 class SendToPrinterDialog : public TitleDialog//public DPIDialog
 {
 private:
@@ -128,20 +182,16 @@ private:
     };
 
 private:
-	void init_bind();
-	void init_timer();
-
 	int									m_print_plate_idx;
     int									m_current_filament_id;
     int                                 m_print_error_code;
-    int									timeout_count = 0;
     bool								m_is_in_sending_mode{ false };
     bool								m_is_rename_mode{ false };
     bool								enable_prepare_mode{ true };
     bool								m_need_adaptation_screen{ false };
     bool								m_export_3mf_cancel{ false };
     bool								m_is_canceled{ false };
-    bool                                m_sendAndPrint { false };
+    bool                                m_send_and_print { false };
     std::string                         m_print_error_msg;
     std::string                         m_print_error_extra;
     std::string							m_print_info;
@@ -198,70 +248,53 @@ private:
 
     std::map<com_id_t, MachineItem::MachineData> m_machineListMap;
     std::vector<MachineItem*>           m_machineItemList;
-    std::map<com_id_t, SendJobInfo>     m_sendJobMap;
+    std::shared_ptr<MultiSend>          m_multiSend;
 
     wxColour							m_colour_def_color{ wxColour(255, 255, 255) };
     wxColour							m_colour_bold_color{ wxColour(38, 46, 48) };
-	wxTimer*							m_refresh_timer{ nullptr };
-    //std::shared_ptr<BBLStatusBarSend>   m_status_bar;
-	wxScrolledWindow*                   m_sw_print_failed_info{nullptr};
+    wxTimer*                            m_redirect_timer;
+    bool                                m_send_error {false};
    
 public:
-	SendToPrinterDialog(Plater* plater = nullptr, bool sendAndPrint = false);
+	SendToPrinterDialog(Plater* plater = nullptr);
     ~SendToPrinterDialog();
 
     bool Show(bool show);
-	bool is_timeout();
     void on_rename_click(wxCommandEvent& event);
     void on_rename_enter();
-    void stripWhiteSpace(std::string& str);
-    void prepare_mode();
-    void sending_mode();
-    void reset_timeout();
     void update_user_printer();
-    void update_show_status();
-    void prepare(int print_plate_idx);
+    void prepare(int print_plate_idx, bool send_and_print);
     void check_focus(wxWindow* window);
     void check_fcous_state(wxWindow* window);
     void update_priner_status_msg(wxString msg, bool is_warning = false);
     void update_print_status_msg(wxString msg, bool is_warning = false, bool is_printer = true);
 	void update_printer_list(wxCommandEvent& event);
-	void clear_ip_address_config(wxCommandEvent& e);
-	void on_print_job_cancel(wxCommandEvent& evt);
 	void set_default();
-	void on_timer(wxTimerEvent& event);
-	void on_selection_changed(wxCommandEvent& event);
-	void Enable_Refresh_Button(bool en);
-	void show_status(PrintDialogStatus status, std::vector<wxString> params = std::vector<wxString>());
-	void Enable_Send_Button(bool en);
 	void on_dpi_changed(const wxRect& suggested_rect) override;
     void update_user_machine_list();
-    void show_print_failed_info(bool show, int code = 0, wxString description = wxEmptyString, wxString extra = wxEmptyString);
     void update_print_error_info(int code, std::string msg, std::string extra);
     void on_change_color_mode() { wxGetApp().UpdateDlgDarkUI(this); }
     wxString format_text(wxString& m_msg);
 	std::vector<std::string> sort_string(std::vector<std::string> strArray);
 
 private:
-    void onClose(wxCloseEvent& event);
+	void init_bind();
+    void updateVisible();
+    void updateSendButtonState();
+    void clear_machine_list();
+    void remove_temporary_file();
+    void on_close(wxCloseEvent& event);
     void onNetworkTypeToggled(wxCommandEvent& event);
     void onMachineSelectionToggled(wxCommandEvent& event);
     void onSendClicked(wxCommandEvent& event);
-    void onCancelClicked(wxCommandEvent& event);
+    void on_cancel(wxCommandEvent& event);
     void onConnectionReady(ComConnectionReadyEvent& event);
     void onConnectionExit(ComConnectionExitEvent& event);
-    void onSendGcodeFinished(ComSendGcodeFinishEvent& event);
-    void onSendGcodeProgress(ComSendGcodeProgressEvent& event);
-    void onSendMultiJobCompleted(wxCommandEvent& event);
-    void updateVisible();
-    void updateSendButtonState();
-    void updateSendJobList(com_id_t id, bool complete, ComErrno err);
-    void clear_machine_list();
-    void remove_temporary_file();
+    void on_multi_send_progress(wxCommandEvent& event);
+    void on_multi_send_completed(wxCommandEvent& event);
+    void on_redirect_timer(wxTimerEvent &event);
 };
 
-wxDECLARE_EVENT(EVT_CLEAR_IPADDRESS, wxCommandEvent);
-wxDECLARE_EVENT(EVT_SEND_MULTI_JOB_COMPLETED, wxCommandEvent);
 }
 }
 
