@@ -79,25 +79,25 @@ BindMachineDialog::LinkLabel::LinkLabel(wxWindow *parent, const wxString &text, 
     });
 }
 
-BindMachineDialog::RoundImagePanel::RoundImagePanel(wxWindow *parent, const wxSize& size/*=wxDefaultSize*/)
+RoundImagePanel::RoundImagePanel(wxWindow *parent, const wxSize& size/*=wxDefaultSize*/)
     : wxPanel(parent, wxID_ANY, wxDefaultPosition, size)
 {
     Bind(wxEVT_PAINT, &RoundImagePanel::OnPaint, this);
     //Bind(wxEVT_SIZE, &RoundImagePanel::OnSize, this);
 }
 
-void BindMachineDialog::RoundImagePanel::SetImage(const wxImage& image)
+void RoundImagePanel::SetImage(const wxImage& image)
 {
     m_image = image;
     Refresh();
 }
 
-void BindMachineDialog::RoundImagePanel::OnSize(wxSizeEvent& event)
+void RoundImagePanel::OnSize(wxSizeEvent& event)
 {
 
 }
 
-void BindMachineDialog::RoundImagePanel::OnPaint(wxPaintEvent& event)
+void RoundImagePanel::OnPaint(wxPaintEvent& event)
 {
     if (!m_image.IsOk()) {
         event.Skip();
@@ -131,7 +131,7 @@ void BindMachineDialog::RoundImagePanel::OnPaint(wxPaintEvent& event)
     dc.DrawBitmap(wxBitmap(img), 0, 0);
 }
 
-void BindMachineDialog::RoundImagePanel::CreateRegion(wxDC &dc)
+void RoundImagePanel::CreateRegion(wxDC &dc)
 {
     wxSize sz = GetSize();
     int x = sz.x / 2;
@@ -182,9 +182,9 @@ BindMachineDialog::BindMachineDialog()
     m_user_panel = new RoundImagePanel(m_normal_panel, wxSize(FromDIP(80), FromDIP(80)));
     m_user_sizer->AddStretchSpacer(1);
     m_user_sizer->Add(m_user_panel, 0, wxALIGN_CENTER, 0);
-    m_user_sizer->AddSpacer(FromDIP(7));
-    m_user_sizer->Add(m_user_name, 0, wxALIGN_CENTER, 0);
+    m_user_sizer->AddSpacer(FromDIP(10));
     m_user_sizer->AddStretchSpacer(1);
+    m_user_sizer->Add(m_user_name, 0, wxALIGN_CENTER, 0);
 
     auto m_bind_icon = create_scaled_bitmap("ff_bind_machine", nullptr, 23);
     auto linkBitmap = new wxStaticBitmap(m_normal_panel, wxID_ANY, m_bind_icon, wxDefaultPosition, wxSize(FromDIP(23), FromDIP(23)), 0);
@@ -194,7 +194,7 @@ BindMachineDialog::BindMachineDialog()
     topSizer->Add(linkBitmap, 0, wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(20));
     topSizer->Add(m_user_sizer, 1, wxEXPAND | wxALIGN_CENTER, 0);
 
-    m_bind_text = new wxStaticText(m_normal_panel, wxID_ANY, _L("Register this device to this account"));
+    m_bind_text = new wxStaticText(m_normal_panel, wxID_ANY, _L("Would you like to log out the printer?"));
     m_bind_text->SetForegroundColour(wxColour("#333333"));
     m_bind_text->SetFont(GetFont());
     m_bind_text->Wrap(-1);
@@ -423,7 +423,7 @@ void BindMachineDialog::on_bind_printer(wxCommandEvent &event)
         BOOST_LOG_TRIVIAL(error) << "dev_id is empty or dev_pid is 0";  
         return;
     }
-
+   
     m_bind_job = std::make_shared<BindJob>(nullptr, wxGetApp().plater(), dev_id, dev_pid, dev_name);
     m_bind_job->set_event_handle(this);
     m_bind_job->start();
@@ -455,13 +455,13 @@ void BindMachineDialog::on_show(wxShowEvent &event)
         wxBitmap bmp;
         auto pid = m_device_info->get_dev_pid();
         if (0x0024 == pid) { // ad 5m pro
-            bmp = create_scaled_bitmap("adventurer_5m_pro", 0, 90);
+            bmp = create_scaled_bitmap("adventurer_5m_pro", 0, 80);
         } else if (0x0023 == pid) { // ad 5m
-            bmp = create_scaled_bitmap("adventurer_5m", 0, 90);
+            bmp = create_scaled_bitmap("adventurer_5m", 0, 80);
         } else {
             auto img_path = m_device_info->get_printer_thumbnail_img_str();
             if (wxGetApp().dark_mode()) { img_path += "_dark"; }
-            bmp = create_scaled_bitmap(img_path, this, FromDIP(90));
+            bmp = create_scaled_bitmap(img_path, this, FromDIP(80));
         }
         m_printer_img->SetBitmap(bmp);
         m_printer_img->Refresh();
@@ -473,7 +473,7 @@ void BindMachineDialog::on_show(wxShowEvent &event)
 
         if (LoginDialog::IsUsrLogin()) {
             auto user_info = LoginDialog::GetUsrInfo();
-            BOOST_LOG_TRIVIAL(error) << "Get user info: nickname (" << user_info.nickname << "), headImgUrl ги" << user_info.headImgUrl << ")";
+            BOOST_LOG_TRIVIAL(error) << "Get user info: nickname (" << user_info.nickname << "), headImgUrl (" << user_info.headImgUrl << ")";
             m_user_name->SetLabelText(user_info.nickname);
             if (!user_info.headImgUrl.empty()) {
                 m_web_request = wxWebSession::GetDefault().CreateRequest(this, user_info.headImgUrl);
@@ -494,224 +494,277 @@ void BindMachineDialog::on_show(wxShowEvent &event)
 }
 
 
-UnBindMachineDialog::UnBindMachineDialog(Plater *plater /*= nullptr*/)
-    : DPIDialog(static_cast<wxWindow *>(wxGetApp().mainframe), wxID_ANY, _L("Log out printer"), wxDefaultPosition, wxDefaultSize, wxCAPTION)
+UnBindMachineDialog::UnBindMachineDialog()
+    : TitleDialog(static_cast<wxWindow *>(wxGetApp().mainframe), _L("Log out printer"), 6)
 {
-    std::string icon_path = (boost::format("%1%/images/Orca-FlashforgeTitle.ico") % resources_dir()).str();
-    SetIcon(wxIcon(encode_path(icon_path.c_str()), wxBITMAP_TYPE_ICO));
+#ifdef __WINDOWS__
+    SetDoubleBuffered(true);
+#endif //__WINDOWS__
 
     SetBackgroundColour(*wxWHITE);
-    wxBoxSizer *m_sizer_main = new wxBoxSizer(wxVERTICAL);
-    auto m_line_top = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 1), wxTAB_TRAVERSAL);
-    m_line_top->SetBackgroundColour(wxColour(166, 169, 170));
-    m_sizer_main->Add(m_line_top, 0, wxEXPAND, 0);
-    m_sizer_main->Add(0, 0, 0, wxTOP, FromDIP(38));
 
-    wxBoxSizer *m_sizer_body = new wxBoxSizer(wxHORIZONTAL);
+    wxBoxSizer* main_sizer = MainSizer();
 
-    auto  m_panel_left = new StaticBox(this, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(201), FromDIP(212)), wxBORDER_NONE);
-    m_panel_left->SetMinSize(wxSize(FromDIP(201), FromDIP(212)));
-    m_panel_left->SetCornerRadius(FromDIP(8));
-    m_panel_left->SetBackgroundColor(BIND_DIALOG_GREY200);
-    wxBoxSizer *m_sizere_left_h = new wxBoxSizer(wxHORIZONTAL);
-    wxBoxSizer *m_sizere_left_v= new wxBoxSizer(wxVERTICAL);
+    m_machine_sizer = new wxBoxSizer(wxVERTICAL);     
+    m_printer_img = new wxStaticBitmap(this, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxSize(FromDIP(120), FromDIP(120)), 0);
+    m_printer_name = new wxStaticText(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize);
+    m_printer_name->SetMaxSize(wxSize(FromDIP(350), -1));
+    m_printer_name->Wrap(FromDIP(350));
+    m_printer_name->SetForegroundColour(wxColor("#333333"));
+    m_printer_name->SetFont(GetFont());
+    m_machine_sizer->AddStretchSpacer(1);
+    m_machine_sizer->Add(m_printer_img, 0, wxALIGN_CENTER, 0);
+    m_machine_sizer->AddSpacer(FromDIP(5));
+    m_machine_sizer->Add(m_printer_name, 0, wxALIGN_CENTER, 0);
+    m_machine_sizer->AddStretchSpacer(1);
 
-    m_printer_img = new wxStaticBitmap(m_panel_left, wxID_ANY, create_scaled_bitmap("printer_thumbnail", nullptr, FromDIP(100)), wxDefaultPosition, wxSize(FromDIP(120), FromDIP(120)), 0);
-    m_printer_img->SetBackgroundColour(BIND_DIALOG_GREY200);
-    m_printer_img->Hide();
-    m_printer_name     = new wxStaticText(m_panel_left, wxID_ANY, wxEmptyString);
-    m_printer_name->SetFont(::Label::Head_14);
-    m_printer_name->SetForegroundColour(*wxBLACK);
-    m_printer_name->SetBackgroundColour(BIND_DIALOG_GREY200);
-    m_sizere_left_v->Add(m_printer_img, 0, wxALIGN_CENTER, 0);
-    m_sizere_left_v->Add(0, 0, 0, wxTOP, 5);
-    m_sizere_left_v->Add(m_printer_name, 0, wxALIGN_CENTER, 0);
-    m_sizere_left_h->Add(m_sizere_left_v, 1, wxALIGN_CENTER, 0);
+    m_user_name = new wxStaticText(this, wxID_ANY, _("No Name"), wxDefaultPosition, wxDefaultSize);
+    m_user_name->SetForegroundColour(wxColor("#333333"));
+    m_user_name->SetMaxSize(wxSize(FromDIP(350), -1));
+    m_user_name->Wrap(FromDIP(350));
+    m_user_sizer = new wxBoxSizer(wxVERTICAL);
 
-    m_panel_left->SetSizer(m_sizere_left_h);
-    m_panel_left->Layout();
-    m_sizer_body->Add(m_panel_left, 0, wxEXPAND, 0);
+    m_printer_img_panel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(120), FromDIP(120)));
+    //m_user_img = new wxStaticBitmap(m_normal_panel, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxSize(FromDIP(80), FromDIP(80)), 0);
+    m_user_panel = new RoundImagePanel(this, wxSize(FromDIP(80), FromDIP(80)));
+    m_user_sizer->AddStretchSpacer(1);
+    m_user_sizer->Add(m_user_panel, 0, wxALIGN_CENTER, 0);
+    m_user_sizer->AddSpacer(FromDIP(10));
+    m_user_sizer->AddStretchSpacer(1);
+    m_user_sizer->Add(m_user_name, 0, wxALIGN_CENTER, 0);
 
-    auto m_bind_icon = create_scaled_bitmap("unbind_machine", nullptr, 28);
-    m_sizer_body->Add(new wxStaticBitmap(this, wxID_ANY, m_bind_icon, wxDefaultPosition, wxSize(FromDIP(36), FromDIP(28)), 0), 0, wxALIGN_CENTER | wxLEFT | wxRIGHT, FromDIP(20));
+    auto m_bind_icon = create_scaled_bitmap("ff_unbind_machine", nullptr, 23);
+    auto linkBitmap = new wxStaticBitmap(this, wxID_ANY, m_bind_icon, wxDefaultPosition, wxSize(FromDIP(23), FromDIP(23)), 0);
 
-    auto m_panel_right = new StaticBox(this, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(201), FromDIP(212)), wxBORDER_NONE);
-    m_panel_right->SetMinSize(wxSize(FromDIP(201), FromDIP(212)));
-    m_panel_right->SetCornerRadius(FromDIP(8));
-    m_panel_right->SetBackgroundColor(BIND_DIALOG_GREY200);
-    m_user_name = new wxStaticText(m_panel_right, wxID_ANY, wxEmptyString);
-    m_user_name->SetForegroundColour(*wxBLACK);
-    m_user_name->SetBackgroundColour(BIND_DIALOG_GREY200);
-    m_user_name->SetFont(::Label::Head_14);
-    wxBoxSizer *m_sizer_right_h = new wxBoxSizer(wxHORIZONTAL);
-    wxBoxSizer *m_sizer_right_v = new wxBoxSizer(wxVERTICAL);
+    wxBoxSizer *topSizer = new wxBoxSizer(wxHORIZONTAL);
+    topSizer->Add(m_machine_sizer, 1, wxEXPAND | wxALIGN_CENTER);
+    topSizer->Add(linkBitmap, 0, wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(20));
+    topSizer->Add(m_user_sizer, 1, wxEXPAND | wxALIGN_CENTER, 0);
 
-    m_avatar = new wxStaticBitmap(m_panel_right, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxSize(FromDIP(60), FromDIP(60)), 0);
-    m_sizer_right_v->Add(m_avatar, 0, wxALIGN_CENTER, 0);
-    m_sizer_right_v->Add(0, 0, 0, wxTOP, 7);
-    m_sizer_right_v->Add(m_user_name, 0, wxALIGN_CENTER, 0);
-    m_sizer_right_h->Add(m_sizer_right_v, 1, wxALIGN_CENTER, 0);
+    m_unbind_text = new wxStaticText(this, wxID_ANY, _L("Would you like to log out the printer?"));
+    m_unbind_text->SetForegroundColour(wxColour("#333333"));
+    m_unbind_text->SetFont(GetFont());
+    m_unbind_text->Wrap(-1);
+    
+    m_unbind_btn = new FFButton(this, wxID_ANY, _("Confirm"), 4, false);
+    m_unbind_btn->SetFontUniformColor(wxColour("#ffffff"));
+    m_unbind_btn->SetBGColor(wxColour("#419488"));
+    m_unbind_btn->SetBGHoverColor(wxColour("#65A79E"));
+    m_unbind_btn->SetBGPressColor(wxColour("#1A8676"));
+    m_unbind_btn->SetBGDisableColor(wxColour("#dddddd"));
+    m_unbind_btn->SetSize(-1, FromDIP(30));
+    m_unbind_btn->SetMinSize(wxSize(100, FromDIP(30)));
+    m_cancel_btn = new FFButton(this, wxID_ANY, _("Cancel"), 4, true);
+    m_cancel_btn->SetFontColor(wxColour("#333333"));
+    m_cancel_btn->SetFontHoverColor(wxColour("#65A79E"));
+    m_cancel_btn->SetFontPressColor(wxColour("#1A8676"));
+    m_cancel_btn->SetFontDisableColor(wxColour("#dddddd"));    
+    m_cancel_btn->SetBorderColor(wxColour("#333333"));
+    m_cancel_btn->SetBorderHoverColor(wxColour("#65A79E"));
+    m_cancel_btn->SetBorderPressColor(wxColour("#1A8676"));
+    m_cancel_btn->SetBorderDisableColor(wxColour("#dddddd"));
+    m_cancel_btn->SetBGUniformColor(wxColour("#ffffff"));
+    m_cancel_btn->SetSize(-1, FromDIP(30));
+    m_cancel_btn->SetMinSize(wxSize(100, FromDIP(30)));
 
-    m_panel_right->SetSizer(m_sizer_right_h);
-    m_panel_right->Layout();
-    m_sizer_body->Add(m_panel_right, 0, wxEXPAND, 0);
+    wxBoxSizer* btnSizer = new wxBoxSizer(wxHORIZONTAL);
+    btnSizer->AddStretchSpacer(1);
+    btnSizer->Add(m_cancel_btn, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
+    btnSizer->AddSpacer(FromDIP(50));
+    btnSizer->Add(m_unbind_btn, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_LEFT);
+    btnSizer->AddStretchSpacer(1);
+    
+    main_sizer->AddSpacer(FromDIP(30));
+    main_sizer->Add(topSizer, 0, wxEXPAND | wxALIGN_CENTER | wxLEFT | wxRIGHT, FromDIP(30));
+    main_sizer->AddSpacer(FromDIP(30));
+    main_sizer->Add(m_unbind_text, 0, wxEXPAND | wxLEFT | wxRIGHT | wxALIGN_CENTER_VERTICAL | wxALIGN_LEFT, FromDIP(30));
+    main_sizer->AddSpacer(FromDIP(36));
+    main_sizer->Add(btnSizer, 0, wxEXPAND | wxALIGN_CENTER_HORIZONTAL);
+    main_sizer->AddSpacer(FromDIP(50));
+    main_sizer->Layout();
 
-    m_sizer_main->Add(m_sizer_body, 1, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
-
-    m_sizer_main->Add(0, 0, 0, wxEXPAND | wxTOP, FromDIP(20));
-
-    m_status_text = new wxStaticText(this, wxID_ANY, _L("Would you like to log out the printer?"), wxDefaultPosition, wxSize(BIND_DIALOG_BUTTON_PANEL_SIZE.x, -1), wxST_ELLIPSIZE_END);
-    m_status_text->SetForegroundColour(wxColour(107, 107, 107));
-    m_status_text->SetFont(::Label::Body_13);
-
-
-
-    wxBoxSizer *m_sizer_button = new wxBoxSizer(wxHORIZONTAL);
-
-    m_sizer_button->Add(0, 0, 1, wxEXPAND, 5);
-    m_button_unbind = new Button(this, _L("Confirm"));
-    StateColor btn_bg_green(std::pair<wxColour, int>(wxColour(38, 166, 154), StateColor::Hovered),
-                            std::pair<wxColour, int>(wxColour(0, 150, 136), StateColor::Normal));
-    m_button_unbind->SetBackgroundColor(btn_bg_green);
-    m_button_unbind->SetBorderColor(wxColour(0, 150, 136));
-    m_button_unbind->SetTextColor(wxColour("#FFFFFE"));
-    m_button_unbind->SetSize(BIND_DIALOG_BUTTON_SIZE);
-    m_button_unbind->SetMinSize(BIND_DIALOG_BUTTON_SIZE);
-    m_button_unbind->SetCornerRadius(FromDIP(12));
-
-
-    StateColor btn_bg_white(std::pair<wxColour, int>(wxColour(206, 206, 206), StateColor::Hovered),
-                        std::pair<wxColour, int>(*wxWHITE, StateColor::Normal));
-
-    m_button_cancel = new Button(this, _L("Cancel"));
-    m_button_cancel->SetBackgroundColor(btn_bg_white);
-    m_button_cancel->SetBorderColor(BIND_DIALOG_GREY900);
-    m_button_cancel->SetSize(BIND_DIALOG_BUTTON_SIZE);
-    m_button_cancel->SetMinSize(BIND_DIALOG_BUTTON_SIZE);
-    m_button_cancel->SetTextColor(BIND_DIALOG_GREY900);
-    m_button_cancel->SetCornerRadius(FromDIP(12));
-
-    m_sizer_button->Add(m_button_unbind, 0, wxALIGN_CENTER, 0);
-    m_sizer_button->Add(0, 0, 0, wxLEFT, FromDIP(13));
-    m_sizer_button->Add(m_button_cancel, 0, wxALIGN_CENTER, 0);
-
-    m_sizer_main->Add(m_status_text, 0, wxALIGN_CENTER, 0);
-    m_sizer_main->Add(0, 0, 0, wxTOP, FromDIP(10));
-    m_sizer_main->Add(m_sizer_button, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
-    m_sizer_main->Add(0, 0, 0, wxTOP, FromDIP(20));
-
-    SetSizer(m_sizer_main);
+    main_sizer->Fit(this);
+    //SetSizer(m_sizer_main);
     Layout();
     Fit();
     Centre(wxBOTH);
 
-    Bind(wxEVT_SHOW, &UnBindMachineDialog::on_show, this);
-    m_button_unbind->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(UnBindMachineDialog::on_unbind_printer), NULL, this);
-    m_button_cancel->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(UnBindMachineDialog::on_cancel), NULL, this);
-
     Bind(wxEVT_WEBREQUEST_STATE, [this](wxWebRequestEvent& evt) {
-        switch (evt.GetState()) {
-            // Request completed
-        case wxWebRequest::State_Completed: {
-            wxImage avatar_stream = *evt.GetResponse().GetStream();
-            if (avatar_stream.IsOk()) {
-                avatar_stream.Rescale(FromDIP(60), FromDIP(60));
-                auto bitmap = new wxBitmap(avatar_stream);
-                //bitmap->SetSize(wxSize(FromDIP(60), FromDIP(60)));
-                m_avatar->SetBitmap(*bitmap);
-                Layout();
-            }
-            break;
-        }
-                                        // Request failed
-        case wxWebRequest::State_Failed: {
-            break;
-        }
-        }
-    });
+         switch (evt.GetState()) {
+         case wxWebRequest::State_Completed: {
+             BOOST_LOG_TRIVIAL(error) << "BindDialog: web request state completed";
+             wxImage avatar_stream = *evt.GetResponse().GetStream();
+             if (avatar_stream.IsOk()) {
+                 avatar_stream.Rescale(FromDIP(80), FromDIP(80));
+                 //auto bitmap = new wxBitmap(avatar_stream);
+                 //bitmap->SetSize(wxSize(FromDIP(60), FromDIP(60)));
+                 //m_user_img->SetBitmap(*bitmap);
+                 m_user_panel->SetImage(avatar_stream);
+                 Layout();
+             }
+             break;
+         }
+         case wxWebRequest::State_Failed: {
+             BOOST_LOG_TRIVIAL(error) << "BindDialog: web request state failed";
+             break;
+         }
+         }
+         });
+
+    Bind(wxEVT_SHOW, &UnBindMachineDialog::on_show, this);
+    Bind(wxEVT_CLOSE_WINDOW, &UnBindMachineDialog::on_close, this);
+    m_unbind_btn->Bind(wxEVT_BUTTON, &UnBindMachineDialog::on_unbind_printer, this);
+    m_cancel_btn->Bind(wxEVT_BUTTON, &UnBindMachineDialog::on_cancel, this);
+    Bind(EVT_UNBIND_MACHINE_COMPLETED, &UnBindMachineDialog::on_unbind_completed, this);
 
     wxGetApp().UpdateDlgDarkUI(this);
 }
 
 UnBindMachineDialog::~UnBindMachineDialog()
 {
-    m_button_unbind->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(UnBindMachineDialog::on_unbind_printer), NULL, this);
-    m_button_cancel->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(UnBindMachineDialog::on_cancel), NULL, this);
+    Unbind(EVT_UNBIND_MACHINE_COMPLETED, &UnBindMachineDialog::on_unbind_completed, this);
 }
-
 
 void UnBindMachineDialog::on_cancel(wxCommandEvent &event)
 {
+    on_destroy();
     EndModal(wxID_CANCEL);
+}
+
+void UnBindMachineDialog::on_destroy()
+{
+    if (m_unbind_job) {
+        m_unbind_job->cancel();
+        m_unbind_job->join();
+    }
+    if (m_web_request.IsOk()) {
+        m_web_request.Cancel();
+    }
+}
+
+void UnBindMachineDialog::on_result_ok(wxCommandEvent& event)
+{
+    if (m_result_code != 0) {
+        //m_simplebook->SetSelection(0);
+        Layout();
+        Fit();
+    } else {
+        EndModal(wxID_OK);
+    }
+}
+
+void UnBindMachineDialog::on_close(wxCloseEvent &event)
+{
+    on_destroy();
+    event.Skip();
+}
+
+void UnBindMachineDialog::on_unbind_completed(wxCommandEvent &event)
+{
+    m_result_code = event.GetInt();
+    if (m_result_code == COM_OK) {
+        BOOST_LOG_TRIVIAL(info) << "unbind success";
+        //m_result_text->SetLabel(_("The device is registered successfully!"));
+        //m_result_text->SetForegroundColour(wxColor("#419488"));
+        //m_result_sizer->Layout();
+        //m_simplebook->SetSelection(1);
+        EndModal(wxID_OK);
+    } else {
+        //m_result_text->SetLabel(_("The device is registered fail!"));
+        //m_result_text->SetForegroundColour(wxColor("#EA3522"));
+        //m_result_sizer->Layout();
+        //m_simplebook->SetSelection(1);
+        BOOST_LOG_TRIVIAL(error) << "unbind error: " << m_result_code;
+        EndModal(wxID_CANCEL);
+    }
+    Layout();
+    Fit();
 }
 
 void UnBindMachineDialog::on_unbind_printer(wxCommandEvent &event)
 {
-     if (!LoginDialog::IsUsrLogin()) {
-        m_status_text->SetLabelText(_L("Please log in first."));
-        return;
-    }
-
+    m_result_code = 0;
     if (!m_device_info) {
-        m_status_text->SetLabelText(_L("There was a problem connecting to the printer. Please try again."));
+        BOOST_LOG_TRIVIAL(error) << "device_info is null"; 
         return;
     }
 
-    DeviceObjectOpr *devOpr = wxGetApp().getDeviceObjectOpr();
-    if (devOpr == nullptr)
-        return;
-
-    ComErrno ret = devOpr->unbind_wan_machine(m_device_info);
-    if (ret == COM_OK) {
-        m_status_text->SetLabelText(_L("Log out successful."));
-        m_button_cancel->SetLabel(_L("Close"));
-        m_button_unbind->Hide();
-        EndModal(wxID_OK);
-    } else {
-        m_status_text->SetLabelText(_L("Failed to log out."));
-        EndModal(wxID_CANCEL);
+    std::string serial_no = m_device_info->get_dev_id();
+    std::string dev_id = m_device_info->get_wan_dev_id();
+    if (serial_no.empty() || dev_id.empty()) {
+        BOOST_LOG_TRIVIAL(error) << "dev_id is empty or dev_id is 0";  
         return;
     }
+    ComErrno result = MultiComMgr::inst()->unbindWanDev(serial_no, dev_id);
+    EndModal(result == COM_OK ? wxID_OK : wxID_CANCEL);
+   
+    //m_unbind_job = std::make_shared<UnbindJob>(serial_no, dev_id);
+    //m_unbind_job->set_event_handle(this);
+    //m_unbind_job->start();
 }
 
 void UnBindMachineDialog::on_dpi_changed(const wxRect &suggested_rect)
 {
-    m_button_unbind->SetMinSize(BIND_DIALOG_BUTTON_SIZE);
-    m_button_cancel->SetMinSize(BIND_DIALOG_BUTTON_SIZE);
+    m_unbind_btn->SetMinSize(BIND_DIALOG_BUTTON_SIZE);
+    m_cancel_btn->SetMinSize(BIND_DIALOG_BUTTON_SIZE);
 }
 
- void UnBindMachineDialog::update_device_info(DeviceObject *info)
- {
-     m_device_info = info;
- }
+void UnBindMachineDialog::update_device_info(DeviceObject* info)
+{
+    m_device_info = info;
+}
+
+void UnBindMachineDialog::update_machine_info(MachineObject *info)
+{
+    m_machine_info = info;
+}
 
 void UnBindMachineDialog::on_show(wxShowEvent &event)
 {
+    m_result_code   = 0;
+    //m_result_extra  = wxEmptyString;
+    //m_result_info   = wxEmptyString;
+
     if (event.IsShown()) {
-        auto img = m_device_info->get_printer_thumbnail_img_str();
-        if (wxGetApp().dark_mode()) { img += "_dark"; }
-        auto bitmap = create_scaled_bitmap(img, this, FromDIP(100));
-        m_printer_img->SetBitmap(bitmap);
+        wxBitmap bmp;
+        auto pid = m_device_info->get_dev_pid();
+        if (0x0024 == pid) { // ad 5m pro
+            bmp = create_scaled_bitmap("adventurer_5m_pro", 0, 80);
+        } else if (0x0023 == pid) { // ad 5m
+            bmp = create_scaled_bitmap("adventurer_5m", 0, 80);
+        } else {
+            auto img_path = m_device_info->get_printer_thumbnail_img_str();
+            if (wxGetApp().dark_mode()) { img_path += "_dark"; }
+            bmp = create_scaled_bitmap(img_path, this, FromDIP(80));
+        }
+        m_printer_img->SetBitmap(bmp);
         m_printer_img->Refresh();
-        m_printer_img->Show();
+        //m_printer_img->Show();
 
         m_printer_name->SetLabelText(from_u8(m_device_info->get_dev_name()));
+        //m_machinePanel->Layout();
+        m_machine_sizer->Layout();
 
-
-        //if (LoginDialog::IsUsrLogin()) {
-        //    wxString username_text = from_u8(wxGetApp().getAgent()->get_user_name());
-        //    m_user_name->SetLabelText(username_text);
-        //    wxString avatar_url = wxGetApp().getAgent()->get_user_avatar();
-        //    web_request = wxWebSession::GetDefault().CreateRequest(this, avatar_url);
-        //    if (!web_request.IsOk()) {
-        //        // todo request fail
-        //    }
-        //    web_request.Start();
-        //}
-
+        if (LoginDialog::IsUsrLogin()) {
+            auto user_info = LoginDialog::GetUsrInfo();
+            BOOST_LOG_TRIVIAL(error) << "Get user info: nickname (" << user_info.nickname << "), headImgUrl (" << user_info.headImgUrl << ")";
+            m_user_name->SetLabelText(user_info.nickname);
+            if (!user_info.headImgUrl.empty()) {
+                m_web_request = wxWebSession::GetDefault().CreateRequest(this, user_info.headImgUrl);
+                if (!m_web_request.IsOk()) {
+                    BOOST_LOG_TRIVIAL(error) << "web session create request fail";
+                } else {
+                    m_web_request.Start();
+                }
+            }
+            m_user_sizer->Layout();
+        }
+        //m_simplebook->Layout();
+        MainSizer()->Fit(this);
         Layout();
+        Fit();
         event.Skip();
-    } 
+    }
 }
 
 }} // namespace Slic3r::GUI
