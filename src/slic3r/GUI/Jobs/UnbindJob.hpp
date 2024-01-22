@@ -16,8 +16,6 @@ class UnbindJob : public PlaterJob
     wxWindow *           m_event_handle{nullptr};
     DeviceObject*        m_dev_obj {nullptr};
     std::function<void()> m_success_fun{nullptr};
-    std::string         m_serial_number;
-    std::string         m_dev_id;
     bool                m_job_finished{ false };
     int                 m_print_job_completed_id = 0;
     bool                m_improved{false};
@@ -25,7 +23,7 @@ class UnbindJob : public PlaterJob
 protected:
     void on_exception(const std::exception_ptr &) override;
 public:
-    UnbindJob(DeviceObject* dev_obj, const std::string &serialNumber, const std::string &dev_id);
+    UnbindJob(DeviceObject* dev_obj);
 
     bool is_finished() { return m_job_finished;  }
 

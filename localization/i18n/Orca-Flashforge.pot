@@ -8,10 +8,11 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-01-10 10:00+0800\n"
+"POT-Creation-Date: 2024-01-22 16:29+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -92,7 +93,6 @@ msgstr ""
 msgid "Gap Fill"
 msgstr ""
 
-#, possible-c-format
 msgid "Allows painting only on facets selected by: \"%1%\""
 msgstr ""
 
@@ -108,7 +108,6 @@ msgstr ""
 msgid "Lay on face"
 msgstr ""
 
-#, possible-c-format
 msgid ""
 "Filament count exceeds the maximum number that painting tool supports. only "
 "the first %1% filaments will be available in painting tool."
@@ -174,7 +173,6 @@ msgstr ""
 msgid "Remove painted color"
 msgstr ""
 
-#, possible-c-format
 msgid "Painted using: Filament %1%"
 msgstr ""
 
@@ -414,7 +412,6 @@ msgstr ""
 msgid "Decimate ratio"
 msgstr ""
 
-#, possible-c-format
 msgid ""
 "Processing model '%1%' with more than 1M triangles could be slow. It is "
 "highly recommended to simplify the model."
@@ -454,7 +451,6 @@ msgstr ""
 msgid "Show wireframe"
 msgstr ""
 
-#, possible-c-format
 msgid "%1%"
 msgstr ""
 
@@ -532,7 +528,6 @@ msgstr ""
 msgid "Undefined"
 msgstr ""
 
-#, possible-c-format
 msgid "%1% was replaced with %2%"
 msgstr ""
 
@@ -555,7 +550,6 @@ msgstr ""
 msgid "Configuration package was loaded, but some values were not recognized."
 msgstr ""
 
-#, possible-c-format
 msgid ""
 "Configuration file \"%1%\" was loaded, but some values were not recognized."
 msgstr ""
@@ -579,7 +573,6 @@ msgstr ""
 msgid "Critical error"
 msgstr ""
 
-#, possible-c-format
 msgid "Orca-Flashforge got an unhandled exception: %1%"
 msgstr ""
 
@@ -597,7 +590,7 @@ msgid "Connect %s failed! [SN:%s, code=%s]"
 msgstr ""
 
 msgid ""
-"Flash Slicer requires the Microsoft WebView2 Runtime to operate certain "
+"Orca-Flashforge requires the Microsoft WebView2 Runtime to operate certain "
 "features.\n"
 "Click Yes to install it now."
 msgstr ""
@@ -621,7 +614,7 @@ msgstr ""
 msgid "Click to download new version in default browser: %s"
 msgstr ""
 
-msgid "The Flash Slicer needs an upgrade"
+msgid "The Orca-Flashforge needs an upgrade"
 msgstr ""
 
 msgid "This is the newest version."
@@ -632,7 +625,7 @@ msgstr ""
 
 msgid ""
 "The Orca-Flashforge configuration file may be corrupted and cannot be parsed."
-"\\Orca-Flashforge has attempted to recreate the configuration file.\n"
+"Orca-Flashforge has attempted to recreate the configuration file.\n"
 "Please note, application settings will be lost, but printer profiles will "
 "not be affected."
 msgstr ""
@@ -676,8 +669,8 @@ msgid "Open Project"
 msgstr ""
 
 msgid ""
-"The version of Flash Slicer is too low and needs to be updated to the latest "
-"version before it can be used normally"
+"The version of Orca-Flashforge is too low and needs to be updated to the "
+"latest version before it can be used normally"
 msgstr ""
 
 msgid "Already the newest version!"
@@ -734,10 +727,9 @@ msgstr ""
 msgid "Rename"
 msgstr ""
 
-msgid "Flash Slicer GUI initialization failed"
+msgid "Orca-Flashforge GUI initialization failed"
 msgstr ""
 
-#, possible-c-format
 msgid "Fatal error, exception catched: %1%"
 msgstr ""
 
@@ -1472,6 +1464,9 @@ msgstr ""
 msgid "Connecting..."
 msgstr ""
 
+msgid "Connected Failed."
+msgstr ""
+
 msgid "?"
 msgstr ""
 
@@ -1627,15 +1622,6 @@ msgid "Error! Unable to create thread!"
 msgstr ""
 
 msgid "Exception"
-msgstr ""
-
-msgid "Logging in"
-msgstr ""
-
-msgid "Login failed"
-msgstr ""
-
-msgid "Please check the printer network connection."
 msgstr ""
 
 msgid "Abnormal print file data. Please slice again."
@@ -1866,7 +1852,6 @@ msgstr ""
 msgid "min"
 msgstr ""
 
-#, possible-c-format
 msgid "The input value should be greater than %1% and less than %2%"
 msgstr ""
 
@@ -1933,13 +1918,13 @@ msgstr ""
 msgid "Max volumetric speed"
 msgstr ""
 
-msgid "\\u2103"
+msgid "℃"
 msgstr ""
 
 msgid "Bed temperature"
 msgstr ""
 
-msgid "mm\\u00B3"
+msgid "mm³"
 msgstr ""
 
 msgid "Start calibration"
@@ -2190,14 +2175,12 @@ msgstr ""
 msgid "Unknown error when export G-code."
 msgstr ""
 
-#, possible-c-format
 msgid ""
 "Failed to save gcode file.\n"
 "Error message: %1%.\n"
 "Source file %2%."
 msgstr ""
 
-#, possible-c-format
 msgid "Succeed to export G-code to %1%"
 msgstr ""
 
@@ -2207,7 +2190,6 @@ msgstr ""
 msgid "Copying of the temporary G-code to the output G-code failed"
 msgstr ""
 
-#, possible-c-format
 msgid "Scheduling upload to `%1%`. See Window -> Print Host Upload Queue"
 msgstr ""
 
@@ -2375,7 +2357,6 @@ msgid ""
 "NO  - Keep Independent Support Layer Height"
 msgstr ""
 
-#, possible-c-format
 msgid "%1% infill pattern doesn't support 100%% density."
 msgstr ""
 
@@ -2520,21 +2501,21 @@ msgid "Update failed."
 msgstr ""
 
 msgid ""
-"The current chamber temperature or the target chamber temperature exceeds 45"
-"\\u2103.In order to avoid extruder clogging,low temperature filament(PLA/"
-"PETG/TPU) is not allowed to be loaded."
+"The current chamber temperature or the target chamber temperature exceeds "
+"45℃.In order to avoid extruder clogging,low temperature filament(PLA/PETG/"
+"TPU) is not allowed to be loaded."
 msgstr ""
 
 msgid ""
 "Low temperature filament(PLA/PETG/TPU) is loaded in the extruder.In order to "
 "avoid extruder clogging,it is not allowed to set the chamber temperature "
-"above 45\\u2103."
+"above 45℃."
 msgstr ""
 
 msgid ""
-"When you set the chamber temperature below 40\\u2103, the chamber "
-"temperature control will not be activated. And the target chamber "
-"temperature will automatically be set to 0\\u2103."
+"When you set the chamber temperature below 40℃, the chamber temperature "
+"control will not be activated. And the target chamber temperature will "
+"automatically be set to 0℃."
 msgstr ""
 
 msgid "Failed to start printing job"
@@ -2602,7 +2583,6 @@ msgid ""
 "NO for %s %s."
 msgstr ""
 
-#, possible-c-format
 msgid "Invalid format. Expected vector format: \"%1%\""
 msgstr ""
 
@@ -3025,7 +3005,11 @@ msgstr ""
 
 msgid ""
 "You can find it in \"Settings > Network > Connection code\"\n"
-"on the printer, as shown in the figure:"
+"on the printer; To facilitate device identification, \n"
+"you can change the device name on the device page."
+msgstr ""
+
+msgid "The access code is wrong, please input again."
 msgstr ""
 
 msgid "Invalid input."
@@ -3418,9 +3402,6 @@ msgstr ""
 msgid "Overwrite file"
 msgstr ""
 
-msgid "Overwrite config"
-msgstr ""
-
 msgid "Yes to All"
 msgstr ""
 
@@ -3526,7 +3507,7 @@ msgstr ""
 
 msgid ""
 "Another virtual camera is running.\n"
-"Orca Slicer supports only a single virtual camera.\n"
+"Orca-Flashforge supports only a single virtual camera.\n"
 "Do you want to stop this virtual camera?"
 msgstr ""
 
@@ -3637,8 +3618,8 @@ msgid "Failed to parse model infomations."
 msgstr ""
 
 msgid ""
-"The .gcode.3mf file contains no G-code data.Please slice it with Orca Slicer "
-"and export a new .gcode.3mf file."
+"The .gcode.3mf file contains no G-code data.Please slice it with Orca-"
+"Flashforge and export a new .gcode.3mf file."
 msgstr ""
 
 #, possible-c-format
@@ -4108,6 +4089,14 @@ msgstr ""
 msgid "Error loading shaders"
 msgstr ""
 
+msgctxt "Layers"
+msgid "Top"
+msgstr ""
+
+msgctxt "Layers"
+msgid "Bottom"
+msgstr ""
+
 msgid "Enable AI monitoring of printing"
 msgstr ""
 
@@ -4173,7 +4162,6 @@ msgstr ""
 msgid "Untitled"
 msgstr ""
 
-#, possible-c-format
 msgid " plate %1%:"
 msgstr ""
 
@@ -4253,11 +4241,10 @@ msgstr ""
 
 msgid ""
 "There are some unknown filaments mapped to generic preset. Please update "
-"Orca Slicer or restart Orca Slicer to check if there is an update to system "
-"presets."
+"Orca-Flashforge or restart Orca-Flashforge to check if there is an update to "
+"system presets."
 msgstr ""
 
-#, possible-c-format
 msgid "Do you want to save changes to \"%1%\"?"
 msgstr ""
 
@@ -4346,7 +4333,6 @@ msgstr ""
 msgid "The name may show garbage characters!"
 msgstr ""
 
-#, possible-c-format
 msgid "Failed loading file \"%1%\". An invalid configuration was found."
 msgstr ""
 
@@ -4510,7 +4496,7 @@ msgid "Project downloaded %d%%"
 msgstr ""
 
 msgid ""
-"Importing to Orca Slicer failed. Please download the file and manually "
+"Importing to Orca-Flashforge failed. Please download the file and manually "
 "import it."
 msgstr ""
 
@@ -4617,39 +4603,30 @@ msgstr ""
 msgid "Plate Settings"
 msgstr ""
 
-#, possible-c-format
 msgid "Number of currently selected parts: %1%\n"
 msgstr ""
 
-#, possible-c-format
 msgid "Number of currently selected objects: %1%\n"
 msgstr ""
 
-#, possible-c-format
 msgid "Part name: %1%\n"
 msgstr ""
 
-#, possible-c-format
 msgid "Object name: %1%\n"
 msgstr ""
 
-#, possible-c-format
 msgid "Size: %1% x %2% x %3% in\n"
 msgstr ""
 
-#, possible-c-format
 msgid "Size: %1% x %2% x %3% mm\n"
 msgstr ""
 
-#, possible-c-format
 msgid "Volume: %1% in³\n"
 msgstr ""
 
-#, possible-c-format
 msgid "Volume: %1% mm³\n"
 msgstr ""
 
-#, possible-c-format
 msgid "Triangles: %1%\n"
 msgstr ""
 
@@ -4658,7 +4635,7 @@ msgstr ""
 
 msgid ""
 "\"Fix Model\" feature is currently only on Windows. Please repair the model "
-"on Orca Slicer(windows) or CAD softwares."
+"on Orca-Flashforge(windows) or CAD softwares."
 msgstr ""
 
 #, possible-c-format
@@ -5062,11 +5039,9 @@ msgstr ""
 msgid "Overwrite a system profile is not allowed"
 msgstr ""
 
-#, possible-c-format
 msgid "Preset \"%1%\" already exists."
 msgstr ""
 
-#, possible-c-format
 msgid "Preset \"%1%\" already exists and is incompatible with current printer."
 msgstr ""
 
@@ -5088,23 +5063,22 @@ msgstr ""
 msgid "Save preset"
 msgstr ""
 
-#, possible-c-format
+msgctxt "PresetName"
+msgid "Copy"
+msgstr ""
+
 msgid "Printer \"%1%\" is selected with preset \"%2%\""
 msgstr ""
 
-#, possible-c-format
 msgid "Please choose an action with \"%1%\" preset after saving."
 msgstr ""
 
-#, possible-c-format
 msgid "For \"%1%\", change \"%2%\" to \"%3%\" "
 msgstr ""
 
-#, possible-c-format
 msgid "For \"%1%\", add \"%2%\" as a new preset"
 msgstr ""
 
-#, possible-c-format
 msgid "Simply switch to \"%1%\""
 msgstr ""
 
@@ -5124,6 +5098,9 @@ msgid "Input access code"
 msgstr ""
 
 msgid "Online"
+msgstr ""
+
+msgid "Are you sure to unbind this device?"
 msgstr ""
 
 msgid "Log out successful."
@@ -5319,19 +5296,63 @@ msgstr ""
 msgid "Modifying the device name"
 msgstr ""
 
-msgid "Send to Printer SD card"
+msgid "send prepare fail"
 msgstr ""
 
-msgid "Cannot send the print task when the upgrade is in progress"
+msgid "Tip"
 msgstr ""
 
-msgid "An SD card needs to be inserted before send to printer SD card."
+msgid "File sent successfully"
 msgstr ""
 
-msgid "The printer is required to be in the same LAN as Orca Slicer."
+msgid ""
+"File sending failure: inconsistent model and slicing configuration or "
+"network abnormality"
 msgstr ""
 
-msgid "The printer does not support sending to printer SD card."
+msgid "Send printing tasks to"
+msgstr ""
+
+msgid "Levelling"
+msgstr ""
+
+msgid "Select Printer"
+msgstr ""
+
+msgid "Network"
+msgstr ""
+
+msgid "Lan"
+msgstr ""
+
+msgid "No printer connected, please connect printer first!"
+msgstr ""
+
+msgid "Sending task, do you want to cancel it?"
+msgstr ""
+
+msgid "Untitled.3mf"
+msgstr ""
+
+msgid "Preparing printing task"
+msgstr ""
+
+msgid "Canceling the print job, please wait"
+msgstr ""
+
+msgid "Send completed, automatically redirected to device status"
+msgstr ""
+
+msgid "The printer is busy and cannot receive printing commands."
+msgstr ""
+
+msgid "Canceling the print job successfully."
+msgstr ""
+
+msgid "Send failed, please check network or device status"
+msgstr ""
+
+msgid "Send completed"
 msgstr ""
 
 msgid "Failed to create socket"
@@ -5364,10 +5385,7 @@ msgstr ""
 msgid "Log in printer"
 msgstr ""
 
-msgid "Would you like to log in this printer with current account?"
-msgstr ""
-
-msgid "Check the reason"
+msgid "Would you like to log out the printer?"
 msgstr ""
 
 msgid "Read and accept"
@@ -5376,60 +5394,19 @@ msgstr ""
 msgid "Terms and Conditions"
 msgstr ""
 
-msgid ""
-"Thank you for purchasing a Bambu Lab device.Before using your Bambu Lab "
-"device, please read the termsand conditions.By clicking to agree to use your "
-"Bambu Lab device, you agree to abide by the Privacy Policyand Terms of Use"
-"(collectively, the \"Terms\"). If you do not comply with or agree to the "
-"Bambu Lab Privacy Policy, please do not use Bambu Lab equipment and services."
+msgid "Privacy Policy"
 msgstr ""
 
 msgid "and"
 msgstr ""
 
-msgid "Privacy Policy"
+msgid "The device is registered fail!"
 msgstr ""
 
-msgid "We ask for your help to improve everyone's printer"
-msgstr ""
-
-msgid "Statement about User Experience Improvement Program"
-msgstr ""
-
-#, possible-c-format
-msgid ""
-"In the 3D Printing community, we learn from each other's successes and "
-"failures to adjust our own slicing parameters and settings. %s follows the "
-"same principle and uses machine learning to improve its performance from the "
-"successes and failures of the vast number of prints by our users. We are "
-"training %s to be smarter by feeding them the real-world data. If you are "
-"willing, this service will access information from your error logs and usage "
-"logs, which may include information described in  Privacy Policy. We will "
-"not collect any Personal Data by which an individual can be identified "
-"directly or indirectly, including without limitation names, addresses, "
-"payment information, or phone numbers. By enabling this service, you agree "
-"to these terms and the statement about Privacy Policy."
-msgstr ""
-
-msgid "Statement on User Experience Improvement Plan"
-msgstr ""
-
-msgid "Log in successful."
+msgid "The device is registered successfully!"
 msgstr ""
 
 msgid "Log out printer"
-msgstr ""
-
-msgid "Would you like to log out the printer?"
-msgstr ""
-
-msgid "Please log in first."
-msgstr ""
-
-msgid "There was a problem connecting to the printer. Please try again."
-msgstr ""
-
-msgid "Failed to log out."
 msgstr ""
 
 #. TRN "Save current Settings"
@@ -5796,12 +5773,10 @@ msgid_plural "Following presets will be deleted too."
 msgstr[0] ""
 msgstr[1] ""
 
-#, possible-c-format
 msgid "Are you sure to %1% the selected preset?"
 msgstr ""
 
 #. TRN  Remove/Delete
-#, possible-c-format
 msgid "%1% Preset"
 msgstr ""
 
@@ -5862,35 +5837,29 @@ msgstr ""
 msgid "Transfer the selected options to the newly selected preset."
 msgstr ""
 
-#, possible-c-format
 msgid ""
 "Save the selected options to preset \n"
 "\"%1%\"."
 msgstr ""
 
-#, possible-c-format
 msgid ""
 "Transfer the selected options to the newly selected preset \n"
 "\"%1%\"."
 msgstr ""
 
-#, possible-c-format
 msgid "Preset \"%1%\" contains the following unsaved changes:"
 msgstr ""
 
-#, possible-c-format
 msgid ""
 "Preset \"%1%\" is not compatible with the new printer profile and it "
 "contains the following unsaved changes:"
 msgstr ""
 
-#, possible-c-format
 msgid ""
 "Preset \"%1%\" is not compatible with the new process profile and it "
 "contains the following unsaved changes:"
 msgstr ""
 
-#, possible-c-format
 msgid ""
 "You have changed some settings of preset \"%1%\". \n"
 "Would you like to keep these changed settings (new value) after switching "
@@ -5927,7 +5896,6 @@ msgstr ""
 msgid "Cover"
 msgstr ""
 
-#, possible-c-format
 msgid "The name \"%1%\" already exists."
 msgstr ""
 
@@ -6327,14 +6295,15 @@ msgid "Network plug-in update"
 msgstr ""
 
 msgid ""
-"Click OK to update the Network plug-in when Flash Slicer launches next time."
+"Click OK to update the Network plug-in when Orca-Flashforge launches next "
+"time."
 msgstr ""
 
 #, possible-c-format
 msgid "A new Network plug-in(%s) available, Do you want to install it?"
 msgstr ""
 
-msgid "New version of Flash Slicer"
+msgid "New version of Orca-Flashforge"
 msgstr ""
 
 msgid "Don't remind me of this version again"
@@ -6347,7 +6316,7 @@ msgid "LAN Connection Failed (Sending print file)"
 msgstr ""
 
 msgid ""
-"Step 1, please confirm Orca Slicer and your printer are in the same LAN."
+"Step 1, please confirm Orca-Flashforge and your printer are in the same LAN."
 msgstr ""
 
 msgid ""
@@ -6465,7 +6434,6 @@ msgstr ""
 msgid "Repair canceled"
 msgstr ""
 
-#, possible-c-format
 msgid "Copying of file %1% to %2% failed: %3%"
 msgstr ""
 
@@ -6483,11 +6451,9 @@ msgid ""
 "bottom or enable supports."
 msgstr ""
 
-#, possible-c-format
 msgid "Object can't be printed for empty layer between %1% and %2%."
 msgstr ""
 
-#, possible-c-format
 msgid "Object: %1%"
 msgstr ""
 
@@ -6507,7 +6473,6 @@ msgstr ""
 msgid "Please check the custom G-code or use the default custom G-code."
 msgstr ""
 
-#, possible-c-format
 msgid "Generating G-code: layer %1%"
 msgstr ""
 
@@ -6550,7 +6515,6 @@ msgstr ""
 msgid "Multiple"
 msgstr ""
 
-#, possible-c-format
 msgid "Failed to calculate line width of %1%. Can not get value of \"%2%\" "
 msgstr ""
 
@@ -6652,16 +6616,13 @@ msgstr ""
 msgid "write callback failed"
 msgstr ""
 
-#, possible-c-format
 msgid ""
 "%1% is too close to exclusion area, there may be collisions when printing."
 msgstr ""
 
-#, possible-c-format
 msgid "%1% is too close to others, and collisions may be caused."
 msgstr ""
 
-#, possible-c-format
 msgid "%1% is too tall, and collisions will be caused."
 msgstr ""
 
@@ -6704,11 +6665,9 @@ msgid ""
 "materials."
 msgstr ""
 
-#, possible-c-format
 msgid "The object %1% exceeds the maximum build volume height."
 msgstr ""
 
-#, possible-c-format
 msgid ""
 "While the object %1% itself fits the build volume, its last layer exceeds "
 "the maximum build volume height."
@@ -7607,8 +7566,8 @@ msgstr ""
 
 #, possible-c-format
 msgid ""
-"Enter the shrinkage percentage that the filament will get after cooling (94% "
-"if you measure 94mm instead of 100mm). The part will be scaled in xy to "
+"Enter the shrinkage percentage that the filament will get after cooling "
+"(94% if you measure 94mm instead of 100mm). The part will be scaled in xy to "
 "compensate. Only the filament used for the perimeter is taken into account.\n"
 "Be sure to allow enough space between objects, as this compensation is done "
 "after the checks."
@@ -7673,9 +7632,6 @@ msgid ""
 "stable. Before purging the print head into an infill or a sacrificial "
 "object, Slic3r will always prime this amount of material into the wipe tower "
 "to produce successive infill or sacrificial object extrusions reliably."
-msgstr ""
-
-msgid "mm³"
 msgstr ""
 
 msgid "Speed of the last cooling move"
@@ -10130,7 +10086,6 @@ msgstr ""
 msgid "The name cannot be empty."
 msgstr ""
 
-#, possible-c-format
 msgid "The selected preset: %1% is not found."
 msgstr ""
 
@@ -10387,10 +10342,10 @@ msgstr ""
 msgid "Printing Parameters"
 msgstr ""
 
-msgid "- \\u2103"
+msgid "- ℃"
 msgstr ""
 
-msgid " \\u2103"
+msgid " ℃"
 msgstr ""
 
 msgid "Plate Type"
@@ -10457,9 +10412,6 @@ msgstr ""
 msgid "To Volumetric Speed"
 msgstr ""
 
-msgid "mm\\u00B3/s"
-msgstr ""
-
 msgid "Flow Dynamics Calibration Result"
 msgstr ""
 
@@ -10502,7 +10454,6 @@ msgstr ""
 msgid "Multiple resolved IP addresses"
 msgstr ""
 
-#, possible-c-format
 msgid ""
 "There are several IP addresses resolving to hostname %1%.\n"
 "Please select one that should be used."
@@ -10579,6 +10530,10 @@ msgid "Status"
 msgstr ""
 
 msgid "Host"
+msgstr ""
+
+msgctxt "OfFile"
+msgid "Size"
 msgstr ""
 
 msgid "Filename"
@@ -10783,16 +10738,19 @@ msgstr ""
 msgid "Get Code"
 msgstr ""
 
-msgid "Code"
+msgid "Verify Code Login/ Register"
+msgstr ""
+
+msgid "Password Login"
 msgstr ""
 
 msgid "Phone Number / email"
 msgstr ""
 
-msgid "Verify Code Login/ Register"
+msgid "Mobile Phone Number Error"
 msgstr ""
 
-msgid "Password Login"
+msgid "Email Address Error"
 msgstr ""
 
 msgid "Verify code is incorrect"
@@ -10811,9 +10769,6 @@ msgid "Register"
 msgstr ""
 
 msgid "Forget Password"
-msgstr ""
-
-msgid "Account or Password Input Error"
 msgstr ""
 
 msgid "Machine Type"

@@ -48,6 +48,7 @@
 #include <wx/event.h>
 #include "TitleDialog.hpp"
 #include "FlashForge/MultiComDef.hpp"
+#include "MsgDialog.hpp"
 
 namespace Slic3r {
 namespace GUI {
@@ -68,7 +69,7 @@ public:
     MultiSend(wxWindow* event_handler, int sync_num = 5);
     ~MultiSend();
 
-    bool send_to_printer(int plate_idx, const com_id_list_t& com_ids, bool send_and_print, bool leveling);
+    bool send_to_printer(int plate_idx, const com_id_list_t& com_ids, const std::string& job_name, bool send_and_print, bool leveling);
     void cancel();
     
     bool get_multi_send_result(std::map<com_id_t, Result>& result);
@@ -102,6 +103,7 @@ private:
     wxWindow*       m_event_handler {nullptr};
     std::string     m_slice_path;
     std::string     m_thumb_path;
+    std::string     m_slice_job_name;
     std::deque<com_id_t>            m_printers;
     std::map<com_id_t, ResultInfo>  m_send_jobs;
     std::shared_ptr<ExportSliceJob> m_export_job;
@@ -252,7 +254,8 @@ private:
 
     wxColour							m_colour_def_color{ wxColour(255, 255, 255) };
     wxColour							m_colour_bold_color{ wxColour(38, 46, 48) };
-    wxTimer*                            m_redirect_timer;
+    wxTimer*                            m_redirect_timer {nullptr};
+    MessageDialog*                      m_msg_window {nullptr};
     bool                                m_send_error {false};
    
 public:

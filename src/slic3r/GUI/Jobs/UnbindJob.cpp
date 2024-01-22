@@ -7,11 +7,9 @@ namespace Slic3r {
 namespace GUI {
 
 wxDEFINE_EVENT(EVT_UNBIND_MACHINE_COMPLETED, wxCommandEvent);
-UnbindJob::UnbindJob(DeviceObject* dev_obj, const std::string &serialNumber, const std::string &dev_id)
+UnbindJob::UnbindJob(DeviceObject* dev_obj)
     : PlaterJob{nullptr, wxGetApp().plater()}
     , m_dev_obj(dev_obj)
-    , m_serial_number(serialNumber)
-    , m_dev_id(dev_id)
 {
 }
 
@@ -32,9 +30,14 @@ void UnbindJob::on_success(std::function<void()> success)
 
 void UnbindJob::process()
 {
-    if (!m_dev_obj || m_serial_number.empty() || m_dev_id.empty()) {
-        BOOST_LOG_TRIVIAL(error) << "UnbindJob: Invalid parameter: serial_number(" << m_serial_number
-            << "), dev_id(" << m_dev_id << ")";
+    DeviceObjectOpr *devOpr = wxGetApp().getDeviceObjectOpr();
+    if (!devOpr || !m_dev_obj) {
+        if (!devOpr) {
+            BOOST_LOG_TRIVIAL(error) << "UnbindJob: Invalid parameter: device object opr is null";
+        }
+        if (!m_dev_obj) {
+            BOOST_LOG_TRIVIAL(error) << "UnbindJob: Invalid parameter: device object is null";
+        }
         wxCommandEvent event(EVT_UNBIND_MACHINE_COMPLETED);
         event.SetInt(-1);
         event.SetEventObject(m_event_handle);
@@ -42,7 +45,7 @@ void UnbindJob::process()
         return;
     }
 
-    ComErrno result = m_dev_obj->unbind_wan_machine(m_serial_number, m_dev_id);
+    ComErrno result = devOpr->unbind_wan_machine(m_dev_obj);
     wxCommandEvent event(EVT_UNBIND_MACHINE_COMPLETED);
     event.SetInt(result);
     event.SetEventObject(m_event_handle);

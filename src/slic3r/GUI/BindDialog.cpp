@@ -171,7 +171,7 @@ BindMachineDialog::BindMachineDialog()
     m_machine_sizer->Add(m_printer_name, 0, wxALIGN_CENTER, 0);
     m_machine_sizer->AddStretchSpacer(1);
 
-    m_user_name = new wxStaticText(m_normal_panel, wxID_ANY, _("No Name"), wxDefaultPosition, wxDefaultSize);
+    m_user_name = new wxStaticText(m_normal_panel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize);
     m_user_name->SetForegroundColour(wxColor("#333333"));
     m_user_name->SetMaxSize(wxSize(FromDIP(350), -1));
     m_user_name->Wrap(FromDIP(350));
@@ -196,7 +196,7 @@ BindMachineDialog::BindMachineDialog()
 
     m_bind_text = new wxStaticText(m_normal_panel, wxID_ANY, _L("Would you like to log out the printer?"));
     m_bind_text->SetForegroundColour(wxColour("#333333"));
-    m_bind_text->SetFont(GetFont());
+    m_bind_text->SetFont(::Label::Body_14);
     m_bind_text->Wrap(-1);
 
     // agreement
@@ -238,7 +238,7 @@ BindMachineDialog::BindMachineDialog()
     m_panel_agreement->SetSizer(sizer_privacy_body);
     m_panel_agreement->Layout();
     
-    m_bind_btn = new FFButton(m_normal_panel, wxID_ANY, _("Confirm"), 4, false);
+    m_bind_btn = new FFButton(m_normal_panel, wxID_ANY, _L("Confirm"), 4, false);
     m_bind_btn->SetFontUniformColor(wxColour("#ffffff"));
     m_bind_btn->SetBGColor(wxColour("#419488"));
     m_bind_btn->SetBGHoverColor(wxColour("#65A79E"));
@@ -247,7 +247,7 @@ BindMachineDialog::BindMachineDialog()
     m_bind_btn->SetSize(-1, FromDIP(30));
     m_bind_btn->SetMinSize(wxSize(100, FromDIP(30)));
     m_bind_btn->Enable(false);
-    m_cancel_btn = new FFButton(m_normal_panel, wxID_ANY, _("Cancel"), 4, true);
+    m_cancel_btn = new FFButton(m_normal_panel, wxID_ANY, _L("Cancel"), 4, true);
     m_cancel_btn->SetFontColor(wxColour("#333333"));
     m_cancel_btn->SetFontHoverColor(wxColour("#65A79E"));
     m_cancel_btn->SetFontPressColor(wxColour("#1A8676"));
@@ -283,7 +283,7 @@ BindMachineDialog::BindMachineDialog()
     // result panel
     m_result_panel = new wxPanel(m_simplebook);    
     m_result_text = new wxStaticText(m_result_panel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
-    m_result_btn = new FFButton(m_result_panel, wxID_ANY, _("OK"), 4, false);
+    m_result_btn = new FFButton(m_result_panel, wxID_ANY, _L("OK"), 4, false);
     m_result_btn->SetFontUniformColor(*wxWHITE);
     m_result_btn->SetBGColor(wxColour("#419488"));
     m_result_btn->SetBGHoverColor(wxColour("#65A79E"));
@@ -386,7 +386,7 @@ void BindMachineDialog::on_close(wxCloseEvent &event)
 void BindMachineDialog::on_bind_fail(wxCommandEvent &event)
 {
     m_result_code = event.GetInt();
-    m_result_text->SetLabel(_("The device is registered fail!"));
+    m_result_text->SetLabel(_L("The device is registered fail!"));
     m_result_text->SetForegroundColour(wxColor("#EA3522"));
     m_result_sizer->Layout();
     m_simplebook->SetSelection(1);
@@ -397,7 +397,7 @@ void BindMachineDialog::on_bind_fail(wxCommandEvent &event)
 void BindMachineDialog::on_bind_success(wxCommandEvent &event)
 {
     m_result_code = 0;
-    m_result_text->SetLabel(_("The device is registered successfully!"));
+    m_result_text->SetLabel(_L("The device is registered successfully!"));
     m_result_text->SetForegroundColour(wxColor("#419488"));
     m_result_sizer->Layout();
     m_simplebook->SetSelection(1);
@@ -518,7 +518,7 @@ UnBindMachineDialog::UnBindMachineDialog()
     m_machine_sizer->Add(m_printer_name, 0, wxALIGN_CENTER, 0);
     m_machine_sizer->AddStretchSpacer(1);
 
-    m_user_name = new wxStaticText(this, wxID_ANY, _("No Name"), wxDefaultPosition, wxDefaultSize);
+    m_user_name = new wxStaticText(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize);
     m_user_name->SetForegroundColour(wxColor("#333333"));
     m_user_name->SetMaxSize(wxSize(FromDIP(350), -1));
     m_user_name->Wrap(FromDIP(350));
@@ -543,10 +543,10 @@ UnBindMachineDialog::UnBindMachineDialog()
 
     m_unbind_text = new wxStaticText(this, wxID_ANY, _L("Would you like to log out the printer?"));
     m_unbind_text->SetForegroundColour(wxColour("#333333"));
-    m_unbind_text->SetFont(GetFont());
+    m_unbind_text->SetFont(::Label::Body_14);
     m_unbind_text->Wrap(-1);
     
-    m_unbind_btn = new FFButton(this, wxID_ANY, _("Confirm"), 4, false);
+    m_unbind_btn = new FFButton(this, wxID_ANY, _L("Confirm"), 4, false);
     m_unbind_btn->SetFontUniformColor(wxColour("#ffffff"));
     m_unbind_btn->SetBGColor(wxColour("#419488"));
     m_unbind_btn->SetBGHoverColor(wxColour("#65A79E"));
@@ -554,7 +554,7 @@ UnBindMachineDialog::UnBindMachineDialog()
     m_unbind_btn->SetBGDisableColor(wxColour("#dddddd"));
     m_unbind_btn->SetSize(-1, FromDIP(30));
     m_unbind_btn->SetMinSize(wxSize(100, FromDIP(30)));
-    m_cancel_btn = new FFButton(this, wxID_ANY, _("Cancel"), 4, true);
+    m_cancel_btn = new FFButton(this, wxID_ANY, _L("Cancel"), 4, true);
     m_cancel_btn->SetFontColor(wxColour("#333333"));
     m_cancel_btn->SetFontHoverColor(wxColour("#65A79E"));
     m_cancel_btn->SetFontPressColor(wxColour("#1A8676"));
@@ -664,13 +664,13 @@ void UnBindMachineDialog::on_unbind_completed(wxCommandEvent &event)
     m_result_code = event.GetInt();
     if (m_result_code == COM_OK) {
         BOOST_LOG_TRIVIAL(info) << "unbind success";
-        //m_result_text->SetLabel(_("The device is registered successfully!"));
+        //m_result_text->SetLabel(_L("The device is registered successfully!"));
         //m_result_text->SetForegroundColour(wxColor("#419488"));
         //m_result_sizer->Layout();
         //m_simplebook->SetSelection(1);
         EndModal(wxID_OK);
     } else {
-        //m_result_text->SetLabel(_("The device is registered fail!"));
+        //m_result_text->SetLabel(_L("The device is registered fail!"));
         //m_result_text->SetForegroundColour(wxColor("#EA3522"));
         //m_result_sizer->Layout();
         //m_simplebook->SetSelection(1);
@@ -688,19 +688,9 @@ void UnBindMachineDialog::on_unbind_printer(wxCommandEvent &event)
         BOOST_LOG_TRIVIAL(error) << "device_info is null"; 
         return;
     }
-
-    std::string serial_no = m_device_info->get_dev_id();
-    std::string dev_id = m_device_info->get_wan_dev_id();
-    if (serial_no.empty() || dev_id.empty()) {
-        BOOST_LOG_TRIVIAL(error) << "dev_id is empty or dev_id is 0";  
-        return;
-    }
-    ComErrno result = MultiComMgr::inst()->unbindWanDev(serial_no, dev_id);
-    EndModal(result == COM_OK ? wxID_OK : wxID_CANCEL);
-   
-    //m_unbind_job = std::make_shared<UnbindJob>(serial_no, dev_id);
-    //m_unbind_job->set_event_handle(this);
-    //m_unbind_job->start();
+    m_unbind_job = std::make_shared<UnbindJob>(m_device_info);
+    m_unbind_job->set_event_handle(this);
+    m_unbind_job->start();
 }
 
 void UnBindMachineDialog::on_dpi_changed(const wxRect &suggested_rect)
