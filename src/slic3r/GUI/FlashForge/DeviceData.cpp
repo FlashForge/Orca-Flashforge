@@ -26,6 +26,16 @@ DeviceObject::DeviceObject(const fnet_lan_dev_info &devInfo)
     m_bind_state = "free";
 }
 
+DeviceObject::DeviceObject(const device_wan_info &wanInfo)
+    : m_lan_info(nullptr)
+    , m_is_online(true)
+{
+    m_wan_info = new device_wan_info(wanInfo);
+    m_dev_id = m_wan_info->serialNum;
+    m_dev_name   = m_wan_info->name;
+    m_bind_state = "free";
+}
+
 bool DeviceObject::is_lan_mode_in_scan_print()
 {
     if (m_lan_info == nullptr)
@@ -146,19 +156,18 @@ string DeviceObject::get_dev_id()
 
 unsigned short DeviceObject::get_dev_pid()
 {
-    if (m_lan_info == nullptr)
-        return 0;
-    return m_lan_info->pid;
+    if (m_lan_info != nullptr)
+        return m_lan_info->pid;
+    else if (m_wan_info != nullptr)
+        return m_wan_info->pid;
+    return 0;
 }
 
 string DeviceObject::get_wan_dev_id()
 {
-    return m_bind_dev_id;
-}
-
-void DeviceObject::set_wan_dev_id(const string &devId)
-{
-    m_bind_dev_id = devId;
+    if(m_wan_info == nullptr)
+        return "";
+    return m_wan_info->bind_dev_id;
 }
 
 bool DeviceObject::is_in_printing_status(const string& status)
@@ -511,10 +520,13 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
         string macSN = data.wanDevInfo.serialNumber;
         auto   it    = m_user_devices.find(macSN);
         if (it == m_user_devices.end()) {
-            DeviceObject *devObj = new DeviceObject(macSN, data.wanDevInfo.name);
+            device_wan_info wanInfo;
+            wanInfo.name = data.wanDevInfo.name;
+            wanInfo.bind_dev_id = data.wanDevInfo.devId;
+            wanInfo.pid = data.devDetail->pid;
+            wanInfo.serialNum = data.wanDevInfo.serialNumber;
+            DeviceObject *devObj = new DeviceObject(wanInfo);
             devObj->set_connection_type(CONNECTTYPE_CLOUD);
-            devObj->set_online_state(true);
-            devObj->set_wan_dev_id(data.wanDevInfo.devId);
             devObj->set_connecting(false);
             devObj->set_connected_ready(true);
             m_user_devices.emplace(make_pair(macSN, devObj));
