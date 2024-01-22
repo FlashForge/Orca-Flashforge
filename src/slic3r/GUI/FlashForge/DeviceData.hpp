@@ -41,6 +41,7 @@ public:
     DeviceObject(const string& dev_id, const string& dev_name);
     DeviceObject(const fnet_lan_dev_info &devInfo);
     DeviceObject(const device_wan_info &wanInfo);
+    ~DeviceObject();
 
     bool        is_lan_mode_in_scan_print();
     bool        is_lan_mode_printer();
