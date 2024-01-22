@@ -27,11 +27,20 @@ enum ActiveState {
     UpdateToDate
 };
 
+struct device_wan_info
+{
+    string name;
+    string bind_dev_id;
+    int pid;
+    string serialNum;
+};
+
 class DeviceObject
 {
 public:
     DeviceObject(const string& dev_id, const string& dev_name);
     DeviceObject(const fnet_lan_dev_info &devInfo);
+    DeviceObject(const device_wan_info &wanInfo);
 
     bool        is_lan_mode_in_scan_print();
     bool        is_lan_mode_printer();
@@ -59,7 +68,6 @@ public:
     string      get_dev_id();  // serialNumber
     unsigned short     get_dev_pid();
     string      get_wan_dev_id();
-    void        set_wan_dev_id(const string &devId);
 
     static bool is_in_printing_status(const string& status);
     void        set_print_state(const string &status);
@@ -77,9 +85,9 @@ public:
 
 private:
     fnet_lan_dev_info *m_lan_info { nullptr };
+    device_wan_info   *m_wan_info { nullptr };
     string             m_dev_id;
     string             m_dev_name;
-    string             m_bind_dev_id; /*used in bind or unbind */
 
     string              m_user_access_code;
     string              m_bind_state; /* free | occupied */
