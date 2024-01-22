@@ -36,6 +36,19 @@ DeviceObject::DeviceObject(const device_wan_info &wanInfo)
     m_bind_state = "free";
 }
 
+DeviceObject::~DeviceObject()
+{
+    if (m_lan_info != nullptr) {
+        delete m_lan_info;
+        m_lan_info = nullptr;
+    }
+
+    if (m_wan_info != nullptr) {
+        delete m_wan_info;
+        m_wan_info = nullptr;
+    }
+}
+
 bool DeviceObject::is_lan_mode_in_scan_print()
 {
     if (m_lan_info == nullptr)
