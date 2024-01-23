@@ -1492,10 +1492,8 @@ msgstr "请检查打印机和工作室的网络连接"
 msgid "Connecting..."
 msgstr "连接中..."
 
-#, fuzzy
-#| msgid "Connect failed [%d]!"
 msgid "Connected Failed."
-msgstr "连接失败 [%d]！"
+msgstr "连接失败！"
 
 msgid "?"
 msgstr "?"
@@ -3131,20 +3129,16 @@ msgstr "连接打印机（局域网）"
 msgid "Please input the printer access code:"
 msgstr "请输入打印机访问码："
 
-#, fuzzy
-#| msgid ""
-#| "You can find it in \"Settings > Network > Connection code\"\n"
-#| "on the printer, as shown in the figure:"
 msgid ""
 "You can find it in \"Settings > Network > Connection code\"\n"
 "on the printer; To facilitate device identification, \n"
 "you can change the device name on the device page."
 msgstr ""
-"你可以在打印机“设置->网络->连接->访问码\"\n"
-"查看，如下图所示："
+"你可以在打印机“设置->网络->连接模式\"\\查看；\n"
+"为方便识别设备，可在设备界面端修改设备名称；"
 
 msgid "The access code is wrong, please input again."
-msgstr ""
+msgstr "识别码输入错误，请重新输入。"
 
 msgid "Invalid input."
 msgstr "非法输入"
@@ -5306,10 +5300,8 @@ msgstr "输入访问码"
 msgid "Online"
 msgstr "在线"
 
-#, fuzzy
-#| msgid "Are you sure you want to cancel this print?"
 msgid "Are you sure to unbind this device?"
-msgstr "你确定要取消这次打印吗？"
+msgstr "确认移除设备吗？"
 
 msgid "Log out successful."
 msgstr "登出成功。"
@@ -5555,11 +5547,6 @@ msgstr "未连接打印机，请先连接设备"
 #| msgid "Are you sure you want to cancel this print?"
 msgid "Sending task, do you want to cancel it?"
 msgstr "你确定要取消这次打印吗？"
-
-#, fuzzy
-#| msgid "Untitled"
-msgid "Untitled.3mf"
-msgstr "未命名"
 
 #, fuzzy
 #| msgid "Preparing print job"
@@ -11633,6 +11620,11 @@ msgid ""
 "clogging when printing lower temperature filament with a higher enclosure "
 "temperature. More info about this in the Wiki."
 msgstr ""
+
+#, fuzzy
+#~| msgid "Untitled"
+#~ msgid "Untitled.3mf"
+#~ msgstr "未命名"
 
 #~ msgid "Send to Printer SD card"
 #~ msgstr "发送到打印机的SD卡"

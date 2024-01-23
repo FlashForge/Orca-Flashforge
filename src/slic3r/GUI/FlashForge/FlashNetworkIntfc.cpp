@@ -9,7 +9,7 @@
 
 namespace fnet {
 
-FlashNetworkIntfc::FlashNetworkIntfc(const char *libraryPath, const char *logFileName)
+FlashNetworkIntfc::FlashNetworkIntfc(const char *libraryPath, const char *logFileDir, int expireHours)
     : m_isOk(false)
 {
     library_handle_t libraryHandle = loadLibrary(libraryPath);
@@ -49,7 +49,7 @@ FlashNetworkIntfc::FlashNetworkIntfc(const char *libraryPath, const char *logFil
     INIT_FUNC_PTR(getWanDevDetail, fnet_getWanDevDetail);
     INIT_FUNC_PTR(freeDevDetail, fnet_freeDevDetail);
     INIT_FUNC_PTR(wanDevSendGcode, fnet_wanDevSendGcode);
-    if (initlize(logFileName) == FNET_OK) {
+    if (initlize(logFileDir, expireHours) == FNET_OK) {
         m_isOk = true;
     }
 }

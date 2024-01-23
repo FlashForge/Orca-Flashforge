@@ -454,12 +454,6 @@ DeviceObject* DeviceObjectOpr::get_scan_device(const string& dev_id)
 
 void DeviceObjectOpr::get_my_machine_list_v2(map<string, DeviceObject*>& devList)
 {
-    for (auto it = m_user_devices.begin(); it != m_user_devices.end(); it++) {
-        if (!it->second)
-            continue;
-        devList.insert(make_pair(it->first, it->second));
-    }
-
     for (auto it = m_scan_devices.begin(); it != m_scan_devices.end(); it++) {
         if (!it->second)
             continue;
