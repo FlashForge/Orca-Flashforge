@@ -274,6 +274,8 @@ void DeviceObjectOpr::update_scan_machine()
     MultiComUtils::getLanDevList(devInfos);
 
     for (auto &elem : devInfos) {
+        if (elem.connectMode == 1)
+            continue;
         string        dev_id = elem.serialNumber;
         DeviceObject *devObj = new DeviceObject(elem);
         devObj->set_connection_type(CONNECTTYPE_LAN);
@@ -509,8 +511,7 @@ void DeviceObjectOpr::onConnectExit(ComConnectionExitEvent &event)
                 // do nothing, this device still belongs to other device. (Including exit successfully)
             }
         } else {
-            auto local_it = m_local_devices.find(m_selected_machine);
-            if (event.ret == COM_VERIFY_LAN_DEV_FAILED && local_it != m_local_devices.end()) {
+            if (event.ret == COM_VERIFY_LAN_DEV_FAILED) {
                 // notify the device access code has changed, this device should unbind and move to other device.
                 unbind_lan_machine(devObj);
             } else {
@@ -552,7 +553,7 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
         DeviceObject *userObj = nullptr;
         auto it = m_user_devices.find(m_selected_machine);
         if (it == m_user_devices.end()) {
-            userObj = new DeviceObject(*devObj);
+            userObj = new DeviceObject(*devObj->get_lan_dev_info());
             userObj->set_user_access_code(devObj->get_user_access_code(true));
             m_user_devices.emplace(make_pair(m_selected_machine, userObj));
 
