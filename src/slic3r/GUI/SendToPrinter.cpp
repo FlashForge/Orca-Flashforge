@@ -603,7 +603,7 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/)
     line_level->SetBackgroundColour(wxColour("#DDDDDD"));
 
     m_levelCkb = new FFCheckBox(this);
-    m_levelCkb->SetValue(true);
+    m_levelCkb->SetValue(false);
     m_levelLbl = new wxStaticText(this, wxID_ANY, _L("Levelling"));
     m_levelLbl->SetForegroundColour(wxColour("#333333"));
 
