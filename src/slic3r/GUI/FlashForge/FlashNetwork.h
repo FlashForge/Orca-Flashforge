@@ -11,13 +11,36 @@
 #define FNET_API
 #endif
 
+
 #define MAX_DEVICE_SN_LEN 128
 #define MAX_DEVICE_NAME_LEN 128
 
+struct fnet_connection_read_data;
+typedef struct fnet_connection_read_data fnet_connection_read_data_t;
+
 // returning a non-zero value from the callback aborts the transfer
-typedef int (*fnet_progress_call_back_t)(long long now, long long total, void *data);
+typedef int (*fnet_progress_callback_t)(long long now, long long total, void *data);
+
+// returning a non-zero value from the callback stop the event loop
+typedef int (*fnet_read_callback_t)(fnet_connection_read_data_t *readData, void *data);
+
+// returning a non-zero value from the callback stop the event loop
+typedef int (*fnet_error_callback_t)(int code, void *data);
+
 
 #pragma pack(push, 4)
+
+typedef enum fnet_connection_write_data_type {
+    FNET_CONNECTION_WRITE_SUBSCRIBE_DEVICE,
+    FNET_CONNECTION_WRITE_BIND_DEVICE,
+    FNET_CONNECTION_WRITE_UNBIND_DEVICE,
+} fnet_connection_write_data_type_t;
+
+typedef enum fnet_connection_read_data_type {
+    FNET_CONNECTION_READ_DEVICE_DETAIL,
+    FNET_CONNECTION_READ_BIND_DEVICE,
+    FNET_CONNECTION_READ_UNBIND_DEVICE,
+} fnet_connection_read_data_type_t;
 
 typedef struct fnet_send_gcode_data {
     const char *gcodeFilePath;  // utf-8
@@ -25,9 +48,22 @@ typedef struct fnet_send_gcode_data {
     const char *gcodeDstName;   // utf-8
     int printNow;               // 1 true, 0 false
     int levelingBeforePrint;    // 1 true, 0 false
-    fnet_progress_call_back_t callback;
+    fnet_progress_callback_t callback;
     void *callbackData;
 } fnet_send_gcode_data_t;
+
+typedef struct fnet_connection_settings {
+    fnet_read_callback_t readCallback;
+    void *readCallbackData;
+    fnet_error_callback_t errorCallback;
+    void *errorCallbackData;
+    int msTimeOut;
+} fnet_connection_settings_t;
+
+typedef struct fnet_connection_write_data {
+    fnet_connection_write_data_type_t type;
+    void *data;
+} fnet_connection_write_data_t;
 
 typedef struct fnet_lan_dev_info {
     char serialNumber[MAX_DEVICE_SN_LEN];
@@ -130,6 +166,11 @@ typedef struct fnet_dev_detail {
     char *errorCode;
 } fnet_dev_detail_t;
 
+typedef struct fnet_connection_read_data {
+    fnet_connection_read_data_type_t type;
+    void *data;
+} fnet_connection_read_data_t;
+
 #pragma pack(pop)
 
 
@@ -146,11 +187,11 @@ typedef struct fnet_dev_detail {
 extern "C" {
 #endif
 
-FNET_API int fnet_initlize(const char *logFileName);
+FNET_API int fnet_initlize(const char *logFileDir, int expireHours);
 
 FNET_API void fnet_uninitlize();
 
-FNET_API const char *fnet_getVersion();
+FNET_API const char *fnet_getVersion(); // 1.0.0
 
 FNET_API int fnet_getLanDevList(fnet_lan_dev_info_t **infos, int *devCnt, int msWaitTime);
 
@@ -165,7 +206,7 @@ FNET_API int fnet_lanDevSendGcode(const char *ip, unsigned short port, const cha
     const char *checkCode, const fnet_send_gcode_data_t *sendGcodeData, int msTimeout);
 
 FNET_API int fnet_downloadFile(const char *url, fnet_file_data_t **fileData,
-    fnet_progress_call_back_t callback, void *callbackData, int msTimeout);
+    fnet_progress_callback_t callback, void *callbackData, int msTimeout);
 
 FNET_API void fnet_freeFileData(fnet_file_data_t *fileData);
 
@@ -213,6 +254,16 @@ FNET_API int fnet_getWanDevDetail(const char *accessToken, const char *devId,
 
 FNET_API int fnet_wanDevSendGcode(const char *accessToken, const char *devId,
     const fnet_send_gcode_data_t *sendGcodeData, int msTimeout);
+
+FNET_API int fnet_openConnection(void **connection, int msTimeout);
+
+FNET_API void fnet_closeConnection(void *connection); // called in another thread
+
+FNET_API void fnet_connectionRun(void *connection,
+    const fnet_connection_settings_t *settings); // run event processing loop
+
+FNET_API void fnet_connectionPost(void *connection,
+    const fnet_connection_write_data_t *writeData); // called in another thread
 
 #ifdef __cplusplus
 }

@@ -56,8 +56,6 @@ private:
 
     typedef boost::bimap<com_id_t, ComConnection*>::value_type com_ptr_map_val_t;
 
-    std::string initLogFiles(const std::string &logFileDir);
-
     void initConnection(const com_ptr_t &comPtr, const com_dev_data_t &devData);
 
     void onWanDevMaintian(const ComWanDevMaintainEvent &event);
