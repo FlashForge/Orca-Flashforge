@@ -427,22 +427,17 @@ SelectMachinePopup::SelectMachinePopup(wxWindow *parent)
     Bind(wxEVT_TIMER, &SelectMachinePopup::on_timer, this);
     Bind(EVT_DISSMISS_MACHINE_LIST, &SelectMachinePopup::on_dissmiss_win, this);
 
-    MultiComMgr::inst()->Bind(COM_CONNECTION_EXIT_EVENT, [this](ComConnectionExitEvent &event) {
-        if (this->IsShown() && m_refresh_timer && !m_refresh_timer->IsRunning()) {
-            m_refresh_timer->Start(MACHINE_LIST_REFRESH_INTERVAL);
-        }
-        event.Skip();
-    });
-
-    MultiComMgr::inst()->Bind(COM_CONNECTION_READY_EVENT, [this](ComConnectionReadyEvent &event) {
-        if (this->IsShown() && m_refresh_timer && !m_refresh_timer->IsRunning()) {
-            m_refresh_timer->Start(MACHINE_LIST_REFRESH_INTERVAL);
-        }
-        event.Skip();
-    });
+    MultiComMgr::inst()->Bind(COM_CONNECTION_EXIT_EVENT, &SelectMachinePopup::on_connect_exit, this);
+    MultiComMgr::inst()->Bind(COM_CONNECTION_READY_EVENT, &SelectMachinePopup::on_connect_ready, this);
 }
 
-SelectMachinePopup::~SelectMachinePopup() { delete m_refresh_timer;}
+SelectMachinePopup::~SelectMachinePopup()
+{
+    delete m_refresh_timer;
+    m_refresh_timer = nullptr;
+    MultiComMgr::inst()->Unbind(COM_CONNECTION_EXIT_EVENT, &SelectMachinePopup::on_connect_exit, this);
+    MultiComMgr::inst()->Unbind(COM_CONNECTION_READY_EVENT, &SelectMachinePopup::on_connect_ready, this);
+}
 
 void SelectMachinePopup::Popup(wxWindow *WXUNUSED(focus))
 {
@@ -532,6 +527,22 @@ wxWindow *SelectMachinePopup::create_title_panel(wxString text)
     panel_title->SetSizer(sizer_title);
     panel_title->Layout();
     return panel_title;
+}
+
+void SelectMachinePopup::on_connect_exit(ComConnectionExitEvent &event)
+{
+    if (this->IsShown() && m_refresh_timer && !m_refresh_timer->IsRunning()) {
+        m_refresh_timer->Start(MACHINE_LIST_REFRESH_INTERVAL);
+    }
+    event.Skip();
+}
+
+void SelectMachinePopup::on_connect_ready(ComConnectionReadyEvent &event)
+{
+    if (this->IsShown() && m_refresh_timer && !m_refresh_timer->IsRunning()) {
+        m_refresh_timer->Start(MACHINE_LIST_REFRESH_INTERVAL);
+    }
+    event.Skip();
 }
 
 void SelectMachinePopup::on_timer(wxTimerEvent &event)
