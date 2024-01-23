@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: Slic3rPE\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2024-01-22 16:29+0800\n"
-"PO-Revision-Date: 2024-01-22 16:52+0800\n"
+"PO-Revision-Date: 2024-01-23 10:42+0800\n"
 "Last-Translator: SoftFever <softfeverever@gmail.com>\n"
 "Language-Team: \n"
 "Language: zh_CN\n"
@@ -5541,20 +5541,14 @@ msgstr "发送打印任务至"
 msgid "Levelling"
 msgstr "调平"
 
-#, fuzzy
-#| msgid "Select Plate"
 msgid "Select Printer"
-msgstr "选择盘"
+msgstr "选择打印机"
 
-#, fuzzy
-#| msgid "Network lookup"
 msgid "Network"
-msgstr "搜索网络"
+msgstr "外网"
 
-#, fuzzy
-#| msgid "and"
 msgid "Lan"
-msgstr "和"
+msgstr "局域网"
 
 msgid "No printer connected, please connect printer first!"
 msgstr "未连接打印机，请先连接设备"
