@@ -70,6 +70,8 @@ bool MultiSend::send_to_printer(int plate_idx, const com_id_list_t& com_ids, con
         m_printers.emplace_back(id);
         m_send_jobs.emplace(id, ResultInfo{-1, false, Result_Ok, 0.0});
     }
+    //wxGetApp().plater()->export_gcode(m_slice_path, m_plate_idx);
+
     m_export_job = std::make_shared<ExportSliceJob>(wxGetApp().plater(), m_slice_path, m_thumb_path, m_plate_idx);
     m_export_job->set_event_handle(this);
     m_export_job->start();
@@ -609,22 +611,26 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/)
     levelSizer->Add(m_levelCkb, 0, wxLEFT | wxALIGN_LEFT, FromDIP(10));
     levelSizer->Add(m_levelLbl, 0, wxLEFT | wxALIGN_LEFT, FromDIP(10));
 
-    m_selectPrinterLbl = new wxStaticText(this, wxID_ANY, _L("Select Printer"));
-    m_wlanBtn = new FFToggleButton(this, _L("Network"));
+    wxPanel* network_panel = new wxPanel(this);
+    m_selectPrinterLbl = new wxStaticText(network_panel, wxID_ANY, _L("Select Printer"));
+    m_wlanBtn = new FFToggleButton(network_panel, _L("Network"));
     m_wlanBtn->SetWindowStyle(m_wlanBtn->GetWindowStyle() | wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL);
     Bind(wxEVT_TOGGLEBUTTON, &SendToPrinterDialog::onNetworkTypeToggled, this);
-    m_lanBtn = new FFToggleButton(this, _L("Lan"));
+    m_lanBtn = new FFToggleButton(network_panel, _L("Lan"));
     m_lanBtn->SetWindowStyle(m_wlanBtn->GetWindowStyle() | wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL);
     Bind(wxEVT_TOGGLEBUTTON, &SendToPrinterDialog::onNetworkTypeToggled, this);
-    auto networkLine = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(1, -1), wxTAB_TRAVERSAL);
+    auto networkLine = new wxPanel(network_panel, wxID_ANY, wxDefaultPosition, wxSize(1, -1), wxTAB_TRAVERSAL);
     networkLine->SetForegroundColour(wxColour("#DDDDDD"));
     networkLine->SetBackgroundColour(wxColour("#DDDDDD"));
 
     wxBoxSizer* networkSizer = new wxBoxSizer(wxHORIZONTAL);
-    networkSizer->Add(m_selectPrinterLbl, 1, wxLEFT | wxEXPAND | wxALIGN_LEFT, FromDIP(10));
+    networkSizer->Add(m_selectPrinterLbl, 0, wxLEFT | wxALIGN_LEFT | wxALIGN_BOTTOM, FromDIP(10));
+    networkSizer->AddStretchSpacer(1);
     networkSizer->Add(m_wlanBtn, 0, wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL | wxRIGHT, FromDIP(5));
     networkSizer->Add(networkLine, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(3));
     networkSizer->Add(m_lanBtn, 0, wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL | wxLEFT, FromDIP(5));
+    network_panel->SetSizer(networkSizer);
+    network_panel->Layout();
 
     // machine book
     m_machineBook = new wxSimplebook(this, wxID_ANY);
@@ -677,17 +683,20 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/)
     m_noMachineText->SetForegroundColour(wxColour("#FB4747"));
     m_noMachineText->SetMaxSize(wxSize(FromDIP(380), -1));
     wxBoxSizer* textSizer = new wxBoxSizer(wxHORIZONTAL);
+    textSizer->AddSpacer(FromDIP(10));
     textSizer->Add(m_noMachineBitmap, 0, wxALIGN_CENTER);
     textSizer->AddSpacer(FromDIP(10));
     textSizer->Add(m_noMachineText, 1, wxALIGN_CENTER_VERTICAL);
 
     auto noMachineSizer = new wxBoxSizer(wxVERTICAL);
     noMachineSizer->AddSpacer(FromDIP(10));
-    noMachineSizer->Add(m_machineLine, 0);
+    noMachineSizer->Add(m_machineLine, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(3));
     noMachineSizer->AddSpacer(FromDIP(20));
     noMachineSizer->Add(textSizer, 0, wxALIGN_LEFT);
+    noMachineSizer->AddSpacer(FromDIP(50));
     m_noMachinePanel->SetSizer(noMachineSizer);
     m_noMachinePanel->Layout();
+    //m_noMachinePanel->Fit();
     m_machineBook->AddPage(m_noMachinePanel, wxEmptyString, false);
 
     // send book: 0: send panel, 1: progress panel
@@ -764,7 +773,7 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/)
     m_sizer_main->AddSpacer(FromDIP(12));
     m_sizer_main->Add(line_level, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
     m_sizer_main->AddSpacer(FromDIP(12));
-    m_sizer_main->Add(networkSizer, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
+    m_sizer_main->Add(network_panel, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
     m_sizer_main->AddSpacer(FromDIP(12));
     m_sizer_main->Add(m_machineBook, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
     m_sizer_main->AddSpacer(FromDIP(10));
@@ -975,8 +984,7 @@ void SendToPrinterDialog::update_user_machine_list()
         for (auto id : idList) {
             auto data = MultiComMgr::inst()->devData(id, &valid);
             if (valid) {
-                if ((COM_CONNECT_WAN == data.connectMode && m_wlanBtn->GetValue())
-                    || (COM_CONNECT_LAN == data.connectMode && m_lanBtn->GetValue())) {
+                if (COM_CONNECT_WAN == data.connectMode || COM_CONNECT_LAN == data.connectMode) {
                     MachineItem::MachineData mdata;
                     mdata.flag = data.connectMode;
                     mdata.model = data.devDetail->model;
@@ -1049,11 +1057,19 @@ void SendToPrinterDialog::update_user_printer()
     Freeze();
     clear_machine_list();
     int index = 1;
+    bool wlanFlag = false, lanFlag = false;
     if (!m_machineListMap.empty()) {
         size_t cnt = m_machineListMap.size();
         size_t rows = (cnt + 1) / 2;
         m_machineListSizer->SetRows(rows);
         for (auto& m : m_machineListMap) {
+            if (m.second.flag == COM_CONNECT_WAN) {
+                wlanFlag = true;
+                if (!m_wlanBtn->GetValue()) continue;
+            } else if (m.second.flag == COM_CONNECT_LAN) {
+                lanFlag = true;
+                if (!m_lanBtn->GetValue()) continue;
+            }
             auto mitem = new MachineItem(m_machineListWindow, m.second);
             mitem->Bind(wxEVT_TOGGLEBUTTON, &SendToPrinterDialog::onMachineSelectionToggled, this);
             m_machineListSizer->Add(mitem, 1, wxEXPAND | wxALIGN_LEFT);
@@ -1069,10 +1085,27 @@ void SendToPrinterDialog::update_user_printer()
         m_machineListWindow->SetVirtualSize(-1, vh);
         m_machineListSizer->Layout();
         index = 0;
+    } else {
+        m_machineListWindow->SetSize(-1, 1);
+        m_machineListWindow->Layout();
+        m_noMachinePanel->Fit();
+        //m_machineBook->SetBackgroundColour(wxColour("#ff0000"));
     }
+    //m_wlanBtn->Enable(wlanFlag);
+    //m_lanBtn->Enable(lanFlag);
     if (m_machineBook->GetSelection()!= index) {
         m_machineBook->SetSelection(index);
-        //m_machineBook->Layout();
+        m_machineBook->InvalidateBestSize();
+        auto panel = m_machineBook->GetCurrentPage();
+        //auto sz = panel->GetBestSize().GetHeight();
+        //m_machineBook->SetSize(-1, panel->GetBestSize().GetHeight());
+        panel->Layout();
+        panel->Fit();
+        auto sz = panel->GetBestSize();
+        m_machineBook->SetSize(-1, sz.GetHeight());
+        m_machineBook->SetMaxSize(wxSize(-1, sz.GetHeight()));
+        m_machineBook->Layout();
+        m_machineBook->Fit();
     }
     //m_machineBook->Layout();
     //m_sendPanel->Layout();
@@ -1183,6 +1216,7 @@ void SendToPrinterDialog::on_dpi_changed(const wxRect &suggested_rect)
 void SendToPrinterDialog::set_default()
 {
     //project name
+    m_is_in_sending_mode = false;
     m_wlanBtn->SetValue(true);
     m_lanBtn->SetValue(true);
     m_rename_switch_panel->SetSelection(0);
@@ -1316,7 +1350,7 @@ void SendToPrinterDialog::on_close(wxCloseEvent& event)
 void SendToPrinterDialog::onNetworkTypeToggled(wxCommandEvent& event)
 {
     if (event.GetId() == m_wlanBtn->GetId() || event.GetId() == m_lanBtn->GetId()) {
-        update_user_machine_list();
+        update_user_printer();
     }
 }
 
