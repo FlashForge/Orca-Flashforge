@@ -70,6 +70,8 @@ bool MultiSend::send_to_printer(int plate_idx, const com_id_list_t& com_ids, con
         m_printers.emplace_back(id);
         m_send_jobs.emplace(id, ResultInfo{-1, false, Result_Ok, 0.0});
     }
+    //wxGetApp().plater()->export_gcode(m_slice_path, m_plate_idx);
+
     m_export_job = std::make_shared<ExportSliceJob>(wxGetApp().plater(), m_slice_path, m_thumb_path, m_plate_idx);
     m_export_job->set_event_handle(this);
     m_export_job->start();
@@ -1183,6 +1185,7 @@ void SendToPrinterDialog::on_dpi_changed(const wxRect &suggested_rect)
 void SendToPrinterDialog::set_default()
 {
     //project name
+    m_is_in_sending_mode = false;
     m_wlanBtn->SetValue(true);
     m_lanBtn->SetValue(true);
     m_rename_switch_panel->SetSelection(0);

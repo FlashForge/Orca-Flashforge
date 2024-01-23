@@ -10954,10 +10954,10 @@ void Plater::send_gcode_legacy(int plate_idx, Export3mfProgressFn proFn)
             if (dlg.ShowModal() != wxID_OK)
                 return;
         }
-
         p->export_gcode(fs::path(), false, std::move(upload_job));
     }
 }
+
 int Plater::send_gcode(int plate_idx, Export3mfProgressFn proFn)
 {
     int result = 0;
@@ -10990,6 +10990,16 @@ int Plater::send_gcode(int plate_idx, Export3mfProgressFn proFn)
     result = export_3mf(p->m_print_job_data._3mf_path, strategy, plate_idx, proFn);
 
     return result;
+}
+
+void Plater::export_gcode(const std::string& path, int plate_idx/*=-1*/)
+{
+    DynamicPrintConfig* physical_printer_config = &Slic3r::GUI::wxGetApp().preset_bundle->printers.get_edited_preset().config;
+    if (! physical_printer_config/*|| p->model.objects.empty()*/) {
+        return;
+    }
+    PrintHostJob upload_job(physical_printer_config);
+    p->export_gcode(path, false, std::move(upload_job));
 }
 
 int Plater::export_config_3mf(int plate_idx, Export3mfProgressFn proFn)
