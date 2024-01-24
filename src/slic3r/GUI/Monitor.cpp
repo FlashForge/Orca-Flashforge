@@ -162,14 +162,14 @@ MonitorPanel::~MonitorPanel()
         page->SetFocus();
     }, m_tabpanel->GetId());
 
-    //m_status_add_machine_panel = new AddMachinePanel(m_tabpanel);
-    m_device_list_panel = new DeviceListPanel(m_tabpanel);
-    m_tabpanel->AddPage(m_device_list_panel, _L("Device List"), "", true);
+    m_status_add_machine_panel = new AddMachinePanel(m_tabpanel);
+    //m_device_list_panel = new DeviceListPanel(m_tabpanel);
+    m_tabpanel->AddPage(m_status_add_machine_panel, _L(""), "", true);
 
     //m_status_info_panel        = new StatusPanel(m_tabpanel);
     //m_tabpanel->AddPage(m_status_info_panel, _L("Device Status"), "", false);
-    m_status_info_panel_page   = new SingleDeviceState(m_tabpanel);
-    m_tabpanel->AddPage(m_status_info_panel_page, _L("Device Status"), "", false);
+    //m_status_info_panel_page   = new SingleDeviceState(m_tabpanel);
+    //m_tabpanel->AddPage(m_status_info_panel_page, _L("Device Status"), "", false);
 
     m_media_file_panel = new MediaFilePanel(m_tabpanel);
     //m_tabpanel->AddPage(m_media_file_panel, _L("SD Card"), "", false);
@@ -225,10 +225,10 @@ void MonitorPanel::msw_rescale()
     /* side_tool rescale */
     m_side_tools->msw_rescale();
     m_tabpanel->Rescale();
-    //m_status_add_machine_panel->msw_rescale();
-    m_device_list_panel->msw_rescale();
+    m_status_add_machine_panel->msw_rescale();
+    //m_device_list_panel->msw_rescale();
     //m_status_info_panel->msw_rescale();
-    m_status_info_panel_page->msw_rescale();
+    //m_status_info_panel_page->msw_rescale();
     m_media_file_panel->Rescale();
     m_upgrade_panel->msw_rescale();
     m_hms_panel->msw_rescale();
