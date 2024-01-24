@@ -78,6 +78,10 @@ bool DeviceObject::has_access_right()
 
 void DeviceObject::set_user_access_code(const string &code, bool only_refresh /* = true*/)
 {
+    if (code.empty()) {
+        m_user_access_code = " ";
+        return;
+    }
     m_user_access_code = code;
     if (only_refresh && !code.empty()) {
         AppConfig *config = GUI::wxGetApp().app_config;
@@ -485,6 +489,7 @@ void DeviceObjectOpr::clear_scan_machine()
 
 void DeviceObjectOpr::onConnectExit(ComConnectionExitEvent &event)
 {
+    event.Skip();
     DeviceObject *devObj = nullptr;
     auto          it     = m_scan_devices.find(m_selected_machine);
     if (it != m_scan_devices.end()) {
@@ -522,6 +527,7 @@ void DeviceObjectOpr::onConnectExit(ComConnectionExitEvent &event)
 
 void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
 {
+    event.Skip();
     int connectId = event.id ;
     const com_dev_data_t &data      = MultiComMgr::inst()->devData(connectId);
     if (data.connectMode == COM_CONNECT_WAN) {
