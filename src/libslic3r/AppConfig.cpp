@@ -1295,7 +1295,7 @@ void AppConfig::save_bind_machine_to_config(const std::string& dev_id, const std
             if (it_name != mac->end() && it_name->second == dev_name) {
                 return;  // no need to update or add
             }
-            it->second = dev_name;
+            it_name->second = dev_name;
             update = true;
             break;
         }
