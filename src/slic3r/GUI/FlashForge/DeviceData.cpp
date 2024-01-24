@@ -78,6 +78,10 @@ bool DeviceObject::has_access_right()
 
 void DeviceObject::set_user_access_code(const string &code, bool only_refresh /* = true*/)
 {
+    if (code.empty()) {
+        m_user_access_code = " ";
+        return;
+    }
     m_user_access_code = code;
     if (only_refresh && !code.empty()) {
         AppConfig *config = GUI::wxGetApp().app_config;
