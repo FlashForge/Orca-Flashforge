@@ -328,14 +328,14 @@ static void add_msg_content(wxWindow* parent, wxBoxSizer* content_sizer, wxStrin
 // ErrorDialog
 
 ErrorDialog::ErrorDialog(wxWindow *parent, const wxString &msg, bool monospaced_font)
-    : MsgDialog(parent, wxString::Format(_(L("%s error")), SLIC3R_APP_FULL_NAME), 
+    : MsgDialog(parent, wxString::Format(_(L("error"))), 
                         wxString::Format(_(L("%s has encountered an error")), SLIC3R_APP_FULL_NAME), wxOK)
 	, msg(msg)
 {
     add_msg_content(this, content_sizer, msg, monospaced_font);
 
 	// Use a small bitmap with monospaced font, as the error text will not be wrapped.
-    logo->SetBitmap(create_scaled_bitmap("Orca-Flashforge_192px.png", this, monospaced_font ? 48 : /*1*/ 84));
+    logo->SetBitmap(create_scaled_bitmap("Orca-Flashforge_32px.png", this, monospaced_font ? 48 : 32));
 
     SetMaxSize(wxSize(-1, CONTENT_MAX_HEIGHT*wxGetApp().em_unit()));
 
