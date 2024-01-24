@@ -306,7 +306,7 @@ public:
         memDc.SetTextForeground(StateColor::darkModeColorFor(wxColor(134, 134, 134)));
         memDc.DrawLabel(m_constant_text.version, version_rect, wxALIGN_LEFT | wxALIGN_BOTTOM);
 
-        auto bs_version = wxString::Format("Based on BambuStudio and PrusaSlicer").ToStdString();
+        auto bs_version = wxString::Format(_L("Based on BambuStudio and PrusaSlicer")).ToStdString();
         memDc.SetFont(Label::Body_12);
         wxSize text_rect = memDc.GetTextExtent(bs_version);
         int start_x = (title_rect.GetLeft() + version_rect.GetRight()) / 2 - text_rect.GetWidth()/2;
@@ -321,7 +321,7 @@ public:
         int logo_width = FromDIP(94 * m_scale);
         wxBitmap logo_bmp = *bmp_cache.load_svg("splash_logo", logo_size, logo_size);
         int logo_y = top_margin + title_rect.GetHeight() + logo_margin;
-        memDc.DrawBitmap(logo_bmp, (width - logo_width) / 2, logo_y, true);
+        memDc.DrawBitmap(logo_bmp, (width - logo_size) / 2, logo_y, true);
 
         // calculate position for the dynamic text
         int text_margin = FromDIP(80 * m_scale);

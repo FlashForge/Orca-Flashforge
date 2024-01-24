@@ -579,7 +579,7 @@ void PartPlate::render_logo_texture(GLTexture &logo_texture, const GeometryBuffe
 
 void PartPlate::render_logo(bool bottom, bool render_cali) const
 {
-	if (!m_partplate_list->render_bedtype_logo) {
+	if (m_partplate_list->render_bedtype_logo) {
 		// render third-party printer texture logo
 		if (m_partplate_list->m_logo_texture_filename.empty()) {
 			m_partplate_list->m_logo_texture.reset();

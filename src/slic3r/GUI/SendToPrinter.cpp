@@ -223,6 +223,7 @@ void MultiSend::send_event(int code, const wxString& msg)
 
 void MultiSend::on_cnnection_exit(ComConnectionExitEvent& event)
 {
+    event.Skip();
     if (m_send_jobs.find(event.id) == m_send_jobs.end()) {
         return;
     }
@@ -235,7 +236,6 @@ void MultiSend::on_cnnection_exit(ComConnectionExitEvent& event)
     }
     send_next_job();
     update_progress();
-    event.Skip();
 }
 
 void MultiSend::on_send_gcode_finished(ComSendGcodeFinishEvent& event)
