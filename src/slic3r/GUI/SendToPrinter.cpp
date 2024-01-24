@@ -116,10 +116,15 @@ bool MultiSend::prepare()
     std::filesystem::path temp_path(temporary_dir());
     temp_path = temp_path / "orca-flashforge" / "slice";
     if (!std::filesystem::exists(temp_path)) {
-        if (std::filesystem::create_directories(temp_path)) {
-            BOOST_LOG_TRIVIAL(info) << "create orca-flashforge slice path (" << temp_path << ") " << "success";
-        } else {
-            BOOST_LOG_TRIVIAL(info) << "create orca-flashforge slice path (" << temp_path << ") " << "fail";
+        try {
+            if (std::filesystem::create_directories(temp_path)) {
+                BOOST_LOG_TRIVIAL(info) << "create orca-flashforge slice path (" << temp_path << ") " << "success";
+            } else {
+                BOOST_LOG_TRIVIAL(info) << "create orca-flashforge slice path (" << temp_path << ") " << "fail";
+                return false;
+            }
+        } catch (...) {
+            BOOST_LOG_TRIVIAL(info) << "create orca-flashforge slice path (" << temp_path << ") " << "exception";
             return false;
         }
     }
@@ -143,12 +148,16 @@ void MultiSend::cancel_export_job()
 void MultiSend::remove_temp_path()
 {
     std::filesystem::path temp_path(temporary_dir());
-    temp_path = temp_path / "orca-flashforge" / "slice";
-    std::filesystem::directory_iterator dir(temp_path);
-	for (auto& p : dir) {
-        bool ret = std::filesystem::remove_all(p);
-        BOOST_LOG_TRIVIAL(info) << "remove path (" << p.path().filename() << ") " << (ret ? "success" : "fail");
-	}
+    try {
+        temp_path = temp_path / "orca-flashforge" / "slice";
+        std::filesystem::directory_iterator dir(temp_path);
+        for (auto& p : dir) {
+            bool ret = std::filesystem::remove_all(p);
+            BOOST_LOG_TRIVIAL(info) << "remove path (" << p.path().filename() << ") " << (ret ? "success" : "fail");
+        }
+    } catch (...) {
+        BOOST_LOG_TRIVIAL(info) << "remove path (" << temp_path.string() << ") exception";
+    }
 }
 
 void MultiSend::send_next_job()
