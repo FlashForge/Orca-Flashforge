@@ -487,40 +487,51 @@ void DeviceObjectOpr::clear_scan_machine()
     m_scan_devices.clear();
 }
 
+string DeviceObjectOpr::find_dev_id_from_connection(int connectId)
+{
+    auto it = m_dev_connect_map.begin();
+    for (; it != m_dev_connect_map.end(); ++it) {
+        if (it->second == connectId)
+            return it->first;
+    }
+    return "";
+}
+
 void DeviceObjectOpr::onConnectExit(ComConnectionExitEvent &event)
 {
     event.Skip();
+    string        devId = find_dev_id_from_connection(event.id);
     DeviceObject *devObj = nullptr;
-    auto          it     = m_scan_devices.find(m_selected_machine);
-    if (it != m_scan_devices.end()) {
-        devObj = it->second;
-        devObj->set_connecting(false);
-        if (devObj->get_user_access_code().empty()) {
-            // first bind
-            if (event.ret == COM_VERIFY_LAN_DEV_FAILED) {
-                // popop input access code dialog again.
-                ConnectPrinterDialog dlg(wxGetApp().mainframe, wxID_ANY, _L("Input access code"), true);
-                dlg.set_device_object(devObj);
-                if (dlg.ShowModal() == wxID_OK) {
-                    wxGetApp().mainframe->jump_to_monitor(devObj->get_dev_id());
-                }
-            } else if(event.ret == COM_ERROR){
-                devObj->set_connected_ready(false);  // connect finished, and failed.
-            } else {
-                // do nothing, this device still belongs to other device. (Including exit successfully)
-            }
-        } else {
-            if (event.ret == COM_VERIFY_LAN_DEV_FAILED) {
-                // notify the device access code has changed, this device should unbind and move to other device.
-                unbind_lan_machine(devObj);
-            } else {
-                devObj->set_online_state(false);
-            }
-        }
+    auto it = m_user_devices.find(devId);
+    if (it != m_user_devices.end()) {
+        it->second->set_online_state(false);
     } else {
-        it = m_user_devices.find(m_selected_machine);
-        if (it != m_user_devices.end()) {
-            it->second->set_online_state(false);
+        auto it = m_scan_devices.find(devId);
+        if (it != m_scan_devices.end()) {
+            devObj = it->second;
+            devObj->set_connecting(false);
+            if (devObj->get_user_access_code().empty()) {
+                // first bind
+                if (event.ret == COM_VERIFY_LAN_DEV_FAILED) {
+                    // popop input access code dialog again.
+                    ConnectPrinterDialog dlg(wxGetApp().mainframe, wxID_ANY, _L("Input access code"), true);
+                    dlg.set_device_object(devObj);
+                    if (dlg.ShowModal() == wxID_OK) {
+                        wxGetApp().mainframe->jump_to_monitor(devObj->get_dev_id());
+                    }
+                } else if (event.ret == COM_ERROR) {
+                    devObj->set_connected_ready(false); // connect finished, and failed.
+                } else {
+                    // do nothing, this device still belongs to other device. (Including exit successfully)
+                }
+            } else {
+                if (event.ret == COM_VERIFY_LAN_DEV_FAILED) {
+                    // notify the device access code has changed, this device should unbind and move to other device.
+                    unbind_lan_machine(devObj);
+                } else {
+                    devObj->set_online_state(false);
+                }
+            }
         }
     }
 }
@@ -546,16 +557,17 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
             m_user_devices.emplace(make_pair(macSN, devObj));
         }
     } else {
-        DeviceObject *devObj = get_scan_device(m_selected_machine);
+        string serialNum = data.lanDevInfo.serialNumber;
+        DeviceObject *devObj    = get_scan_device(serialNum);
         if (devObj == nullptr)
             return;
 
         DeviceObject *userObj = nullptr;
-        auto it = m_user_devices.find(m_selected_machine);
+        auto          it      = m_user_devices.find(serialNum);
         if (it == m_user_devices.end()) {
             userObj = new DeviceObject(*devObj->get_lan_dev_info());
             userObj->set_user_access_code(devObj->get_user_access_code(true));
-            m_user_devices.emplace(make_pair(m_selected_machine, userObj));
+            m_user_devices.emplace(make_pair(serialNum, userObj));
 
             AppConfig *config = GUI::wxGetApp().app_config;
             if (config) {

@@ -134,6 +134,8 @@ private:
     void get_my_machine_list_v2(map<string, DeviceObject *> &devList);
 
     void clear_scan_machine();
+    
+    string find_dev_id_from_connection(int connectId);
 
 private:
     void onConnectExit(ComConnectionExitEvent &event);
