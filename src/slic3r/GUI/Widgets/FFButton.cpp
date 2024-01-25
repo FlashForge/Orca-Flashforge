@@ -12,7 +12,7 @@ FFButton::FFButton(wxWindow* parent, wxWindowID id/*= wxID_ANY*/, const wxString
 	, m_fontColor("#333333")
 	, m_fontHoverColor("#65A79E")
 	, m_fontPressColor("#419488")
-	, m_fontDisableColor("#dddddd")
+	, m_fontDisableColor("#333333")
 	, m_borderColor("#333333")
 	, m_borderHoverColor("#65A79E")
 	, m_borderPressColor("#419488")

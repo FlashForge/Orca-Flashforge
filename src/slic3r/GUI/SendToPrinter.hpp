@@ -287,6 +287,7 @@ private:
     void clear_machine_list();
     void remove_temporary_file();
     void on_close(wxCloseEvent& event);
+    void on_size(wxSizeEvent& event);
     void onNetworkTypeToggled(wxCommandEvent& event);
     void onMachineSelectionToggled(wxCommandEvent& event);
     void onSendClicked(wxCommandEvent& event);
