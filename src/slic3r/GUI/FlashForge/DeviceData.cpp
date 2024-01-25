@@ -286,6 +286,11 @@ void DeviceObjectOpr::update_scan_machine()
         auto it = m_local_devices.find(dev_id);
         if (it != m_local_devices.end()) {
             devObj->set_user_access_code(it->second->get_user_access_code(), false);
+        } else {
+            it = m_user_devices.find(dev_id);
+            if (it != m_user_devices.end()) {
+                devObj->set_user_access_code(it->second->get_user_access_code(), false);
+            }
         }
         m_scan_devices.insert(make_pair(dev_id, devObj));
     }
@@ -504,7 +509,12 @@ void DeviceObjectOpr::onConnectExit(ComConnectionExitEvent &event)
     DeviceObject *devObj = nullptr;
     auto it = m_user_devices.find(devId);
     if (it != m_user_devices.end()) {
-        it->second->set_online_state(false);
+        devObj = it->second;
+        if (event.ret == COM_VERIFY_LAN_DEV_FAILED) {
+            unbind_lan_machine(devObj);
+        } else {
+            devObj->set_online_state(false);
+        }
     } else {
         auto it = m_scan_devices.find(devId);
         if (it != m_scan_devices.end()) {
