@@ -424,7 +424,7 @@ void MachineItem::build()
     }
 
     m_nameLbl = new wxStaticText(this, wxID_ANY, m_data.name);
-    m_nameLbl->SetMaxSize(wxSize(FromDIP(200), FromDIP(24)));
+    m_nameLbl->SetMaxSize(wxSize(FromDIP(200), -1));
     m_nameLbl->Wrap(FromDIP(200));
     
     m_mainSizer = new wxBoxSizer(wxHORIZONTAL);
@@ -1609,15 +1609,60 @@ SendToPrinterDialog::~SendToPrinterDialog()
     delete m_redirect_timer;
 }
 
-
-}
-}SetSelection(0);
-        Layout();
-    } else {
-        EndModal(wxID_OK);
-        wxGetApp().mainframe->select_tab(size_t(MainFrame::tpMonitor));
+void SendToPrinterDialog::updateSendButtonState()
+{
+    bool enable = false;
+    for (auto& item : m_machineItemList) {
+        if (item->IsChecked()) {
+            enable = true;
+            break;
+        }
     }
-    m_redirect_timer->Stop();
+    m_sendBtn->Enable(enable);
+}
+
+void SendToPrinterDialog::remove_temporary_file()
+{
+    std::filesystem::path temp_path(temporary_dir());
+    temp_path = temp_path / "orca-flashforge" / "slice";
+    std::filesystem::directory_iterator dir(temp_path);
+	for (auto& p : dir) {
+        bool ret = std::filesystem::remove_all(p);
+        BOOST_LOG_TRIVIAL(info) << "remove path (" << p.path().filename() << ") " << (ret ? "success" : "fail");
+	}
+}
+
+SendToPrinterDialog::~SendToPrinterDialog()
+{
+    delete m_redirect_timer;
+}
+
+void SendToPrinterDialog::updateSendButtonState()
+{
+    bool enable = false;
+    for (auto& item : m_machineItemList) {
+        if (item->IsChecked()) {
+            enable = true;
+            break;
+        }
+    }
+    m_sendBtn->Enable(enable);
+}
+
+void SendToPrinterDialog::remove_temporary_file()
+{
+    std::filesystem::path temp_path(temporary_dir());
+    temp_path = temp_path / "orca-flashforge" / "slice";
+    std::filesystem::directory_iterator dir(temp_path);
+	for (auto& p : dir) {
+        bool ret = std::filesystem::remove_all(p);
+        BOOST_LOG_TRIVIAL(info) << "remove path (" << p.path().filename() << ") " << (ret ? "success" : "fail");
+	}
+}
+
+SendToPrinterDialog::~SendToPrinterDialog()
+{
+    delete m_redirect_timer;
 }
 
 void SendToPrinterDialog::onConnectionExit(ComConnectionExitEvent& event)
