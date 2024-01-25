@@ -96,7 +96,7 @@ void MultiSend::cancel()
         }
     }
     m_is_sending = false;
-    if (!cancel_flag) {
+    if (cancel_flag) {
         send_event(0, "");
     }
 }
@@ -286,11 +286,15 @@ void MultiSend::on_export_slice_completed(wxCommandEvent& event)
         BOOST_LOG_TRIVIAL(error) << "MultiSend: export temp slice/thumb file error, " << event.GetString();
         send_event(-1, "prepare error");
     } else {
-        int sync_num = (m_sync_num > m_printers.size() ? m_printers.size() : m_sync_num);
-        for (int i = 0; i < sync_num; ++i) {
+        if (m_printers.empty()) {
             send_next_job();
+        } else {
+            int sync_num = (m_sync_num > m_printers.size() ? m_printers.size() : m_sync_num);
+            for (int i = 0; i < sync_num; ++i) {
+                send_next_job();
+            }
+            update_progress();
         }
-        update_progress();
     }
     event.Skip();
 }
@@ -794,7 +798,7 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/)
     m_sizer_main->AddSpacer(FromDIP(45));
 
     m_redirect_timer = new wxTimer();
-    m_redirect_timer->SetOwner(this);
+    //m_redirect_timer->SetOwner(this);
 
     //SetSizer(m_sizer_main);
     Layout();
@@ -982,7 +986,7 @@ void SendToPrinterDialog::init_bind()
     MultiComMgr::inst()->Bind(COM_CONNECTION_READY_EVENT, &SendToPrinterDialog::onConnectionReady, this);
     Bind(EVT_MULTI_SEND_COMPLETED, &SendToPrinterDialog::on_multi_send_completed, this);
     Bind(EVT_MULTI_SEND_PROGRESS, &SendToPrinterDialog::on_multi_send_progress, this);
-    Bind(wxEVT_TIMER, &SendToPrinterDialog::on_redirect_timer, this);
+    m_redirect_timer->Bind(wxEVT_TIMER, &SendToPrinterDialog::on_redirect_timer, this);
     //MultiComMgr::inst()->Bind(COM_CONNECTION_EXIT_EVENT, &SendToPrinterDialog::onConnectionExit, this);
     //MultiComMgr::inst()->Bind(COM_SEND_GCODE_FINISH_EVENT, &SendToPrinterDialog::onSendGcodeFinished, this);
     //MultiComMgr::inst()->Bind(COM_SEND_GCODE_PROGRESS_EVENT, &SendToPrinterDialog::onSendGcodeProgress, this);
@@ -1013,7 +1017,7 @@ void SendToPrinterDialog::update_user_machine_list()
     }
 #if 0
     if (m_machineListMap.empty()) {
-        for (int i = 0; i < 5; ++i) {
+        for (int i = 0; i < 3; ++i) {
             MachineItem::MachineData mdata;
             mdata.flag = 0;
             if (i % 2 == 0) {
@@ -1070,6 +1074,7 @@ void SendToPrinterDialog::update_user_printer()
 {
     Freeze();
     clear_machine_list();
+    m_selectAll->SetValue(false);
     int index = 1;
     bool wlanFlag = false, lanFlag = false;
     if (!m_machineListMap.empty()) {
@@ -1097,7 +1102,8 @@ void SendToPrinterDialog::update_user_printer()
         m_machineListWindow->SetMinSize(wxSize(-1, height));
         m_machineListWindow->SetMaxSize(wxSize(-1, height));
         m_machineListWindow->SetVirtualSize(-1, vh);
-        m_machineListSizer->Layout();
+        m_machineListWindow->Layout();
+        m_machineListWindow->Fit();
         index = 0;
     } else {
         m_machineListWindow->SetSize(-1, 1);
@@ -1230,6 +1236,7 @@ void SendToPrinterDialog::on_dpi_changed(const wxRect &suggested_rect)
 void SendToPrinterDialog::set_default()
 {
     //project name
+    m_need_redirect = false;
     m_is_in_sending_mode = false;
     m_wlanBtn->SetValue(true);
     m_lanBtn->SetValue(true);
@@ -1319,6 +1326,25 @@ void SendToPrinterDialog::set_default()
     m_stext_weight->SetLabel(weight);
 }
 
+void SendToPrinterDialog::redirect_window()
+{
+    if (m_msg_window) {
+        m_need_redirect = true;
+        return;
+        //m_msg_window->Show(false);
+        //m_msg_window->Destroy();
+        //m_msg_window = nullptr;
+    }
+    if (!IsVisible()) return;
+    if (m_send_error) {
+        m_sendBook->SetSelection(0);
+        Layout();
+    } else {
+        EndModal(wxID_OK);
+        wxGetApp().mainframe->select_tab(size_t(MainFrame::tpMonitor));
+    }
+}
+
 bool SendToPrinterDialog::Show(bool show)
 {
     // set default value when show this dialog
@@ -1326,12 +1352,12 @@ bool SendToPrinterDialog::Show(bool show)
         wxGetApp().reset_to_active();
         set_default();
         update_user_machine_list();
-    } else {
-        if (m_msg_window) {
-            m_msg_window->Destroy();
-            m_msg_window = nullptr;
-        }
-    }
+    }// else {
+        //if (m_msg_window) {
+        //    m_msg_window->Destroy();
+        //    m_msg_window = nullptr;
+        //}
+    //}
     Layout();
     Fit();
     if (show) { CenterOnParent(); }
@@ -1344,20 +1370,13 @@ void SendToPrinterDialog::on_close(wxCloseEvent& event)
         if (!m_msg_window) {
             m_msg_window = new MessageDialog(nullptr, _L("Sending task, do you want to cancel it?"), _L("Warning"), wxYES_NO);
             if (wxID_YES == m_msg_window->ShowModal()) {
-                if (IsVisible()) {
-                    if (m_multiSend) {
-                        m_multiSend->cancel();
-                    }
-                    m_is_in_sending_mode = false;
-                    event.Skip();
+                if (m_multiSend) {
+                    m_multiSend->cancel();
                 }
-            }
-            if (m_msg_window) {
-                m_msg_window->Destroy();
-                m_msg_window = nullptr;
+                m_is_in_sending_mode = false;
+                event.Skip();
             }
         }
-        
     } else {
         event.Skip();
     }
@@ -1450,21 +1469,31 @@ void SendToPrinterDialog::on_cancel(wxCommandEvent& event)
         return;
     }
     if (!m_msg_window) {
-        m_msg_window = new MessageDialog(this, _L("Sending task, do you want to cancel it?"), _L("Warning"), wxYES_NO);
-        if (wxID_YES == m_msg_window->ShowModal()) {
-            if (IsVisible()) {
-                m_multiSend->cancel();
-                if (m_progressInfoLbl->IsShown()) {
-                    m_progressInfoLbl->SetLabel(_L("Canceling the print job, please wait"));
-                }
-                m_progressCancelBtn->Enable(false);
+        m_msg_window = new MessageDialog(nullptr, _L("Sending task, do you want to cancel it?"), _L("Warning"), wxYES_NO);
+        if (wxID_YES == m_msg_window->ShowModal() && m_is_in_sending_mode) {
+            m_multiSend->cancel();
+            if (m_progressInfoLbl->IsShown()) {
+                m_progressInfoLbl->SetLabel(_L("Canceling the print job, please wait"));
             }
+            m_progressCancelBtn->Enable(false);
         }
-        if (m_msg_window) {
-            m_msg_window->Destroy();
-            m_msg_window = nullptr;
+        m_msg_window->Destroy();
+        m_msg_window = nullptr;
+        if (m_need_redirect) {
+            redirect_window();
+            m_need_redirect = false;
         }
     }
+}
+
+void SendToPrinterDialog::on_redirect_timer(wxTimerEvent& event)
+{
+    if (m_msg_window) {
+        m_need_redirect = true;
+        return;
+    }
+    redirect_window();
+    event.Skip();
 }
 
 void SendToPrinterDialog::onConnectionReady(ComConnectionReadyEvent& event)
@@ -1488,6 +1517,7 @@ void SendToPrinterDialog::on_multi_send_progress(wxCommandEvent& event)
 
 void SendToPrinterDialog::on_multi_send_completed(wxCommandEvent& event)
 {
+    m_is_in_sending_mode = false;
     std::map<com_id_t, MultiSend::Result> send_result;
     m_multiSend->get_multi_send_result(send_result);
     if (send_result.empty()) {
@@ -1535,27 +1565,14 @@ void SendToPrinterDialog::on_multi_send_completed(wxCommandEvent& event)
         BOOST_LOG_TRIVIAL(info) << "Send multi job completed";
         SendToPrinterTipDialog dlg(nullptr, successList, failList);
         if (dlg.ShowModal()) {
-            EndDialog(wxID_OK);
-            wxGetApp().mainframe->select_tab(size_t(MainFrame::tpMonitor));
+            if (IsVisible()) {
+                EndDialog(wxID_OK);
+                wxGetApp().mainframe->select_tab(size_t(MainFrame::tpMonitor));
+            }
         }
     }
     Layout();
     Fit();
-}
-
-void SendToPrinterDialog::on_redirect_timer(wxTimerEvent& event)
-{
-    if (m_msg_window) {
-        m_msg_window->EndModal(wxID_YES);
-    }
-    if (m_send_error) {
-        m_sendBook->SetSelection(0);
-        Layout();
-    } else {
-        EndModal(wxID_OK);
-        wxGetApp().mainframe->select_tab(size_t(MainFrame::tpMonitor));
-    }
-    m_redirect_timer->Stop();
 }
 
 void SendToPrinterDialog::onConnectionExit(ComConnectionExitEvent& event)
@@ -1591,17 +1608,6 @@ void SendToPrinterDialog::updateSendButtonState()
         }
     }
     m_sendBtn->Enable(enable);
-}
-
-void SendToPrinterDialog::remove_temporary_file()
-{
-    std::filesystem::path temp_path(temporary_dir());
-    temp_path = temp_path / "orca-flashforge" / "slice";
-    std::filesystem::directory_iterator dir(temp_path);
-	for (auto& p : dir) {
-        bool ret = std::filesystem::remove_all(p);
-        BOOST_LOG_TRIVIAL(info) << "remove path (" << p.path().filename() << ") " << (ret ? "success" : "fail");
-	}
 }
 
 SendToPrinterDialog::~SendToPrinterDialog()
