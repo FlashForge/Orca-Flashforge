@@ -116,10 +116,15 @@ bool MultiSend::prepare()
     std::filesystem::path temp_path(temporary_dir());
     temp_path = temp_path / "orca-flashforge" / "slice";
     if (!std::filesystem::exists(temp_path)) {
-        if (std::filesystem::create_directories(temp_path)) {
-            BOOST_LOG_TRIVIAL(info) << "create orca-flashforge slice path (" << temp_path << ") " << "success";
-        } else {
-            BOOST_LOG_TRIVIAL(info) << "create orca-flashforge slice path (" << temp_path << ") " << "fail";
+        try {
+            if (std::filesystem::create_directories(temp_path)) {
+                BOOST_LOG_TRIVIAL(info) << "create orca-flashforge slice path (" << temp_path << ") " << "success";
+            } else {
+                BOOST_LOG_TRIVIAL(info) << "create orca-flashforge slice path (" << temp_path << ") " << "fail";
+                return false;
+            }
+        } catch (...) {
+            BOOST_LOG_TRIVIAL(info) << "create orca-flashforge slice path (" << temp_path << ") " << "exception";
             return false;
         }
     }
@@ -143,12 +148,16 @@ void MultiSend::cancel_export_job()
 void MultiSend::remove_temp_path()
 {
     std::filesystem::path temp_path(temporary_dir());
-    temp_path = temp_path / "orca-flashforge" / "slice";
-    std::filesystem::directory_iterator dir(temp_path);
-	for (auto& p : dir) {
-        bool ret = std::filesystem::remove_all(p);
-        BOOST_LOG_TRIVIAL(info) << "remove path (" << p.path().filename() << ") " << (ret ? "success" : "fail");
-	}
+    try {
+        temp_path = temp_path / "orca-flashforge" / "slice";
+        std::filesystem::directory_iterator dir(temp_path);
+        for (auto& p : dir) {
+            bool ret = std::filesystem::remove_all(p);
+            BOOST_LOG_TRIVIAL(info) << "remove path (" << p.path().filename() << ") " << (ret ? "success" : "fail");
+        }
+    } catch (...) {
+        BOOST_LOG_TRIVIAL(info) << "remove path (" << temp_path.string() << ") exception";
+    }
 }
 
 void MultiSend::send_next_job()
@@ -214,8 +223,8 @@ void MultiSend::send_event(int code, const wxString& msg)
 
 void MultiSend::on_cnnection_exit(ComConnectionExitEvent& event)
 {
-    event.Skip();
     if (m_send_jobs.find(event.id) == m_send_jobs.end()) {
+        event.Skip();
         return;
     }
     BOOST_LOG_TRIVIAL(info) << "MultiSend: com connection exit, com_id: " << event.id;
@@ -227,12 +236,14 @@ void MultiSend::on_cnnection_exit(ComConnectionExitEvent& event)
     }
     send_next_job();
     update_progress();
+    event.Skip();
 }
 
 void MultiSend::on_send_gcode_finished(ComSendGcodeFinishEvent& event)
 {
     auto& iter = m_send_jobs.find(event.id);
     if (iter == m_send_jobs.end()) {
+        event.Skip();
         return;
     }
     BOOST_LOG_TRIVIAL(info) << "MultiSend: com send gcode finish, com_id: " << event.id;
@@ -260,6 +271,7 @@ void MultiSend::on_send_gcode_progress(ComSendGcodeProgressEvent& event)
 {
     auto& iter = m_send_jobs.find(event.id);
     if (iter == m_send_jobs.end()) {
+        event.Skip();
         return;
     }
     iter->second.finish = false;
@@ -293,8 +305,8 @@ SendToPrinterTipDialog::SendToPrinterTipDialog(wxWindow* parent, const wxStringL
 
     if (!success.empty()) {
         wxStaticText* successText = new wxStaticText(this, wxID_ANY, _L("File sent successfully"));
-        successText->SetMaxSize(wxSize(FromDIP(800), -1));
-        successText->Wrap(FromDIP(800));
+        successText->SetMaxSize(wxSize(FromDIP(680), -1));
+        successText->Wrap(FromDIP(680));
         successText->SetForegroundColour("#333333");
         successText->SetBackgroundColour("#ffffff");
         sizer->Add(successText, 0, wxEXPAND | wxALIGN_LEFT | wxLEFT | wxRIGHT, 40);
@@ -317,8 +329,8 @@ SendToPrinterTipDialog::SendToPrinterTipDialog(wxWindow* parent, const wxStringL
         }
 
         wxStaticText* failText = new wxStaticText(this, wxID_ANY, _L("File sending failure: inconsistent model and slicing configuration or network abnormality"));
-        failText->SetMaxSize(wxSize(FromDIP(600), -1));
-        failText->Wrap(FromDIP(600));
+        failText->SetMaxSize(wxSize(FromDIP(500), -1));
+        failText->Wrap(FromDIP(500));
         failText->SetForegroundColour("#333333");
         failText->SetBackgroundColour("#ffffff");
         sizer->Add(failText, 0, wxEXPAND | wxALIGN_LEFT | wxLEFT | wxRIGHT, 40);
@@ -412,8 +424,8 @@ void MachineItem::build()
     }
 
     m_nameLbl = new wxStaticText(this, wxID_ANY, m_data.name);
-    m_nameLbl->SetMaxSize(wxSize(FromDIP(300), -1));
-    m_nameLbl->Wrap(FromDIP(300));
+    m_nameLbl->SetMaxSize(wxSize(FromDIP(200), -1));
+    m_nameLbl->Wrap(FromDIP(200));
     
     m_mainSizer = new wxBoxSizer(wxHORIZONTAL);
     m_mainSizer->Add(m_checkBox, 0, wxALIGN_CENTER_VERTICAL);
@@ -498,9 +510,9 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/)
     //file name
     //rename normal
     m_rename_switch_panel = new wxSimplebook(m_topPanel);
-    m_rename_switch_panel->SetSize(wxSize(FromDIP(320), FromDIP(25)));
-    m_rename_switch_panel->SetMinSize(wxSize(FromDIP(320), FromDIP(25)));
-    m_rename_switch_panel->SetMaxSize(wxSize(FromDIP(320), FromDIP(25)));
+    m_rename_switch_panel->SetSize(wxSize(FromDIP(300), FromDIP(25)));
+    m_rename_switch_panel->SetMinSize(wxSize(FromDIP(300), FromDIP(25)));
+    m_rename_switch_panel->SetMaxSize(wxSize(FromDIP(300), FromDIP(25)));
 
     m_renamePanel = new wxPanel(m_rename_switch_panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     m_renamePanel->SetBackgroundColour(*wxWHITE);
@@ -510,7 +522,8 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/)
     m_renameText = new wxStaticText(m_renamePanel, wxID_ANY, wxT("MyLabel"), wxDefaultPosition, wxDefaultSize, 0);
     m_renameText->SetForegroundColour(*wxBLACK);
     m_renameText->SetFont(::Label::Body_13);
-    m_renameText->SetMaxSize(wxSize(FromDIP(320), -1));
+    m_renameText->SetMaxSize(wxSize(FromDIP(280), -1));
+    m_renameText->Wrap(FromDIP(280));
     m_renameBtn = new Button(m_renamePanel, "", "ff_editable", wxBORDER_NONE, FromDIP(12));
     m_renameBtn->SetBackgroundColor(*wxWHITE);
     m_renameBtn->SetBackgroundColour(*wxWHITE);
@@ -529,9 +542,9 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/)
 
     m_rename_input = new ::TextInput(m_rename_edit_panel, wxEmptyString, wxEmptyString, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
     m_rename_input->GetTextCtrl()->SetFont(::Label::Body_13);
-    m_rename_input->SetSize(wxSize(FromDIP(320), FromDIP(24)));
-    m_rename_input->SetMinSize(wxSize(FromDIP(320), FromDIP(24)));
-    m_rename_input->SetMaxSize(wxSize(FromDIP(320), FromDIP(24)));
+    m_rename_input->SetSize(wxSize(FromDIP(280), FromDIP(24)));
+    m_rename_input->SetMinSize(wxSize(FromDIP(280), FromDIP(24)));
+    m_rename_input->SetMaxSize(wxSize(FromDIP(280), FromDIP(24)));
     m_rename_input->Bind(wxEVT_TEXT_ENTER, [this](auto& e) {on_rename_enter();});
     m_rename_input->Bind(wxEVT_KILL_FOCUS, [this](auto& e) {
         if (!m_rename_input->HasFocus() && !m_renameText->HasFocus())
@@ -963,6 +976,7 @@ void SendToPrinterDialog::update_print_status_msg(wxString msg, bool is_warning,
 
 void SendToPrinterDialog::init_bind()
 {
+    Bind(wxEVT_SIZE, &SendToPrinterDialog::on_size, this);
     Bind(wxEVT_CLOSE_WINDOW, &SendToPrinterDialog::on_close, this);
     Bind(EVT_UPDATE_USER_MACHINE_LIST, &SendToPrinterDialog::update_printer_list, this);
     MultiComMgr::inst()->Bind(COM_CONNECTION_READY_EVENT, &SendToPrinterDialog::onConnectionReady, this);
@@ -1076,9 +1090,9 @@ void SendToPrinterDialog::update_user_printer()
             mitem->SetChecked(false);
             m_machineItemList.emplace_back(mitem);
         }
-        int vh = rows * 46 + (rows + 1) * 10;
+        int vh = rows * FromDIP(46) + (rows + 1) * FromDIP(10);
         rows = (rows > 4) ? 4 : rows;
-        int height = rows * 46 + (rows + 1) * 10;
+        int height = rows * FromDIP(46) + (rows + 1) * FromDIP(10);
         m_machineListWindow->SetSize(-1, height);
         m_machineListWindow->SetMinSize(wxSize(-1, height));
         m_machineListWindow->SetMaxSize(wxSize(-1, height));
@@ -1338,13 +1352,34 @@ void SendToPrinterDialog::on_close(wxCloseEvent& event)
                     event.Skip();
                 }
             }
-            m_msg_window->Destroy();
-            m_msg_window = nullptr;
+            if (m_msg_window) {
+                m_msg_window->Destroy();
+                m_msg_window = nullptr;
+            }
         }
         
     } else {
         event.Skip();
     }
+}
+
+void SendToPrinterDialog::on_size(wxSizeEvent& event)
+{
+    event.Skip();
+    return;
+#if 0
+    int width = event.GetSize().GetWidth() - 190;
+    wxSize sz(width, FromDIP(24));
+    m_rename_switch_panel->SetSize(sz);
+    m_thumbnailPanel->SetMinSize(sz);
+    m_thumbnailPanel->SetMaxSize(sz); 
+    m_renameText->SetSize(sz);
+    m_renameText->SetMinSize(sz);
+    m_renameText->SetMaxSize(sz);
+    m_rename_input->SetSize(sz);
+    m_rename_input->SetMinSize(sz);
+    m_rename_input->SetMaxSize(sz);
+#endif
 }
 
 void SendToPrinterDialog::onNetworkTypeToggled(wxCommandEvent& event)
@@ -1425,8 +1460,10 @@ void SendToPrinterDialog::on_cancel(wxCommandEvent& event)
                 m_progressCancelBtn->Enable(false);
             }
         }
-        m_msg_window->Destroy();
-        m_msg_window = nullptr;
+        if (m_msg_window) {
+            m_msg_window->Destroy();
+            m_msg_window = nullptr;
+        }
     }
 }
 
@@ -1496,7 +1533,7 @@ void SendToPrinterDialog::on_multi_send_completed(wxCommandEvent& event)
             (iter.second == MultiSend::Result_Ok) ? successList.Add(name) : failList.Add(name);
         }
         BOOST_LOG_TRIVIAL(info) << "Send multi job completed";
-        SendToPrinterTipDialog dlg(this, successList, failList);
+        SendToPrinterTipDialog dlg(nullptr, successList, failList);
         if (dlg.ShowModal()) {
             EndDialog(wxID_OK);
             wxGetApp().mainframe->select_tab(size_t(MainFrame::tpMonitor));
@@ -1508,14 +1545,15 @@ void SendToPrinterDialog::on_multi_send_completed(wxCommandEvent& event)
 
 void SendToPrinterDialog::on_redirect_timer(wxTimerEvent& event)
 {
+    if (m_msg_window) {
+        m_msg_window->EndModal(wxID_YES);
+    }
     if (m_send_error) {
         m_sendBook->SetSelection(0);
         Layout();
     } else {
-        if (!m_msg_window) {
-            EndModal(wxID_OK);
-            wxGetApp().mainframe->select_tab(size_t(MainFrame::tpMonitor));
-        }
+        EndModal(wxID_OK);
+        wxGetApp().mainframe->select_tab(size_t(MainFrame::tpMonitor));
     }
     m_redirect_timer->Stop();
 }
@@ -1570,7 +1608,6 @@ SendToPrinterDialog::~SendToPrinterDialog()
 {
     delete m_redirect_timer;
 }
-
 
 }
 }
