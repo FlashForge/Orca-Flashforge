@@ -82,7 +82,6 @@ private:
     void do_send_next_job();
     void update_progress();
     void send_event(int code, const wxString& msg);
-
     void on_cnnection_exit(ComConnectionExitEvent& event);
     void on_send_gcode_finished(ComSendGcodeFinishEvent& event);
     void on_send_gcode_progress(ComSendGcodeProgressEvent& event);
@@ -194,6 +193,7 @@ private:
     bool								m_export_3mf_cancel{ false };
     bool								m_is_canceled{ false };
     bool                                m_send_and_print { false };
+    bool                                m_need_redirect {false};
     std::string                         m_print_error_msg;
     std::string                         m_print_error_extra;
     std::string							m_print_info;
@@ -285,7 +285,7 @@ private:
     void updateVisible();
     void updateSendButtonState();
     void clear_machine_list();
-    void remove_temporary_file();
+    void redirect_window();
     void on_close(wxCloseEvent& event);
     void on_size(wxSizeEvent& event);
     void onNetworkTypeToggled(wxCommandEvent& event);
