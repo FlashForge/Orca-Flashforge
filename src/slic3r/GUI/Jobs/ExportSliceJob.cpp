@@ -39,7 +39,7 @@ void ExportSliceJob::process()
             }
         }
         image = image.Rescale(256, 256);
-        if (image.SaveFile(m_thumb_path)) {
+        if (image.SaveFile(wxString::FromUTF8(m_thumb_path))) {
             BOOST_LOG_TRIVIAL(info) << "ExportSliceJob: save thumb (" << m_thumb_path << ") success";
         } else {
             BOOST_LOG_TRIVIAL(error) << "ExportSliceJob: save thumb (" << m_thumb_path << ") fail";

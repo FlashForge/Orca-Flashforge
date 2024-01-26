@@ -77,6 +77,7 @@ public:
 private:
     bool prepare();
     void remove_temp_path();
+    bool export_temp_file();
     void cancel_export_job();
     void send_next_job();
     void do_send_next_job();

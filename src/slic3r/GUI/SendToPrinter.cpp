@@ -1,6 +1,6 @@
 #include "SendToPrinter.hpp"
 #include <algorithm>
-#include <filesystem>
+#include <boost/filesystem.hpp>
 #include "I18N.hpp"
 
 #include "libslic3r/Utils.hpp"
@@ -62,10 +62,21 @@ bool MultiSend::send_to_printer(int plate_idx, const com_id_list_t& com_ids, con
     m_printers.clear();
     m_send_jobs.clear();
     m_plate_idx = plate_idx;
+
+    for (auto& id : com_ids) {
+        m_printers.emplace_back(id);
+        m_send_jobs.emplace(id, ResultInfo{-1, false, Result_Ok, 0.0});
+    }    
     if (!prepare()) {
+        for (auto& iter : m_printers) {
+            m_send_jobs[iter].finish = true;
+            m_send_jobs[iter].result = Result_Fail;
+        }
+        m_printers.clear();
         send_event(-1, _L("send prepare fail"));
         return false;
     }
+#if 0
     for (auto& id : com_ids) {
         m_printers.emplace_back(id);
         m_send_jobs.emplace(id, ResultInfo{-1, false, Result_Ok, 0.0});
@@ -75,6 +86,28 @@ bool MultiSend::send_to_printer(int plate_idx, const com_id_list_t& com_ids, con
     m_export_job = std::make_shared<ExportSliceJob>(wxGetApp().plater(), m_slice_path, m_thumb_path, m_plate_idx);
     m_export_job->set_event_handle(this);
     m_export_job->start();
+#else
+    if (export_temp_file()) {
+        if (m_printers.empty()) {
+            send_next_job();
+        } else {
+            int sync_num = (m_sync_num > m_printers.size() ? m_printers.size() : m_sync_num);
+            for (int i = 0; i < sync_num; ++i) {
+                send_next_job();
+            }
+            update_progress();
+        }
+    } else {
+        BOOST_LOG_TRIVIAL(error) << "MultiSend: export temp slice/thumb file error";
+        for (auto& iter : m_printers) {
+            m_send_jobs[iter].finish = true;
+            m_send_jobs[iter].result = Result_Fail;
+        }
+        m_printers.clear();
+        send_event(-1, "prepare error");
+        return false;
+    }
+#endif
     return true;
 }
 
@@ -113,26 +146,27 @@ bool MultiSend::get_multi_send_result(std::map<com_id_t, MultiSend::Result>& res
 bool MultiSend::prepare()
 {
     auto pid = get_current_pid();
-    std::filesystem::path temp_path(temporary_dir());
+    boost::filesystem::path temp_path(temporary_dir());
     temp_path = temp_path / "orca-flashforge" / "slice";
-    if (!std::filesystem::exists(temp_path)) {
-        try {
-            if (std::filesystem::create_directories(temp_path)) {
+    try {
+        if (!boost::filesystem::exists(temp_path)) {
+            if (boost::filesystem::create_directories(temp_path.string())) {
                 BOOST_LOG_TRIVIAL(info) << "create orca-flashforge slice path (" << temp_path << ") " << "success";
             } else {
                 BOOST_LOG_TRIVIAL(info) << "create orca-flashforge slice path (" << temp_path << ") " << "fail";
                 return false;
             }
-        } catch (...) {
-            BOOST_LOG_TRIVIAL(info) << "create orca-flashforge slice path (" << temp_path << ") " << "exception";
-            return false;
         }
+    } catch (...) {
+        BOOST_LOG_TRIVIAL(info) << "create orca-flashforge slice path (" << temp_path << ") " << "exception";
+        return false;
     }
     std::stringstream buf;
     buf << pid;
     std::string pidstr = buf.str();
     m_slice_path = (temp_path / (pidstr + ".3mf")).string();
     m_thumb_path = (temp_path / (pidstr + ".png")).string();
+
     return true;
 }
 
@@ -147,17 +181,59 @@ void MultiSend::cancel_export_job()
 
 void MultiSend::remove_temp_path()
 {
-    std::filesystem::path temp_path(temporary_dir());
+    boost::filesystem::path temp_path(temporary_dir());
     try {
         temp_path = temp_path / "orca-flashforge" / "slice";
-        std::filesystem::directory_iterator dir(temp_path);
+        boost::filesystem::directory_iterator dir(temp_path);
         for (auto& p : dir) {
-            bool ret = std::filesystem::remove_all(p);
-            BOOST_LOG_TRIVIAL(info) << "remove path (" << p.path().filename() << ") " << (ret ? "success" : "fail");
+            if (boost::filesystem::is_regular_file(p)) {
+                bool ret = boost::filesystem::remove_all(p.path().filename());
+                BOOST_LOG_TRIVIAL(info) << "remove path (" << p.path().filename() << ") " << (ret ? "success" : "fail");
+            }
         }
     } catch (...) {
         BOOST_LOG_TRIVIAL(info) << "remove path (" << temp_path.string() << ") exception";
     }
+    m_slice_path = "";
+    m_thumb_path = "";
+}
+
+bool MultiSend::export_temp_file()
+{
+    Plater* plater = wxGetApp().plater();
+    BOOST_LOG_TRIVIAL(info) << "export_temp_file: start process";
+    if (!plater || m_slice_path.empty() || m_thumb_path.empty()) {
+        BOOST_LOG_TRIVIAL(error) << "export_temp_file: export slice job fail, parameter invalid";
+        return false;
+    }
+    BOOST_LOG_TRIVIAL(info) << "export_temp_file: slice_path: " << m_slice_path << ", thumb_path: " << m_thumb_path;
+    ThumbnailData &data   = plater->get_partplate_list().get_curr_plate()->thumbnail_data;
+    if (data.is_valid()) {
+        wxImage image(data.width, data.height);
+        image.InitAlpha();
+        for (unsigned int r = 0; r < data.height; ++r) {
+            unsigned int rr = (data.height - 1 - r) * data.width;
+            for (unsigned int c = 0; c < data.width; ++c) {
+                unsigned char *px = (unsigned char *) data.pixels.data() + 4 * (rr + c);
+                image.SetRGB((int) c, (int) r, px[0], px[1], px[2]);
+                image.SetAlpha((int) c, (int) r, px[3]);
+            }
+        }
+        image = image.Rescale(256, 256);
+        if (image.SaveFile(wxString::FromUTF8(m_thumb_path))) {
+            BOOST_LOG_TRIVIAL(info) << "export_temp_file: save thumb (" << m_thumb_path << ") success";
+        } else {
+            BOOST_LOG_TRIVIAL(error) << "export_temp_file: save thumb (" << m_thumb_path << ") fail";
+            return false;
+        }
+    }
+    int result = plater->export_3mf(m_slice_path, SaveStrategy::Silence | SaveStrategy::SplitModel | SaveStrategy::WithGcode | SaveStrategy::SkipModel, m_plate_idx);
+    if (result < 0) {
+        BOOST_LOG_TRIVIAL(error) << "export_temp_file: export 3mf error: " << result;
+        return false;
+    }
+    BOOST_LOG_TRIVIAL(info) << "export_temp_file: export 3mf success: " << result;
+    return true;
 }
 
 void MultiSend::send_next_job()
@@ -214,7 +290,7 @@ void MultiSend::send_event(int code, const wxString& msg)
     remove_temp_path();
     if (m_event_handler) {
         wxCommandEvent event(EVT_MULTI_SEND_COMPLETED);
-        event.SetInt(-1);
+        event.SetInt(code);
         event.SetString(msg);
         event.SetEventObject(m_event_handler);
         wxPostEvent(m_event_handler, event);
