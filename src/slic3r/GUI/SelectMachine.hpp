@@ -170,7 +170,7 @@ protected:
 };
 
 #define SELECT_MACHINE_POPUP_SIZE wxSize(FromDIP(216), FromDIP(674))
-#define SELECT_MACHINE_LIST_SIZE wxSize(FromDIP(212), FromDIP(670))  
+#define SELECT_MACHINE_LIST_SIZE wxSize(FromDIP(212), FromDIP(770))
 #define SELECT_MACHINE_ITEM_SIZE wxSize(FromDIP(182), FromDIP(35))
 #define SELECT_MACHINE_GREY900 wxColour(38, 46, 48)
 #define SELECT_MACHINE_GREY600 wxColour(144,144,144)

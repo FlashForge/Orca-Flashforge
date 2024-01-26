@@ -369,9 +369,9 @@ SelectMachinePopup::SelectMachinePopup(wxWindow *parent)
     SetDoubleBuffered(true);
 #endif //__WINDOWS__
 
-    SetSize(SELECT_MACHINE_POPUP_SIZE);
+    /*SetSize(SELECT_MACHINE_POPUP_SIZE);
     SetMinSize(SELECT_MACHINE_POPUP_SIZE);
-    SetMaxSize(SELECT_MACHINE_POPUP_SIZE);
+    SetMaxSize(SELECT_MACHINE_POPUP_SIZE);*/
 
     Freeze();
     wxBoxSizer *m_sizer_main = new wxBoxSizer(wxVERTICAL);

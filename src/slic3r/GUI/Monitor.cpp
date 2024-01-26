@@ -295,11 +295,14 @@ void MonitorPanel::on_printer_clicked(wxMouseEvent &event)
         //pos.x = pos.x < 0? 0:pos.x;
         m_select_machine.Move(pos);
 
-#ifdef __linux__
-        m_select_machine.SetSize(wxSize(m_side_tools->GetSize().x, -1));
-        m_select_machine.SetMaxSize(wxSize(m_side_tools->GetSize().x, -1));
-        m_select_machine.SetMinSize(wxSize(m_side_tools->GetSize().x, -1));
-#endif
+        wxSize sizeAll = wxGetApp().mainframe->GetSize();
+        int side_tools_height = sizeAll.y - rect.y - m_side_tools->GetRect().height - 10;
+
+//#ifdef __linux__
+        m_select_machine.SetSize(wxSize(m_side_tools->GetSize().x, side_tools_height));
+        m_select_machine.SetMaxSize(wxSize(m_side_tools->GetSize().x, side_tools_height));
+        m_select_machine.SetMinSize(wxSize(m_side_tools->GetSize().x, side_tools_height));
+        //#endif
 
         m_select_machine.Popup();
     }
