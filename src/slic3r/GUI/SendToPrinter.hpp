@@ -131,7 +131,8 @@ public:
     struct MachineData
     {
         int         flag;   // 0 wlan, 1 lan
-        std::string model;
+        //std::string model;
+        int         pid;
         wxString    name;
         com_id_t    comId;
 
@@ -161,7 +162,7 @@ private:
     wxStaticText*   m_nameLbl;
     wxBoxSizer*     m_mainSizer;
     MachineData     m_data;
-    static std::map<std::string, wxImage> m_machineBitmapMap;
+    static std::map<int, wxImage> m_machineBitmapMap;
 };
 
 

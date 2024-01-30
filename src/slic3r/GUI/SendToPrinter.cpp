@@ -462,7 +462,7 @@ wxBoxSizer* SendToPrinterTipDialog::createItem(bool success, const wxString& nam
 }
 
 
-std::map<std::string, wxImage> MachineItem::m_machineBitmapMap;
+std::map<int, wxImage> MachineItem::m_machineBitmapMap;
 MachineItem::MachineItem(wxWindow* parent, const MachineData& data)
     : wxPanel(parent, wxID_ANY)
     , m_data(data)
@@ -515,7 +515,7 @@ void MachineItem::build()
     //m_iconPanel->SetMinSize(wxSize(FromDIP(46), FromDIP(46)));
     //m_iconPanel->SetMaxSize(wxSize(FromDIP(46), FromDIP(46)));
     
-    auto iter = m_machineBitmapMap.find(m_data.model);
+    auto iter = m_machineBitmapMap.find(m_data.pid);
     if (iter != m_machineBitmapMap.end()) {
         m_thumbnailPanel->set_thumbnail(iter->second);
     }
@@ -540,8 +540,8 @@ void MachineItem::initBitmap()
     if (!m_machineBitmapMap.empty()) {
         return;
     }
-    m_machineBitmapMap["Adventurer 5M"] = create_scaled_bitmap("adventurer_5m", 0, 46).ConvertToImage();
-    m_machineBitmapMap["Adventurer 5M Pro"] = create_scaled_bitmap("adventurer_5m_pro", 0, 46).ConvertToImage();
+    m_machineBitmapMap[0x0023] = create_scaled_bitmap("adventurer_5m", 0, 46).ConvertToImage();
+    m_machineBitmapMap[0x0024] = create_scaled_bitmap("adventurer_5m_pro", 0, 46).ConvertToImage();
 }
 
 
@@ -1098,7 +1098,7 @@ void SendToPrinterDialog::update_user_machine_list()
                 if (COM_CONNECT_WAN == data.connectMode || COM_CONNECT_LAN == data.connectMode) {
                     MachineItem::MachineData mdata;
                     mdata.flag = data.connectMode;
-                    //mdata.model = data.devDetail->model;
+                    mdata.pid = data.devDetail->pid;
                     mdata.name = wxString::FromUTF8((COM_CONNECT_WAN == data.connectMode) ? data.wanDevInfo.name : data.lanDevInfo.name);
                     mdata.comId = id;
                     m_machineListMap.emplace(mdata.comId, mdata);
@@ -1114,9 +1114,9 @@ void SendToPrinterDialog::update_user_machine_list()
             MachineItem::MachineData mdata;
             mdata.flag = 0;
             if (i % 2 == 0) {
-                mdata.model = "Adventurer 5M Pro";
+                mdata.pid = 0x0024; //"Adventurer 5M Pro";
             } else {
-                mdata.model = "Adventurer 5M";
+                mdata.pid = 0x0023; //"Adventurer 5M";
             }
             mdata.name = "Just For Test";
             mdata.comId = i;
