@@ -52,7 +52,10 @@ MultiSend::~MultiSend()
 
 bool MultiSend::send_to_printer(int plate_idx, const com_id_list_t& com_ids, const std::string& job_name, bool send_and_print, bool leveling)
 {
+    BOOST_LOG_TRIVIAL(error) << "begin send_to_printer";
     if (m_is_sending) {
+        BOOST_LOG_TRIVIAL(error) << "is sending";
+        send_event(-1, _L("MultiSend:send_to_printer, is busy"));
         return false;   
     }
     m_slice_job_name = job_name;
@@ -64,9 +67,18 @@ bool MultiSend::send_to_printer(int plate_idx, const com_id_list_t& com_ids, con
     m_plate_idx = plate_idx;
 
     for (auto& id : com_ids) {
-        m_printers.emplace_back(id);
-        m_send_jobs.emplace(id, ResultInfo{-1, false, Result_Ok, 0.0});
-    }    
+        bool valid = false;
+        MultiComMgr::inst()->devData(id, &valid);
+        if (valid) {
+            m_printers.emplace_back(id);
+            m_send_jobs.emplace(id, ResultInfo{-1, false, Result_Ok, 0.0});
+        }
+    }
+    if (m_printers.empty()) {
+        BOOST_LOG_TRIVIAL(error) << "MultiSend: send_to_printer, no valid printer";
+        send_event(-1, _L("no valid printer"));
+        return false;
+    }
     if (!prepare()) {
         for (auto& iter : m_printers) {
             m_send_jobs[iter].finish = true;
@@ -108,11 +120,13 @@ bool MultiSend::send_to_printer(int plate_idx, const com_id_list_t& com_ids, con
         return false;
     }
 #endif
+    BOOST_LOG_TRIVIAL(error) << "end send_to_printer";
     return true;
 }
 
 void MultiSend::cancel()
 {
+    BOOST_LOG_TRIVIAL(info) << "MultiSend: cancel";
     cancel_export_job();
     if (!m_printers.empty()) {
         for (auto& iter : m_printers) {
@@ -129,7 +143,7 @@ void MultiSend::cancel()
         }
     }
     m_is_sending = false;
-    if (cancel_flag) {
+    if (!cancel_flag) {
         send_event(0, "");
     }
 }
@@ -299,6 +313,7 @@ void MultiSend::send_event(int code, const wxString& msg)
 
 void MultiSend::on_cnnection_exit(ComConnectionExitEvent& event)
 {
+    BOOST_LOG_TRIVIAL(info) << "MultiSend: on_cnnection_exit";
     if (m_send_jobs.find(event.id) == m_send_jobs.end()) {
         event.Skip();
         return;
@@ -310,6 +325,7 @@ void MultiSend::on_cnnection_exit(ComConnectionExitEvent& event)
         m_send_jobs[event.id].finish = true;
         m_send_jobs[event.id].result = Result_Fail_Network;
     }
+    
     send_next_job();
     update_progress();
     event.Skip();
@@ -317,6 +333,7 @@ void MultiSend::on_cnnection_exit(ComConnectionExitEvent& event)
 
 void MultiSend::on_send_gcode_finished(ComSendGcodeFinishEvent& event)
 {
+    BOOST_LOG_TRIVIAL(info) << "MultiSend: on_send_gcode_finished";
     auto& iter = m_send_jobs.find(event.id);
     if (iter == m_send_jobs.end()) {
         event.Skip();
@@ -1423,6 +1440,7 @@ void SendToPrinterDialog::redirect_window()
 
 bool SendToPrinterDialog::Show(bool show)
 {
+    BOOST_LOG_TRIVIAL(error) << "SendToPrinterDialog::Show, " << show ? "show" : "no show";
     // set default value when show this dialog
     if (show) {
         wxGetApp().reset_to_active();
@@ -1437,6 +1455,7 @@ bool SendToPrinterDialog::Show(bool show)
     Layout();
     Fit();
     if (show) { CenterOnParent(); }
+    //flush_logs();
     return DPIDialog::Show(show);
 }
 
@@ -1506,6 +1525,7 @@ void SendToPrinterDialog::onMachineSelectionToggled(wxCommandEvent& event)
 
 void SendToPrinterDialog::onSendClicked(wxCommandEvent& event)
 {
+    BOOST_LOG_TRIVIAL(error) << "begin send button clicked";
     m_is_in_sending_mode = true;
     com_id_list_t com_ids;
     for (auto& iter : m_machineItemList) {
@@ -1524,9 +1544,11 @@ void SendToPrinterDialog::onSendClicked(wxCommandEvent& event)
     int ret = m_multiSend->send_to_printer(m_print_plate_idx, com_ids, job_name.ToUTF8().data(), m_send_and_print, m_levelCkb->GetValue());
     if (!ret) {
         m_is_in_sending_mode = false;
+        update_user_machine_list();
         BOOST_LOG_TRIVIAL(info) << "send_to_printer error";
         return;
     } else {
+        BOOST_LOG_TRIVIAL(error) << "send_to_printer success";
         m_progressInfoLbl->SetLabel(_L("Preparing printing task"));
         m_progressInfoLbl->SetForegroundColour(wxColour("#333333"));
         m_progressBar->SetValue(0);
@@ -1593,6 +1615,7 @@ void SendToPrinterDialog::on_multi_send_progress(wxCommandEvent& event)
 
 void SendToPrinterDialog::on_multi_send_completed(wxCommandEvent& event)
 {
+    BOOST_LOG_TRIVIAL(info) << "SendToPrinterDialog: receive multi send completed";
     m_is_in_sending_mode = false;
     std::map<com_id_t, MultiSend::Result> send_result;
     m_multiSend->get_multi_send_result(send_result);
@@ -1600,6 +1623,7 @@ void SendToPrinterDialog::on_multi_send_completed(wxCommandEvent& event)
         BOOST_LOG_TRIVIAL(error) << "SendToPrinterDialog: result is empty";
         return;
     }
+    BOOST_LOG_TRIVIAL(info) << "SendToPrinterDialog: receive multi send completed 2";
     m_progressBar->SetValue(100);
     m_progressCancelBtn->Show(false);
     if (send_result.size() == 1) {
