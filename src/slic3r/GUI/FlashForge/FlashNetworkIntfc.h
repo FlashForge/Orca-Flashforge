@@ -45,6 +45,11 @@ public:
     decltype(&fnet_getWanDevDetail) getWanDevDetail;
     decltype(&fnet_freeDevDetail) freeDevDetail;
     decltype(&fnet_wanDevSendGcode) wanDevSendGcode;
+    decltype(&fnet_createConnection) createConnection;
+    decltype(&fnet_freeConnection) freeConnection;
+    decltype(&fnet_connectionRun) connectionRun;
+    decltype(&fnet_connectionPost) connectionPost;
+    decltype(&fnet_connectionStop) connectionStop;
 
 public:
     FlashNetworkIntfc(const char *libraryPath, const char *logFileDir, int expireHours);

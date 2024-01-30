@@ -15,32 +15,29 @@
 #define MAX_DEVICE_SN_LEN 128
 #define MAX_DEVICE_NAME_LEN 128
 
-struct fnet_connection_read_data;
-typedef struct fnet_connection_read_data fnet_connection_read_data_t;
+struct fnet_conn_read_data;
+typedef struct fnet_conn_read_data fnet_conn_read_data_t;
 
 // returning a non-zero value from the callback aborts the transfer
 typedef int (*fnet_progress_callback_t)(long long now, long long total, void *data);
 
 // returning a non-zero value from the callback stop the event loop
-typedef int (*fnet_read_callback_t)(fnet_connection_read_data_t *readData, void *data);
-
-// returning a non-zero value from the callback stop the event loop
-typedef int (*fnet_error_callback_t)(int code, void *data);
-
+// the corresponding free function needs to be called according to the readData->type to release the readData->data.
+typedef int (*fnet_conn_read_callback_t)(fnet_conn_read_data_t *readData, void *data);
 
 #pragma pack(push, 4)
 
-typedef enum fnet_connection_write_data_type {
-    FNET_CONNECTION_WRITE_SUBSCRIBE_DEVICE,
-    FNET_CONNECTION_WRITE_BIND_DEVICE,
-    FNET_CONNECTION_WRITE_UNBIND_DEVICE,
-} fnet_connection_write_data_type_t;
+typedef enum fnet_conn_write_data_type {
+    FNET_CONN_WRITE_SUBSCRIBE_DEVICE,   // data, fnet_device_ids_t
+    FNET_CONN_WRITE_SYNC_BIND_DEVICE,   // data, fnet_device_ids_t
+    FNET_CONN_WRITE_SYNC_UNBIND_DEVICE, // data, fnet_device_ids_t
+} fnet_conn_write_data_type_t;
 
-typedef enum fnet_connection_read_data_type {
-    FNET_CONNECTION_READ_DEVICE_DETAIL,
-    FNET_CONNECTION_READ_BIND_DEVICE,
-    FNET_CONNECTION_READ_UNBIND_DEVICE,
-} fnet_connection_read_data_type_t;
+typedef enum fnet_conn_read_data_type {
+    FNET_CONN_READ_DEVICE_DETAIL,       // data, fnet_dev_detail_t
+    FNET_CONN_READ_SYNC_BIND_DEVICE,    // data, nullptr
+    FNET_CONN_READ_SYNC_UNBIND_DEVICE,  // data, nullptr
+} fnet_conn_read_data_type_t;
 
 typedef struct fnet_send_gcode_data {
     const char *gcodeFilePath;  // utf-8
@@ -52,18 +49,23 @@ typedef struct fnet_send_gcode_data {
     void *callbackData;
 } fnet_send_gcode_data_t;
 
-typedef struct fnet_connection_settings {
-    fnet_read_callback_t readCallback;
+typedef struct fnet_conn_settings {
+    fnet_conn_read_callback_t readCallback;
     void *readCallbackData;
-    fnet_error_callback_t errorCallback;
-    void *errorCallbackData;
-    int msTimeOut;
-} fnet_connection_settings_t;
+    int maxReconnectCnt;
+    int maxErrorCnt;
+    int msTimeout;
+} fnet_conn_settings_t;
 
-typedef struct fnet_connection_write_data {
-    fnet_connection_write_data_type_t type;
+typedef struct fnet_conn_write_data {
+    fnet_conn_write_data_type_t type;
     void *data;
-} fnet_connection_write_data_t;
+} fnet_conn_write_data_t;
+
+typedef struct fnet_dev_ids {
+    const char **devIds;
+    int devCnt;
+} fnet_dev_ids_t;
 
 typedef struct fnet_lan_dev_info {
     char serialNumber[MAX_DEVICE_SN_LEN];
@@ -73,7 +75,7 @@ typedef struct fnet_lan_dev_info {
     unsigned short vid;
     unsigned short pid;
     unsigned short connectMode; // 0 lan mode, 1 wan mode
-    unsigned short bindStatus; // 0 unbound, 1 bound
+    unsigned short bindStatus;  // 0 unbound, 1 bound
 } fnet_lan_dev_info_t;
 
 typedef struct fnet_file_data {
@@ -93,6 +95,7 @@ typedef struct fnet_client_token_data {
 } fnet_client_token_data_t;
 
 typedef struct fnet_user_profile {
+    char *uid;
     char *nickname;
     char *headImgUrl;
 } fnet_user_profile_t;
@@ -113,7 +116,6 @@ typedef struct fnet_wan_dev_info {
 } fnet_wan_dev_info_t;
 
 typedef struct fnet_dev_detail {
-    char *model;
     int pid;
     int nozzleCnt;
     int nozzleStyle;            // 0 independent, 1 non-independent
@@ -166,10 +168,10 @@ typedef struct fnet_dev_detail {
     char *errorCode;
 } fnet_dev_detail_t;
 
-typedef struct fnet_connection_read_data {
-    fnet_connection_read_data_type_t type;
-    void *data;
-} fnet_connection_read_data_t;
+typedef struct fnet_conn_read_data {
+    fnet_conn_read_data_type_t type;
+    void *data;                 // the corresponding free function needs to be called according to the type
+} fnet_conn_read_data_t;
 
 #pragma pack(pop)
 
@@ -255,15 +257,16 @@ FNET_API int fnet_getWanDevDetail(const char *accessToken, const char *devId,
 FNET_API int fnet_wanDevSendGcode(const char *accessToken, const char *devId,
     const fnet_send_gcode_data_t *sendGcodeData, int msTimeout);
 
-FNET_API int fnet_openConnection(void **connection, int msTimeout);
+FNET_API int fnet_createConnection(void **conn, const char *accessToken,
+    const fnet_conn_settings_t *settings);
 
-FNET_API void fnet_closeConnection(void *connection); // called in another thread
+FNET_API void fnet_freeConnection(void *conn);
 
-FNET_API void fnet_connectionRun(void *connection,
-    const fnet_connection_settings_t *settings); // run event processing loop
+FNET_API void fnet_connectionRun(void *conn); // run event processing loop
 
-FNET_API void fnet_connectionPost(void *connection,
-    const fnet_connection_write_data_t *writeData); // called in another thread
+FNET_API void fnet_connectionPost(void *conn, const fnet_conn_write_data_t *writeData); // called in another thread
+
+FNET_API void fnet_connectionStop(void *conn); // called in another thread
 
 #ifdef __cplusplus
 }
