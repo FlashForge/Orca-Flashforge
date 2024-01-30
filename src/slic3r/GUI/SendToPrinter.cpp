@@ -1081,7 +1081,7 @@ void SendToPrinterDialog::update_user_machine_list()
                 if (COM_CONNECT_WAN == data.connectMode || COM_CONNECT_LAN == data.connectMode) {
                     MachineItem::MachineData mdata;
                     mdata.flag = data.connectMode;
-                    mdata.model = data.devDetail->model;
+                    //mdata.model = data.devDetail->model;
                     mdata.name = wxString::FromUTF8((COM_CONNECT_WAN == data.connectMode) ? data.wanDevInfo.name : data.lanDevInfo.name);
                     mdata.comId = id;
                     m_machineListMap.emplace(mdata.comId, mdata);
