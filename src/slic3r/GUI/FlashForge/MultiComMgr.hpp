@@ -9,6 +9,7 @@
 #include <boost/bimap.hpp>
 #include <wx/event.h>
 #include "ComConnection.hpp"
+#include "ComWanAsyncConn.hpp"
 #include "FlashNetworkIntfc.h"
 #include "MultiComDef.hpp"
 #include "MultiComEvent.hpp"
@@ -32,9 +33,11 @@ public:
 
     void removeLanDev(com_id_t id);
 
-    void setWanDevToken(const std::string &userName, const std::string &accessToken);
+    ComErrno addWanDev(const std::string &accessToken);
 
     void removeWanDev();
+
+    void setWanDevToken(const std::string &accessToken);
 
     ComErrno bindWanDev(const std::string &serialNumber, unsigned short pid,
         const std::string &name);
@@ -60,13 +63,15 @@ private:
 
     void onWanDevMaintian(const ComWanDevMaintainEvent &event);
 
-    void onWanDevUpdated(const WanDevUpdateEvent &event);
+    void onGetWanDev(const GetWanDevEvent &event);
 
     void onConnectionReady(const ComConnectionReadyEvent &event);
 
     void onConnectionExit(const ComConnectionExitEvent &event);
 
     void onDevDetailUpdate(const ComDevDetailUpdateEvent &event);
+
+    void onWanConnReadData(const WanConnReadDataEvent &event);
 
     com_dev_data_t makeDevData(const fnet_wan_dev_info_t *wanDevInfo);
 
@@ -77,7 +82,9 @@ private:
     std::map<com_id_t, com_dev_data_t>       m_datMap;
     std::set<com_id_t>                       m_readyIdSet;
     std::set<std::string>                    m_serialNumberSet;
+    std::map<std::string, com_id_t>          m_devIdMap;
     std::unique_ptr<UserDataUpdateThd>       m_userDataUpdateThd;
+    std::unique_ptr<ComWanAsyncConn>         m_wanAsyncConn;
     std::unique_ptr<fnet::FlashNetworkIntfc> m_networkIntfc;
 };
 

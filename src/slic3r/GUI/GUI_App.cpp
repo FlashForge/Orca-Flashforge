@@ -3924,7 +3924,7 @@ std::string GUI_App::handle_web_request(std::string cmd)
                                 handle_login_result(usr_pic,usr_name);
                                 LoginDialog::SetToken(access_token,refresh_token);
                                 LoginDialog::SetUsrInfo(com_user_profile_t{usr_name,usr_pic});
-                                Slic3r::GUI::MultiComMgr::inst()->setWanDevToken(usr_name,access_token);
+                                Slic3r::GUI::MultiComMgr::inst()->setWanDevToken(access_token);
                             }
                             else{
                                 //尝试更新token值，若还是无效，则清空已有信息
@@ -3934,7 +3934,7 @@ std::string GUI_App::handle_web_request(std::string cmd)
                                     handle_login_result(usr_pic,usr_name);
                                     LoginDialog::SetToken(token_data.accessToken,token_data.refreshToken);
                                     LoginDialog::SetUsrInfo(com_user_profile_t{usr_name,usr_pic});
-                                    Slic3r::GUI::MultiComMgr::inst()->setWanDevToken(usr_name,token_data.accessToken);
+                                    Slic3r::GUI::MultiComMgr::inst()->setWanDevToken(token_data.accessToken);
                                     app_config->set("access_token",token_data.accessToken);
                                     app_config->set("refresh_token",token_data.refreshToken);
                                     app_config->set("expire_time",std::to_string(token_data.expiresIn));
