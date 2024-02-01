@@ -293,16 +293,17 @@ void MultiComMgr::onDevDetailUpdate(const ComDevDetailUpdateEvent &event)
 
 void MultiComMgr::onWanConnReadData(const WanConnReadDataEvent &event)
 {
-    auto queueDevDetailUpdateEvent = [this](const fnet_conn_read_data_t &readData){
+    auto procDevDetailUpdateEvent = [this](const fnet_conn_read_data_t &readData) {
         auto it = m_devIdMap.find(readData.devId);
         if (it != m_devIdMap.end()) {
-            QueueEvent(new ComDevDetailUpdateEvent(COM_DEV_DETAIL_UPDATE_EVENT,
-                it->second, ComInvalidCommandId, (fnet_dev_detail_t *)readData.data));
+            ComDevDetailUpdateEvent devDetailUpdateEvent(COM_DEV_DETAIL_UPDATE_EVENT,
+                it->second, ComInvalidCommandId, (fnet_dev_detail_t *)readData.data);
+            onDevDetailUpdate(devDetailUpdateEvent);
         }
     };
     switch (event.readData.type) {
     case FNET_CONN_READ_DEVICE_DETAIL:
-        queueDevDetailUpdateEvent(event.readData);
+        procDevDetailUpdateEvent(event.readData);
         break;
     case FNET_CONN_READ_SYNC_BIND_DEVICE:
         m_userDataUpdateThd->setUpdateWanDev();
