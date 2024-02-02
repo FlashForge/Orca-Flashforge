@@ -72,19 +72,20 @@ ComErrno MultiComMgr::addWanDev(const std::string &accessToken)
     if (networkIntfc() == nullptr) {
         return COM_UNINITIALIZED;
     }
-    if (m_userDataUpdateThd.get() != nullptr) {
+    if (m_wanAsyncConn.get() != nullptr) {
         return COM_ERROR;
     }
-    m_userDataUpdateThd->setToken(accessToken);
-    m_userDataUpdateThd->setUpdateUserProfile();
-    m_userDataUpdateThd->setUpdateWanDev();
     m_wanAsyncConn.reset(new ComWanAsyncConn(m_networkIntfc.get()));
     ComErrno ret = m_wanAsyncConn->createConn(accessToken);
     if (ret != COM_OK) {
+        m_wanAsyncConn.reset(nullptr);
         return ret;
     }
     m_wanAsyncConn->Bind(COM_WAN_DEV_MAINTAIN_EVENT, &MultiComMgr::onWanDevMaintian, this);
     m_wanAsyncConn->Bind(WAN_CONN_READ_DATA_EVENT, &MultiComMgr::onWanConnReadData, this);
+    m_userDataUpdateThd->setToken(accessToken);
+    m_userDataUpdateThd->setUpdateUserProfile();
+    m_userDataUpdateThd->setUpdateWanDev();
     return ret;
 }
 
