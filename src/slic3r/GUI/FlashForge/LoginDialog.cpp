@@ -639,14 +639,14 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     auto register_link = new wxStaticText(parent, wxID_ANY, _L("Register"));
     register_link->SetForegroundColour(wxColour(50,141,251));
     register_link->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
-        wxString url = "https://www.baidu.com/";
+        wxString url = "http://dev.auth.flashforge.shop/en/signUp";
         wxLaunchDefaultBrowser(url);
     });
 
     auto forget_password_link = new wxStaticText(parent, wxID_ANY,  _L("Forget Password"));
     forget_password_link->SetForegroundColour(wxColour(50,141,251));
     forget_password_link->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
-        wxString url = "https://www.youku.com/";
+        wxString url = "http://dev.auth.flashforge.shop/en/resetPassword";
         wxLaunchDefaultBrowser(url);
     });
 
