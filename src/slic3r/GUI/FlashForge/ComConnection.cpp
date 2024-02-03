@@ -78,18 +78,13 @@ bool ComConnection::abortSendGcode(int commandId)
 
 void ComConnection::run()
 {
-    ComGetDevDetail getDevDetail;
-    ComErrno ret;
-    if (m_connectMode == COM_CONNECT_LAN) {
-        ret = getDevDetail.exec(m_networkIntfc, m_ip, m_port, m_serialNumber, m_checkCode);
-    } else {
-        ret = getDevDetail.exec(m_networkIntfc, m_accessToken, m_deviceId);
-    }
+    fnet_dev_detail_t *detail;
+    ComErrno ret = initialize(&detail);
     if (ret != COM_OK) {
         QueueEvent(new ComConnectionExitEvent(COM_CONNECTION_EXIT_EVENT, m_id, ret));
         return;
     }
-    QueueEvent(new ComConnectionReadyEvent(COM_CONNECTION_READY_EVENT, m_id, getDevDetail.devDetail()));
+    QueueEvent(new ComConnectionReadyEvent(COM_CONNECTION_READY_EVENT, m_id, detail));
     ret = commandLoop();
     QueueEvent(new ComConnectionExitEvent(COM_CONNECTION_EXIT_EVENT, m_id, ret));
 }
@@ -116,7 +111,7 @@ ComErrno ComConnection::commandLoop()
             }
             m_commandQue.pop(frontCommand->commandId());
         }
-        if ((clock() - m_getDetailClock) / (double)CLOCKS_PER_SEC > 3) {
+        if (m_connectMode == COM_CONNECT_LAN && (clock() - m_getDetailClock) / (double)CLOCKS_PER_SEC > 3) {
             m_commandQue.pushBack(ComCommandPtr(new ComGetDevDetail), 5, true);
             m_getDetailClock = clock();
         }
@@ -128,6 +123,27 @@ std::string ComConnection::getAccessToken()
 {
     boost::mutex::scoped_lock lock(m_tokenMutex);
     return m_accessToken;
+}
+
+ComErrno ComConnection::initialize(fnet_dev_detail_t **detail)
+{
+    ComErrno ret;
+    ComGetDevDetail getDevDetail;
+    if (m_connectMode == COM_CONNECT_LAN) {
+        ret = getDevDetail.exec(m_networkIntfc, m_ip, m_port, m_serialNumber, m_checkCode);
+    } else {
+        int tryCnt = 3;
+        for (int i = 0; i < tryCnt; ++i) {
+            ret = getDevDetail.exec(m_networkIntfc, m_accessToken, m_deviceId);
+            if (ret == FNET_OK || ret == FNET_UNAUTHORIZED) {
+                *detail = getDevDetail.devDetail();
+                break;
+            } else if (i + 1 < tryCnt) {
+                boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
+            }
+        }
+    }
+    return ret;
 }
 
 void ComConnection::processCommand(ComCommand *command, ComErrno ret)

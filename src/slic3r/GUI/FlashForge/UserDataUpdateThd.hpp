@@ -1,5 +1,5 @@
-#ifndef slic3r_GUI_WanDevUpdateThd_hpp_
-#define slic3r_GUI_WanDevUpdateThd_hpp_
+#ifndef slic3r_GUI_UserDataUpdateThd_hpp_
+#define slic3r_GUI_UserDataUpdateThd_hpp_
 
 #include <atomic>
 #include <boost/thread/mutex.hpp>
@@ -11,21 +11,13 @@
 
 namespace Slic3r { namespace GUI {
 
-struct WanDevUpdateEvent : public wxCommandEvent
-{
-    WanDevUpdateEvent(wxEventType _type, const std::string &_accessToken,
-        fnet_wan_dev_info_t *_devInfos, int _devCnt)
-    {
-        SetEventType(_type);
-        accessToken = _accessToken;
-        devInfos = _devInfos;
-        devCnt = _devCnt;
-    }
+struct GetWanDevEvent : public wxCommandEvent {
+    ComErrno ret;
     std::string accessToken;
     fnet_wan_dev_info_t *devInfos;
     int devCnt;
 };
-wxDECLARE_EVENT(WAN_DEV_UPDATE_EVENT, WanDevUpdateEvent);
+wxDECLARE_EVENT(GET_WAN_DEV_EVENT, GetWanDevEvent);
 
 class UserDataUpdateThd : public wxEvtHandler
 {
@@ -34,33 +26,28 @@ public:
 
     void exit();
 
-    void getToken(std::string &userName, std::string &accessToken);
+    std::string getToken();
 
-    void setToken(const std::string &userName, const std::string &accessToken);
+    void setToken(const std::string &accessToken);
 
-    void clearToken();
+    void setUpdateUserProfile();
 
     void setUpdateWanDev();
 
 private:
     void run();
 
-    ComErrno updateUserProfile(const std::string &accessToken);
+    void updateUserProfile(const std::string &accessToken);
 
-    ComErrno updateWanDev(const std::string &accessToken);
-
-    void getTokenPrivate(std::string &oldUserName, std::string &userName,
-        std::string &accessToken);
-
-    void setOldUserName(const std::string &oldUserName);
+    void updateWanDev(const std::string &accessToken);
 
 private:
-    std::string              m_oldUserName;
-    std::string              m_userName;
     std::string              m_accessToken;
     boost::mutex             m_tokenMutex;
+    std::atomic_bool         m_updateUserProfile;
+    std::atomic_bool         m_updateWanDev;
     WaitEvent                m_loopWaitEvent;
-    std::atomic<bool>        m_exitThread;
+    std::atomic_bool         m_exitThread;
     boost::thread            m_thread;
     fnet::FlashNetworkIntfc *m_networkIntfc;
 };

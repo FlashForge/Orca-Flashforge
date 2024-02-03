@@ -49,6 +49,11 @@ FlashNetworkIntfc::FlashNetworkIntfc(const char *libraryPath, const char *logFil
     INIT_FUNC_PTR(getWanDevDetail, fnet_getWanDevDetail);
     INIT_FUNC_PTR(freeDevDetail, fnet_freeDevDetail);
     INIT_FUNC_PTR(wanDevSendGcode, fnet_wanDevSendGcode);
+    INIT_FUNC_PTR(createConnection, fnet_createConnection);
+    INIT_FUNC_PTR(freeConnection, fnet_freeConnection);
+    INIT_FUNC_PTR(connectionRun, fnet_connectionRun);
+    INIT_FUNC_PTR(connectionPost, fnet_connectionPost);
+    INIT_FUNC_PTR(connectionStop, fnet_connectionStop);
     if (initlize(logFileDir, expireHours) == FNET_OK) {
         m_isOk = true;
     }

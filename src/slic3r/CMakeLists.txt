@@ -149,6 +149,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/GLSelectionRectangle.hpp
     GUI/Gizmos/GizmoObjectManipulation.cpp
     GUI/Gizmos/GizmoObjectManipulation.hpp
+    GUI/FlashForge/ComWanAsyncConn.cpp
+    GUI/FlashForge/ComWanAsyncConn.hpp
     GUI/FlashForge/ComCommand.cpp
     GUI/FlashForge/ComCommand.hpp
     GUI/FlashForge/ComCommandQue.cpp

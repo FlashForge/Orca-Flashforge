@@ -1,0 +1,96 @@
+#include "ComWanAsyncConn.hpp"
+#include "MultiComEvent.hpp"
+#include "MultiComUtils.hpp"
+
+namespace Slic3r { namespace GUI {
+
+wxDEFINE_EVENT(WAN_CONN_READ_DATA_EVENT, WanConnReadDataEvent);
+
+ComWanAsyncConn::ComWanAsyncConn(fnet::FlashNetworkIntfc *networkIntfc)
+    : m_conn(nullptr)
+    , m_networkIntfc(networkIntfc)
+{
+}
+
+ComErrno ComWanAsyncConn::createConn(const std::string &accessToken)
+{
+    fnet_conn_settings_t settings;
+    settings.readCallback = readCallback;
+    settings.readCallbackData = this;
+    settings.maxReconnectCnt = 5;
+    settings.maxErrorCnt = 3;
+    settings.msTimeout = ComTimeoutWan;
+    int fnetRet = m_networkIntfc->createConnection(&m_conn, accessToken.c_str(), &settings);
+    ComErrno ret = MultiComUtils::fnetRet2ComErrno(fnetRet);
+    if (ret != COM_OK) {
+        return ret;
+    }
+    m_thread.reset(new boost::thread(boost::bind(&ComWanAsyncConn::run, this)));
+    return ret;
+}
+
+void ComWanAsyncConn::freeConn()
+{
+    if (m_thread == nullptr) {
+        return;
+    }
+    m_networkIntfc->connectionStop(m_conn);
+    m_thread->join();
+    m_thread.reset(nullptr);
+    m_networkIntfc->freeConnection(m_conn);
+}
+
+void ComWanAsyncConn::postSyncBindDev(const std::string &devId)
+{
+    if (m_thread == nullptr) {
+        return;
+    }
+    const char *ids = devId.c_str();
+    fnet_dev_ids_t fnetDevIds = {&ids, 1};
+    fnet_conn_write_data_t writeData = {FNET_CONN_WRITE_SYNC_BIND_DEVICE, &fnetDevIds};
+    m_networkIntfc->connectionPost(m_conn, &writeData);
+}
+
+void ComWanAsyncConn::postSyncUnbindDev(const std::string &devId)
+{
+    if (m_thread == nullptr) {
+        return;
+    }
+    const char *ids = devId.c_str();
+    fnet_dev_ids_t fnetDevIds = {&ids, 1};
+    fnet_conn_write_data_t writeData = {FNET_CONN_WRITE_SYNC_UNBIND_DEVICE, &fnetDevIds};
+    m_networkIntfc->connectionPost(m_conn, &writeData);
+}
+
+void ComWanAsyncConn::postSubscribeDev(const std::vector<std::string> &devIds)
+{
+    if (m_thread == nullptr || devIds.empty()) {
+        return;
+    }
+    std::vector<const char *> ids;
+    for (auto &devId : devIds) {
+        ids.push_back(devId.c_str());
+    }
+    fnet_dev_ids_t fnetDevIds = {ids.data(), 1};
+    fnet_conn_write_data_t writeData = {FNET_CONN_WRITE_SUBSCRIBE_DEVICE, &fnetDevIds};
+    m_networkIntfc->connectionPost(m_conn, &writeData);
+}
+
+void ComWanAsyncConn::run()
+{
+    ComErrno ret = MultiComUtils::fnetRet2ComErrno(m_networkIntfc->connectionRun(m_conn));
+    if (ret != COM_OK) {
+        QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, ret));
+    }
+}
+
+int ComWanAsyncConn::readCallback(fnet_conn_read_data_t *readData, void *data)
+{
+    WanConnReadDataEvent *event = new WanConnReadDataEvent;
+    event->SetEventType(WAN_CONN_READ_DATA_EVENT);
+    event->readData = *readData;
+    ((ComWanAsyncConn *)data)->QueueEvent(event);
+    return 0;
+}
+
+}} // namespace Slic3r::GUI

@@ -22,7 +22,7 @@ typedef struct fnet_conn_read_data fnet_conn_read_data_t;
 typedef int (*fnet_progress_callback_t)(long long now, long long total, void *data);
 
 // returning a non-zero value from the callback stop the event loop
-// the corresponding free function needs to be called according to the readData->type to release the readData->data.
+// the corresponding free function needs to be called to release the readData->data and readData->devId.
 typedef int (*fnet_conn_read_callback_t)(fnet_conn_read_data_t *readData, void *data);
 
 #pragma pack(push, 4)
@@ -63,8 +63,8 @@ typedef struct fnet_conn_write_data {
 } fnet_conn_write_data_t;
 
 typedef struct fnet_dev_ids {
-    const char **devIds;
-    int devCnt;
+    const char **ids;
+    int cnt;
 } fnet_dev_ids_t;
 
 typedef struct fnet_lan_dev_info {
@@ -170,7 +170,8 @@ typedef struct fnet_dev_detail {
 
 typedef struct fnet_conn_read_data {
     fnet_conn_read_data_type_t type;
-    void *data;                 // the corresponding free function needs to be called according to the type
+    void *data;                 // call fent_freeXXXX to release
+    char *devId;                // call fnet_freeString to release
 } fnet_conn_read_data_t;
 
 #pragma pack(pop)
@@ -262,11 +263,13 @@ FNET_API int fnet_createConnection(void **conn, const char *accessToken,
 
 FNET_API void fnet_freeConnection(void *conn);
 
-FNET_API void fnet_connectionRun(void *conn); // run event processing loop
+FNET_API int fnet_connectionRun(void *conn); // run event processing loop
 
 FNET_API void fnet_connectionPost(void *conn, const fnet_conn_write_data_t *writeData); // called in another thread
 
 FNET_API void fnet_connectionStop(void *conn); // called in another thread
+
+FNET_API void fnet_freeString(char *str);
 
 #ifdef __cplusplus
 }

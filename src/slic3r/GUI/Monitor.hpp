@@ -2,6 +2,7 @@
 #define slic3r_Monitor_hpp_
 
 #include "Tabbook.hpp"
+#include <ctime>
 #include <wx/notebook.h>
 #include <wx/scrolwin.h>
 #include <wx/sizer.h>
@@ -101,7 +102,7 @@ private:
     int last_status;
     bool m_initialized { false };
     wxTimer* m_refresh_timer = nullptr;
-    DWORD m_connect_fail_time1;
+    time_t m_connect_fail_time1;
 
 public:
     MonitorPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);

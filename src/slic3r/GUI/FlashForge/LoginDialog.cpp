@@ -639,14 +639,14 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     auto register_link = new wxStaticText(parent, wxID_ANY, _L("Register"));
     register_link->SetForegroundColour(wxColour(50,141,251));
     register_link->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
-        wxString url = "https://www.baidu.com/";
+        wxString url = "http://dev.auth.flashforge.shop/en/signUp";
         wxLaunchDefaultBrowser(url);
     });
 
     auto forget_password_link = new wxStaticText(parent, wxID_ANY,  _L("Forget Password"));
     forget_password_link->SetForegroundColour(wxColour(50,141,251));
     forget_password_link->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
-        wxString url = "https://www.youku.com/";
+        wxString url = "http://dev.auth.flashforge.shop/en/resetPassword";
         wxLaunchDefaultBrowser(url);
     });
 
@@ -888,7 +888,7 @@ void LoginDialog::onPage1Login(wxCommandEvent& event)
             app_config->set("access_token",token_data.accessToken);
             app_config->set("refresh_token",token_data.refreshToken);
             app_config->set("expire_time",std::to_string(token_data.expiresIn));
-             Slic3r::GUI::MultiComMgr::inst()->setWanDevToken(usrname.ToStdString(),token_data.accessToken);
+             Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data.accessToken);
         } 
     }
     else if (login_result == ComErrno::COM_INVALID_VALIDATION){
@@ -915,7 +915,7 @@ void LoginDialog::onPage4Login(wxMouseEvent& event)
             app_config->set("access_token",token_data.accessToken);
             app_config->set("refresh_token",token_data.refreshToken);
             app_config->set("expire_time",std::to_string(token_data.expiresIn));
-             Slic3r::GUI::MultiComMgr::inst()->setWanDevToken(usrname.ToStdString(),token_data.accessToken);
+             Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data.accessToken);
         } 
     }
     else if (login_result == ComErrno::COM_INVALID_VALIDATION){
@@ -962,7 +962,7 @@ void LoginDialog::onPage2Login(wxCommandEvent& event)
             app_config->set("access_token",token_data.accessToken);
             app_config->set("refresh_token",token_data.refreshToken);
             app_config->set("expire_time",std::to_string(token_data.expiresIn));
-             Slic3r::GUI::MultiComMgr::inst()->setWanDevToken(usrname.ToStdString(),token_data.accessToken);
+             Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data.accessToken);
         }
         
     }
@@ -1020,7 +1020,7 @@ void LoginDialog::onPage3Login(wxMouseEvent& event)
             app_config->set("access_token",token_data.accessToken);
             app_config->set("refresh_token",token_data.refreshToken);
             app_config->set("expire_time",std::to_string(token_data.expiresIn));
-             Slic3r::GUI::MultiComMgr::inst()->setWanDevToken(usrname.ToStdString(),token_data.accessToken);
+             Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data.accessToken);
         }
         
     }

@@ -51,6 +51,8 @@ private:
 
     std::string getAccessToken();
 
+    ComErrno initialize(fnet_dev_detail_t **detail);
+
     void processCommand(ComCommand *command, ComErrno ret);
 
 private:
