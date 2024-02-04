@@ -23,6 +23,7 @@
 #include <string_view>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/dll/runtime_symbol_info.hpp>
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/log/trivial.hpp>
