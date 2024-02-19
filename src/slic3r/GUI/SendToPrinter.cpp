@@ -314,9 +314,13 @@ void MultiSend::send_event(int code, const wxString& msg)
 void MultiSend::on_cnnection_exit(ComConnectionExitEvent& event)
 {
     BOOST_LOG_TRIVIAL(info) << "MultiSend: on_cnnection_exit";
-    if (m_send_jobs.find(event.id) == m_send_jobs.end()) {
+    auto jobIter = m_send_jobs.find(event.id);
+    if (jobIter == m_send_jobs.end()) {
         event.Skip();
         return;
+    } else {
+        jobIter->second.finish = true;
+        jobIter->second.result = Result_Fail_Network;
     }
     BOOST_LOG_TRIVIAL(info) << "MultiSend: com connection exit, com_id: " << event.id;
     auto iter = std::find(m_printers.begin(), m_printers.end(), event.id);
@@ -334,7 +338,7 @@ void MultiSend::on_cnnection_exit(ComConnectionExitEvent& event)
 void MultiSend::on_send_gcode_finished(ComSendGcodeFinishEvent& event)
 {
     BOOST_LOG_TRIVIAL(info) << "MultiSend: on_send_gcode_finished";
-    auto& iter = m_send_jobs.find(event.id);
+    auto iter = m_send_jobs.find(event.id);
     if (iter == m_send_jobs.end()) {
         event.Skip();
         return;
@@ -362,7 +366,7 @@ void MultiSend::on_send_gcode_finished(ComSendGcodeFinishEvent& event)
 
 void MultiSend::on_send_gcode_progress(ComSendGcodeProgressEvent& event)
 {
-    auto& iter = m_send_jobs.find(event.id);
+    auto iter = m_send_jobs.find(event.id);
     if (iter == m_send_jobs.end()) {
         event.Skip();
         return;
@@ -1441,21 +1445,15 @@ void SendToPrinterDialog::redirect_window()
 bool SendToPrinterDialog::Show(bool show)
 {
     BOOST_LOG_TRIVIAL(error) << "SendToPrinterDialog::Show, " << show ? "show" : "no show";
-    // set default value when show this dialog
     if (show) {
+        // set default value when show this dialog
         wxGetApp().reset_to_active();
         set_default();
         update_user_machine_list();
-    }// else {
-        //if (m_msg_window) {
-        //    m_msg_window->Destroy();
-        //    m_msg_window = nullptr;
-        //}
-    //}
-    Layout();
-    Fit();
-    if (show) { CenterOnParent(); }
-    //flush_logs();
+        Layout();
+        Fit();
+        CenterOnParent();
+    }
     return DPIDialog::Show(show);
 }
 
@@ -1624,11 +1622,12 @@ void SendToPrinterDialog::on_multi_send_completed(wxCommandEvent& event)
         return;
     }
     BOOST_LOG_TRIVIAL(info) << "SendToPrinterDialog: receive multi send completed 2";
-    m_progressBar->SetValue(100);
     m_progressCancelBtn->Show(false);
     if (send_result.size() == 1) {
         auto iter = send_result.begin();
         if (iter->second == Result_Ok) {
+            m_progressBar->SetValue(100);
+            m_progressLbl->SetLabel("100%");
             m_progressInfoLbl->SetLabel(_L("Send completed, automatically redirected to device status"));
             m_progressInfoLbl->SetForegroundColour(wxColour("#333333"));
             m_send_error = false;
@@ -1662,13 +1661,18 @@ void SendToPrinterDialog::on_multi_send_completed(wxCommandEvent& event)
             }
             (iter.second == MultiSend::Result_Ok) ? successList.Add(name) : failList.Add(name);
         }
+        if (successList.size() == send_result.size()) {
+            m_progressBar->SetValue(100);
+            m_progressLbl->SetLabel("100%");
+        }
         BOOST_LOG_TRIVIAL(info) << "Send multi job completed";
         SendToPrinterTipDialog dlg(nullptr, successList, failList);
-        if (dlg.ShowModal()) {
-            if (IsVisible()) {
-                EndDialog(wxID_OK);
-                wxGetApp().mainframe->select_tab(size_t(MainFrame::tpMonitor));
-            }
+        dlg.ShowModal();
+        if (m_msg_window) {
+            m_need_redirect = true;
+        } else {
+            EndDialog(wxID_OK);
+            wxGetApp().mainframe->select_tab(size_t(MainFrame::tpMonitor));
         }
     }
     Layout();

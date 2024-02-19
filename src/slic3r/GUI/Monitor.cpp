@@ -351,8 +351,8 @@ void MonitorPanel::update_all()
     }
 
     if (m_connect_fail_time1 > 0) {
-        DWORD connect_failed_time2 = GetTickCount();
-        if (connect_failed_time2 - m_connect_fail_time1 > 3000) {
+        time_t connect_failed_time2 = time(nullptr);
+        if ((connect_failed_time2 - m_connect_fail_time1) / (double)CLOCKS_PER_SEC > 3) {
             m_connect_fail_time1 = 0;
             obj->set_connected_ready(true);
         }
@@ -364,7 +364,7 @@ void MonitorPanel::update_all()
         return;
     } else if (!obj->is_connected_ready()) {  // connect failed
         if (m_connect_fail_time1 == 0)
-            m_connect_fail_time1 = GetTickCount();
+            m_connect_fail_time1 = time(nullptr);
         m_side_tools->update_device_status(obj);
         show_status(MONITOR_CONNECTED_FAILED);
         return;

@@ -33,7 +33,7 @@ ComErrno MultiComUtils::getTokenByPassword(const std::string &userName, const st
     }
     fnet_token_data_t *fnetTokenData;
     int ret = intfc->getTokenByPassword(userName.c_str(), password.c_str(), &fnetTokenData, ComTimeoutWan);
-    if (ret != COM_OK) {
+    if (ret != FNET_OK) {
         return fnetRet2ComErrno(ret);
     }
     fnet::FreeInDestructor freeTokenInfo(fnetTokenData, intfc->freeToken);

@@ -72,22 +72,26 @@ ComErrno MultiComMgr::addWanDev(const std::string &accessToken)
     if (networkIntfc() == nullptr) {
         return COM_UNINITIALIZED;
     }
-    m_userDataUpdateThd->setToken(accessToken);
-    m_userDataUpdateThd->setUpdateUserProfile();
-    m_userDataUpdateThd->setUpdateWanDev();
+    if (m_wanAsyncConn.get() != nullptr) {
+        return COM_ERROR;
+    }
     m_wanAsyncConn.reset(new ComWanAsyncConn(m_networkIntfc.get()));
     ComErrno ret = m_wanAsyncConn->createConn(accessToken);
     if (ret != COM_OK) {
+        m_wanAsyncConn.reset(nullptr);
         return ret;
     }
     m_wanAsyncConn->Bind(COM_WAN_DEV_MAINTAIN_EVENT, &MultiComMgr::onWanDevMaintian, this);
     m_wanAsyncConn->Bind(WAN_CONN_READ_DATA_EVENT, &MultiComMgr::onWanConnReadData, this);
+    m_userDataUpdateThd->setToken(accessToken);
+    m_userDataUpdateThd->setUpdateUserProfile();
+    m_userDataUpdateThd->setUpdateWanDev();
     return ret;
 }
 
 void MultiComMgr::removeWanDev()
 {
-    if (networkIntfc() == nullptr) {
+    if (networkIntfc() == nullptr || m_wanAsyncConn.get() == nullptr) {
         return;
     }
     m_wanAsyncConn->freeConn();
@@ -114,7 +118,7 @@ ComErrno MultiComMgr::bindWanDev(const std::string &serialNumber, unsigned short
         return COM_UNINITIALIZED;
     }
     std::string accessToken = m_userDataUpdateThd->getToken();
-    if (accessToken.empty()) {
+    if (accessToken.empty() || m_wanAsyncConn.get() == nullptr) {
         return COM_ERROR;
     }
     fnet_wan_dev_bind_data_t *bindData;
@@ -134,7 +138,7 @@ ComErrno MultiComMgr::unbindWanDev(const std::string &serialNumber, const std::s
         return COM_UNINITIALIZED;
     }
     std::string accessToken = m_userDataUpdateThd->getToken();
-    if (accessToken.empty()) {
+    if (accessToken.empty() || m_wanAsyncConn.get() == nullptr) {
         return COM_ERROR;
     }
     int ret = m_networkIntfc->unbindWanDev(accessToken.c_str(), devId.c_str(), ComTimeoutWan);
@@ -215,11 +219,7 @@ void MultiComMgr::initConnection(const com_ptr_t &comPtr, const com_dev_data_t &
 void MultiComMgr::onWanDevMaintian(const ComWanDevMaintainEvent &event)
 {
     if (event.ret != COM_OK) {
-        for (auto &comPtr : m_comPtrs) {
-            if (comPtr->connectMode() == COM_CONNECT_WAN) {
-                comPtr.get()->disconnect(0);
-            }
-        }
+        removeWanDev();
     }
     QueueEvent(event.Clone());
 }
@@ -231,7 +231,7 @@ void MultiComMgr::onGetWanDev(const GetWanDevEvent &event)
         return;
     }
     fnet::FreeInDestructorArg freeDevInfos(event.devInfos, m_networkIntfc->freeWanDevList, event.devCnt);
-    if (m_userDataUpdateThd->getToken() != event.accessToken) {
+    if (m_userDataUpdateThd->getToken() != event.accessToken || m_wanAsyncConn.get() == nullptr) {
         return;
     }
     std::set<std::string> devIdSet;
@@ -293,16 +293,17 @@ void MultiComMgr::onDevDetailUpdate(const ComDevDetailUpdateEvent &event)
 
 void MultiComMgr::onWanConnReadData(const WanConnReadDataEvent &event)
 {
-    auto queueDevDetailUpdateEvent = [this](const fnet_conn_read_data_t &readData){
+    auto procDevDetailUpdateEvent = [this](const fnet_conn_read_data_t &readData) {
         auto it = m_devIdMap.find(readData.devId);
         if (it != m_devIdMap.end()) {
-            QueueEvent(new ComDevDetailUpdateEvent(COM_DEV_DETAIL_UPDATE_EVENT,
-                it->second, ComInvalidCommandId, (fnet_dev_detail_t *)readData.data));
+            ComDevDetailUpdateEvent devDetailUpdateEvent(COM_DEV_DETAIL_UPDATE_EVENT,
+                it->second, ComInvalidCommandId, (fnet_dev_detail_t *)readData.data);
+            onDevDetailUpdate(devDetailUpdateEvent);
         }
     };
     switch (event.readData.type) {
     case FNET_CONN_READ_DEVICE_DETAIL:
-        queueDevDetailUpdateEvent(event.readData);
+        procDevDetailUpdateEvent(event.readData);
         break;
     case FNET_CONN_READ_SYNC_BIND_DEVICE:
         m_userDataUpdateThd->setUpdateWanDev();
