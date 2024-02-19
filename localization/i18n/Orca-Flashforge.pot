@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-01-24 13:51+0800\n"
+"POT-Creation-Date: 2024-02-03 09:27+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -3916,17 +3916,10 @@ msgid ""
 "to give a positive rating(4 or 5stars)."
 msgstr ""
 
-msgid "Device List"
-msgstr ""
-
-msgid "Device Status"
-msgstr ""
-
 msgid "Don't show again"
 msgstr ""
 
-#, possible-c-format
-msgid "%s error"
+msgid "error"
 msgstr ""
 
 #, possible-c-format
@@ -4873,9 +4866,6 @@ msgstr ""
 msgid "fatal"
 msgstr ""
 
-msgid "error"
-msgstr ""
-
 msgid "warning"
 msgstr ""
 
@@ -5297,6 +5287,12 @@ msgid "Automatic flow calibration using Micro Lidar"
 msgstr ""
 
 msgid "Modifying the device name"
+msgstr ""
+
+msgid "MultiSend:send_to_printer, is busy"
+msgstr ""
+
+msgid "no valid printer"
 msgstr ""
 
 msgid "send prepare fail"

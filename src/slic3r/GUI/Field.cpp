@@ -1028,7 +1028,9 @@ using choice_ctrl = ::ComboBox; // BBS
 
 static std::map<std::string, DynamicList*> dynamic_lists;
 
-void Choice::register_dynamic_list(std::string const &optname, DynamicList *list) { dynamic_lists.emplace(optname, list); }
+void Choice::register_dynamic_list(std::string const &optname, DynamicList *list) {
+    dynamic_lists.emplace(optname, list);
+}
 
 void DynamicList::update()
 {
