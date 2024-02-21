@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Slic3rPE\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-01-24 13:51+0800\n"
-"PO-Revision-Date: 2024-01-24 13:55+0800\n"
+"POT-Creation-Date: 2024-02-20 12:47+0800\n"
+"PO-Revision-Date: 2024-02-20 12:49+0800\n"
 "Last-Translator: SoftFever <softfeverever@gmail.com>\n"
 "Language-Team: \n"
 "Language: zh_CN\n"
@@ -684,6 +684,9 @@ msgid ""
 "The version of Orca-Flashforge is too low and needs to be updated to the "
 "latest version before it can be used normally"
 msgstr "Orca-Flashforge版本过低，需要更新到最新版本方可正常使用"
+
+msgid "Unable to connect to the Internet!"
+msgstr "无法连接到互联网！"
 
 msgid "Already the newest version!"
 msgstr "已经是最新版本！"
@@ -4022,18 +4025,11 @@ msgstr ""
 "此打印配置文件至少需要一个成功的打印记录 \n"
 "才能给出好评（4星或5星）。"
 
-msgid "Device List"
-msgstr "设备列表"
-
-msgid "Device Status"
-msgstr "设备状态"
-
 msgid "Don't show again"
 msgstr "不再显示"
 
-#, c-format
-msgid "%s error"
-msgstr "%s 错误"
+msgid "error"
+msgstr "错误"
 
 #, c-format
 msgid "%s has encountered an error"
@@ -4994,9 +4990,6 @@ msgstr "日志级别"
 msgid "fatal"
 msgstr "致命"
 
-msgid "error"
-msgstr "错误"
-
 msgid "warning"
 msgstr "警告"
 
@@ -5430,6 +5423,14 @@ msgstr "使用微型激光雷达进行自动流量校准"
 
 msgid "Modifying the device name"
 msgstr "修改打印机名称"
+
+msgid "MultiSend:send_to_printer, is busy"
+msgstr ""
+
+#, fuzzy
+#| msgid "Log in printer"
+msgid "no valid printer"
+msgstr "登录打印机"
 
 msgid "send prepare fail"
 msgstr "发送准备失败"
@@ -11271,6 +11272,16 @@ msgstr "模式"
 
 msgid "Login out"
 msgstr "登出"
+
+#~ msgid "Device List"
+#~ msgstr "设备列表"
+
+#~ msgid "Device Status"
+#~ msgstr "设备状态"
+
+#, c-format
+#~ msgid "%s error"
+#~ msgstr "%s 错误"
 
 #~ msgid ""
 #~ "3D Scene Operations\n"

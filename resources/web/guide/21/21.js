@@ -314,8 +314,8 @@ function SelectPrinterNone( sVendor )
 
 function GotoFilamentPage()
 {
-	let nChoose=OnExitFilter();
-	
+	//let nChoose=OnExitFilter();
+	let nChoose=OnExit();
 	if(nChoose>0)
 		window.open('../22/index.html','_self');
 }

@@ -389,7 +389,7 @@ void AppConfig::set_version_check_url()
     auto start1 = std::chrono::steady_clock::now();
     double t1 = -1, t2 = -1;
     Http::Ptr p1 = Http::get(url1)
-        .timeout_max(5)
+        .timeout_connect(5)
         .on_complete([&](std::string body, unsigned status) {
             auto end = std::chrono::steady_clock::now();
             std::chrono::duration<double> elapsed = end - start1;
@@ -399,7 +399,7 @@ void AppConfig::set_version_check_url()
 
     auto start2 = std::chrono::steady_clock::now();
     Http::Ptr p2 = Http::get(url2)
-        .timeout_max(5)
+        .timeout_connect(5)
         .on_complete([&](std::string body, unsigned status) {
             auto end = std::chrono::steady_clock::now();
             std::chrono::duration<double> elapsed = end - start2;

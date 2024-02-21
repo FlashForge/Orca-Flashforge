@@ -4462,6 +4462,27 @@ Semver get_version(const std::string& str, const std::regex& regexp) {
 
 void GUI_App::check_new_version_sf(bool show_tips, int by_user)
 {
+    auto isHostConnectToInternet = []() {
+        wxString       urls[2] = {"www.baidu.com", "www.google.com"};
+        wxIPV4address  addr;
+        wxSocketClient socket;
+        for (int i = 0; i < 2; ++i) {
+            addr.Hostname(urls[i]);
+            addr.Service(443);
+            if (socket.Connect(addr)) {
+                socket.Close();
+                return true;
+            }
+        }
+        return false;
+    };
+    if (!isHostConnectToInternet()) {
+        if (by_user) {
+            wxMessageBox(_L("Unable to connect to the Internet!"), _L("Info"), wxOK | wxICON_INFORMATION);
+        }
+        return;
+    };
+
     AppConfig* app_config = wxGetApp().app_config;
     auto version_check_url = app_config->version_check_url();
     Http::get(version_check_url)

@@ -4,6 +4,8 @@
   "from": "system",
   "instantiation": "false",
   "inherits": "fdm_machine_common",
+  "printer_variant": "0.4",
+  "printer_technology": "FFF",
   "gcode_flavor": "marlin",
   "machine_max_acceleration_e": [
     "5000",
@@ -84,8 +86,6 @@
   "extruder_clearance_height_to_rod": "34",
   "extruder_clearance_height_to_lid": "34",
   "printer_settings_id": "",
-  "printer_technology": "FFF",
-  "printer_variant": "0.4",
   "retraction_minimum_travel": [
     "2"
   ],
@@ -124,9 +124,9 @@
     "1"
   ],
   "default_filament_profile": [
-    "Flashforge Generic PLA"
+    "Flashforge PLA"
   ],
-  "default_print_profile": "0.20mm Standard @Flashforge AD5M",
+  "default_print_profile": "0.20mm Standard @FF AD5M 0.4 Nozzle",
   "bed_exclude_area": [
     "0x0"
   ],
