@@ -140,6 +140,122 @@ private:
     fnet_send_gcode_data_t  m_sendGcodeData;
 };
 
+class ComWanAsyncCommand : public ComCommand
+{
+public:
+    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &accessToken,
+        const std::string &deviceId)
+    {
+        return COM_ERROR;
+    }
+};
+
+class ComTempCtrl : public ComWanAsyncCommand
+{
+public:
+    ComTempCtrl(double platformTemp, double rightTemp, double leftTemp, double chamberTemp)
+    {
+        m_tempCtrl.platformTemp = platformTemp;
+        m_tempCtrl.rightTemp = rightTemp;
+        m_tempCtrl.leftTemp = leftTemp;
+        m_tempCtrl.chamberTemp = chamberTemp;
+    }
+    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &ip,
+        unsigned int port, const std::string &serialNumber, const std::string &checkCode)
+    {
+        int ret = networkIntfc->ctrlLanDevTemp(ip.c_str(), port, serialNumber.c_str(),
+            checkCode.c_str(), &m_tempCtrl, ComTimeoutLan);
+        return MultiComUtils::fnetRet2ComErrno(ret);
+    }
+    const fnet_temp_ctrl_t &tempCtrl()
+    {
+        return m_tempCtrl;
+    }
+
+private:
+    fnet_temp_ctrl_t m_tempCtrl;
+};
+
+class ComLightCtrl : public ComWanAsyncCommand
+{
+public:
+    ComLightCtrl(const std::string &lightStatus)
+        : m_lightStatus(lightStatus)
+    {
+        m_lightCtrl.lightStatus = m_lightStatus.c_str();
+    }
+    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &ip,
+        unsigned int port, const std::string &serialNumber, const std::string &checkCode)
+    {
+        int ret = networkIntfc->ctrlLanDevLight(ip.c_str(), port, serialNumber.c_str(),
+            checkCode.c_str(), &m_lightCtrl, ComTimeoutLan);
+        return MultiComUtils::fnetRet2ComErrno(ret);
+    }
+    const fnet_light_ctrl_t &lightCtrl()
+    {
+        return m_lightCtrl;
+    }
+
+private:
+    std::string m_lightStatus;
+    fnet_light_ctrl_t m_lightCtrl;
+};
+
+class ComAirFilterCtrl : public ComWanAsyncCommand
+{
+public:
+    ComAirFilterCtrl(const std::string &internalFanStatus, const std::string &externalFanStatus)
+        : m_internalFanStatus(internalFanStatus)
+        , m_externalFanStatus(externalFanStatus)
+    {
+        m_airFilterCtrl.internalFanStatus = m_internalFanStatus.c_str();
+        m_airFilterCtrl.externalFanStatus = m_externalFanStatus.c_str();
+    }
+    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &ip,
+        unsigned int port, const std::string &serialNumber, const std::string &checkCode)
+    {
+        int ret = networkIntfc->ctrlLanDevAirFilter(ip.c_str(), port, serialNumber.c_str(),
+            checkCode.c_str(), &m_airFilterCtrl, ComTimeoutLan);
+        return MultiComUtils::fnetRet2ComErrno(ret);
+    }
+    const fnet_air_filter_ctrl_t &airFilterCtrl()
+    {
+        return m_airFilterCtrl;
+    }
+
+private:
+    std::string m_internalFanStatus;
+    std::string m_externalFanStatus;
+    fnet_air_filter_ctrl_t m_airFilterCtrl;
+};
+
+class ComPrintCtrl : public ComWanAsyncCommand
+{
+public:
+    ComPrintCtrl(double zAxisCompensation, double printSpeedAdjust, double coolingFanSpeed,
+        double chamberFanSpeed)
+    {
+        m_printCtrl.zAxisCompensation = zAxisCompensation;
+        m_printCtrl.printSpeedAdjust = printSpeedAdjust;
+        m_printCtrl.coolingFanSpeed = coolingFanSpeed;
+        m_printCtrl.chamberFanSpeed = chamberFanSpeed;
+    }
+    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &ip,
+        unsigned int port, const std::string &serialNumber, const std::string &checkCode)
+    {
+        int ret = networkIntfc->ctrlLanDevPrint(ip.c_str(), port, serialNumber.c_str(),
+            checkCode.c_str(), &m_printCtrl, ComTimeoutLan);
+        return MultiComUtils::fnetRet2ComErrno(ret);
+    }
+    const fnet_print_ctrl_t &printCtrl()
+    {
+        return m_printCtrl;
+    }
+
+private:
+    fnet_print_ctrl_t m_printCtrl;
+};
+
 }} // namespace Slic3r::GUI
 
 #endif

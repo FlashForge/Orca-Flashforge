@@ -24,6 +24,11 @@ public:
     decltype(&fnet_freeLanDevInfos) freeLanDevInfos;
     decltype(&fnet_lanDevSendGcode) lanDevSendGcode;
     decltype(&fnet_getLanDevDetail) getLanDevDetail;
+    decltype(&fnet_freeDevDetail) freeDevDetail;
+    decltype(&fnet_ctrlLanDevTemp) ctrlLanDevTemp;
+    decltype(&fnet_ctrlLanDevLight) ctrlLanDevLight;
+    decltype(&fnet_ctrlLanDevAirFilter) ctrlLanDevAirFilter;
+    decltype(&fnet_ctrlLanDevPrint) ctrlLanDevPrint;
     decltype(&fnet_getTokenByPassword) getTokenByPassword;
     decltype(&fnet_refreshToken) refreshToken;
     decltype(&fnet_freeToken) freeToken;
@@ -43,7 +48,6 @@ public:
     decltype(&fnet_getWanDevList) getWanDevList;
     decltype(&fnet_freeWanDevList) freeWanDevList;
     decltype(&fnet_getWanDevDetail) getWanDevDetail;
-    decltype(&fnet_freeDevDetail) freeDevDetail;
     decltype(&fnet_wanDevSendGcode) wanDevSendGcode;
     decltype(&fnet_createConnection) createConnection;
     decltype(&fnet_freeConnection) freeConnection;

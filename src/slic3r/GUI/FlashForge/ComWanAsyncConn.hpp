@@ -29,6 +29,14 @@ public:
 
     void postSubscribeDev(const std::vector<std::string> &devIds);
 
+    void postTempCtrl(const std::string &devId, const fnet_temp_ctrl_t &tempCtrl);
+
+    void postLightCtrl(const std::string &devId, const fnet_light_ctrl_t &lightCtrl);
+
+    void postAirFilterCtrl(const std::string &devId, const fnet_air_filter_ctrl_t &airFilterCtrl);
+
+    void postPrintCtrl(const std::string &devId, const fnet_print_ctrl_t &printCtrl);
+
 private:
     void run();
 

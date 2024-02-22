@@ -28,6 +28,11 @@ FlashNetworkIntfc::FlashNetworkIntfc(const char *libraryPath, const char *logFil
     INIT_FUNC_PTR(freeLanDevInfos, fnet_freeLanDevInfos);
     INIT_FUNC_PTR(lanDevSendGcode, fnet_lanDevSendGcode);
     INIT_FUNC_PTR(getLanDevDetail, fnet_getLanDevDetail);
+    INIT_FUNC_PTR(freeDevDetail, fnet_freeDevDetail);
+    INIT_FUNC_PTR(ctrlLanDevTemp, fnet_ctrlLanDevTemp);
+    INIT_FUNC_PTR(ctrlLanDevLight, fnet_ctrlLanDevLight);
+    INIT_FUNC_PTR(ctrlLanDevAirFilter, fnet_ctrlLanDevAirFilter);
+    INIT_FUNC_PTR(ctrlLanDevPrint, fnet_ctrlLanDevPrint);
     INIT_FUNC_PTR(getTokenByPassword, fnet_getTokenByPassword);
     INIT_FUNC_PTR(refreshToken, fnet_refreshToken);
     INIT_FUNC_PTR(freeToken, fnet_freeToken);
@@ -47,7 +52,6 @@ FlashNetworkIntfc::FlashNetworkIntfc(const char *libraryPath, const char *logFil
     INIT_FUNC_PTR(getWanDevList, fnet_getWanDevList);
     INIT_FUNC_PTR(freeWanDevList, fnet_freeWanDevList);
     INIT_FUNC_PTR(getWanDevDetail, fnet_getWanDevDetail);
-    INIT_FUNC_PTR(freeDevDetail, fnet_freeDevDetail);
     INIT_FUNC_PTR(wanDevSendGcode, fnet_wanDevSendGcode);
     INIT_FUNC_PTR(createConnection, fnet_createConnection);
     INIT_FUNC_PTR(freeConnection, fnet_freeConnection);

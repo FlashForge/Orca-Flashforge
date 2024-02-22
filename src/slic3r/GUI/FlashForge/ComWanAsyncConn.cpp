@@ -46,8 +46,7 @@ void ComWanAsyncConn::postSyncBindDev(const std::string &devId)
         return;
     }
     const char *ids = devId.c_str();
-    fnet_dev_ids_t fnetDevIds = {&ids, 1};
-    fnet_conn_write_data_t writeData = {FNET_CONN_WRITE_SYNC_BIND_DEVICE, &fnetDevIds};
+    fnet_conn_write_data_t writeData = {FNET_CONN_WRITE_SYNC_BIND_DEVICE, nullptr, {&ids, 1}};
     m_networkIntfc->connectionPost(m_conn, &writeData);
 }
 
@@ -57,8 +56,7 @@ void ComWanAsyncConn::postSyncUnbindDev(const std::string &devId)
         return;
     }
     const char *ids = devId.c_str();
-    fnet_dev_ids_t fnetDevIds = {&ids, 1};
-    fnet_conn_write_data_t writeData = {FNET_CONN_WRITE_SYNC_UNBIND_DEVICE, &fnetDevIds};
+    fnet_conn_write_data_t writeData = {FNET_CONN_WRITE_SYNC_UNBIND_DEVICE, nullptr, {&ids, 1}};
     m_networkIntfc->connectionPost(m_conn, &writeData);
 }
 
@@ -71,8 +69,48 @@ void ComWanAsyncConn::postSubscribeDev(const std::vector<std::string> &devIds)
     for (auto &devId : devIds) {
         ids.push_back(devId.c_str());
     }
-    fnet_dev_ids_t fnetDevIds = {ids.data(), 1};
-    fnet_conn_write_data_t writeData = {FNET_CONN_WRITE_SUBSCRIBE_DEVICE, &fnetDevIds};
+    fnet_conn_write_data_t writeData = {FNET_CONN_WRITE_SUBSCRIBE_DEVICE, nullptr, {ids.data(), 1}};
+    m_networkIntfc->connectionPost(m_conn, &writeData);
+}
+
+void ComWanAsyncConn::postTempCtrl(const std::string &devId, const fnet_temp_ctrl_t &tempCtrl)
+{
+    if (m_thread == nullptr) {
+        return;
+    }
+    const char *ids = devId.c_str();
+    fnet_conn_write_data_t writeData = {FNET_CONN_WRITE_TEMP_CTRL, &tempCtrl, {&ids, 1}};
+    m_networkIntfc->connectionPost(m_conn, &writeData);
+}
+
+void ComWanAsyncConn::postLightCtrl(const std::string &devId, const fnet_light_ctrl_t &lightCtrl)
+{
+    if (m_thread == nullptr) {
+        return;
+    }
+    const char *ids = devId.c_str();
+    fnet_conn_write_data_t writeData = {FNET_CONN_WRITE_LIGHT_CTRL, &lightCtrl, {&ids, 1}};
+    m_networkIntfc->connectionPost(m_conn, &writeData);
+}
+
+void ComWanAsyncConn::postAirFilterCtrl(const std::string &devId,
+    const fnet_air_filter_ctrl_t &airFilterCtrl)
+{
+    if (m_thread == nullptr) {
+        return;
+    }
+    const char *ids = devId.c_str();
+    fnet_conn_write_data_t writeData = {FNET_CONN_WRITE_AIR_FILTER_CTRL, &airFilterCtrl, {&ids, 1}};
+    m_networkIntfc->connectionPost(m_conn, &writeData);
+}
+
+void ComWanAsyncConn::postPrintCtrl(const std::string &devId, const fnet_print_ctrl_t &printCtrl)
+{
+    if (m_thread == nullptr) {
+        return;
+    }
+    const char *ids = devId.c_str();
+    fnet_conn_write_data_t writeData = {FNET_CONN_WRITE_PRINT_CTRL, &printCtrl, {&ids, 1}};
     m_networkIntfc->connectionPost(m_conn, &writeData);
 }
 

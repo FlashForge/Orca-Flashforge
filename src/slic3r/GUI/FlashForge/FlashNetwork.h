@@ -28,9 +28,13 @@ typedef int (*fnet_conn_read_callback_t)(fnet_conn_read_data_t *readData, void *
 #pragma pack(push, 4)
 
 typedef enum fnet_conn_write_data_type {
-    FNET_CONN_WRITE_SUBSCRIBE_DEVICE,   // data, fnet_device_ids_t
-    FNET_CONN_WRITE_SYNC_BIND_DEVICE,   // data, fnet_device_ids_t
-    FNET_CONN_WRITE_SYNC_UNBIND_DEVICE, // data, fnet_device_ids_t
+    FNET_CONN_WRITE_SUBSCRIBE_DEVICE,   // data, nullptr
+    FNET_CONN_WRITE_SYNC_BIND_DEVICE,   // data, nullptr
+    FNET_CONN_WRITE_SYNC_UNBIND_DEVICE, // data, nullptr
+    FNET_CONN_WRITE_TEMP_CTRL,          // data, fnet_temp_ctrl_t
+    FNET_CONN_WRITE_LIGHT_CTRL,         // data, fnet_light_ctrl_t
+    FNET_CONN_WRITE_AIR_FILTER_CTRL,    // data, fnet_air_filter_ctrl_t
+    FNET_CONN_WRITE_PRINT_CTRL,         // data, fnet_print_ctrl_t
 } fnet_conn_write_data_type_t;
 
 typedef enum fnet_conn_read_data_type {
@@ -40,11 +44,11 @@ typedef enum fnet_conn_read_data_type {
 } fnet_conn_read_data_type_t;
 
 typedef struct fnet_send_gcode_data {
-    const char *gcodeFilePath;  // utf-8
-    const char *thumbFilePath;  // utf-8, wan only
-    const char *gcodeDstName;   // utf-8
-    int printNow;               // 1 true, 0 false
-    int levelingBeforePrint;    // 1 true, 0 false
+    const char *gcodeFilePath;          // utf-8
+    const char *thumbFilePath;          // utf-8, wan only
+    const char *gcodeDstName;           // utf-8
+    int printNow;                       // 1 true, 0 false
+    int levelingBeforePrint;            // 1 true, 0 false
     fnet_progress_callback_t callback;
     void *callbackData;
 } fnet_send_gcode_data_t;
@@ -57,15 +61,39 @@ typedef struct fnet_conn_settings {
     int msTimeout;
 } fnet_conn_settings_t;
 
-typedef struct fnet_conn_write_data {
-    fnet_conn_write_data_type_t type;
-    void *data;
-} fnet_conn_write_data_t;
-
 typedef struct fnet_dev_ids {
     const char **ids;
     int cnt;
 } fnet_dev_ids_t;
+
+typedef struct fnet_conn_write_data {
+    fnet_conn_write_data_type_t type;
+    const void *data;
+    fnet_dev_ids_t devIds;
+} fnet_conn_write_data_t;
+
+typedef struct fnet_temp_ctrl {
+    double platformTemp;
+    double rightTemp;
+    double leftTemp;
+    double chamberTemp;
+} fnet_temp_ctrl_t;
+
+typedef struct fnet_light_ctrl {
+    const char *lightStatus;
+} fnet_light_ctrl_t;
+
+typedef struct fnet_air_filter_ctrl {
+    const char *internalFanStatus;
+    const char *externalFanStatus;
+} fnet_air_filter_ctrl_t;
+
+typedef struct fnet_print_ctrl {
+    double zAxisCompensation;   // mm
+    double printSpeedAdjust;    // percent
+    double coolingFanSpeed;     // percent
+    double chamberFanSpeed;     // percent
+} fnet_print_ctrl_t;
 
 typedef struct fnet_lan_dev_info {
     char serialNumber[MAX_DEVICE_SN_LEN];
@@ -204,6 +232,18 @@ FNET_API int fnet_getLanDevDetail(const char *ip, unsigned short port, const cha
     const char *checkCode, fnet_dev_detail_t **detail, int msTimeout);
 
 FNET_API void fnet_freeDevDetail(fnet_dev_detail_t *detail);
+
+FNET_API int fnet_ctrlLanDevTemp(const char *ip, unsigned short port, const char *serialNumber,
+    const char *checkCode, const fnet_temp_ctrl_t *tempCtrl, int msTimeout);
+
+FNET_API int fnet_ctrlLanDevLight(const char *ip, unsigned short port, const char *serialNumber,
+    const char *checkCode, const fnet_light_ctrl_t *lightCtrl, int msTimeout);
+
+FNET_API int fnet_ctrlLanDevAirFilter(const char *ip, unsigned short port, const char *serialNumber,
+    const char *checkCode, const fnet_air_filter_ctrl_t *airFilterCtrl, int msTimeout);
+
+FNET_API int fnet_ctrlLanDevPrint(const char *ip, unsigned short port, const char *serialNumber,
+    const char *checkCode, const fnet_print_ctrl_t *printCtrl, int msTimeout);
 
 FNET_API int fnet_lanDevSendGcode(const char *ip, unsigned short port, const char *serialNumber,
     const char *checkCode, const fnet_send_gcode_data_t *sendGcodeData, int msTimeout);
