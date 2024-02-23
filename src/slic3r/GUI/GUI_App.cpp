@@ -2086,7 +2086,7 @@ void GUI_App::init_flashnetwork()
 #ifdef _WIN32
     std::string flashNetworkDllPath = boost::dll::program_location().parent_path().string() + "/FlashNetwork.dll";
 #elif __APPLE__
-    std::string flashNetworkDllPath = boost::dll::program_location().parent_path().string() + "/FlashNetwork.dylib";
+    std::string flashNetworkDllPath = boost::dll::program_location().parent_path().string() + "/libFlashNetwork.dylib";
 #endif
     Slic3r::GUI::MultiComMgr::inst()->initalize(flashNetworkDllPath, data_dir() + "/FlashNetwork");
 }
