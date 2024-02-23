@@ -131,7 +131,7 @@ TitleDialog::TitleDialog(wxWindow* parent, const wxString& title, int borderRadi
     Layout();
 
     Bind(wxEVT_PAINT, &TitleDialog::OnPaint, this);
-    Bind(wxEVT_SIZE, &TitleDialog::OnSize, this);
+    CallAfter([this](){ Bind(wxEVT_SIZE, &TitleDialog::OnSize, this); });
 }
 
 void TitleDialog::SetTitleBackgroundColor(const wxColour& color)
