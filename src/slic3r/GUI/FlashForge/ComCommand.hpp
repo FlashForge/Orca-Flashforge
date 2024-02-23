@@ -256,6 +256,30 @@ private:
     fnet_print_ctrl_t m_printCtrl;
 };
 
+
+class ComVideoStreamCtrl : public ComWanAsyncCommand
+{
+public:
+    ComVideoStreamCtrl(const std::string &action)
+        : m_action(action)
+    {
+        m_videoStreamCtrl.action = m_action.c_str();
+    }
+    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &ip,
+        unsigned int port, const std::string &serialNumber, const std::string &checkCode)
+    {
+        return COM_OK;
+    }
+    const fnet_video_stream_ctrl_t &videoStreamCtrl()
+    {
+        return m_videoStreamCtrl;
+    }
+
+private:
+    std::string m_action;
+    fnet_video_stream_ctrl_t m_videoStreamCtrl;
+};
+
 }} // namespace Slic3r::GUI
 
 #endif

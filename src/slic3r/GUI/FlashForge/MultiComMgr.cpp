@@ -190,17 +190,20 @@ void MultiComMgr::putCommand(com_id_t id, ComCommand *command)
     }
     auto &typeId = typeid(*command);
     if (typeId == typeid(ComTempCtrl)) {
-        const fnet_temp_ctrl_t &tempCtrl = ((ComTempCtrl *)command)->tempCtrl();
+        auto &tempCtrl = ((ComTempCtrl *)command)->tempCtrl();
         m_wanAsyncConn->postTempCtrl(it->second->deviceId(), tempCtrl);
     } else if (typeId == typeid(ComLightCtrl)) {
-        const fnet_light_ctrl_t &lightCtrl = ((ComLightCtrl *)command)->lightCtrl();
+        auto &lightCtrl = ((ComLightCtrl *)command)->lightCtrl();
         m_wanAsyncConn->postLightCtrl(it->second->deviceId(), lightCtrl);
     } else if (typeId == typeid(ComAirFilterCtrl)) {
-        const fnet_air_filter_ctrl_t &airFilterCtrl = ((ComAirFilterCtrl *)command)->airFilterCtrl();
+        auto &airFilterCtrl = ((ComAirFilterCtrl *)command)->airFilterCtrl();
         m_wanAsyncConn->postAirFilterCtrl(it->second->deviceId(), airFilterCtrl);
     } else if (typeId == typeid(ComPrintCtrl)) {
-        const fnet_print_ctrl_t &printCtrl = ((ComPrintCtrl *) command)->printCtrl();
+        auto &printCtrl = ((ComPrintCtrl *) command)->printCtrl();
         m_wanAsyncConn->postPrintCtrl(it->second->deviceId(), printCtrl);
+    } else if (typeId == typeid(ComVideoStreamCtrl)) {
+        auto &videoStreamCtrl = ((ComVideoStreamCtrl *)command)->videoStreamCtrl();
+        m_wanAsyncConn->postVideoStreamCtrl(it->second->deviceId(), videoStreamCtrl);
     }
 }
 

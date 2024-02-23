@@ -114,6 +114,17 @@ void ComWanAsyncConn::postPrintCtrl(const std::string &devId, const fnet_print_c
     m_networkIntfc->connectionPost(m_conn, &writeData);
 }
 
+void ComWanAsyncConn::postVideoStreamCtrl(const std::string &devId,
+    const fnet_video_stream_ctrl_t &videoStreamCtrl)
+{
+    if (m_thread == nullptr) {
+        return;
+    }
+    const char *ids = devId.c_str();
+    fnet_conn_write_data_t writeData = {FNET_CONN_WRITE_VIDEO_STREAM_CTRL, &videoStreamCtrl, {&ids, 1}};
+    m_networkIntfc->connectionPost(m_conn, &writeData);
+}
+
 void ComWanAsyncConn::run()
 {
     ComErrno ret = MultiComUtils::fnetRet2ComErrno(m_networkIntfc->connectionRun(m_conn));

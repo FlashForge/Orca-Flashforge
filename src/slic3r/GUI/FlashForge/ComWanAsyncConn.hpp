@@ -37,6 +37,8 @@ public:
 
     void postPrintCtrl(const std::string &devId, const fnet_print_ctrl_t &printCtrl);
 
+    void postVideoStreamCtrl(const std::string &devId, const fnet_video_stream_ctrl_t &videoStreamCtrl);
+
 private:
     void run();
 
