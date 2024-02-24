@@ -114,14 +114,14 @@ void ComWanAsyncConn::postPrintCtrl(const std::string &devId, const fnet_print_c
     m_networkIntfc->connectionPost(m_conn, &writeData);
 }
 
-void ComWanAsyncConn::postVideoStreamCtrl(const std::string &devId,
-    const fnet_video_stream_ctrl_t &videoStreamCtrl)
+void ComWanAsyncConn::postCameraStreamCtrl(const std::string &devId,
+    const fnet_camera_stream_ctrl_t &cameraStreamCtrl)
 {
     if (m_thread == nullptr) {
         return;
     }
     const char *ids = devId.c_str();
-    fnet_conn_write_data_t writeData = {FNET_CONN_WRITE_VIDEO_STREAM_CTRL, &videoStreamCtrl, {&ids, 1}};
+    fnet_conn_write_data_t writeData = {FNET_CONN_WRITE_CAMERA_STREAM_CTRL, &cameraStreamCtrl, {&ids, 1}};
     m_networkIntfc->connectionPost(m_conn, &writeData);
 }
 

@@ -35,7 +35,7 @@ typedef enum fnet_conn_write_data_type {
     FNET_CONN_WRITE_LIGHT_CTRL,         // data, fnet_light_ctrl_t
     FNET_CONN_WRITE_AIR_FILTER_CTRL,    // data, fnet_air_filter_ctrl_t
     FNET_CONN_WRITE_PRINT_CTRL,         // data, fnet_print_ctrl_t
-    FNET_CONN_WRITE_VIDEO_STREAM_CTRL,  // data, fnet_video_stream_ctrl
+    FNET_CONN_WRITE_CAMERA_STREAM_CTRL, // data, fnet_camera_stream_ctrl_t
 } fnet_conn_write_data_type_t;
 
 typedef enum fnet_conn_read_data_type {
@@ -96,9 +96,9 @@ typedef struct fnet_print_ctrl {
     double chamberFanSpeed;     // percent
 } fnet_print_ctrl_t;
 
-typedef struct fnet_video_stream_ctrl {
+typedef struct fnet_camera_stream_ctrl {
     const char *action;
-} fnet_video_stream_ctrl_t;
+} fnet_camera_stream_ctrl_t;
 
 typedef struct fnet_lan_dev_info {
     char serialNumber[MAX_DEVICE_SN_LEN];

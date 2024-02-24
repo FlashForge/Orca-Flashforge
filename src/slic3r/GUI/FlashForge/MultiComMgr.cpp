@@ -201,9 +201,9 @@ void MultiComMgr::putCommand(com_id_t id, ComCommand *command)
     } else if (typeId == typeid(ComPrintCtrl)) {
         auto &printCtrl = ((ComPrintCtrl *) command)->printCtrl();
         m_wanAsyncConn->postPrintCtrl(it->second->deviceId(), printCtrl);
-    } else if (typeId == typeid(ComVideoStreamCtrl)) {
-        auto &videoStreamCtrl = ((ComVideoStreamCtrl *)command)->videoStreamCtrl();
-        m_wanAsyncConn->postVideoStreamCtrl(it->second->deviceId(), videoStreamCtrl);
+    } else if (typeId == typeid(ComCameraStreamCtrl)) {
+        auto &cameraStreamCtrl = ((ComCameraStreamCtrl *)command)->cameraStreamCtrl();
+        m_wanAsyncConn->postCameraStreamCtrl(it->second->deviceId(), cameraStreamCtrl);
     }
 }
 
