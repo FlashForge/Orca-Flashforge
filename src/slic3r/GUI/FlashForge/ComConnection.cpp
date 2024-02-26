@@ -136,13 +136,13 @@ ComErrno ComConnection::initialize(fnet_dev_detail_t **detail)
         for (int i = 0; i < tryCnt; ++i) {
             ret = getDevDetail.exec(m_networkIntfc, m_accessToken, m_deviceId);
             if (ret == FNET_OK || ret == FNET_UNAUTHORIZED) {
-                *detail = getDevDetail.devDetail();
                 break;
             } else if (i + 1 < tryCnt) {
                 boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
             }
         }
     }
+    *detail = getDevDetail.devDetail();
     return ret;
 }
 
