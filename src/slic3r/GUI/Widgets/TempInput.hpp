@@ -134,9 +134,10 @@ private:
     DECLARE_EVENT_TABLE()
 };
 
-class IconText  : public wxPanel
+class IconText : public wxPanel
 {
 public:
+    IconText();
     IconText(wxWindow* parent,
              wxString icon = "",
              int iconSize = 12,
@@ -182,7 +183,7 @@ class StartFiltering : public wxPanel
 {
 public:
     StartFiltering(wxWindow* parent);
-    //~StartFiltering();
+    ~StartFiltering();
     void create_panel(wxWindow* parent);
 private:
     SwitchButton* m_internal_circulate_switch;//内循环过滤

@@ -575,11 +575,15 @@ void TempInput::mouseWheelMoved(wxMouseEvent &event) {}
 void TempInput::keyPressed(wxKeyEvent &event) {}
 void TempInput::keyReleased(wxKeyEvent &event) {}
 
+IconText::IconText() {}
+
 IconText::IconText(wxWindow* parent,wxString icon,int iconSize,wxString text,int textSize,const wxPoint &pos,const wxSize & size,long style)
-                : wxPanel(parent, wxID_ANY,pos, size, style)
+                //: wxPanel(parent, wxID_ANY,pos, size, style)
 {
+    //wxWindow::Create(parent, wxID_ANY, pos, size, style);
+    Create(parent, wxID_ANY, pos, size);
     SetBackgroundColour(*wxWHITE);
-    create_panel(this,icon,iconSize,text,textSize);
+    create_panel(this, icon, iconSize, text, textSize);
 }
 
  IconText::~IconText() 
@@ -589,7 +593,7 @@ IconText::IconText(wxWindow* parent,wxString icon,int iconSize,wxString text,int
 void IconText::create_panel(wxWindow* parent,wxString icon,int iconSize,wxString text,int textSize)
 {
     wxBoxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
-    auto m_panel_page = new wxPanel(this, wxID_ANY, wxDefaultPosition,wxDefaultSize,wxBORDER_NONE);
+    auto m_panel_page = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
     //m_panel_page->SetMinSize(wxSize(-1,-1));
     m_icon = create_scaled_bitmap(icon.ToStdString(), parent, iconSize);
     auto icon_static = new wxStaticBitmap(m_panel_page, wxID_ANY, m_icon);
@@ -615,9 +619,9 @@ void IconText::create_panel(wxWindow* parent,wxString icon,int iconSize,wxString
     m_panel_page->Layout();
     sizer->Fit(m_panel_page); 
 
-    parent->SetSizer(sizer);
-    parent->Layout();
-    parent->Fit(); 
+    //parent->SetSizer(sizer);
+    //parent->Layout();
+    //parent->Fit(); 
 }
 
 void IconText::setText(wxString text)
@@ -686,21 +690,20 @@ void IconBottonText::create_panel(wxWindow* parent,wxString icon,int iconSize,wx
     m_panel_page->Layout();
     sizer->Fit(m_panel_page); 
 
-    parent->SetSizer(sizer);
-    parent->Layout();
-    parent->Fit(); 
+    //parent->SetSizer(sizer);
+    //parent->Layout();
+    //parent->Fit(); 
 }
 
 StartFiltering::StartFiltering(wxWindow* parent)
     : wxPanel(parent, wxID_ANY,wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL)
 {
-        SetBackgroundColour(*wxWHITE);
-        create_panel(this);
+    //wxWindow::Create(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+    SetBackgroundColour(*wxWHITE);
+    create_panel(this);
 }
 
-//StartFiltering::~StartFiltering()
-//{
-//}
+StartFiltering::~StartFiltering() {}
 
 void StartFiltering::create_panel(wxWindow* parent)
 {
@@ -764,9 +767,9 @@ void StartFiltering::create_panel(wxWindow* parent)
         sizer->AddSpacer(FromDIP(14));
         sizer->Add(external_circulate_panel, 0, wxEXPAND | wxALIGN_CENTER, 0);
 
-        parent->SetSizer(sizer);
+/*        parent->SetSizer(sizer);
         parent->Layout();
-        parent->Fit();  
+        parent->Fit(); */ 
 }
 
 TempMixDevice::TempMixDevice(wxWindow* parent,bool idle, wxString nozzleTemp, wxString platformTemp, wxString cavityTemp,const wxPoint &pos,const wxSize & size,long style)
@@ -876,13 +879,13 @@ void TempMixDevice::create_panel(wxWindow* parent,bool idle, wxString nozzleTemp
     m_panel_circula_filter = new StartFiltering(parent);
 
     idleSizer->Add(m_panel_idle_device_info, 0, wxALL | wxEXPAND , 0);
-    idleSizer->Add(m_panel_circula_filter, 0, wxALL | wxEXPAND , 0);
+    idleSizer->Add(m_panel_circula_filter, 0, wxALL | wxEXPAND, 0);
     //m_panel_idle_device_info->Hide();
     m_panel_circula_filter->Hide();
 
-    parent->SetSizer(idleSizer);
-    parent->Layout();
-    parent->Fit(); 
+    //parent->SetSizer(idleSizer);
+    //parent->Layout();
+    //parent->Fit(); 
 }
 
 void TempMixDevice::setupLayoutIdleDeviceState(wxBoxSizer *deviceStateSizer, wxPanel *parent,bool idle) 
