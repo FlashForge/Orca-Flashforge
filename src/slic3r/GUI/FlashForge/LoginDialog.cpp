@@ -30,6 +30,7 @@ namespace GUI {
         : FFButton(parent,wxID_ANY,text,10)
         , m_countdown(60)
     {
+        SetBackgroundColour(*wxWHITE);
         m_timer.Bind(wxEVT_TIMER, &CountdownButton::OnTimer, this);
     }
 
@@ -513,6 +514,7 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
 
     //login button
     m_login_button_page1 = new FFButton(parent, wxID_ANY,_L("Login"));
+    m_login_button_page1->SetBackgroundColour(*wxWHITE);
     m_login_button_page1->SetFontDisableColor(wxColour(255, 255, 255));
     m_login_button_page1->SetBorderDisableColor(wxColour(221,221,221));
     m_login_button_page1->SetBGColor(wxColour(221,221,221));
@@ -692,6 +694,7 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
 */
     //login button
     m_login_button_page2 = new FFButton(parent, wxID_ANY,_L("Login"));
+    m_login_button_page2->SetBackgroundColour(*wxWHITE);
     m_login_button_page2->SetFontDisableColor(wxColour(255, 255, 255));
     m_login_button_page2->SetBorderDisableColor(wxColour(221,221,221));
     m_login_button_page2->SetBGColor(wxColour(221,221,221));

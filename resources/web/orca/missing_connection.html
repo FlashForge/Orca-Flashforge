@@ -4,19 +4,83 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Printer Connection Required</title>
-<link rel="stylesheet" type="text/css" href="css/home.css" />
-<link rel="stylesheet" type="text/css" href="css/dark.css" />
+<!-- <link rel="stylesheet" type="text/css" href="css/home.css" />
+<link rel="stylesheet" type="text/css" href="css/dark.css" /> -->
 <script type="text/javascript" src="../data/text.js"></script>	
 <script type="text/javascript" src="../homepage/js/jquery-3.6.0.min.js"></script>
 <script type="text/javascript" src="../homepage/js/json2.js"></script>
 <script type="text/javascript" src="../homepage/js/globalapi.js"></script>
 <script type="text/javascript" src="../homepage/js/home.js"></script>
+<style>
+  body {
+    margin: 0;
+  }
+  img {
+    width: 100vw;
+    height: 100vh;
+  }
+</style>
 </head>
 <body onLoad="OnInit()">
-    <div class="container">
-        <h1 class="trans">Printer Connection</h1>
+    <div class="container" style="padding: 0; border-radius: 0;">
+        <img
+          id="videoStream" 
+          style="display: block;-webkit-user-select: none;margin: auto;background-color: hsl(0, 0%, 25%);" 
+          alt="Live Stream"
+        >
+        <!-- 控制按钮 -->
+        <!-- <button id="toggleButton">暂停</button> -->
+        <!-- <h1 class="trans">Printer Connection</h1>
         <p class="trans">Please set up your printer connection to view the device.</p>
-        <img src="setup_connection.gif" alt="Printer connection setup demonstration" style="max-width: 100%; height: auto; display: block;"/>
+        <img src="setup_connection.gif" alt="Printer connection setup demonstration" style="max-width: 100%; height: auto; display: block;"/> -->
     </div>
+    <script>
+    //    var TestData={"command": "studio_rtsp","rtsp_address": "http://10.33.23.139:8080/?action=stream"};
+       var rtsp_address = window.location.search
+       var urlParams = new URLSearchParams(rtsp_address);
+       var lang = urlParams.get('lang');
+       var videoStreamImg = document.getElementById("videoStream");
+       videoStreamImg.src = 'zanting.jpg';
+
+
+       let streamPaused = false;
+
+       videoStreamImg.addEventListener('click', function() {
+           if (!streamPaused) {
+            if (lang) {
+              videoStreamImg.src = lang;
+              streamPaused = true;
+              setTimeout(function() {
+                  videoStreamImg.src = 'zanting.jpg';
+                  streamPaused = false;
+              }, 600000); // 10分钟后暂停，10分钟 = 600000毫秒
+            } else {
+              videoStreamImg.src = 'zanting.jpg';
+              streamPaused = false;
+              alert('无法获取视频流路径')
+            }
+           } else {
+             videoStreamImg.src = 'zanting.jpg';
+             streamPaused = false;
+           }
+       });
+
+       // 适配设置
+      //  var docEl = document.documentElement;
+      //  function setRemUnit () {
+      //    var rem = docEl.clientWidth / 10; // 可根据不同电脑分辨率进行手动修改
+      //    console.log(rem)
+      //    docEl.style.fontSize = rem + 'px'
+      //  };
+ 
+      //  setRemUnit();
+ 
+      //  window.addEventListener('resize', setRemUnit);
+      //  window.addEventListener('pageshow', function (e) {
+      //    if (e.persisted) {
+      //      setRemUnit();
+      //    }
+      //  });
+    </script>
 </body>
 </html>

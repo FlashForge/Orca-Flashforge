@@ -11,6 +11,8 @@ body
 
 .container {
     text-align: center;
+    width: 100vw;
+    height: 100vh;
     padding: 30px;
     border-radius: 10px;
     background-color: #ffffff;

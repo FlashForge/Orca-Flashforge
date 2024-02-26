@@ -3,7 +3,10 @@
 
 #include "../wxExtensions.hpp"
 #include <wx/textctrl.h>
+#include "SwitchButton.hpp"
 #include "StaticBox.hpp"
+#include "Label.hpp"
+#include "Button.hpp"
 
 wxDECLARE_EVENT(wxCUSTOMEVT_SET_TEMP_FINISH, wxCommandEvent);
 
@@ -129,6 +132,91 @@ private:
     void keyReleased(wxKeyEvent &event);
 
     DECLARE_EVENT_TABLE()
+};
+
+class IconText  : public wxPanel
+{
+public:
+    IconText(wxWindow* parent,
+             wxString icon = "",
+             int iconSize = 12,
+             wxString text = "",
+             int textSize = 12,
+             const wxPoint &pos = wxDefaultPosition,
+             const wxSize & size = wxDefaultSize,
+             long style = wxTAB_TRAVERSAL);
+    //~IconText();
+    void create_panel(wxWindow* parent,wxString icon,int iconSize,wxString text,int textSize);
+    void setText(wxString text);
+    void setTextColor(wxColour colour);
+private:
+    wxBitmap    m_icon;
+    wxStaticBitmap*  m_icon_staticbitmap{nullptr};
+    Label*   text_ctrl;
+};
+
+class IconBottonText :public wxPanel
+{
+public:
+        IconBottonText(wxWindow* parent,
+                       wxString icon = "",
+                       int iconSize = 12,
+                       wxString text = "",
+                       int textSize = 12,
+                       wxString secondIcon = "",
+                       wxString thirdIcon = "",
+                       const wxPoint &pos = wxDefaultPosition,
+                       const wxSize & size = wxDefaultSize,
+                       long style = wxTAB_TRAVERSAL);
+        ~IconBottonText();
+        void create_panel(wxWindow* parent,wxString icon,int iconSize,wxString text,int textSize,wxString secondIcon  = "",wxString thirdIcon = "");
+        void setLimit(double min,double max);
+private:
+    wxBitmap    m_icon;
+    Button*     m_inc_btn{nullptr};
+    Button*     m_dec_btn{nullptr};
+    Label*      text_ctrl;
+};
+
+class StartFiltering : public wxPanel
+{
+public:
+    StartFiltering(wxWindow* parent);
+    ~StartFiltering();
+    void create_panel(wxWindow* parent);
+private:
+    SwitchButton* m_internal_circulate_switch;//内循环过滤
+    SwitchButton* m_external_circulate_switch;//外循环过滤
+};
+
+class TempMixDevice :public wxPanel
+{
+public:
+    TempMixDevice(wxWindow* parent,wxString nozzleTemp = "--", wxString platformTemp = "--", wxString cavityTemp = "--",
+                 const wxPoint &pos = wxDefaultPosition,
+                 const wxSize & size = wxDefaultSize,
+                 long style = wxTAB_TRAVERSAL);
+    ~TempMixDevice();
+    void create_panel(wxWindow* parent,wxString nozzleTemp,wxString platformTemp,wxString cavityTemp);
+
+    void setupLayoutIdleDeviceState(wxBoxSizer *deviceStateSizer, wxPanel *parent);
+    void setupLayoutDeviceInfo(wxBoxSizer *deviceStateSizer, wxPanel *parent);
+
+    void connectEvent();
+
+    void modifyTemp(wxString nozzleTemp = "--", wxString platformTemp = "--", wxString cavityTemp = "--");
+    void modifyDeviceInfo();
+    void modifyDeviceLampState();
+    void modifyDeviceFilterState();    
+private:
+    wxPanel* m_panel_idle_device_state;
+    wxPanel* m_panel_idle_device_info;
+
+    Button* m_idle_device_info_button;
+    Button* m_idle_lamp_control_button;
+    Button* m_idle_filter_button;
+
+    StartFiltering* m_panel_circula_filter; //空闲状态，过滤按钮
 };
 
 #endif // !slic3r_GUI_TempInput_hpp_

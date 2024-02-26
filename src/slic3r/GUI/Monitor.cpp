@@ -162,14 +162,14 @@ MonitorPanel::~MonitorPanel()
         page->SetFocus();
     }, m_tabpanel->GetId());
 
-    m_status_add_machine_panel = new AddMachinePanel(m_tabpanel);
-    //m_device_list_panel = new DeviceListPanel(m_tabpanel);
-    m_tabpanel->AddPage(m_status_add_machine_panel, _L(""), "", true);
+    //m_status_add_machine_panel = new AddMachinePanel(m_tabpanel);
+    m_device_list_panel = new DeviceListPanel(m_tabpanel);
+    m_tabpanel->AddPage(m_device_list_panel, _L("Device List"), "", true);
 
     //m_status_info_panel        = new StatusPanel(m_tabpanel);
     //m_tabpanel->AddPage(m_status_info_panel, _L("Device Status"), "", false);
-    //m_status_info_panel_page   = new SingleDeviceState(m_tabpanel);
-    //m_tabpanel->AddPage(m_status_info_panel_page, _L("Device Status"), "", false);
+    m_status_info_panel_page   = new SingleDeviceState(m_tabpanel);
+    m_tabpanel->AddPage(m_status_info_panel_page, _L("Device Status"), "", false);
 
     m_media_file_panel = new MediaFilePanel(m_tabpanel);
     //m_tabpanel->AddPage(m_media_file_panel, _L("SD Card"), "", false);
