@@ -145,14 +145,14 @@ public:
              const wxPoint &pos = wxDefaultPosition,
              const wxSize & size = wxDefaultSize,
              long style = wxTAB_TRAVERSAL);
-    //~IconText();
+    ~IconText();
     void create_panel(wxWindow* parent,wxString icon,int iconSize,wxString text,int textSize);
     void setText(wxString text);
     void setTextColor(wxColour colour);
 private:
     wxBitmap    m_icon;
     wxStaticBitmap*  m_icon_staticbitmap{nullptr};
-    Label*   text_ctrl;
+    Label          *m_text_ctrl{nullptr};
 };
 
 class IconBottonText :public wxPanel
@@ -168,7 +168,7 @@ public:
                        const wxPoint &pos = wxDefaultPosition,
                        const wxSize & size = wxDefaultSize,
                        long style = wxTAB_TRAVERSAL);
-        ~IconBottonText();
+        //~IconBottonText();
         void create_panel(wxWindow* parent,wxString icon,int iconSize,wxString text,int textSize,wxString secondIcon  = "",wxString thirdIcon = "");
         void setLimit(double min,double max);
 private:
@@ -182,7 +182,7 @@ class StartFiltering : public wxPanel
 {
 public:
     StartFiltering(wxWindow* parent);
-    ~StartFiltering();
+    //~StartFiltering();
     void create_panel(wxWindow* parent);
 private:
     SwitchButton* m_internal_circulate_switch;//内循环过滤
@@ -192,17 +192,19 @@ private:
 class TempMixDevice :public wxPanel
 {
 public:
-    TempMixDevice(wxWindow* parent,wxString nozzleTemp = "--", wxString platformTemp = "--", wxString cavityTemp = "--",
+    TempMixDevice(wxWindow* parent,bool idle = false, wxString nozzleTemp = "--", wxString platformTemp = "--", wxString cavityTemp = "--",
                  const wxPoint &pos = wxDefaultPosition,
                  const wxSize & size = wxDefaultSize,
                  long style = wxTAB_TRAVERSAL);
-    ~TempMixDevice();
-    void create_panel(wxWindow* parent,wxString nozzleTemp,wxString platformTemp,wxString cavityTemp);
+    //~TempMixDevice();
+    void create_panel(wxWindow* parent,bool idle, wxString nozzleTemp,wxString platformTemp,wxString cavityTemp);
 
-    void setupLayoutIdleDeviceState(wxBoxSizer *deviceStateSizer, wxPanel *parent);
+    void setupLayoutIdleDeviceState(wxBoxSizer *deviceStateSizer, wxPanel *parent,bool idle);
     void setupLayoutDeviceInfo(wxBoxSizer *deviceStateSizer, wxPanel *parent);
 
     void connectEvent();
+
+    void setDeviceInfoBtnIcon(const wxString &icon);
 
     void modifyTemp(wxString nozzleTemp = "--", wxString platformTemp = "--", wxString cavityTemp = "--");
     void modifyDeviceInfo();

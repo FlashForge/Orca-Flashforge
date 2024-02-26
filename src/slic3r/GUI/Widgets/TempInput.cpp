@@ -582,10 +582,9 @@ IconText::IconText(wxWindow* parent,wxString icon,int iconSize,wxString text,int
     create_panel(this,icon,iconSize,text,textSize);
 }
 
-// IconText::~IconText()
-// {
-//     ;
-// }
+ IconText::~IconText() 
+ { 
+ }
 
 void IconText::create_panel(wxWindow* parent,wxString icon,int iconSize,wxString text,int textSize)
 {
@@ -598,18 +597,18 @@ void IconText::create_panel(wxWindow* parent,wxString icon,int iconSize,wxString
     //icon_static->SetMinSize(wxSize(47,50));
     icon_static->SetBackgroundColour(*wxWHITE);
 
-    text_ctrl = new Label(m_panel_page, text);
-    text_ctrl->Wrap(-1);
-    text_ctrl->SetFont(wxFont(wxFontInfo(textSize)));
-    text_ctrl->SetForegroundColour(wxColour(50,141,251));
-    text_ctrl->SetBackgroundColour(*wxWHITE);
-    text_ctrl->SetMinSize(wxSize(FromDIP(70),-1));
+    m_text_ctrl = new Label(m_panel_page, text);
+    m_text_ctrl->Wrap(-1);
+    m_text_ctrl->SetFont(wxFont(wxFontInfo(textSize)));
+    m_text_ctrl->SetForegroundColour(wxColour(50, 141, 251));
+    m_text_ctrl->SetBackgroundColour(*wxWHITE);
+    m_text_ctrl->SetMinSize(wxSize(FromDIP(70), -1));
 
     //sizer->AddSpacer(FromDIP(10));
     sizer->AddStretchSpacer();
     sizer->Add(icon_static,0, wxALIGN_CENTER | wxALL | wxEXPAND ,0);
     sizer->AddSpacer(FromDIP(5));
-    sizer->Add(text_ctrl,0, wxALIGN_CENTER | wxALL | wxEXPAND,0);
+    sizer->Add(m_text_ctrl, 0, wxALIGN_CENTER | wxALL | wxEXPAND, 0);
     sizer->AddStretchSpacer();
 
     m_panel_page->SetSizer(sizer);
@@ -623,13 +622,13 @@ void IconText::create_panel(wxWindow* parent,wxString icon,int iconSize,wxString
 
 void IconText::setText(wxString text)
 {
-    text_ctrl->SetLabel(text);
+    m_text_ctrl->SetLabel(text);
     Refresh();
 }
 
 void IconText::setTextColor(wxColour colour)
 {
-    text_ctrl->SetBackgroundColour(colour);
+    m_text_ctrl->SetBackgroundColour(colour);
     Refresh();
 }
 
@@ -640,10 +639,9 @@ IconBottonText::IconBottonText(wxWindow* parent,wxString icon,int iconSize,wxStr
     create_panel(this,icon,iconSize,text,textSize,secondIcon,thirdIcon);
 }
 
-IconBottonText::~IconBottonText()
-{
-    ;
-}
+//IconBottonText::~IconBottonText()
+//{
+//}
 
 void IconBottonText::create_panel(wxWindow* parent,wxString icon,int iconSize,wxString text,int textSize,wxString secondIcon,wxString thirdIcon)
 {
@@ -700,10 +698,9 @@ StartFiltering::StartFiltering(wxWindow* parent)
         create_panel(this);
 }
 
-StartFiltering::~StartFiltering()
-{
-        ;
-}
+//StartFiltering::~StartFiltering()
+//{
+//}
 
 void StartFiltering::create_panel(wxWindow* parent)
 {
@@ -734,7 +731,9 @@ void StartFiltering::create_panel(wxWindow* parent)
         m_internal_circulate_switch = new SwitchButton(internal_circulate_panel);
         m_internal_circulate_switch->SetBackgroundColour(*wxWHITE);
 
+        bSizer_internal_circulate_hor->AddSpacer(FromDIP(17));
         bSizer_internal_circulate_hor->Add(m_staticText_internal_circulate, 0, wxALL | wxEXPAND, 0);
+        bSizer_internal_circulate_hor->AddSpacer(FromDIP(7));
         bSizer_internal_circulate_hor->Add(m_internal_circulate_switch, 0, wxALL | wxEXPAND, 0);
 
         internal_circulate_panel->SetSizer(bSizer_internal_circulate_hor);
@@ -750,7 +749,9 @@ void StartFiltering::create_panel(wxWindow* parent)
         m_external_circulate_switch = new SwitchButton(external_circulate_panel);
         m_external_circulate_switch->SetBackgroundColour(*wxWHITE);
 
+        bSizer_external_circulate_hor->AddSpacer(FromDIP(17));
         bSizer_external_circulate_hor->Add(m_staticText_external_circulate, 0, wxALL | wxEXPAND, 0);
+        bSizer_external_circulate_hor->AddSpacer(FromDIP(7));
         bSizer_external_circulate_hor->Add(m_external_circulate_switch, 0, wxALL | wxEXPAND, 0);
 
         external_circulate_panel->SetSizer(bSizer_external_circulate_hor);
@@ -760,6 +761,7 @@ void StartFiltering::create_panel(wxWindow* parent)
         sizer->Add(m_panel_filtering_title, 0, wxEXPAND | wxALL, 0);
         sizer->Add(0, FromDIP(12), 0);
         sizer->Add(internal_circulate_panel, 0, wxEXPAND | wxALIGN_CENTER, 0);
+        sizer->AddSpacer(FromDIP(14));
         sizer->Add(external_circulate_panel, 0, wxEXPAND | wxALIGN_CENTER, 0);
 
         parent->SetSizer(sizer);
@@ -767,20 +769,19 @@ void StartFiltering::create_panel(wxWindow* parent)
         parent->Fit();  
 }
 
-TempMixDevice::TempMixDevice(wxWindow* parent,wxString nozzleTemp, wxString platformTemp, wxString cavityTemp,const wxPoint &pos,const wxSize & size,long style)
+TempMixDevice::TempMixDevice(wxWindow* parent,bool idle, wxString nozzleTemp, wxString platformTemp, wxString cavityTemp,const wxPoint &pos,const wxSize & size,long style)
              : wxPanel(parent, wxID_ANY,pos, size, style)
 {
     SetBackgroundColour(*wxWHITE);
-    create_panel(this,nozzleTemp,platformTemp,cavityTemp);
+    create_panel(this,idle,nozzleTemp,platformTemp,cavityTemp);
     connectEvent();
 }
 
- TempMixDevice::~TempMixDevice()
- {
-    ;
- }
+ //TempMixDevice::~TempMixDevice()
+ //{
+ //}
 
-void TempMixDevice::create_panel(wxWindow* parent,wxString nozzleTemp,wxString platformTemp,wxString cavityTemp)
+void TempMixDevice::create_panel(wxWindow* parent,bool idle, wxString nozzleTemp,wxString platformTemp,wxString cavityTemp)
 {
     //新建垂直布局
     wxBoxSizer* idleSizer = new wxBoxSizer(wxVERTICAL);
@@ -850,7 +851,7 @@ void TempMixDevice::create_panel(wxWindow* parent,wxString nozzleTemp,wxString p
     m_panel_idle_device_state = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     m_panel_idle_device_state->SetBackgroundColour(*wxWHITE);
     wxBoxSizer *deviceStateSizer = new wxBoxSizer(wxVERTICAL);
-    setupLayoutIdleDeviceState(deviceStateSizer, m_panel_idle_device_state);
+    setupLayoutIdleDeviceState(deviceStateSizer, m_panel_idle_device_state,idle);
     m_panel_idle_device_state->SetSizer(deviceStateSizer);
     m_panel_idle_device_state->Layout();
     deviceStateSizer->Fit(m_panel_idle_device_state);
@@ -884,7 +885,7 @@ void TempMixDevice::create_panel(wxWindow* parent,wxString nozzleTemp,wxString p
     parent->Fit(); 
 }
 
-void TempMixDevice::setupLayoutIdleDeviceState(wxBoxSizer *deviceStateSizer, wxPanel *parent) 
+void TempMixDevice::setupLayoutIdleDeviceState(wxBoxSizer *deviceStateSizer, wxPanel *parent,bool idle) 
 {
 //***灯控制布局
     wxBoxSizer *bSizer_control_lamp  = new wxBoxSizer(wxHORIZONTAL);
@@ -892,15 +893,18 @@ void TempMixDevice::setupLayoutIdleDeviceState(wxBoxSizer *deviceStateSizer, wxP
     m_panel_control_lamp->SetBackgroundColour(wxColour(255, 255, 255));
 
     // 显示文件信息按钮
-    m_idle_device_info_button = new Button(m_panel_control_lamp, wxString(""), "device_file_info", 0, FromDIP(18));
+    wxString file_pic = idle ? "device_idle_file_info" :"device_file_info";
+    m_idle_device_info_button = new Button(m_panel_control_lamp, wxString(""), file_pic, 0, FromDIP(18));
     m_idle_device_info_button->SetFont(wxFont(wxFontInfo(16)));
     m_idle_device_info_button->SetBorderWidth(0);
-    m_idle_device_info_button->SetBackgroundColor(wxColour(255, 255, 255));
+//    m_idle_device_info_button->SetBackgroundColor(wxColour(255, 255, 255));
+    m_idle_device_info_button->SetBackgroundColor(wxColour(217, 234, 255));
     m_idle_device_info_button->SetBorderColor(wxColour(255, 255, 255));
     // m_idle_device_info_button->SetTextColor(wxColour(51,51,51));
     m_idle_device_info_button->SetMinSize((wxSize(FromDIP(108), FromDIP(29))));
     m_idle_device_info_button->SetCornerRadius(0);
-    bSizer_control_lamp->Add(m_idle_device_info_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM | wxTOP | wxEXPAND, FromDIP(4));
+    bSizer_control_lamp->Add(m_idle_device_info_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM , FromDIP(4));
+    bSizer_control_lamp->AddSpacer(FromDIP(6));
 
     // 显示灯控制按钮
     m_idle_lamp_control_button = new Button(m_panel_control_lamp, wxString(""), "device_lamp_control", 0, FromDIP(18));
@@ -911,7 +915,8 @@ void TempMixDevice::setupLayoutIdleDeviceState(wxBoxSizer *deviceStateSizer, wxP
     // m_idle_lamp_control_button->SetTextColor(wxColour(51,51,51));
     m_idle_lamp_control_button->SetMinSize((wxSize(FromDIP(108), FromDIP(29))));
     m_idle_lamp_control_button->SetCornerRadius(0);
-    bSizer_control_lamp->Add(m_idle_lamp_control_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM | wxTOP | wxEXPAND, FromDIP(4));
+    bSizer_control_lamp->Add(m_idle_lamp_control_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+    bSizer_control_lamp->AddSpacer(FromDIP(6));
 
     // 显示过滤按钮
     m_idle_filter_button = new Button(m_panel_control_lamp, wxString(""), "device_filter", 0, FromDIP(18));
@@ -922,7 +927,7 @@ void TempMixDevice::setupLayoutIdleDeviceState(wxBoxSizer *deviceStateSizer, wxP
     // m_idle_filter_button->SetTextColor(wxColour(51,51,51));
     m_idle_filter_button->SetMinSize((wxSize(FromDIP(108), FromDIP(29))));
     m_idle_filter_button->SetCornerRadius(0);
-    bSizer_control_lamp->Add(m_idle_filter_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM | wxTOP | wxEXPAND, FromDIP(4));
+    bSizer_control_lamp->Add(m_idle_filter_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
 
     //***灯控制布局添加至垂直布局
     m_panel_control_lamp->SetSizer(bSizer_control_lamp);
@@ -998,7 +1003,7 @@ void TempMixDevice::setupLayoutDeviceInfo(wxBoxSizer *deviceStateSizer, wxPanel 
 
     deviceStateSizer->Add(m_panel_separotor1);
 
-    auto m_panel_device_data = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(120), -1), wxTAB_TRAVERSAL);
+    auto m_panel_device_data = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     m_panel_device_data->SetBackgroundColour(wxColour(255, 255, 255));
 
     wxBoxSizer *bSizer_device_data = new wxBoxSizer(wxVERTICAL);
@@ -1054,9 +1059,13 @@ void TempMixDevice::connectEvent()
     m_idle_device_info_button->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e) {
         if(m_panel_idle_device_info){
              m_panel_idle_device_info->Show();
+            m_idle_device_info_button->SetBackgroundColor(wxColour(217, 234, 255));
         }
         if(m_panel_circula_filter){
           m_panel_circula_filter->Hide();
+        }
+        if (m_idle_filter_button) {
+          m_idle_filter_button->SetBackgroundColor(wxColour(255, 255, 255));
         }
         Layout();
     });
@@ -1064,11 +1073,20 @@ void TempMixDevice::connectEvent()
     m_idle_filter_button->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e) {
         if(m_panel_circula_filter){
             m_panel_circula_filter->Show();
+            m_idle_filter_button->SetBackgroundColor(wxColour(217, 234, 255));
         }
         if(m_panel_idle_device_info){
           m_panel_idle_device_info->Hide();
         }
+        if (m_idle_device_info_button) {
+          m_idle_device_info_button->SetBackgroundColor(wxColour(255, 255, 255));
+        }
         Layout();
     });  
 
+}
+
+void TempMixDevice::setDeviceInfoBtnIcon(const wxString &icon) 
+{ 
+    m_idle_device_info_button->SetIcon(icon);
 }
