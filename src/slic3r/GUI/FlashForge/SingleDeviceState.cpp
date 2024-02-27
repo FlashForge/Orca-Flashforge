@@ -223,14 +223,18 @@ void DeviceDetail::create_panel(wxWindow* parent)
         wxBoxSizer *bSizer_third_row = new wxBoxSizer(wxHORIZONTAL);
         auto m_panel_third_row = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, -1), wxTAB_TRAVERSAL);
 
-        IconBottonText* device_speed = new IconBottonText(m_panel_third_row,wxString("device_speed"),17,wxString("90%"),12);
+        IconBottonText* device_speed = new IconBottonText(m_panel_third_row,wxString("device_speed"),17,wxString("90"),12);
+        device_speed->setLimit(10, 150);
+        device_speed->setAdjustValue(1);
         device_speed->SetMinSize(wxSize(FromDIP(130), -1));
         bSizer_third_row->AddSpacer(FromDIP(25));
         bSizer_third_row->Add(device_speed, 0, wxEXPAND | wxALL, 0);
 
         bSizer_third_row->AddStretchSpacer();
 
-        IconBottonText* device_nozzle_fan = new IconBottonText(m_panel_third_row,wxString("device_nozzle_fan"),17,wxString("50%"),12);
+        IconBottonText* device_nozzle_fan = new IconBottonText(m_panel_third_row,wxString("device_nozzle_fan"),17,wxString("50"),12);
+        device_nozzle_fan->setLimit(0, 100);
+        device_nozzle_fan->setAdjustValue(1);
         device_nozzle_fan->SetMinSize(wxSize(FromDIP(130), -1));
         bSizer_third_row->Add(device_nozzle_fan, 0, wxEXPAND | wxALL, 0);
         //bSizer_third_row->AddSpacer(FromDIP(16));
@@ -252,14 +256,18 @@ void DeviceDetail::create_panel(wxWindow* parent)
         wxBoxSizer *bSizer_fourth_row = new wxBoxSizer(wxHORIZONTAL);
         auto m_panel_fourth_row = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, -1), wxTAB_TRAVERSAL);
 
-        IconBottonText* device_z_axis = new IconBottonText(m_panel_fourth_row,wxString("device_z_axis"),17,wxString("0.02"),12,wxString("device_z_dec"),wxString("device_z_inc"));
+        IconBottonText* device_z_axis = new IconBottonText(m_panel_fourth_row,wxString("device_z_axis"),17,wxString("0.02"),12,wxString("device_z_dec"),wxString("push_button_arrow_dec_normal"));
+        device_z_axis->setLimit(-5, 5);
+        device_z_axis->setAdjustValue(0.01);
         device_z_axis->SetMinSize(wxSize(FromDIP(130), -1));
         bSizer_fourth_row->AddSpacer(FromDIP(25));
         bSizer_fourth_row->Add(device_z_axis, 0, wxEXPAND | wxALL, 0);
 
         bSizer_fourth_row->AddStretchSpacer();
 
-        IconBottonText* device_cooling_fan = new IconBottonText(m_panel_fourth_row,wxString("device_cooling_fan"),17,wxString("100%"),12);
+        IconBottonText* device_cooling_fan = new IconBottonText(m_panel_fourth_row,wxString("device_cooling_fan"),17,wxString("100"),12);
+        device_cooling_fan->setLimit(0, 100);
+        device_cooling_fan->setAdjustValue(1);
         device_cooling_fan->SetMinSize(wxSize(FromDIP(130), -1));
         bSizer_fourth_row->Add(device_cooling_fan, 0, wxEXPAND | wxALL, 0);
         //bSizer_fourth_row->AddSpacer(FromDIP(16));
@@ -1357,6 +1365,8 @@ void SingleDeviceState::connectEvent()
        //m_material_pic = create_scaled_bitmap("device_idle_file_info", this, 60);
        m_material_staticbitmap->SetBitmap(create_scaled_bitmap("device_idle_file_info", this, 60));
        //m_material_staticbitmap->Refresh();
+       m_device_info_button->SetIcon("device_idle_file_info");
+       m_device_info_button->Refresh();
         if(m_busy_device_detial){
             m_busy_device_detial->Show();
             m_busy_device_detial->Show(m_busy_device_detial->IsShown());
@@ -1386,6 +1396,18 @@ void SingleDeviceState::connectEvent()
             m_device_info_button->SetBackgroundColor(wxColour(255,255,255));
         }
         Layout();
+   });
+
+   m_lamp_control_button->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e) {
+       if (m_lamp_control_button->GetFlashForgeSelected()) {
+           m_lamp_control_button->SetIcon("device_lamp_control");
+           m_lamp_control_button->Refresh();
+           m_lamp_control_button->SetFlashForgeSelected(false);
+       } else {
+           m_lamp_control_button->SetIcon("device_lamp_control_press");
+           m_lamp_control_button->Refresh();
+           m_lamp_control_button->SetFlashForgeSelected(true);
+       }
    });
 
 // //idle button slot

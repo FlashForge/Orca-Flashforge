@@ -580,25 +580,17 @@ IconText::IconText() {}
 IconText::IconText(wxWindow* parent,wxString icon,int iconSize,wxString text,int textSize,const wxPoint &pos,const wxSize & size,long style)
                 //: wxPanel(parent, wxID_ANY,pos, size, style)
 {
-    //wxWindow::Create(parent, wxID_ANY, pos, size, style);
     Create(parent, wxID_ANY, pos, size);
     SetBackgroundColour(*wxWHITE);
     create_panel(this, icon, iconSize, text, textSize);
 }
 
- IconText::~IconText() 
- { 
- }
-
 void IconText::create_panel(wxWindow* parent,wxString icon,int iconSize,wxString text,int textSize)
 {
     wxBoxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
     auto m_panel_page = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
-    //m_panel_page->SetMinSize(wxSize(-1,-1));
     m_icon = create_scaled_bitmap(icon.ToStdString(), parent, iconSize);
     auto icon_static = new wxStaticBitmap(m_panel_page, wxID_ANY, m_icon);
-    //icon_static->SetMinSize(wxSize(FromDIP(15),FromDIP(15)));
-    //icon_static->SetMinSize(wxSize(47,50));
     icon_static->SetBackgroundColour(*wxWHITE);
 
     m_text_ctrl = new Label(m_panel_page, text);
@@ -608,7 +600,6 @@ void IconText::create_panel(wxWindow* parent,wxString icon,int iconSize,wxString
     m_text_ctrl->SetBackgroundColour(*wxWHITE);
     m_text_ctrl->SetMinSize(wxSize(FromDIP(70), -1));
 
-    //sizer->AddSpacer(FromDIP(10));
     sizer->AddStretchSpacer();
     sizer->Add(icon_static,0, wxALIGN_CENTER | wxALL | wxEXPAND ,0);
     sizer->AddSpacer(FromDIP(5));
@@ -618,10 +609,6 @@ void IconText::create_panel(wxWindow* parent,wxString icon,int iconSize,wxString
     m_panel_page->SetSizer(sizer);
     m_panel_page->Layout();
     sizer->Fit(m_panel_page); 
-
-    //parent->SetSizer(sizer);
-    //parent->Layout();
-    //parent->Fit(); 
 }
 
 void IconText::setText(wxString text)
@@ -643,10 +630,6 @@ IconBottonText::IconBottonText(wxWindow* parent,wxString icon,int iconSize,wxStr
     create_panel(this,icon,iconSize,text,textSize,secondIcon,thirdIcon);
 }
 
-//IconBottonText::~IconBottonText()
-//{
-//}
-
 void IconBottonText::create_panel(wxWindow* parent,wxString icon,int iconSize,wxString text,int textSize,wxString secondIcon,wxString thirdIcon)
 {
     wxBoxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -654,122 +637,194 @@ void IconBottonText::create_panel(wxWindow* parent,wxString icon,int iconSize,wx
     m_panel_page->SetSize(wxSize(-1,-1));
     m_icon = create_scaled_bitmap(icon.ToStdString(), parent, iconSize);
 
-    text_ctrl = new Label(m_panel_page, text);
-    text_ctrl->Wrap(-1);
-    text_ctrl->SetFont(wxFont(wxFontInfo(textSize)));
-    text_ctrl->SetForegroundColour(wxColour(51,51,51));
-    text_ctrl->SetBackgroundColour(wxColour(255,255,255));
-    text_ctrl->SetMinSize(wxSize(FromDIP(35),-1));
+    m_text_ctrl = new wxTextCtrl(m_panel_page, wxID_ANY, text, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
+    m_text_ctrl->SetFont(wxFont(wxFontInfo(textSize)));
+    m_text_ctrl->SetForegroundColour(wxColour(51, 51, 51));
+    m_text_ctrl->SetBackgroundColour(wxColour(255, 255, 255));
+    m_text_ctrl->SetMinSize(wxSize(FromDIP(40), -1));
+    //m_text_ctrl->Bind(wxEVT_TEXT, &IconBottonText::onTextChange, this);
+    m_text_ctrl->Bind(wxEVT_KILL_FOCUS, &IconBottonText::onTextFocusOut, this);
 
+    m_unitLabel = new wxStaticText(m_panel_page, wxID_ANY, "%");
 
     auto icon_static = new wxStaticBitmap(m_panel_page, wxID_ANY, m_icon);
-    //icon_static->SetMinSize(wxSize(FromDIP(15),FromDIP(15)));
 
-    //auto dec_icon = create_scaled_bitmap(wxString("spin_dec").ToStdString(), parent, iconSize);
-    //auto dec_icon_static = new wxStaticBitmap(m_panel_page, wxID_ANY, dec_icon);
-    wxString second_icon_name = secondIcon.IsEmpty() ? "device_dec" : secondIcon;
-    m_dec_btn = new Button(m_panel_page, "", second_icon_name, wxBORDER_NONE, 16);
+    if (secondIcon.IsEmpty()) {
+        m_dec_btn = new FFPushButton(m_panel_page, wxID_ANY, "push_button_dec_normal", "push_button_dec_hover", "push_button_dec_press","push_button_dec_disable");
+    } else {
+        m_dec_btn = new FFPushButton(m_panel_page, wxID_ANY, "push_button_arrow_dec_normal", "push_button_arrow_dec_hover", "push_button_arrow_dec_press","push_button_arrow_dec_disable");
+    }
+    m_dec_btn->Bind(wxEVT_LEFT_UP, &IconBottonText::onDecBtnClicked, this);
     m_dec_btn->SetBackgroundColour(*wxWHITE);
 
-    //auto inc_icon = create_scaled_bitmap(wxString("spin_inc").ToStdString(), parent, iconSize);
-    //auto inc_icon_static = new wxStaticBitmap(m_panel_page, wxID_ANY, inc_icon);
-    wxString third_icon_name = thirdIcon.IsEmpty() ? "device_inc" : secondIcon;
-    m_inc_btn = new Button(m_panel_page, "", third_icon_name, wxBORDER_NONE, 16);
+    if (secondIcon.IsEmpty()) {
+        m_inc_btn = new FFPushButton(m_panel_page, wxID_ANY, "push_button_inc_normal", "push_button_inc_hover", "push_button_inc_press","push_button_inc_disable");
+    } else {
+        m_inc_btn = new FFPushButton(m_panel_page, wxID_ANY, "push_button_arrow_inc_normal", "push_button_arrow_inc_hover", "push_button_arrow_inc_press","push_button_arrow_inc_disable");
+    }
+    m_inc_btn->Bind(wxEVT_LEFT_UP, &IconBottonText::onIncBtnClicked, this);
     m_inc_btn->SetBackgroundColour(*wxWHITE);
 
     sizer->Add(icon_static,0, wxALIGN_CENTER | wxALL | wxEXPAND ,0);
     sizer->AddSpacer(FromDIP(5));
     sizer->Add(m_dec_btn, 0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND, 0);
     sizer->AddSpacer(FromDIP(5));
-    sizer->Add(text_ctrl,0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND,0);
+    sizer->Add(m_text_ctrl, 0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND, 0);
+    sizer->Add(m_unitLabel, 0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND, 0);
     sizer->AddSpacer(FromDIP(5));
     sizer->Add(m_inc_btn, 0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND, 0);
-    //sizer->AddStretchSpacer();
 
     m_panel_page->SetSizer(sizer);
     m_panel_page->Layout();
     sizer->Fit(m_panel_page); 
+    if (!secondIcon.IsEmpty()) {
+        m_unitLabel->Hide();
+    }
+}
 
-    //parent->SetSizer(sizer);
-    //parent->Layout();
-    //parent->Fit(); 
+void IconBottonText::setLimit(double min, double max)
+{ 
+    m_min = min;
+    m_max = max;
+}
+
+void IconBottonText::setAdjustValue(double value) 
+{
+    m_adjust_value = value; 
+}
+
+void IconBottonText::onTextChange(wxCommandEvent &event) 
+{
+    long value;
+    if (m_text_ctrl->GetValue().ToLong(&value)) {
+        if (value < m_min) {
+            wxString str_min = wxString::Format("%.2f", m_min);
+            m_text_ctrl->ChangeValue(str_min);
+        } else if (value > m_max) {
+            wxString str_max = wxString::Format("%.2f", m_max);
+            m_text_ctrl->ChangeValue(str_max);
+        }
+    }
+}
+
+void IconBottonText::onTextFocusOut(wxFocusEvent &event) 
+{
+    wxString text = m_text_ctrl->GetValue();
+    long     value;
+    if (text.ToLong(&value)) {
+        if (value < m_min) {
+            wxString str_min = wxString::Format("%.0f", m_min);
+            m_text_ctrl->ChangeValue(str_min);
+        } else if (value > m_max) {
+            wxString str_max = wxString::Format("%.0f", m_max);
+            m_text_ctrl->ChangeValue(str_max);
+        }
+    }
+    event.Skip();
+}
+
+void IconBottonText::onDecBtnClicked(wxMouseEvent &event) 
+{
+    wxString text = m_text_ctrl->GetValue();
+    long     value;
+    double   doubleValue;
+    if (text.ToLong(&value)) {
+        double cur_value = (value - m_adjust_value) < m_min ? m_min : value - m_adjust_value;
+        wxString str_cur   = wxString::Format("%.0f", cur_value);
+        m_text_ctrl->ChangeValue(str_cur);
+    } else if (text.ToDouble(&doubleValue)) {
+        double cur_value = (doubleValue - m_adjust_value) < m_min ? m_min : doubleValue - m_adjust_value;
+        wxString str_cur   = wxString::Format("%.2f", cur_value);
+        m_text_ctrl->ChangeValue(str_cur);
+    }
+    event.Skip(); 
+}
+
+void IconBottonText::onIncBtnClicked(wxMouseEvent &event)
+{
+    wxString text = m_text_ctrl->GetValue();
+    long     value;
+    double   doubleValue;
+    if (text.ToLong(&value)) {
+        double cur_value = (value + m_adjust_value) > m_max ? m_max : value + m_adjust_value;
+        wxString str_cur   = wxString::Format("%.0f", cur_value);
+        m_text_ctrl->ChangeValue(str_cur);
+    } else if (text.ToDouble(&doubleValue)) {
+        double   cur_value = (doubleValue + m_adjust_value) > m_max ? m_max : doubleValue + m_adjust_value;
+        wxString str_cur   = wxString::Format("%.2f", cur_value);
+        m_text_ctrl->ChangeValue(str_cur);
+    }
+    event.Skip();
 }
 
 StartFiltering::StartFiltering(wxWindow* parent)
     : wxPanel(parent, wxID_ANY,wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL)
 {
-    //wxWindow::Create(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     SetBackgroundColour(*wxWHITE);
     create_panel(this);
 }
 
-StartFiltering::~StartFiltering() {}
-
 void StartFiltering::create_panel(wxWindow* parent)
 {
-        wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
-        wxBoxSizer *bSizer_filtering_title = new wxBoxSizer(wxHORIZONTAL);
+    wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
+    wxBoxSizer *bSizer_filtering_title = new wxBoxSizer(wxHORIZONTAL);
 
-        auto m_panel_filtering_title = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(36)), wxTAB_TRAVERSAL);
-        m_panel_filtering_title->SetBackgroundColour(wxColour(248,248,248));
+    auto m_panel_filtering_title = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(36)), wxTAB_TRAVERSAL);
+    m_panel_filtering_title->SetBackgroundColour(wxColour(248,248,248));
 
-        //过滤标题
-        auto m_staticText_filtering = new wxStaticText(m_panel_filtering_title, wxID_ANY ,("Start Filtering"));
-        m_staticText_filtering->Wrap(-1);
-        m_staticText_filtering->SetFont(wxFont(wxFontInfo(16)));
-        m_staticText_filtering->SetForegroundColour(wxColour(51,51,51));
+    //过滤标题
+    auto m_staticText_filtering = new wxStaticText(m_panel_filtering_title, wxID_ANY ,("Start Filtering"));
+    m_staticText_filtering->Wrap(-1);
+    m_staticText_filtering->SetFont(wxFont(wxFontInfo(16)));
+    m_staticText_filtering->SetForegroundColour(wxColour(51,51,51));
 
-        bSizer_filtering_title->Add(m_staticText_filtering, 0, wxLEFT, FromDIP(17));
-        bSizer_filtering_title->Add(0, 0, 1, wxEXPAND, 0);
-        m_panel_filtering_title->SetSizer(bSizer_filtering_title);
-        m_panel_filtering_title->Layout();
-        bSizer_filtering_title->Fit(m_panel_filtering_title);
+    bSizer_filtering_title->Add(m_staticText_filtering, 0, wxLEFT, FromDIP(17));
+    bSizer_filtering_title->Add(0, 0, 1, wxEXPAND, 0);
+    m_panel_filtering_title->SetSizer(bSizer_filtering_title);
+    m_panel_filtering_title->Layout();
+    bSizer_filtering_title->Fit(m_panel_filtering_title);
 
-        //内循环过滤
-        wxBoxSizer *bSizer_internal_circulate_hor = new wxBoxSizer(wxHORIZONTAL);
-        wxPanel*    internal_circulate_panel      = new wxPanel(parent, wxID_ANY, wxDefaultPosition,wxDefaultSize, wxTAB_TRAVERSAL);
-        auto m_staticText_internal_circulate = new wxStaticText(internal_circulate_panel, wxID_ANY, ("Internal Circulate"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
-        m_staticText_internal_circulate->Wrap(-1);
-        m_staticText_internal_circulate->SetFont(wxFont(wxFontInfo(16)));
-        m_internal_circulate_switch = new SwitchButton(internal_circulate_panel);
-        m_internal_circulate_switch->SetBackgroundColour(*wxWHITE);
+    //内循环过滤
+    wxBoxSizer *bSizer_internal_circulate_hor = new wxBoxSizer(wxHORIZONTAL);
+    wxPanel*    internal_circulate_panel      = new wxPanel(parent, wxID_ANY, wxDefaultPosition,wxDefaultSize, wxTAB_TRAVERSAL);
+    auto m_staticText_internal_circulate = new wxStaticText(internal_circulate_panel, wxID_ANY, ("Internal Circulate"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
+    m_staticText_internal_circulate->Wrap(-1);
+    m_staticText_internal_circulate->SetFont(wxFont(wxFontInfo(16)));
+    m_internal_circulate_switch = new SwitchButton(internal_circulate_panel);
+    m_internal_circulate_switch->SetBackgroundColour(*wxWHITE);
 
-        bSizer_internal_circulate_hor->AddSpacer(FromDIP(17));
-        bSizer_internal_circulate_hor->Add(m_staticText_internal_circulate, 0, wxALL | wxEXPAND, 0);
-        bSizer_internal_circulate_hor->AddSpacer(FromDIP(7));
-        bSizer_internal_circulate_hor->Add(m_internal_circulate_switch, 0, wxALL | wxEXPAND, 0);
+    bSizer_internal_circulate_hor->AddSpacer(FromDIP(17));
+    bSizer_internal_circulate_hor->Add(m_staticText_internal_circulate, 0, wxALL | wxEXPAND, 0);
+    bSizer_internal_circulate_hor->AddSpacer(FromDIP(7));
+    bSizer_internal_circulate_hor->Add(m_internal_circulate_switch, 0, wxALL | wxEXPAND, 0);
 
-        internal_circulate_panel->SetSizer(bSizer_internal_circulate_hor);
-        internal_circulate_panel->Layout();
-        bSizer_internal_circulate_hor->Fit(internal_circulate_panel);
+    internal_circulate_panel->SetSizer(bSizer_internal_circulate_hor);
+    internal_circulate_panel->Layout();
+    bSizer_internal_circulate_hor->Fit(internal_circulate_panel);
 
-        //外循环过滤
-        wxBoxSizer *bSizer_external_circulate_hor = new wxBoxSizer(wxHORIZONTAL);
-        wxPanel*    external_circulate_panel      = new wxPanel(parent, wxID_ANY, wxDefaultPosition,wxDefaultSize, wxTAB_TRAVERSAL);
-        auto m_staticText_external_circulate = new wxStaticText(external_circulate_panel, wxID_ANY, ("External Circulate"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
-        m_staticText_external_circulate->Wrap(-1);
-        m_staticText_external_circulate->SetFont(wxFont(wxFontInfo(16)));
-        m_external_circulate_switch = new SwitchButton(external_circulate_panel);
-        m_external_circulate_switch->SetBackgroundColour(*wxWHITE);
+    //外循环过滤
+    wxBoxSizer *bSizer_external_circulate_hor = new wxBoxSizer(wxHORIZONTAL);
+    wxPanel*    external_circulate_panel      = new wxPanel(parent, wxID_ANY, wxDefaultPosition,wxDefaultSize, wxTAB_TRAVERSAL);
+    auto m_staticText_external_circulate = new wxStaticText(external_circulate_panel, wxID_ANY, ("External Circulate"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
+    m_staticText_external_circulate->Wrap(-1);
+    m_staticText_external_circulate->SetFont(wxFont(wxFontInfo(16)));
+    m_external_circulate_switch = new SwitchButton(external_circulate_panel);
+    m_external_circulate_switch->SetBackgroundColour(*wxWHITE);
 
-        bSizer_external_circulate_hor->AddSpacer(FromDIP(17));
-        bSizer_external_circulate_hor->Add(m_staticText_external_circulate, 0, wxALL | wxEXPAND, 0);
-        bSizer_external_circulate_hor->AddSpacer(FromDIP(7));
-        bSizer_external_circulate_hor->Add(m_external_circulate_switch, 0, wxALL | wxEXPAND, 0);
+    bSizer_external_circulate_hor->AddSpacer(FromDIP(17));
+    bSizer_external_circulate_hor->Add(m_staticText_external_circulate, 0, wxALL | wxEXPAND, 0);
+    bSizer_external_circulate_hor->AddSpacer(FromDIP(7));
+    bSizer_external_circulate_hor->Add(m_external_circulate_switch, 0, wxALL | wxEXPAND, 0);
 
-        external_circulate_panel->SetSizer(bSizer_external_circulate_hor);
-        external_circulate_panel->Layout();
-        bSizer_external_circulate_hor->Fit(external_circulate_panel);
+    external_circulate_panel->SetSizer(bSizer_external_circulate_hor);
+    external_circulate_panel->Layout();
+    bSizer_external_circulate_hor->Fit(external_circulate_panel);
 
-        sizer->Add(m_panel_filtering_title, 0, wxEXPAND | wxALL, 0);
-        sizer->Add(0, FromDIP(12), 0);
-        sizer->Add(internal_circulate_panel, 0, wxEXPAND | wxALIGN_CENTER, 0);
-        sizer->AddSpacer(FromDIP(14));
-        sizer->Add(external_circulate_panel, 0, wxEXPAND | wxALIGN_CENTER, 0);
-
-/*        parent->SetSizer(sizer);
-        parent->Layout();
-        parent->Fit(); */ 
+    sizer->Add(m_panel_filtering_title, 0, wxEXPAND | wxALL, 0);
+    sizer->Add(0, FromDIP(12), 0);
+    sizer->Add(internal_circulate_panel, 0, wxEXPAND | wxALIGN_CENTER, 0);
+    sizer->AddSpacer(FromDIP(14));
+    sizer->Add(external_circulate_panel, 0, wxEXPAND | wxALIGN_CENTER, 0);
 }
 
 TempMixDevice::TempMixDevice(wxWindow* parent,bool idle, wxString nozzleTemp, wxString platformTemp, wxString cavityTemp,const wxPoint &pos,const wxSize & size,long style)
@@ -779,10 +834,6 @@ TempMixDevice::TempMixDevice(wxWindow* parent,bool idle, wxString nozzleTemp, wx
     create_panel(this,idle,nozzleTemp,platformTemp,cavityTemp);
     connectEvent();
 }
-
- //TempMixDevice::~TempMixDevice()
- //{
- //}
 
 void TempMixDevice::create_panel(wxWindow* parent,bool idle, wxString nozzleTemp,wxString platformTemp,wxString cavityTemp)
 {
@@ -882,10 +933,6 @@ void TempMixDevice::create_panel(wxWindow* parent,bool idle, wxString nozzleTemp
     idleSizer->Add(m_panel_circula_filter, 0, wxALL | wxEXPAND, 0);
     //m_panel_idle_device_info->Hide();
     m_panel_circula_filter->Hide();
-
-    //parent->SetSizer(idleSizer);
-    //parent->Layout();
-    //parent->Fit(); 
 }
 
 void TempMixDevice::setupLayoutIdleDeviceState(wxBoxSizer *deviceStateSizer, wxPanel *parent,bool idle) 
