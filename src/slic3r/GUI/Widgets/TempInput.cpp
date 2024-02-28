@@ -839,6 +839,8 @@ void StartFiltering::create_panel(wxWindow* parent)
     sizer->Add(internal_circulate_panel, 0, wxEXPAND | wxALIGN_CENTER, 0);
     sizer->AddSpacer(FromDIP(14));
     sizer->Add(external_circulate_panel, 0, wxEXPAND | wxALIGN_CENTER, 0);
+
+    parent->SetSizer(sizer);
 }
 
 TempMixDevice::TempMixDevice(wxWindow* parent,bool idle, wxString nozzleTemp, wxString platformTemp, wxString cavityTemp,const wxPoint &pos,const wxSize & size,long style)
@@ -866,40 +868,42 @@ void TempMixDevice::create_panel(wxWindow* parent,bool idle, wxString nozzleTemp
     wxString degreeSymbol = wxString::FromUTF8("\xE2\x84\x83");
     temperatureString.Append(degreeSymbol);
     IconText* tempCtrl_top = new IconText(m_panel_temperature,wxString("device_top_temperature"),20,temperatureString,20);
-    tempCtrl_top->SetMinSize(wxSize(FromDIP(104), FromDIP(29)));
+    //tempCtrl_top->SetMinSize(wxSize(FromDIP(106), FromDIP(29)));
 
-    bSizer_temperature->Add(tempCtrl_top,0, wxALIGN_CENTER | wxALL | wxEXPAND, FromDIP(9));
+    //bSizer_temperature->Add(tempCtrl_top,0, wxALIGN_CENTER | wxALL | wxEXPAND, FromDIP(9));
+    bSizer_temperature->Add(tempCtrl_top, wxSizerFlags(1).Expand());
 
-    auto m_panel_temperature_separotor0 = new wxPanel(m_panel_temperature, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+    auto m_panel_temperature_separotor0 = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     m_panel_temperature_separotor0->SetBackgroundColour(wxColour(240,240,240));
     m_panel_temperature_separotor0->SetMinSize(wxSize(FromDIP(6),-1));
 
     bSizer_temperature->Add(m_panel_temperature_separotor0,0, wxEXPAND, 0);
 
     int temperature1 = 80;
-    wxString temperatureString1 = wxString::Format("%d", temperature1);
-    wxString degreeSymbol1 = wxString::FromUTF8("\xE2\x84\x83");
-    temperatureString1.Append(degreeSymbol1);
-    IconText* tempCtrl_top1 = new IconText(m_panel_temperature,wxString("device_bottom_temperature"),20,temperatureString1,20);
-    tempCtrl_top1->SetMinSize(wxSize(FromDIP(104), FromDIP(29)));
+    wxString temperatureString_1 = wxString::Format("%d", temperature1);
+    wxString degreeSymbol_1 = wxString::FromUTF8("\xE2\x84\x83");
+    temperatureString_1.Append(degreeSymbol_1);
+    IconText *tempCtrl_bottom = new IconText(m_panel_temperature, wxString("device_bottom_temperature"), 20, temperatureString_1, 20);
+    //tempCtrl_bottom->SetMinSize(wxSize(FromDIP(106), FromDIP(29)));
 
-    bSizer_temperature->Add(tempCtrl_top1,0, wxALIGN_CENTER | wxALL | wxEXPAND, FromDIP(9));
+    //bSizer_temperature->Add(tempCtrl_bottom,0, wxALIGN_CENTER | wxALL | wxEXPAND, FromDIP(9));
+    bSizer_temperature->Add(tempCtrl_bottom, wxSizerFlags(1).Expand());
 
-    auto m_panel_temperature_separotor1 = new wxPanel(m_panel_temperature, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+    auto m_panel_temperature_separotor1 = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     m_panel_temperature_separotor1->SetBackgroundColour(wxColour(240,240,240));
     m_panel_temperature_separotor1->SetMinSize(wxSize(FromDIP(6),-1));
 
     bSizer_temperature->Add(m_panel_temperature_separotor1,0, wxEXPAND, 0);
 
     int temperature2 = 100;
-    wxString temperatureString2 = wxString::Format("%d", temperature2);
-    wxString degreeSymbol2 = wxString::FromUTF8("\xE2\x84\x83");
-    temperatureString2.Append(degreeSymbol2);
-    IconText* tempCtrl_top2 = new IconText(m_panel_temperature,wxString("device_mid_temperature"),20,temperatureString2,20);
-    tempCtrl_top2->SetMinSize(wxSize(FromDIP(104), FromDIP(29)));
+    wxString temperatureString_2 = wxString::Format("%d", temperature2);
+    wxString degreeSymbol_2 = wxString::FromUTF8("\xE2\x84\x83");
+    temperatureString_2.Append(degreeSymbol_2);
+    IconText *tempCtrl_top2 = new IconText(m_panel_temperature, wxString("device_mid_temperature"), 20, temperatureString_2, 20);
+    //tempCtrl_top2->SetMinSize(wxSize(FromDIP(106), FromDIP(29)));
 
-    bSizer_temperature->Add(tempCtrl_top2,0, wxALIGN_CENTER | wxALL | wxEXPAND, FromDIP(9));
-
+    //bSizer_temperature->Add(tempCtrl_top2,0, wxALIGN_CENTER | wxALL | wxEXPAND, FromDIP(9));
+    bSizer_temperature->Add(tempCtrl_top2, wxSizerFlags(1).Expand());
 
     m_panel_temperature->SetSizer(bSizer_temperature);
     m_panel_temperature->Layout();
@@ -914,7 +918,7 @@ void TempMixDevice::create_panel(wxWindow* parent,bool idle, wxString nozzleTemp
 
     idleSizer->Add(m_panel_separotor5,0, wxALL | wxEXPAND, 0);
 
-//创建设备状态切换控件
+//创建灯控件布局
 
     m_panel_idle_device_state = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     m_panel_idle_device_state->SetBackgroundColour(*wxWHITE);
@@ -924,8 +928,8 @@ void TempMixDevice::create_panel(wxWindow* parent,bool idle, wxString nozzleTemp
     m_panel_idle_device_state->Layout();
     deviceStateSizer->Fit(m_panel_idle_device_state);
 
-    idleSizer->Add(m_panel_idle_device_state);
-//*** 设备状态和设备状态信息间距
+    idleSizer->Add(m_panel_idle_device_state,0, wxALL | wxEXPAND, 0);
+    //*** 设备状态和设备状态信息间距
     // 添加空白间距
      auto m_panel_separotor4 = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     m_panel_separotor4->SetBackgroundColour(wxColour(240, 240, 240));
@@ -947,6 +951,8 @@ void TempMixDevice::create_panel(wxWindow* parent,bool idle, wxString nozzleTemp
     idleSizer->Add(m_panel_circula_filter, 0, wxALL | wxEXPAND, 0);
     //m_panel_idle_device_info->Hide();
     m_panel_circula_filter->Hide();
+
+    parent->SetSizer(idleSizer);
 }
 
 void TempMixDevice::setupLayoutIdleDeviceState(wxBoxSizer *deviceStateSizer, wxPanel *parent,bool idle) 
@@ -967,7 +973,8 @@ void TempMixDevice::setupLayoutIdleDeviceState(wxBoxSizer *deviceStateSizer, wxP
     // m_idle_device_info_button->SetTextColor(wxColour(51,51,51));
     m_idle_device_info_button->SetMinSize((wxSize(FromDIP(108), FromDIP(29))));
     m_idle_device_info_button->SetCornerRadius(0);
-    bSizer_control_lamp->Add(m_idle_device_info_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM , FromDIP(4));
+    //bSizer_control_lamp->Add(m_idle_device_info_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM , FromDIP(4));
+    bSizer_control_lamp->Add(m_idle_device_info_button, wxSizerFlags(1).Expand());
     bSizer_control_lamp->AddSpacer(FromDIP(6));
 
     // 显示灯控制按钮
@@ -979,7 +986,8 @@ void TempMixDevice::setupLayoutIdleDeviceState(wxBoxSizer *deviceStateSizer, wxP
     // m_idle_lamp_control_button->SetTextColor(wxColour(51,51,51));
     m_idle_lamp_control_button->SetMinSize((wxSize(FromDIP(108), FromDIP(29))));
     m_idle_lamp_control_button->SetCornerRadius(0);
-    bSizer_control_lamp->Add(m_idle_lamp_control_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+    //bSizer_control_lamp->Add(m_idle_lamp_control_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+    bSizer_control_lamp->Add(m_idle_lamp_control_button, wxSizerFlags(1).Expand());
     bSizer_control_lamp->AddSpacer(FromDIP(6));
 
     // 显示过滤按钮
@@ -991,7 +999,8 @@ void TempMixDevice::setupLayoutIdleDeviceState(wxBoxSizer *deviceStateSizer, wxP
     // m_idle_filter_button->SetTextColor(wxColour(51,51,51));
     m_idle_filter_button->SetMinSize((wxSize(FromDIP(108), FromDIP(29))));
     m_idle_filter_button->SetCornerRadius(0);
-    bSizer_control_lamp->Add(m_idle_filter_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+    //bSizer_control_lamp->Add(m_idle_filter_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+    bSizer_control_lamp->Add(m_idle_filter_button, wxSizerFlags(1).Expand());
 
     //***灯控制布局添加至垂直布局
     m_panel_control_lamp->SetSizer(bSizer_control_lamp);

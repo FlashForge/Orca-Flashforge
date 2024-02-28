@@ -748,7 +748,8 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         m_panel_control_print->SetBackgroundColour(wxColour(255,255,255));
 
         //显示继续打印按钮
-        m_print_button = new Button(m_panel_control_print, wxString("pause print"), "device_pause_print", 0, FromDIP(18));
+        m_print_button = new Button(m_panel_control_print, _L("pause print"), "device_pause_print", 0, FromDIP(18));
+        m_print_button->SetFlashForge(true);
         m_print_button->SetFont(wxFont(wxFontInfo(16)));
         m_print_button->SetBorderWidth(0);
         m_print_button->SetBackgroundColor(wxColour(255,255,255));
@@ -756,6 +757,20 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         m_print_button->SetTextColor(wxColour(51,51,51));
 //        m_print_button->SetMinSize((wxSize(FromDIP(158), FromDIP(29))));
         m_print_button->SetCornerRadius(0);
+        m_print_button->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e) {
+            e.Skip();
+            if (!m_print_button_pressed_down) {
+                m_print_button->SetLabel(_L("continue print"));
+                m_print_button->SetIcon("device_continue_print");
+                m_print_button->Refresh();
+            } else {
+                m_print_button->SetLabel(_L("pause print"));
+                m_print_button->SetIcon("device_pause_print");
+                m_print_button->Refresh();
+            }
+            m_print_button_pressed_down = !m_print_button_pressed_down;
+        });
+
         //bSizer_control_print->Add(m_print_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
         bSizer_control_print->Add(m_print_button, wxSizerFlags(1).Expand());
 
@@ -766,6 +781,7 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
 
         //显示取消打印按钮
         m_cancel_button = new Button(m_panel_control_print, wxString("cancel print"), "device_cancel_print", 0, FromDIP(18));
+        m_cancel_button->SetFlashForge(true);
         m_cancel_button->SetFont(wxFont(wxFontInfo(16)));
         m_cancel_button->SetBorderWidth(0);
         m_cancel_button->SetBackgroundColor(wxColour(255,255,255));
@@ -773,6 +789,13 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         m_cancel_button->SetTextColor(wxColour(51,51,51));
 //        m_cancel_button->SetMinSize((wxSize(FromDIP(158), FromDIP(29))));
         m_cancel_button->SetCornerRadius(0);
+        m_cancel_button->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e) { 
+            e.Skip();
+            m_machine_ctrl_panel->Hide();
+            m_machine_idle_panel->Show();
+            Layout();
+        });
+
         //bSizer_control_print->Add(m_cancel_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
         bSizer_control_print->Add(m_cancel_button, wxSizerFlags(1).Expand());
 
@@ -945,7 +968,7 @@ void SingleDeviceState::setupLayoutIdlePage(wxBoxSizer* idleSizer,wxPanel* paren
         m_panel_control_title2->SetBackgroundColour(wxColour(248,248,248));
 
         wxBoxSizer *bSizer_control_title = new wxBoxSizer(wxHORIZONTAL);
-        m_staticText_control2             = new Label(m_panel_control_title2,("Info and Control"));
+        m_staticText_control2             = new Label(m_panel_control_title2,_L("Info and Control"));
         m_staticText_control2->Wrap(-1);
         m_staticText_control2->SetFont(wxFont(wxFontInfo(16)));
         m_staticText_control2->SetForegroundColour(wxColour(51,51,51));
@@ -975,7 +998,7 @@ void SingleDeviceState::setupLayoutIdlePage(wxBoxSizer* idleSizer,wxPanel* paren
         
         m_idle_device_pic = create_scaled_bitmap("monitor_device_idle", this, 112);
         m_idle_device_staticbitmap = new wxStaticBitmap(m_panel_idle, wxID_ANY, m_idle_device_pic);
-        m_staticText_idle = new Label(m_panel_idle, ("The Current Device has no Printing Projects"));
+        m_staticText_idle = new Label(m_panel_idle, _L("The Current Device has no Printing Projects"));
         m_staticText_idle->Wrap(-1);
         m_staticText_idle->SetFont(wxFont(wxFontInfo(16)));
         m_staticText_idle->SetForegroundColour(wxColour(51,51,51));
@@ -1019,7 +1042,7 @@ void SingleDeviceState::setupLayoutIdlePage(wxBoxSizer* idleSizer,wxPanel* paren
         m_idle_file_list_pic = create_scaled_bitmap("local_file_list", m_panel_idle_text, 18);
         m_idle_file_list_staticbitmap = new wxStaticBitmap(m_panel_idle_text, wxID_ANY, m_idle_file_list_pic);
 
-        m_staticText_file_list = new Label(m_panel_idle_text, ("Local File List"));
+        m_staticText_file_list = new Label(m_panel_idle_text, _L("Local File List"));
         //m_staticText_file_list->Wrap(-1);
         m_staticText_file_list->SetFont(wxFont(wxFontInfo(13)));
         m_staticText_file_list->SetForegroundColour(wxColour(51,51,51));
@@ -1056,8 +1079,9 @@ void SingleDeviceState::setupLayoutIdlePage(wxBoxSizer* idleSizer,wxPanel* paren
 
         m_idle_tempMixDevice = new TempMixDevice(parent,false);
         idleSizer->Add(m_idle_tempMixDevice, 0, wxALL | wxEXPAND , 0);
+        //idleSizer->Add(m_idle_tempMixDevice, wxSizerFlags(1).Expand());
 
-// //***温度控件
+//***温度控件
 
 //         wxBoxSizer *bSizer_temperature  = new wxBoxSizer(wxHORIZONTAL);
 //         auto m_panel_temperature = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(30)), wxTAB_TRAVERSAL);
