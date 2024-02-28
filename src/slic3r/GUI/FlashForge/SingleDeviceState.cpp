@@ -754,9 +754,10 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         m_print_button->SetBackgroundColor(wxColour(255,255,255));
         m_print_button->SetBorderColor(wxColour(255,255,255));
         m_print_button->SetTextColor(wxColour(51,51,51));
-        m_print_button->SetMinSize((wxSize(FromDIP(158), FromDIP(29))));
+//        m_print_button->SetMinSize((wxSize(FromDIP(158), FromDIP(29))));
         m_print_button->SetCornerRadius(0);
-        bSizer_control_print->Add(m_print_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        //bSizer_control_print->Add(m_print_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        bSizer_control_print->Add(m_print_button, wxSizerFlags(1).Expand());
 
         auto m_panel_separotor_print = new wxPanel(m_panel_control_print, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(6), -1), wxTAB_TRAVERSAL);
         m_panel_separotor_print->SetBackgroundColour(wxColour(240,240,240));
@@ -770,9 +771,10 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         m_cancel_button->SetBackgroundColor(wxColour(255,255,255));
         m_cancel_button->SetBorderColor(wxColour(255,255,255));
         m_cancel_button->SetTextColor(wxColour(51,51,51));
-        m_cancel_button->SetMinSize((wxSize(FromDIP(158), FromDIP(29))));
+//        m_cancel_button->SetMinSize((wxSize(FromDIP(158), FromDIP(29))));
         m_cancel_button->SetCornerRadius(0);
-        bSizer_control_print->Add(m_cancel_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        //bSizer_control_print->Add(m_cancel_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        bSizer_control_print->Add(m_cancel_button, wxSizerFlags(1).Expand());
 
 //***继续打印布局添加至垂直布局
         m_panel_control_print->SetSizer(bSizer_control_print);
@@ -808,7 +810,8 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         StateColor tempinput_border_colour(std::make_pair(*wxWHITE, (int)StateColor::Disabled), std::make_pair(wxColour(0, 150, 136), (int)StateColor::Focused),
                                         std::make_pair(wxColour(0, 150, 136), (int)StateColor::Hovered),std::make_pair(*wxWHITE, (int)StateColor::Normal));
         m_tempCtrl_top->SetBorderColor(tempinput_border_colour);
-        bSizer_control_temperature->Add(m_tempCtrl_top, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        //bSizer_control_temperature->Add(m_tempCtrl_top, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        bSizer_control_temperature->Add(m_tempCtrl_top, wxSizerFlags(1).Expand());
 
         //间距
         auto m_panel_separotor_temp = new wxPanel(m_panel_control_temperature, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(6), -1), wxTAB_TRAVERSAL);
@@ -829,7 +832,8 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         //StateColor tempinput_border_colour(std::make_pair(*wxWHITE, (int)StateColor::Disabled), std::make_pair(wxColour(0, 150, 136), (int)StateColor::Focused),
         //                                std::make_pair(wxColour(0, 150, 136), (int)StateColor::Hovered),std::make_pair(*wxWHITE, (int)StateColor::Normal));
         m_tempCtrl_bottom->SetBorderColor(tempinput_border_colour);
-        bSizer_control_temperature->Add(m_tempCtrl_bottom, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        //bSizer_control_temperature->Add(m_tempCtrl_bottom, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        bSizer_control_temperature->Add(m_tempCtrl_bottom, wxSizerFlags(1).Expand());
 
         //间距
         auto m_panel_separotor_temp1 = new wxPanel(m_panel_control_temperature, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(6), -1), wxTAB_TRAVERSAL);
@@ -850,7 +854,8 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         //StateColor tempinput_border_colour(std::make_pair(*wxWHITE, (int)StateColor::Disabled), std::make_pair(wxColour(0, 150, 136), (int)StateColor::Focused),
         //                                std::make_pair(wxColour(0, 150, 136), (int)StateColor::Hovered),std::make_pair(*wxWHITE, (int)StateColor::Normal));
         m_tempCtrl_mid->SetBorderColor(tempinput_border_colour);
-        bSizer_control_temperature->Add(m_tempCtrl_mid, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        //bSizer_control_temperature->Add(m_tempCtrl_mid, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        bSizer_control_temperature->Add(m_tempCtrl_mid, wxSizerFlags(1).Expand());
 
 //***温度布局添加至垂直布局
         m_panel_control_temperature->SetSizer(bSizer_control_temperature);
@@ -880,7 +885,8 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         //m_device_info_button->SetTextColor(wxColour(51,51,51));
         m_device_info_button->SetMinSize((wxSize(FromDIP(108), FromDIP(29))));
         m_device_info_button->SetCornerRadius(0);
-        bSizer_control_lamp->Add(m_device_info_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        //bSizer_control_lamp->Add(m_device_info_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        bSizer_control_lamp->Add(m_device_info_button, wxSizerFlags(1).Expand());
         bSizer_control_lamp->AddSpacer(FromDIP(35));
 
         //显示灯控制按钮
@@ -892,7 +898,8 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         //m_lamp_control_button->SetTextColor(wxColour(51,51,51));
         m_lamp_control_button->SetMinSize((wxSize(FromDIP(108), FromDIP(29))));
         m_lamp_control_button->SetCornerRadius(0);
-        bSizer_control_lamp->Add(m_lamp_control_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        //bSizer_control_lamp->Add(m_lamp_control_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        bSizer_control_lamp->Add(m_lamp_control_button, wxSizerFlags(1).Expand());
         bSizer_control_lamp->AddSpacer(FromDIP(35));
 
         //显示过滤按钮
@@ -904,7 +911,8 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         //m_filter_button->SetTextColor(wxColour(51,51,51));
         m_filter_button->SetMinSize((wxSize(FromDIP(108), FromDIP(29))));
         m_filter_button->SetCornerRadius(0);
-        bSizer_control_lamp->Add(m_filter_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        //bSizer_control_lamp->Add(m_filter_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        bSizer_control_lamp->Add(m_filter_button, wxSizerFlags(1).Expand());
 
 //***灯控制布局添加至垂直布局
         m_panel_control_lamp->SetSizer(bSizer_control_lamp);
