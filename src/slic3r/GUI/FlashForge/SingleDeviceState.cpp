@@ -156,6 +156,20 @@ void DeviceDetail::create_panel(wxWindow* parent)
 {
         wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
 
+        wxBoxSizer *bSizer_confirm_row = new wxBoxSizer(wxHORIZONTAL);
+        auto m_panel_confirm_row = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+        auto btn = new FFPushButton(m_panel_confirm_row, wxID_ANY, "push_button_confirm_normal", "push_button_confirm_hover","push_button_confirm_press", "push_button_confirm_normal");
+        btn->SetBackgroundColour(wxColour(255, 255, 255));
+        bSizer_confirm_row->AddStretchSpacer();
+        bSizer_confirm_row->Add(btn, 0, wxEXPAND | wxTOP , FromDIP(8));
+        bSizer_confirm_row->AddSpacer(FromDIP(25));
+
+        m_panel_confirm_row->SetSizer(bSizer_confirm_row);
+        m_panel_confirm_row->Layout();
+        bSizer_confirm_row->Fit(m_panel_confirm_row);
+
+        sizer->Add(m_panel_confirm_row, 0, wxEXPAND | wxALL, 0);
+
         wxBoxSizer *bSizer_first_row = new wxBoxSizer(wxHORIZONTAL);
         auto m_panel_first_row = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, -1), wxTAB_TRAVERSAL);
 //
@@ -167,15 +181,15 @@ void DeviceDetail::create_panel(wxWindow* parent)
 //
 
         IconText* device_material = new IconText(m_panel_first_row,wxString("device_material"),15,wxString("PLA"),12);
-        device_material->SetMinSize(wxSize(FromDIP(100), -1));
+        //device_material->SetMinSize(wxSize(FromDIP(100), -1));
         bSizer_first_row->AddSpacer(FromDIP(25));
         bSizer_first_row->Add(device_material, 0, wxEXPAND | wxALL, 0);
         bSizer_first_row->AddStretchSpacer();
 
         IconText* device_layer = new IconText(m_panel_first_row,wxString("device_layer"),13,wxString("1185/1500"),12);
-        device_layer->SetMinSize(wxSize(FromDIP(100), -1));
+        //device_layer->SetMinSize(wxSize(FromDIP(100), -1));
         bSizer_first_row->Add(device_layer, 0, wxEXPAND | wxALL, 0);
-        bSizer_first_row->AddSpacer(FromDIP(25));
+        bSizer_first_row->AddSpacer(FromDIP(50));
 
         m_panel_first_row->SetSizer(bSizer_first_row);
         m_panel_first_row->Layout();
@@ -195,15 +209,15 @@ void DeviceDetail::create_panel(wxWindow* parent)
         auto m_panel_second_row = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, -1), wxTAB_TRAVERSAL);
 
         IconText* device_initial_speed = new IconText(m_panel_second_row,wxString("device_initial_speed"),13,wxString("150mm/s"),12);
-        device_initial_speed->SetMinSize(wxSize(FromDIP(100), -1));
+        //device_initial_speed->SetMinSize(wxSize(FromDIP(100), -1));
         bSizer_second_row->AddSpacer(FromDIP(25));
         bSizer_second_row->Add(device_initial_speed, 0, wxEXPAND | wxALL, 0);
         bSizer_second_row->AddStretchSpacer();
 
         IconText* device_fill_rate = new IconText(m_panel_second_row,wxString("device_fill_rate"),13,wxString("20%"),12);
-        device_fill_rate->SetMinSize(wxSize(FromDIP(100), -1));
+        //device_fill_rate->SetMinSize(wxSize(FromDIP(100), -1));
         bSizer_second_row->Add(device_fill_rate, 0, wxEXPAND | wxALL, 0);
-        bSizer_second_row->AddSpacer(FromDIP(25));
+        bSizer_second_row->AddSpacer(FromDIP(50));
 
         m_panel_second_row->SetSizer(bSizer_second_row);
         m_panel_second_row->Layout();
@@ -226,7 +240,7 @@ void DeviceDetail::create_panel(wxWindow* parent)
         IconBottonText* device_speed = new IconBottonText(m_panel_third_row,wxString("device_speed"),17,wxString("90"),12);
         device_speed->setLimit(10, 150);
         device_speed->setAdjustValue(1);
-        device_speed->SetMinSize(wxSize(FromDIP(130), -1));
+        //device_speed->SetMinSize(wxSize(FromDIP(130), -1));
         bSizer_third_row->AddSpacer(FromDIP(25));
         bSizer_third_row->Add(device_speed, 0, wxEXPAND | wxALL, 0);
 
@@ -235,8 +249,9 @@ void DeviceDetail::create_panel(wxWindow* parent)
         IconBottonText* device_nozzle_fan = new IconBottonText(m_panel_third_row,wxString("device_nozzle_fan"),17,wxString("50"),12);
         device_nozzle_fan->setLimit(0, 100);
         device_nozzle_fan->setAdjustValue(1);
-        device_nozzle_fan->SetMinSize(wxSize(FromDIP(130), -1));
+        //device_nozzle_fan->SetMinSize(wxSize(FromDIP(130), -1));
         bSizer_third_row->Add(device_nozzle_fan, 0, wxEXPAND | wxALL, 0);
+        bSizer_third_row->AddSpacer(FromDIP(25));
         //bSizer_third_row->AddSpacer(FromDIP(16));
 
         m_panel_third_row->SetSizer(bSizer_third_row);
@@ -259,7 +274,7 @@ void DeviceDetail::create_panel(wxWindow* parent)
         IconBottonText* device_z_axis = new IconBottonText(m_panel_fourth_row,wxString("device_z_axis"),17,wxString("0.02"),12,wxString("device_z_dec"),wxString("push_button_arrow_dec_normal"));
         device_z_axis->setLimit(-5, 5);
         device_z_axis->setAdjustValue(0.01);
-        device_z_axis->SetMinSize(wxSize(FromDIP(130), -1));
+        //device_z_axis->SetMinSize(wxSize(FromDIP(130), -1));
         bSizer_fourth_row->AddSpacer(FromDIP(25));
         bSizer_fourth_row->Add(device_z_axis, 0, wxEXPAND | wxALL, 0);
 
@@ -268,9 +283,10 @@ void DeviceDetail::create_panel(wxWindow* parent)
         IconBottonText* device_cooling_fan = new IconBottonText(m_panel_fourth_row,wxString("device_cooling_fan"),17,wxString("100"),12);
         device_cooling_fan->setLimit(0, 100);
         device_cooling_fan->setAdjustValue(1);
-        device_cooling_fan->SetMinSize(wxSize(FromDIP(130), -1));
+        //device_cooling_fan->SetMinSize(wxSize(FromDIP(130), -1));
         bSizer_fourth_row->Add(device_cooling_fan, 0, wxEXPAND | wxALL, 0);
         //bSizer_fourth_row->AddSpacer(FromDIP(16));
+        bSizer_fourth_row->AddSpacer(FromDIP(25));
 
         m_panel_fourth_row->SetSizer(bSizer_fourth_row);
         m_panel_fourth_row->Layout();
@@ -915,7 +931,7 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         m_device_info_button->SetMinSize((wxSize(FromDIP(108), FromDIP(29))));
         m_device_info_button->SetCornerRadius(0);
         bSizer_control_lamp->Add(m_device_info_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
-        bSizer_control_lamp->AddSpacer(FromDIP(6));
+        bSizer_control_lamp->AddSpacer(FromDIP(35));
 
         //显示灯控制按钮
         m_lamp_control_button = new Button(m_panel_control_lamp, wxString(""), "device_lamp_control", 0, FromDIP(18));
@@ -927,7 +943,7 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         m_lamp_control_button->SetMinSize((wxSize(FromDIP(108), FromDIP(29))));
         m_lamp_control_button->SetCornerRadius(0);
         bSizer_control_lamp->Add(m_lamp_control_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
-        bSizer_control_lamp->AddSpacer(FromDIP(6));
+        bSizer_control_lamp->AddSpacer(FromDIP(35));
 
         //显示过滤按钮
         m_filter_button = new Button(m_panel_control_lamp, wxString(""), "device_filter", 0, FromDIP(18));

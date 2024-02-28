@@ -19,6 +19,7 @@
 #include "slic3r/GUI/Widgets/ProgressBar.hpp"
 #include "slic3r/GUI/Widgets/TempInput.hpp"
 //#include "slic3r/GUI/Widgets/StaticLine.hpp"
+#include "slic3r/GUI/Widgets/FFButton.hpp"
 
 namespace Slic3r { 
 namespace GUI {

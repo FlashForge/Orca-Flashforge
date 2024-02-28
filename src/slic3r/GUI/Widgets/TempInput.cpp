@@ -598,7 +598,7 @@ void IconText::create_panel(wxWindow* parent,wxString icon,int iconSize,wxString
     m_text_ctrl->SetFont(wxFont(wxFontInfo(textSize)));
     m_text_ctrl->SetForegroundColour(wxColour(50, 141, 251));
     m_text_ctrl->SetBackgroundColour(*wxWHITE);
-    m_text_ctrl->SetMinSize(wxSize(FromDIP(70), -1));
+    //m_text_ctrl->SetMinSize(wxSize(FromDIP(70), -1));
 
     sizer->AddStretchSpacer();
     sizer->Add(icon_static,0, wxALIGN_CENTER | wxALL | wxEXPAND ,0);
@@ -711,6 +711,7 @@ void IconBottonText::onTextFocusOut(wxFocusEvent &event)
 {
     wxString text = m_text_ctrl->GetValue();
     long     value;
+    double   doubleValue;
     if (text.ToLong(&value)) {
         if (value < m_min) {
             wxString str_min = wxString::Format("%.0f", m_min);
@@ -719,7 +720,20 @@ void IconBottonText::onTextFocusOut(wxFocusEvent &event)
             wxString str_max = wxString::Format("%.0f", m_max);
             m_text_ctrl->ChangeValue(str_max);
         }
+    } else if (text.ToDouble(&doubleValue)) {
+        if (doubleValue < m_min) {
+            wxString str_min = wxString::Format("%.2f", m_min);
+            m_text_ctrl->ChangeValue(str_min);
+        } else if (doubleValue > m_max) {
+            wxString str_max = wxString::Format("%.2f", m_max);
+            m_text_ctrl->ChangeValue(str_max);
+        }
+    } else {
+        //输入不合法
+        wxString str_min = wxString::Format("%.0f", m_min);
+        m_text_ctrl->ChangeValue(str_min);
     }
+    
     event.Skip();
 }
 

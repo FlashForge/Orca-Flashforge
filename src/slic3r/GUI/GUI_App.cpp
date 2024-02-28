@@ -3548,6 +3548,7 @@ void GUI_App::ShowUserLogin(bool show)
                 if(app_config){
                     app_config->set("usr_pic",event.userProfile.headImgUrl);
                     app_config->set("usr_name",event.userProfile.nickname);
+                    //BOOST_LOG_TRIVIAL(info) << "login success," << " pic is : " << event.userProfile.headImgUrl << " name is: "<< event.userProfile.nickname;
                     handle_login_result(event.userProfile.headImgUrl,event.userProfile.nickname);
                     app_config->save();
                 }
@@ -3960,7 +3961,7 @@ std::string GUI_App::handle_web_request(std::string cmd)
             else if (command_str.compare("homepage_logout") == 0) {
                 CallAfter([this] {
                     //Slic3r::GUI::MultiComMgr::inst()->removeWanDev();
-                    wxGetApp().handle_login_out();
+                    //wxGetApp().handle_login_out();
                     if(!m_re_login_dlg){
                         m_re_login_dlg = new ReLoginDialog();
                     }
