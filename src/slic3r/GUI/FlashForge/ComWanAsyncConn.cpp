@@ -69,7 +69,7 @@ void ComWanAsyncConn::postSubscribeDev(const std::vector<std::string> &devIds)
     for (auto &devId : devIds) {
         ids.push_back(devId.c_str());
     }
-    fnet_conn_write_data_t writeData = {FNET_CONN_WRITE_SUBSCRIBE_DEVICE, nullptr, {ids.data(), 1}};
+    fnet_conn_write_data_t writeData = {FNET_CONN_WRITE_SUB_DEVICE_STATUS, nullptr, {ids.data(), 1}};
     m_networkIntfc->connectionPost(m_conn, &writeData);
 }
 

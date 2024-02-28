@@ -28,7 +28,7 @@ typedef int (*fnet_conn_read_callback_t)(fnet_conn_read_data_t *readData, void *
 #pragma pack(push, 4)
 
 typedef enum fnet_conn_write_data_type {
-    FNET_CONN_WRITE_SUBSCRIBE_DEVICE,   // data, nullptr
+    FNET_CONN_WRITE_SUB_DEVICE_STATUS,  // data, nullptr
     FNET_CONN_WRITE_SYNC_BIND_DEVICE,   // data, nullptr
     FNET_CONN_WRITE_SYNC_UNBIND_DEVICE, // data, nullptr
     FNET_CONN_WRITE_TEMP_CTRL,          // data, fnet_temp_ctrl_t
@@ -39,9 +39,10 @@ typedef enum fnet_conn_write_data_type {
 } fnet_conn_write_data_type_t;
 
 typedef enum fnet_conn_read_data_type {
-    FNET_CONN_READ_DEVICE_DETAIL,       // data, fnet_dev_detail_t
     FNET_CONN_READ_SYNC_BIND_DEVICE,    // data, nullptr
     FNET_CONN_READ_SYNC_UNBIND_DEVICE,  // data, nullptr
+    FNET_CONN_READ_DEVICE_DETAIL,       // data, fnet_dev_detail_t
+    FNET_CONN_READ_DEVICE_OFFLINE,      // data, nullptr
 } fnet_conn_read_data_type_t;
 
 typedef struct fnet_send_gcode_data {

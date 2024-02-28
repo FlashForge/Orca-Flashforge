@@ -322,15 +322,22 @@ void MultiComMgr::onWanConnReadData(const WanConnReadDataEvent &event)
             onDevDetailUpdate(devDetailUpdateEvent);
         }
     };
+    auto procDevOfflineEvent = [this](const fnet_conn_read_data_t &readData) {
+        auto it = m_devIdMap.find(readData.devId);
+        if (it != m_devIdMap.end()) {
+            QueueEvent(new ComDevOfflineEvent(COM_DEV_OFFLINE_EVENT, it->second));
+        }
+    };
     switch (event.readData.type) {
+    case FNET_CONN_READ_SYNC_BIND_DEVICE:
+    case FNET_CONN_READ_SYNC_UNBIND_DEVICE:
+        m_userDataUpdateThd->setUpdateWanDev();
+        break;
     case FNET_CONN_READ_DEVICE_DETAIL:
         procDevDetailUpdateEvent(event.readData);
         break;
-    case FNET_CONN_READ_SYNC_BIND_DEVICE:
-        m_userDataUpdateThd->setUpdateWanDev();
-        break;
-    case FNET_CONN_READ_SYNC_UNBIND_DEVICE:
-        m_userDataUpdateThd->setUpdateWanDev();
+    case FNET_CONN_READ_DEVICE_OFFLINE:
+        procDevOfflineEvent(event.readData);
         break;
     }
 }
