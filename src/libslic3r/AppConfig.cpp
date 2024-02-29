@@ -606,8 +606,12 @@ std::string AppConfig::load()
                     MacInfoMap info;
                     info.emplace(std::make_pair("dev_id", j_machine["dev_id"].get<std::string>()));
                     info.emplace(std::make_pair("dev_name", j_machine["dev_name"].get<std::string>()));
-                    info.emplace(std::make_pair("dev_placement", j_machine["dev_placement"].get<std::string>()));
-                    info.emplace(std::make_pair("dev_pid", j_machine["dev_pid"].get<std::string>()));
+                    if (j_machine.find("dev_placement") != j_machine.end()) {
+                        info.emplace(std::make_pair("dev_placement", j_machine["dev_placement"].get<std::string>()));
+                    }
+                    if (j_machine.find("dev_pid") != j_machine.end()) {
+                        info.emplace(std::make_pair("dev_pid", j_machine["dev_pid"].get<std::string>()));
+                    }
                     m_local_machines.push_back(info);
                 }
             } else {
