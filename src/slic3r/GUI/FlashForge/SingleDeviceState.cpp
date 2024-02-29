@@ -268,63 +268,6 @@ SingleDeviceState::SingleDeviceState(wxWindow* parent, wxWindowID id, const wxPo
         connectEvent();
 }
 
-// SingleDeviceState::~SingleDeviceState()
-// {
-
-// }
-
-wxBoxSizer* SingleDeviceState::create_top_device_info_page()
-{
-        wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
-        
-        //水平布局
-        wxBoxSizer *bSizer_title_label = new wxBoxSizer(wxHORIZONTAL);
-        m_panel_top_title = new wxPanel(this, wxID_ANY,wxDefaultPosition, wxSize(-1, FromDIP(22)), wxTAB_TRAVERSAL);
-        m_panel_top_title->SetBackgroundColour(wxColour(240,240,240));
-        //显示设备名称
-        m_staticText_device_name = new Label(m_panel_top_title, ("six-AD5M"));
-        m_staticText_device_name->Wrap(-1);
-        m_staticText_device_name->SetFont(wxFont(wxFontInfo(16)));
-        m_staticText_device_name->SetForegroundColour(wxColour(51,51,51));
-
-        bSizer_title_label->Add(m_staticText_device_name, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
-        bSizer_title_label->Add(FromDIP(13), 0, 0, 0);
-        bSizer_title_label->AddStretchSpacer();
-
-        //显示设备所在货架
-        m_staticText_device_position = new Label(m_panel_top_title, ("shelf2"));
-        m_staticText_device_position->Wrap(-1);
-        m_staticText_device_position->SetFont(wxFont(wxFontInfo(16)));
-        m_staticText_device_position->SetForegroundColour(wxColour(51,51,51));
-
-        bSizer_title_label->Add(m_staticText_device_position, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
-        //bSizer_title_label->Add(FromDIP(13), 0, 0, 0);
-        bSizer_title_label->AddStretchSpacer();
-
-        //显示提示内容
-        m_staticText_device_tip = new Label(m_panel_top_title, ("error"));
-        m_staticText_device_tip->Wrap(-1);
-        m_staticText_device_tip->SetFont(wxFont(wxFontInfo(16)));
-        m_staticText_device_tip->SetForegroundColour(wxColour(251,71,71));
-
-        bSizer_title_label->Add(m_staticText_device_tip, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
-        //bSizer_title_label->Add(FromDIP(13), 0, 0, 0);
-        bSizer_title_label->AddStretchSpacer();
-
-        m_panel_top_title->SetSizer(bSizer_title_label);
-        m_panel_top_title->Layout();
-        bSizer_title_label->Fit(m_panel_top_title);
-        sizer->Add(m_panel_top_title, 0, wxEXPAND | wxALL, 0);
-
-        //添加白色分割条
-        auto m_panel_separotor_top = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(3)), wxTAB_TRAVERSAL);
-        m_panel_separotor_top->SetBackgroundColour(wxColour(255,255,255));
-
-        sizer->Add(m_panel_separotor_top, 0, wxEXPAND | wxALL, 0);
-        return sizer;
-
-}
-
 wxBoxSizer* SingleDeviceState::create_monitoring_page()
 {
         wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
@@ -339,8 +282,7 @@ wxBoxSizer* SingleDeviceState::create_monitoring_page()
         m_staticText_device_name->SetFont(wxFont(wxFontInfo(16)));
         m_staticText_device_name->SetForegroundColour(wxColour(51,51,51));
 
-        bSizer_title_label->Add(m_staticText_device_name, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
-        bSizer_title_label->Add(FromDIP(13), 0, 0, 0);
+        bSizer_title_label->Add(m_staticText_device_name, 0, wxALIGN_LEFT | wxEXPAND | wxALL, 0);
         bSizer_title_label->AddStretchSpacer();
 
         //显示设备所在货架
@@ -349,25 +291,24 @@ wxBoxSizer* SingleDeviceState::create_monitoring_page()
         m_staticText_device_position->SetFont(wxFont(wxFontInfo(16)));
         m_staticText_device_position->SetForegroundColour(wxColour(51,51,51));
 
-        bSizer_title_label->Add(m_staticText_device_position, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
-        //bSizer_title_label->Add(FromDIP(13), 0, 0, 0);
+        bSizer_title_label->Add(m_staticText_device_position, 0, wxALIGN_CENTER | wxEXPAND | wxALL, 0);
         bSizer_title_label->AddStretchSpacer();
 
         //显示提示内容
-        m_staticText_device_tip = new Label(m_panel_top_title, ("error"));
+        m_staticText_device_tip = new Label(m_panel_top_title, _L("error"));
         m_staticText_device_tip->Wrap(-1);
         m_staticText_device_tip->SetFont(wxFont(wxFontInfo(16)));
         m_staticText_device_tip->SetForegroundColour(wxColour(251,71,71));
 
-        bSizer_title_label->Add(m_staticText_device_tip, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
-        //bSizer_title_label->Add(FromDIP(13), 0, 0, 0);
-        bSizer_title_label->AddStretchSpacer();
+        bSizer_title_label->Add(m_staticText_device_tip, 0, wxALIGN_RIGHT | wxEXPAND | wxALL, 0);
+        //bSizer_title_label->AddStretchSpacer();
 
         m_panel_top_title->SetSizer(bSizer_title_label);
         m_panel_top_title->Layout();
         bSizer_title_label->Fit(m_panel_top_title);
 
         sizer->Add(m_panel_top_title, 0, wxEXPAND | wxALL, 0);
+        sizer->AddSpacer(FromDIP(4));
         
         //添加白色分割条
         auto m_panel_separotor_top = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(3)), wxTAB_TRAVERSAL);
@@ -380,7 +321,7 @@ wxBoxSizer* SingleDeviceState::create_monitoring_page()
         m_panel_separotor0->SetMinSize(wxSize(-1, FromDIP(10)));
         m_panel_separotor0->SetMaxSize(wxSize(-1, FromDIP(10)));
         sizer->Add(m_panel_separotor0, 0, wxEXPAND, 0);
-
+        //sizer->AddSpacer(FromDIP(6));
 
         //摄像头布局
         m_panel_monitoring_title = new wxPanel(this, wxID_ANY,wxDefaultPosition, wxSize(-1, FromDIP(36)), wxTAB_TRAVERSAL);
@@ -395,9 +336,13 @@ wxBoxSizer* SingleDeviceState::create_monitoring_page()
         m_staticText_monitoring->SetFont(wxFont(wxFontInfo(16)));
         m_staticText_monitoring->SetForegroundColour(wxColour(51,51,51));
 
-        bSizer_monitoring_title->Add(m_staticText_monitoring, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(17));
-        bSizer_monitoring_title->Add(FromDIP(13), 0, 0, 0);
+        bSizer_monitoring_title->AddSpacer(FromDIP(13));
+        bSizer_monitoring_title->Add(m_staticText_monitoring, 0, wxTOP, FromDIP(6));
         bSizer_monitoring_title->AddStretchSpacer();
+
+        m_panel_monitoring_title->SetSizer(bSizer_monitoring_title);
+        m_panel_monitoring_title->Layout();
+        bSizer_monitoring_title->Fit(m_panel_monitoring_title);
 
         //行与行之间的间距使用 wxPanel 进行填充
         sizer->Add(m_panel_monitoring_title, 0, wxEXPAND | wxALL, 0);
@@ -421,21 +366,19 @@ wxBoxSizer* SingleDeviceState::create_machine_control_title()
 
         //设备提示信息
         wxBoxSizer *bSizer_h_title = new wxBoxSizer(wxHORIZONTAL);
-        m_panel_top_right_info = new wxPanel(this, wxID_ANY,wxDefaultPosition, wxSize(-1, FromDIP(23)), wxTAB_TRAVERSAL);
+        m_panel_top_right_info = new wxPanel(this, wxID_ANY,wxDefaultPosition, wxSize(-1, FromDIP(30)), wxTAB_TRAVERSAL);
+        //m_panel_top_right_info = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
         m_panel_top_right_info->SetBackgroundColour(wxColour(240,240,240));
 
         //显示报错信息
-        m_staticText_device_info = new Label(m_panel_top_right_info, ("error Info"));
+        m_staticText_device_info = new Label(m_panel_top_right_info, ("error Info"), wxALIGN_CENTER);
         m_staticText_device_info->Wrap(-1);
         m_staticText_device_info->SetFont(wxFont(wxFontInfo(16)));
-        m_staticText_device_info->SetForegroundColour(wxColour(251,71,71));
         m_staticText_device_info->SetBackgroundColour(wxColour(246,203,198));
-        m_staticText_device_info->SetMinSize(wxSize(FromDIP(284),FromDIP(23)));
-        m_staticText_device_info->SetWindowStyleFlag(wxALIGN_CENTER); 
+        m_staticText_device_info->SetForegroundColour(wxColour(251, 71, 71));
 
-        bSizer_h_title->Add(m_staticText_device_info, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
-        //bSizer_h_title->Add(FromDIP(13), 0, 0, 0);
-        bSizer_h_title->AddStretchSpacer();
+        bSizer_h_title->Add(m_staticText_device_info, wxSizerFlags(1).Expand());
+        bSizer_h_title->AddSpacer(FromDIP(6));
 
         //显示清除按钮
         m_clear_button = new Button(m_panel_top_right_info, wxString("clear"), "", 0, FromDIP(18));
