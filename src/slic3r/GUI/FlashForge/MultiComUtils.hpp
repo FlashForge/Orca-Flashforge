@@ -1,11 +1,18 @@
 #ifndef slic3r_GUI_MultiComUtils_hpp_
 #define slic3r_GUI_MultiComUtils_hpp_
 
+#include <functional>
 #include <string>
+#include <wx/event.h>
 #include "FlashNetworkIntfc.h"
 #include "MultiComDef.hpp"
 
 namespace Slic3r { namespace GUI {
+
+struct ComAsyncCallEvent : public wxCommandEvent {
+    ComErrno ret;
+};
+wxDECLARE_EVENT(COM_ASYNC_CALL_EVENT, ComAsyncCallEvent);
 
 class MultiComUtils
 {
@@ -29,6 +36,8 @@ public:
     static ComErrno signOut(const std::string &accessToken);
 
     static ComErrno fnetRet2ComErrno(int networkRet);
+
+    static void asyncCall(wxEvtHandler *evtHandler, const std::function<ComErrno()> &func);
 };
 
 }} // namespace Slic3r::GUI

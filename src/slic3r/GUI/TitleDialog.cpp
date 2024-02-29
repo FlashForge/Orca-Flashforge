@@ -102,6 +102,7 @@ void TitleBar::OnClose(wxCommandEvent &event)
     if (GetParent()) {
         GetParent()->Close();
     }
+    event.Skip();
 }
 
 void TitleBar::FinishDrag()

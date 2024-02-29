@@ -50,4 +50,51 @@ private:
 	wxColour	m_bgDisableColor;
 };
 
+class FFPushButton : public wxButton
+{
+public:
+    FFPushButton(wxWindow *parent, wxWindowID id = wxID_ANY, 
+				 const wxString &normalIcon = "",
+				 const wxString &hoverIcon = "",
+                 const wxString &pressIcon = "",
+				 const wxString &disableIcon = "");
+    ~FFPushButton(){};
+
+	void OnMousePress(wxMouseEvent &event)
+    {
+        m_isPressed = true;
+        Refresh();
+    }
+
+    void OnMouseRelease(wxMouseEvent &event)
+    {
+        m_isPressed = false;
+        Refresh();
+    }
+
+    void OnMouseEnter(wxMouseEvent &event)
+    {
+        m_isHover = true;
+        Refresh();
+    }
+
+    void OnMouseLeave(wxMouseEvent &event)
+    {
+        m_isHover = false;
+        Refresh();
+    }
+    void OnPaint(wxPaintEvent &event);
+
+private:
+    wxString m_normalIcon;
+    wxString m_pressIcon;
+    wxString m_hoverIcon;
+    wxString m_disableIcon;
+    wxBitmap m_normalBitmap;
+    wxBitmap m_pressBitmap;
+    wxBitmap m_hoverBitmap;
+    wxBitmap m_disableBitmap;
+    bool     m_isPressed = false;
+    bool     m_isHover   = false;
+};
 #endif /* _Slic3r_GUI_FFButton_hpp_ */

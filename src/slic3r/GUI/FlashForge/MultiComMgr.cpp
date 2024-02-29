@@ -25,10 +25,8 @@ bool MultiComMgr::initalize(const std::string &newtworkDllPath, const std::strin
         return false;
     }
     m_userDataUpdateThd.reset(new UserDataUpdateThd(m_networkIntfc.get()));
+    m_userDataUpdateThd->Bind(COM_GET_USER_PROFILE_EVENT, &MultiComMgr::onGetUserProfile, this);
     m_userDataUpdateThd->Bind(GET_WAN_DEV_EVENT, &MultiComMgr::onGetWanDev, this);
-    m_userDataUpdateThd->Bind(COM_GET_USER_PROFILE_EVENT, [this](const ComGetUserProfileEvent &event) {
-        QueueEvent(event.Clone());
-    });
     return true;
 }
 
@@ -245,6 +243,15 @@ void MultiComMgr::onWanDevMaintian(const ComWanDevMaintainEvent &event)
     QueueEvent(event.Clone());
 }
 
+void MultiComMgr::onGetUserProfile(const ComGetUserProfileEvent &event)
+{
+    if (event.ret != COM_OK) {
+        onWanDevMaintian(ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, event.ret));
+        return;
+    }
+    QueueEvent(event.Clone());
+}
+
 void MultiComMgr::onGetWanDev(const GetWanDevEvent &event)
 {
     if (event.ret != COM_OK) {
@@ -322,15 +329,22 @@ void MultiComMgr::onWanConnReadData(const WanConnReadDataEvent &event)
             onDevDetailUpdate(devDetailUpdateEvent);
         }
     };
+    auto procDevOfflineEvent = [this](const fnet_conn_read_data_t &readData) {
+        auto it = m_devIdMap.find(readData.devId);
+        if (it != m_devIdMap.end()) {
+            QueueEvent(new ComDevOfflineEvent(COM_DEV_OFFLINE_EVENT, it->second));
+        }
+    };
     switch (event.readData.type) {
+    case FNET_CONN_READ_SYNC_BIND_DEVICE:
+    case FNET_CONN_READ_SYNC_UNBIND_DEVICE:
+        m_userDataUpdateThd->setUpdateWanDev();
+        break;
     case FNET_CONN_READ_DEVICE_DETAIL:
         procDevDetailUpdateEvent(event.readData);
         break;
-    case FNET_CONN_READ_SYNC_BIND_DEVICE:
-        m_userDataUpdateThd->setUpdateWanDev();
-        break;
-    case FNET_CONN_READ_SYNC_UNBIND_DEVICE:
-        m_userDataUpdateThd->setUpdateWanDev();
+    case FNET_CONN_READ_DEVICE_OFFLINE:
+        procDevOfflineEvent(event.readData);
         break;
     }
 }

@@ -7,6 +7,7 @@
 #include "StaticBox.hpp"
 #include "Label.hpp"
 #include "Button.hpp"
+#include "FFButton.hpp"
 
 wxDECLARE_EVENT(wxCUSTOMEVT_SET_TEMP_FINISH, wxCommandEvent);
 
@@ -146,7 +147,7 @@ public:
              const wxPoint &pos = wxDefaultPosition,
              const wxSize & size = wxDefaultSize,
              long style = wxTAB_TRAVERSAL);
-    ~IconText();
+    ~IconText(){};
     void create_panel(wxWindow* parent,wxString icon,int iconSize,wxString text,int textSize);
     void setText(wxString text);
     void setTextColor(wxColour colour);
@@ -169,21 +170,31 @@ public:
                        const wxPoint &pos = wxDefaultPosition,
                        const wxSize & size = wxDefaultSize,
                        long style = wxTAB_TRAVERSAL);
-        //~IconBottonText();
-        void create_panel(wxWindow* parent,wxString icon,int iconSize,wxString text,int textSize,wxString secondIcon  = "",wxString thirdIcon = "");
-        void setLimit(double min,double max);
+    ~IconBottonText(){};
+    void create_panel(wxWindow* parent,wxString icon,int iconSize,wxString text,int textSize,wxString secondIcon  = "",wxString thirdIcon = "");
+    void setLimit(double min,double max);
+    void setAdjustValue(double value);
+    void onTextChange(wxCommandEvent &event);
+    void onTextFocusOut(wxFocusEvent &event);
+    void onDecBtnClicked(wxMouseEvent &event);
+    void onIncBtnClicked(wxMouseEvent &event);
+
 private:
+    double        m_min;
+    double        m_max;
+    double        m_adjust_value;
     wxBitmap    m_icon;
-    Button*     m_inc_btn{nullptr};
-    Button*     m_dec_btn{nullptr};
-    Label*      text_ctrl;
+    FFPushButton *m_dec_btn{nullptr};
+    FFPushButton *m_inc_btn{nullptr};
+    wxTextCtrl*   m_text_ctrl{nullptr};
+    wxStaticText *m_unitLabel{nullptr};
 };
 
 class StartFiltering : public wxPanel
 {
 public:
     StartFiltering(wxWindow* parent);
-    ~StartFiltering();
+    ~StartFiltering(){};
     void create_panel(wxWindow* parent);
 private:
     SwitchButton* m_internal_circulate_switch;//内循环过滤
@@ -197,7 +208,7 @@ public:
                  const wxPoint &pos = wxDefaultPosition,
                  const wxSize & size = wxDefaultSize,
                  long style = wxTAB_TRAVERSAL);
-    //~TempMixDevice();
+    ~TempMixDevice(){};
     void create_panel(wxWindow* parent,bool idle, wxString nozzleTemp,wxString platformTemp,wxString cavityTemp);
 
     void setupLayoutIdleDeviceState(wxBoxSizer *deviceStateSizer, wxPanel *parent,bool idle);

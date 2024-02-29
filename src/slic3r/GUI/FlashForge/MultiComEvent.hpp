@@ -48,7 +48,7 @@ struct ComConnectionExitEvent : public ComConnectionEvent
 
 struct ComDevDetailUpdateEvent : public ComConnectionEvent
 {
-    ComDevDetailUpdateEvent(wxEventType type,  com_id_t _id, int _commandId, fnet_dev_detail_t *_devDetail)
+    ComDevDetailUpdateEvent(wxEventType type, com_id_t _id, int _commandId, fnet_dev_detail_t *_devDetail)
         : ComConnectionEvent(type, _id, _commandId)
         , devDetail(_devDetail)
     {
@@ -58,6 +58,18 @@ struct ComDevDetailUpdateEvent : public ComConnectionEvent
         return new ComDevDetailUpdateEvent(GetEventType(), id, commandId, devDetail);
     }
     fnet_dev_detail_t *devDetail;
+};
+
+struct ComDevOfflineEvent : public ComConnectionEvent
+{
+    ComDevOfflineEvent(wxEventType type, com_id_t _id)
+        : ComConnectionEvent(type, _id, ComInvalidCommandId)
+    {
+    }
+    ComDevOfflineEvent *Clone() const
+    {
+        return new ComDevOfflineEvent(GetEventType(), id);
+    }
 };
 
 struct ComSendGcodeProgressEvent : public ComConnectionEvent
@@ -123,6 +135,7 @@ struct ComGetUserProfileEvent : public wxCommandEvent
 wxDECLARE_EVENT(COM_CONNECTION_READY_EVENT, ComConnectionReadyEvent);
 wxDECLARE_EVENT(COM_CONNECTION_EXIT_EVENT, ComConnectionExitEvent);
 wxDECLARE_EVENT(COM_DEV_DETAIL_UPDATE_EVENT, ComDevDetailUpdateEvent);
+wxDECLARE_EVENT(COM_DEV_OFFLINE_EVENT, ComDevOfflineEvent);
 wxDECLARE_EVENT(COM_SEND_GCODE_PROGRESS_EVENT, ComSendGcodeProgressEvent);
 wxDECLARE_EVENT(COM_SEND_GCODE_FINISH_EVENT, ComSendGcodeFinishEvent);
 wxDECLARE_EVENT(COM_WAN_DEV_MAINTAIN_EVENT, ComWanDevMaintainEvent);

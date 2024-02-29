@@ -25,6 +25,7 @@ namespace GUI {
     com_token_data_t LoginDialog::m_token_data = {};
     bool LoginDialog::m_usr_is_login = false;
     com_user_profile_t LoginDialog::m_usr_info = {};
+    std::string  LoginDialog::m_usr_name = "";
 
     CountdownButton::CountdownButton(wxWindow* parent, wxString text, wxString icon /*= ""*/, long style /*= 0*/, int iconSize /*= 0*/, wxWindowID btn_id /*= wxID_ANY*/)
         : FFButton(parent,wxID_ANY,text,10)
@@ -151,6 +152,11 @@ void LoginDialog::SetUsrInfo(const com_user_profile_t& usrInfo)
 const com_user_profile_t& LoginDialog::GetUsrInfo()
 {
     return m_usr_info;
+}
+
+const std::string LoginDialog::GetUsrName() 
+{
+    return m_usr_name;
 }
 
 void LoginDialog::on_dpi_changed(const wxRect &suggested_rect)
@@ -892,7 +898,7 @@ void LoginDialog::onPage1Login(wxCommandEvent& event)
             app_config->set("refresh_token",token_data.refreshToken);
             app_config->set("expire_time",std::to_string(token_data.expiresIn));
              Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data.accessToken);
-        } 
+        }
     }
     else if (login_result == ComErrno::COM_INVALID_VALIDATION){
         m_timer.Bind(wxEVT_TIMER, &LoginDialog::OnTimer, this);
@@ -909,12 +915,14 @@ void LoginDialog::onPage4Login(wxMouseEvent& event)
     com_token_data_t token_data;
     ComErrno login_result =  MultiComUtils::getTokenBySMSCode(usrname.ToStdString(),verify_code.ToStdString(),token_data);
     if(login_result == ComErrno::COM_OK){
+        m_usr_name = usrname.ToStdString();
         LoginDialog::m_token_data = token_data;
         wxGetApp().handle_login_result("default.jpg",usrname.ToStdString());
         this->Hide();
         AppConfig *app_config = wxGetApp().app_config;
         if(app_config){
             //主动点击登录，设置token值
+            app_config->set("usr_input_name", usrname.ToStdString());
             app_config->set("access_token",token_data.accessToken);
             app_config->set("refresh_token",token_data.refreshToken);
             app_config->set("expire_time",std::to_string(token_data.expiresIn));
@@ -1014,12 +1022,14 @@ void LoginDialog::onPage3Login(wxMouseEvent& event)
     com_token_data_t token_data;
     ComErrno login_result =  MultiComUtils::getTokenByPassword(usrname.ToStdString(),password.ToStdString(),token_data);
     if(login_result == ComErrno::COM_OK){
+        m_usr_name = usrname.ToStdString();
         LoginDialog::m_token_data = token_data;
         wxGetApp().handle_login_result("default.jpg",usrname.ToStdString());
         this->Hide();
         AppConfig *app_config = wxGetApp().app_config;
         if(app_config){
             //主动点击登录，设置token值
+            app_config->set("usr_input_name", usrname.ToStdString());
             app_config->set("access_token",token_data.accessToken);
             app_config->set("refresh_token",token_data.refreshToken);
             app_config->set("expire_time",std::to_string(token_data.expiresIn));

@@ -1,8 +1,12 @@
 #include "MultiComUtils.hpp"
+#include <boost/thread/thread.hpp>
 #include "FreeInDestructor.h"
 #include "MultiComMgr.hpp"
+#include "WaitEvent.hpp"
 
 namespace Slic3r { namespace GUI {
+
+wxDEFINE_EVENT(COM_ASYNC_CALL_EVENT, ComAsyncCallEvent);
 
 ComErrno MultiComUtils::getLanDevList(std::vector<fnet_lan_dev_info> &devInfos)
 {
@@ -148,6 +152,25 @@ ComErrno MultiComUtils::fnetRet2ComErrno(int networkRet)
     default:
         return COM_ERROR;
     }
+}
+
+void MultiComUtils::asyncCall(wxEvtHandler *evtHandler, const std::function<ComErrno()> &func)
+{
+    WaitEvent waitEvent;
+    boost::thread *thread = nullptr;
+    thread = new boost::thread([evtHandler, func, &waitEvent, &thread]() {
+        boost::thread *myThread = thread;
+        waitEvent.set(true);
+        ComAsyncCallEvent *event = new ComAsyncCallEvent;
+        event->SetEventType(COM_ASYNC_CALL_EVENT);
+        event->ret = func();
+        evtHandler->QueueEvent(event);
+        evtHandler->CallAfter([myThread]() {
+            myThread->join();
+            delete myThread;
+        });
+    });
+    waitEvent.waitTrue();
 }
 
 }} // namespace Slic3r::GUI

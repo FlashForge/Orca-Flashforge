@@ -19,6 +19,7 @@
 #include "slic3r/GUI/Widgets/ProgressBar.hpp"
 #include "slic3r/GUI/Widgets/TempInput.hpp"
 //#include "slic3r/GUI/Widgets/StaticLine.hpp"
+#include "slic3r/GUI/Widgets/FFButton.hpp"
 
 namespace Slic3r { 
 namespace GUI {
@@ -141,6 +142,8 @@ protected:
 
     Button* m_print_button;
     Button* m_cancel_button;
+
+    bool m_print_button_pressed_down = false;
 
 //temperature 
     TempInput* m_tempCtrl_top;

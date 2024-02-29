@@ -7,6 +7,7 @@
 #include "slic3r/GUI/MainFrame.hpp"
 #include "slic3r/GUI/format.hpp"
 #include "slic3r/GUI/FlashForge/MultiComMgr.hpp"
+#include "slic3r/GUI/FlashForge/LoginDialog.hpp"
 
 namespace Slic3r {
 namespace GUI {
@@ -156,6 +157,7 @@ void ReLoginDialog::onReloginBtnClicked(wxCommandEvent& event)
 void ReLoginDialog::onLoginoutBtnClicked(wxCommandEvent& event)
 {
     Hide();
+    wxGetApp().handle_login_out();
     AppConfig *app_config = wxGetApp().app_config;
     if(app_config){
         std::string access_token = app_config->get("access_token");
@@ -164,6 +166,8 @@ void ReLoginDialog::onLoginoutBtnClicked(wxCommandEvent& event)
             if(login_out_result != ComErrno::COM_OK){
                 BOOST_LOG_TRIVIAL(warning) << boost::format("MultiComUtils::signOut Failed!");
             }
+            DeviceObjectOpr *devOpr = wxGetApp().getDeviceObjectOpr();
+            devOpr->clear_my_machine_list();
         }
         
         app_config->set("access_token","");
@@ -173,6 +177,7 @@ void ReLoginDialog::onLoginoutBtnClicked(wxCommandEvent& event)
         app_config->set("usr_pic","");
         Slic3r::GUI::MultiComMgr::inst()->removeWanDev();
     }
+    event.Skip();
 }
 
 void ReLoginDialog::onRelogin2BtnClicked(wxMouseEvent& event)
@@ -181,9 +186,13 @@ void ReLoginDialog::onRelogin2BtnClicked(wxMouseEvent& event)
     if(app_config){
         std::string usr_name = app_config->get("usr_name");
         std::string usr_pic = app_config->get("usr_pic");
+        if (usr_name.empty()) {
+            usr_name = LoginDialog::GetUsrName();
+        }
         wxGetApp().handle_login_result(usr_pic,usr_name);
     }
     Hide();
+    event.Skip();
 }
 
 void ReLoginDialog::on_dpi_changed(const wxRect &suggested_rect)

@@ -54,6 +54,7 @@ public:
     static bool IsUsrLogin();
     static void SetUsrInfo(const com_user_profile_t& usrInfo);
     static const com_user_profile_t& GetUsrInfo();
+    static const std::string GetUsrName();
 
 protected:
     void on_dpi_changed(const wxRect &suggested_rect) override;
@@ -145,6 +146,8 @@ private:
     VerifyCodeCtrl* m_verifycode_ctrl_page1 {nullptr};
     UserNameCtrl* m_username_ctrl_page2 {nullptr};
     PasswordCtrl* m_password_ctrl_page2 {nullptr};
+
+    static std::string m_usr_name;
 
 };
 } // namespace GUI

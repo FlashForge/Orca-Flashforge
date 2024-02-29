@@ -1,5 +1,6 @@
 #include "FFButton.hpp"
 #include <wx/dcgraph.h>
+#include "slic3r/GUI/wxExtensions.hpp"
 
 
 FFButton::FFButton(wxWindow* parent, wxWindowID id/*= wxID_ANY*/, const wxString& label/*= ""*/,
@@ -204,4 +205,39 @@ void FFButton::updateState()
 		SetForegroundColour(m_fontColor);
 	}
 	Update();
+}
+
+FFPushButton::FFPushButton(wxWindow* parent,wxWindowID id,const wxString& normalIcon,const wxString& hoverIcon,const wxString& pressIcon,const wxString& disableIcon)
+    : wxButton(parent, id, "", wxPoint(10, 10), wxSize(25, 25), wxNO_BORDER)
+    , m_normalIcon(normalIcon)
+    , m_hoverIcon(hoverIcon)
+    , m_pressIcon(pressIcon)
+    , m_disableIcon(disableIcon)
+{
+    //SetBitmap(wxBitmap(normalIcon));
+    m_normalBitmap  = create_scaled_bitmap(normalIcon.ToStdString(), this, 16);
+    m_hoverBitmap   = create_scaled_bitmap(hoverIcon.ToStdString(), this, 16);
+    m_pressBitmap   = create_scaled_bitmap(pressIcon.ToStdString(), this, 16);
+    m_disableBitmap = create_scaled_bitmap(disableIcon.ToStdString(), this, 16);
+    Bind(wxEVT_PAINT, &FFPushButton::OnPaint, this);
+    Bind(wxEVT_LEFT_DOWN, &FFPushButton::OnMousePress, this);
+    Bind(wxEVT_LEFT_UP, &FFPushButton::OnMouseRelease, this);
+    Bind(wxEVT_ENTER_WINDOW, &FFPushButton::OnMouseEnter, this);
+    Bind(wxEVT_LEAVE_WINDOW, &FFPushButton::OnMouseLeave, this);
+}
+
+void FFPushButton::OnPaint(wxPaintEvent &event) 
+{
+    wxPaintDC dc(this);
+    if (IsEnabled()) {
+        if (m_isPressed) {
+            dc.DrawBitmap(m_pressBitmap, 0, 0, true);
+        } else if (m_isHover) {
+            dc.DrawBitmap(m_hoverBitmap, 0, 0, true);
+        } else {
+            dc.DrawBitmap(m_normalBitmap, 0, 0, true);
+        }
+    } else {
+        dc.DrawBitmap(m_disableBitmap, 0, 0, true);
+    }
 }

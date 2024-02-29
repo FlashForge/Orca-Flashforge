@@ -43,6 +43,7 @@ struct com_clinet_token_data_t {
 };
 
 struct com_user_profile_t {
+    std::string uid;
     std::string nickname;
     std::string headImgUrl;
 };

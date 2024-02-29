@@ -3548,6 +3548,7 @@ void GUI_App::ShowUserLogin(bool show)
                 if(app_config){
                     app_config->set("usr_pic",event.userProfile.headImgUrl);
                     app_config->set("usr_name",event.userProfile.nickname);
+                    //BOOST_LOG_TRIVIAL(info) << "login success," << " pic is : " << event.userProfile.headImgUrl << " name is: "<< event.userProfile.nickname;
                     handle_login_result(event.userProfile.headImgUrl,event.userProfile.nickname);
                     app_config->save();
                 }
@@ -3905,6 +3906,9 @@ std::string GUI_App::handle_web_request(std::string cmd)
                         std::string access_token = app_config->get("access_token");
                         std::string refresh_token = app_config->get("refresh_token");
                         std::string usr_name = app_config->get("usr_name");
+                        if (usr_name.empty()) {
+                            usr_name = app_config->get("usr_input_name");
+                        }
                         std::string usr_pic = app_config->get("usr_pic");
                         std::string expire_time = app_config->get("expire_time");
                         if(!access_token.empty() && !refresh_token.empty()){
@@ -3960,7 +3964,7 @@ std::string GUI_App::handle_web_request(std::string cmd)
             else if (command_str.compare("homepage_logout") == 0) {
                 CallAfter([this] {
                     //Slic3r::GUI::MultiComMgr::inst()->removeWanDev();
-                    wxGetApp().handle_login_out();
+                    //wxGetApp().handle_login_out();
                     if(!m_re_login_dlg){
                         m_re_login_dlg = new ReLoginDialog();
                     }
