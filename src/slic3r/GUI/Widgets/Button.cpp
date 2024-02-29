@@ -161,6 +161,11 @@ void Button::SetFlashForge(bool bFlashForge)
     m_flashforge = bFlashForge; 
 }
 
+void Button::SetPureText(bool bPureText) 
+{
+    m_pure_text = bPureText;
+}
+
 void Button::paintEvent(wxPaintEvent& evt)
 {
     // depending on your system you may need to look at double-buffered dcs
@@ -270,6 +275,10 @@ void Button::mouseDown(wxMouseEvent& event)
         SetBorderColor(wxColour(255, 255, 255));
         SetBackgroundColor(wxColour(217, 234, 255));
     }
+    if (m_pure_text) {
+        SetBorderColor(wxColour(17, 111, 223));
+        SetTextColor(wxColour(17, 111, 223));
+    }
     if (canFocus)
         SetFocus();
     if (!HasCapture())
@@ -300,6 +309,10 @@ void Button::mouseEnter(wxMouseEvent &event)
         SetBorderWidth(1);
         SetBorderColor(wxColour(50, 141, 251));
     }
+    if (m_pure_text) {
+        SetBorderColor(wxColour(149, 197, 255));
+        SetTextColor(wxColour(149, 197, 255));
+    }
 }
 
 void Button::mouseLeave(wxMouseEvent &event) 
@@ -309,6 +322,10 @@ void Button::mouseLeave(wxMouseEvent &event)
         SetBorderWidth(0);
         SetBorderColor(wxColour(255, 255, 255));
         SetBackgroundColor(wxColour(255, 255, 255));
+    }
+    if (m_pure_text) {
+        SetBorderColor(wxColour(50, 141, 251));
+        SetTextColor(wxColour(50, 141, 251));
     }
 }
 

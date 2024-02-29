@@ -131,10 +131,11 @@ void StartFilter::create_panel(wxWindow* parent)
         bSizer_external_circulate_hor->Fit(external_circulate_panel);
 
         sizer->Add(m_panel_filtering_title, 0, wxEXPAND | wxALL, 0);
-        sizer->Add(0, FromDIP(12), 0);
+        sizer->AddSpacer(FromDIP(12));
         sizer->Add(internal_circulate_panel, 0, wxEXPAND | wxALIGN_CENTER, 0);
-        sizer->AddSpacer(FromDIP(14));
+        sizer->AddSpacer(FromDIP(12));
         sizer->Add(external_circulate_panel, 0, wxEXPAND | wxALIGN_CENTER, 0);
+        sizer->AddSpacer(FromDIP(12));
 
         parent->SetSizer(sizer);
         parent->Layout();
@@ -438,13 +439,19 @@ wxBoxSizer* SingleDeviceState::create_machine_control_title()
 
         //显示清除按钮
         m_clear_button = new Button(m_panel_top_right_info, wxString("clear"), "", 0, FromDIP(18));
+        m_clear_button->SetPureText(true);
         m_clear_button->SetFont(wxFont(wxFontInfo(16)));
         m_clear_button->SetBorderWidth(1);
         m_clear_button->SetBackgroundColor(wxColour(240,240,240));
         m_clear_button->SetBorderColor(wxColour(50,141,251));
         m_clear_button->SetTextColor(wxColour(50,141,251));
-        m_clear_button->SetMinSize((wxSize(FromDIP(34), FromDIP(23))));
+        //m_clear_button->SetMinSize((wxSize(FromDIP(34), FromDIP(23))));
         m_clear_button->SetCornerRadius(0);
+        m_clear_button->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e) { 
+            e.Skip();
+            m_staticText_device_info->Hide();
+            m_clear_button->Hide();
+        });
 
         bSizer_h_title->Add(m_clear_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
 

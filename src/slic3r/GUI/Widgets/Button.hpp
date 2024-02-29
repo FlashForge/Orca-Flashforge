@@ -19,6 +19,7 @@ class Button : public StaticBox
     bool canFocus  = true;
     bool m_flashforge_selected = false;
     bool m_flashforge = false;
+    bool m_pure_text = false;
 
     static const int buttonWidth = 200;
     static const int buttonHeight = 50;
@@ -63,6 +64,8 @@ public:
     void Rescale();
 
     void SetFlashForge(bool bFlashForge = false);
+
+    void SetPureText(bool bPureText = false);
 
 protected:
 #ifdef __WIN32__
