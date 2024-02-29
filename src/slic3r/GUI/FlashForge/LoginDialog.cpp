@@ -898,7 +898,7 @@ void LoginDialog::onPage1Login(wxCommandEvent& event)
             app_config->set("refresh_token",token_data.refreshToken);
             app_config->set("expire_time",std::to_string(token_data.expiresIn));
              Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data.accessToken);
-        } 
+        }
     }
     else if (login_result == ComErrno::COM_INVALID_VALIDATION){
         m_timer.Bind(wxEVT_TIMER, &LoginDialog::OnTimer, this);
@@ -922,6 +922,7 @@ void LoginDialog::onPage4Login(wxMouseEvent& event)
         AppConfig *app_config = wxGetApp().app_config;
         if(app_config){
             //主动点击登录，设置token值
+            app_config->set("usr_input_name", usrname.ToStdString());
             app_config->set("access_token",token_data.accessToken);
             app_config->set("refresh_token",token_data.refreshToken);
             app_config->set("expire_time",std::to_string(token_data.expiresIn));
@@ -1028,6 +1029,7 @@ void LoginDialog::onPage3Login(wxMouseEvent& event)
         AppConfig *app_config = wxGetApp().app_config;
         if(app_config){
             //主动点击登录，设置token值
+            app_config->set("usr_input_name", usrname.ToStdString());
             app_config->set("access_token",token_data.accessToken);
             app_config->set("refresh_token",token_data.refreshToken);
             app_config->set("expire_time",std::to_string(token_data.expiresIn));

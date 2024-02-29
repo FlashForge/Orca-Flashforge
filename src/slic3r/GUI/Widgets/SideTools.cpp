@@ -555,6 +555,13 @@ void SideTools::show_status(int status)
     Fit();
 }
 
+int SideTools::getConnectInfoHeight() 
+{
+    if (m_connection_info->IsShown())
+        return m_connection_info->GetSize().y;
+    return 0;
+}
+
 SideTools::~SideTools()
 {
 }

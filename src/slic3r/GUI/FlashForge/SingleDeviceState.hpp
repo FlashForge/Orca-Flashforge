@@ -143,6 +143,8 @@ protected:
     Button* m_print_button;
     Button* m_cancel_button;
 
+    bool m_print_button_pressed_down = false;
+
 //temperature 
     TempInput* m_tempCtrl_top;
     TempInput* m_tempCtrl_bottom;

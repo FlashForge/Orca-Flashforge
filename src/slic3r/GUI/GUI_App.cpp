@@ -3906,6 +3906,9 @@ std::string GUI_App::handle_web_request(std::string cmd)
                         std::string access_token = app_config->get("access_token");
                         std::string refresh_token = app_config->get("refresh_token");
                         std::string usr_name = app_config->get("usr_name");
+                        if (usr_name.empty()) {
+                            usr_name = app_config->get("usr_input_name");
+                        }
                         std::string usr_pic = app_config->get("usr_pic");
                         std::string expire_time = app_config->get("expire_time");
                         if(!access_token.empty() && !refresh_token.empty()){

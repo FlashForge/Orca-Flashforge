@@ -170,8 +170,6 @@ void DeviceDetail::create_panel(wxWindow* parent)
 
         sizer->Add(m_panel_confirm_row, 0, wxEXPAND | wxALL, 0);
 
-        wxBoxSizer *bSizer_first_row = new wxBoxSizer(wxHORIZONTAL);
-        auto m_panel_first_row = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, -1), wxTAB_TRAVERSAL);
 //
         auto m_panel_separotor10 = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
         m_panel_separotor10->SetBackgroundColour(wxColour(255, 255, 255));
@@ -179,128 +177,80 @@ void DeviceDetail::create_panel(wxWindow* parent)
 
         sizer->Add(m_panel_separotor10);
 //
+        wxBoxSizer *bSizer_h = new wxBoxSizer(wxHORIZONTAL);
+        auto m_panel_separotor0 = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+        m_panel_separotor0->SetBackgroundColour(wxColour(255, 255, 255));
+        m_panel_separotor0->SetMinSize(wxSize(FromDIP(35),-1));
 
+        bSizer_h->Add(m_panel_separotor0);
+
+        wxBoxSizer *bSizer_first_row = new wxBoxSizer(wxVERTICAL);
+        auto m_panel_first_row = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, -1), wxTAB_TRAVERSAL);
         IconText* device_material = new IconText(m_panel_first_row,wxString("device_material"),15,wxString("PLA"),12);
-        //device_material->SetMinSize(wxSize(FromDIP(100), -1));
-        bSizer_first_row->AddSpacer(FromDIP(25));
         bSizer_first_row->Add(device_material, 0, wxEXPAND | wxALL, 0);
-        bSizer_first_row->AddStretchSpacer();
+        bSizer_first_row->AddSpacer(FromDIP(18));
 
-        IconText* device_layer = new IconText(m_panel_first_row,wxString("device_layer"),13,wxString("1185/1500"),12);
-        //device_layer->SetMinSize(wxSize(FromDIP(100), -1));
-        bSizer_first_row->Add(device_layer, 0, wxEXPAND | wxALL, 0);
-        bSizer_first_row->AddSpacer(FromDIP(50));
+        IconText *device_initial_speed = new IconText(m_panel_first_row, wxString("device_initial_speed"), 13, wxString("150mm/s"), 12);
+        bSizer_first_row->Add(device_initial_speed, 0, wxEXPAND | wxALL, 0);
+        bSizer_first_row->AddSpacer(FromDIP(18));
+
+        IconBottonText *device_speed = new IconBottonText(m_panel_first_row, wxString("device_speed"), 17, wxString("90"), 12);
+        device_speed->setLimit(10, 150);
+        device_speed->setAdjustValue(1);
+        bSizer_first_row->Add(device_speed, 0, wxEXPAND | wxALL, 0);
+        bSizer_first_row->AddSpacer(FromDIP(18));
+
+        IconBottonText *device_z_axis = new IconBottonText(m_panel_first_row, wxString("device_z_axis"), 17, wxString("0.02"), 12,wxString("device_z_dec"), wxString("push_button_arrow_dec_normal"));
+        device_z_axis->setLimit(-5, 5);
+        device_z_axis->setAdjustValue(0.01);
+        bSizer_first_row->Add(device_z_axis, 0, wxEXPAND | wxALL, 0);
+        bSizer_first_row->AddStretchSpacer();
 
         m_panel_first_row->SetSizer(bSizer_first_row);
         m_panel_first_row->Layout();
         bSizer_first_row->Fit(m_panel_first_row);
 
-        sizer->Add(m_panel_first_row, 0, wxEXPAND | wxALL, 0);
+        bSizer_h->Add(m_panel_first_row, 0, wxEXPAND | wxALL, 0);
+        bSizer_h->AddStretchSpacer();
+
 //
-
-        auto m_panel_separotor0 = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-        m_panel_separotor0->SetBackgroundColour(wxColour(255, 255, 255));
-        m_panel_separotor0->SetMinSize(wxSize(-1,FromDIP(18)));
-
-        sizer->Add(m_panel_separotor0);
-//
-
-        wxBoxSizer *bSizer_second_row = new wxBoxSizer(wxHORIZONTAL);
+        wxBoxSizer *bSizer_second_row  = new wxBoxSizer(wxVERTICAL);
         auto m_panel_second_row = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, -1), wxTAB_TRAVERSAL);
 
-        IconText* device_initial_speed = new IconText(m_panel_second_row,wxString("device_initial_speed"),13,wxString("150mm/s"),12);
-        //device_initial_speed->SetMinSize(wxSize(FromDIP(100), -1));
-        bSizer_second_row->AddSpacer(FromDIP(25));
-        bSizer_second_row->Add(device_initial_speed, 0, wxEXPAND | wxALL, 0);
-        bSizer_second_row->AddStretchSpacer();
+        IconText *device_layer = new IconText(m_panel_second_row, wxString("device_layer"), 13, wxString("1185/1500"), 12);
+        bSizer_second_row->Add(device_layer, 0, wxEXPAND | wxALL, 0);
+        bSizer_second_row->AddSpacer(FromDIP(18));
 
-        IconText* device_fill_rate = new IconText(m_panel_second_row,wxString("device_fill_rate"),13,wxString("20%"),12);
-        //device_fill_rate->SetMinSize(wxSize(FromDIP(100), -1));
+        IconText *device_fill_rate = new IconText(m_panel_second_row, wxString("device_fill_rate"), 13, wxString("20%"), 12);
         bSizer_second_row->Add(device_fill_rate, 0, wxEXPAND | wxALL, 0);
-        bSizer_second_row->AddSpacer(FromDIP(50));
+        bSizer_second_row->AddSpacer(FromDIP(18));
+
+        IconBottonText *device_nozzle_fan = new IconBottonText(m_panel_second_row, wxString("device_nozzle_fan"), 17, wxString("50"), 12);
+        device_nozzle_fan->setLimit(0, 100);
+        device_nozzle_fan->setAdjustValue(1);
+        bSizer_second_row->Add(device_nozzle_fan, 0, wxEXPAND | wxALL, 0);
+        bSizer_second_row->AddSpacer(FromDIP(18));
+
+        IconBottonText *device_cooling_fan = new IconBottonText(m_panel_second_row, wxString("device_cooling_fan"), 17, wxString("100"), 12);
+        device_cooling_fan->setLimit(0, 100);
+        device_cooling_fan->setAdjustValue(1);
+        bSizer_second_row->Add(device_cooling_fan, 0, wxEXPAND | wxALL, 0);
+        bSizer_second_row->AddStretchSpacer();
 
         m_panel_second_row->SetSizer(bSizer_second_row);
         m_panel_second_row->Layout();
         bSizer_second_row->Fit(m_panel_second_row);
 
-        sizer->Add(m_panel_second_row, 0, wxEXPAND | wxALL, 0);
-
-//
+        bSizer_h->Add(m_panel_second_row, 0, wxEXPAND | wxALL, 0);
 
         auto m_panel_separotor1 = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
         m_panel_separotor1->SetBackgroundColour(wxColour(255, 255, 255));
-        m_panel_separotor1->SetMinSize(wxSize(-1,FromDIP(18)));
+        m_panel_separotor1->SetMinSize(wxSize(FromDIP(35), -1));
 
-        sizer->Add(m_panel_separotor1);
+        bSizer_h->Add(m_panel_separotor1);
 
-//
-        wxBoxSizer *bSizer_third_row = new wxBoxSizer(wxHORIZONTAL);
-        auto m_panel_third_row = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, -1), wxTAB_TRAVERSAL);
-
-        IconBottonText* device_speed = new IconBottonText(m_panel_third_row,wxString("device_speed"),17,wxString("90"),12);
-        device_speed->setLimit(10, 150);
-        device_speed->setAdjustValue(1);
-        //device_speed->SetMinSize(wxSize(FromDIP(130), -1));
-        bSizer_third_row->AddSpacer(FromDIP(25));
-        bSizer_third_row->Add(device_speed, 0, wxEXPAND | wxALL, 0);
-
-        bSizer_third_row->AddStretchSpacer();
-
-        IconBottonText* device_nozzle_fan = new IconBottonText(m_panel_third_row,wxString("device_nozzle_fan"),17,wxString("50"),12);
-        device_nozzle_fan->setLimit(0, 100);
-        device_nozzle_fan->setAdjustValue(1);
-        //device_nozzle_fan->SetMinSize(wxSize(FromDIP(130), -1));
-        bSizer_third_row->Add(device_nozzle_fan, 0, wxEXPAND | wxALL, 0);
-        bSizer_third_row->AddSpacer(FromDIP(25));
-        //bSizer_third_row->AddSpacer(FromDIP(16));
-
-        m_panel_third_row->SetSizer(bSizer_third_row);
-        m_panel_third_row->Layout();
-        bSizer_third_row->Fit(m_panel_third_row);
-
-        sizer->Add(m_panel_third_row, 0, wxEXPAND | wxALL, 0);
-//
-
-        auto m_panel_separotor2 = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-        m_panel_separotor2->SetBackgroundColour(wxColour(255, 255, 255));
-        m_panel_separotor2->SetMinSize(wxSize(-1,FromDIP(18)));
-
-        sizer->Add(m_panel_separotor2);
-
-//
-        wxBoxSizer *bSizer_fourth_row = new wxBoxSizer(wxHORIZONTAL);
-        auto m_panel_fourth_row = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, -1), wxTAB_TRAVERSAL);
-
-        IconBottonText* device_z_axis = new IconBottonText(m_panel_fourth_row,wxString("device_z_axis"),17,wxString("0.02"),12,wxString("device_z_dec"),wxString("push_button_arrow_dec_normal"));
-        device_z_axis->setLimit(-5, 5);
-        device_z_axis->setAdjustValue(0.01);
-        //device_z_axis->SetMinSize(wxSize(FromDIP(130), -1));
-        bSizer_fourth_row->AddSpacer(FromDIP(25));
-        bSizer_fourth_row->Add(device_z_axis, 0, wxEXPAND | wxALL, 0);
-
-        bSizer_fourth_row->AddStretchSpacer();
-
-        IconBottonText* device_cooling_fan = new IconBottonText(m_panel_fourth_row,wxString("device_cooling_fan"),17,wxString("100"),12);
-        device_cooling_fan->setLimit(0, 100);
-        device_cooling_fan->setAdjustValue(1);
-        //device_cooling_fan->SetMinSize(wxSize(FromDIP(130), -1));
-        bSizer_fourth_row->Add(device_cooling_fan, 0, wxEXPAND | wxALL, 0);
-        //bSizer_fourth_row->AddSpacer(FromDIP(16));
-        bSizer_fourth_row->AddSpacer(FromDIP(25));
-
-        m_panel_fourth_row->SetSizer(bSizer_fourth_row);
-        m_panel_fourth_row->Layout();
-        bSizer_fourth_row->Fit(m_panel_fourth_row);
-
-        sizer->Add(m_panel_fourth_row, 0, wxEXPAND | wxALL, 0);
-
-//
-
-        auto m_panel_separotor3 = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-        m_panel_separotor3->SetBackgroundColour(wxColour(255, 255, 255));
-        m_panel_separotor3->SetMinSize(wxSize(-1,FromDIP(18)));
-
-        sizer->Add(m_panel_separotor3);
+        sizer->Add(bSizer_h, 0, wxEXPAND | wxALL, 0);
+        sizer->AddSpacer(FromDIP(18));
 
         parent->SetSizer(sizer);
         parent->Layout();
@@ -798,15 +748,31 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         m_panel_control_print->SetBackgroundColour(wxColour(255,255,255));
 
         //显示继续打印按钮
-        m_print_button = new Button(m_panel_control_print, wxString("pause print"), "device_pause_print", 0, FromDIP(18));
+        m_print_button = new Button(m_panel_control_print, _L("pause print"), "device_pause_print", 0, FromDIP(18));
+        m_print_button->SetFlashForge(true);
         m_print_button->SetFont(wxFont(wxFontInfo(16)));
         m_print_button->SetBorderWidth(0);
         m_print_button->SetBackgroundColor(wxColour(255,255,255));
         m_print_button->SetBorderColor(wxColour(255,255,255));
         m_print_button->SetTextColor(wxColour(51,51,51));
-        m_print_button->SetMinSize((wxSize(FromDIP(158), FromDIP(29))));
+//        m_print_button->SetMinSize((wxSize(FromDIP(158), FromDIP(29))));
         m_print_button->SetCornerRadius(0);
-        bSizer_control_print->Add(m_print_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        m_print_button->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e) {
+            e.Skip();
+            if (!m_print_button_pressed_down) {
+                m_print_button->SetLabel(_L("continue print"));
+                m_print_button->SetIcon("device_continue_print");
+                m_print_button->Refresh();
+            } else {
+                m_print_button->SetLabel(_L("pause print"));
+                m_print_button->SetIcon("device_pause_print");
+                m_print_button->Refresh();
+            }
+            m_print_button_pressed_down = !m_print_button_pressed_down;
+        });
+
+        //bSizer_control_print->Add(m_print_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        bSizer_control_print->Add(m_print_button, wxSizerFlags(1).Expand());
 
         auto m_panel_separotor_print = new wxPanel(m_panel_control_print, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(6), -1), wxTAB_TRAVERSAL);
         m_panel_separotor_print->SetBackgroundColour(wxColour(240,240,240));
@@ -815,14 +781,23 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
 
         //显示取消打印按钮
         m_cancel_button = new Button(m_panel_control_print, wxString("cancel print"), "device_cancel_print", 0, FromDIP(18));
+        m_cancel_button->SetFlashForge(true);
         m_cancel_button->SetFont(wxFont(wxFontInfo(16)));
         m_cancel_button->SetBorderWidth(0);
         m_cancel_button->SetBackgroundColor(wxColour(255,255,255));
         m_cancel_button->SetBorderColor(wxColour(255,255,255));
         m_cancel_button->SetTextColor(wxColour(51,51,51));
-        m_cancel_button->SetMinSize((wxSize(FromDIP(158), FromDIP(29))));
+//        m_cancel_button->SetMinSize((wxSize(FromDIP(158), FromDIP(29))));
         m_cancel_button->SetCornerRadius(0);
-        bSizer_control_print->Add(m_cancel_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        m_cancel_button->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e) { 
+            e.Skip();
+            m_machine_ctrl_panel->Hide();
+            m_machine_idle_panel->Show();
+            Layout();
+        });
+
+        //bSizer_control_print->Add(m_cancel_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        bSizer_control_print->Add(m_cancel_button, wxSizerFlags(1).Expand());
 
 //***继续打印布局添加至垂直布局
         m_panel_control_print->SetSizer(bSizer_control_print);
@@ -858,7 +833,8 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         StateColor tempinput_border_colour(std::make_pair(*wxWHITE, (int)StateColor::Disabled), std::make_pair(wxColour(0, 150, 136), (int)StateColor::Focused),
                                         std::make_pair(wxColour(0, 150, 136), (int)StateColor::Hovered),std::make_pair(*wxWHITE, (int)StateColor::Normal));
         m_tempCtrl_top->SetBorderColor(tempinput_border_colour);
-        bSizer_control_temperature->Add(m_tempCtrl_top, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        //bSizer_control_temperature->Add(m_tempCtrl_top, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        bSizer_control_temperature->Add(m_tempCtrl_top, wxSizerFlags(1).Expand());
 
         //间距
         auto m_panel_separotor_temp = new wxPanel(m_panel_control_temperature, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(6), -1), wxTAB_TRAVERSAL);
@@ -879,7 +855,8 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         //StateColor tempinput_border_colour(std::make_pair(*wxWHITE, (int)StateColor::Disabled), std::make_pair(wxColour(0, 150, 136), (int)StateColor::Focused),
         //                                std::make_pair(wxColour(0, 150, 136), (int)StateColor::Hovered),std::make_pair(*wxWHITE, (int)StateColor::Normal));
         m_tempCtrl_bottom->SetBorderColor(tempinput_border_colour);
-        bSizer_control_temperature->Add(m_tempCtrl_bottom, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        //bSizer_control_temperature->Add(m_tempCtrl_bottom, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        bSizer_control_temperature->Add(m_tempCtrl_bottom, wxSizerFlags(1).Expand());
 
         //间距
         auto m_panel_separotor_temp1 = new wxPanel(m_panel_control_temperature, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(6), -1), wxTAB_TRAVERSAL);
@@ -900,7 +877,8 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         //StateColor tempinput_border_colour(std::make_pair(*wxWHITE, (int)StateColor::Disabled), std::make_pair(wxColour(0, 150, 136), (int)StateColor::Focused),
         //                                std::make_pair(wxColour(0, 150, 136), (int)StateColor::Hovered),std::make_pair(*wxWHITE, (int)StateColor::Normal));
         m_tempCtrl_mid->SetBorderColor(tempinput_border_colour);
-        bSizer_control_temperature->Add(m_tempCtrl_mid, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        //bSizer_control_temperature->Add(m_tempCtrl_mid, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        bSizer_control_temperature->Add(m_tempCtrl_mid, wxSizerFlags(1).Expand());
 
 //***温度布局添加至垂直布局
         m_panel_control_temperature->SetSizer(bSizer_control_temperature);
@@ -930,7 +908,8 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         //m_device_info_button->SetTextColor(wxColour(51,51,51));
         m_device_info_button->SetMinSize((wxSize(FromDIP(108), FromDIP(29))));
         m_device_info_button->SetCornerRadius(0);
-        bSizer_control_lamp->Add(m_device_info_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        //bSizer_control_lamp->Add(m_device_info_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        bSizer_control_lamp->Add(m_device_info_button, wxSizerFlags(1).Expand());
         bSizer_control_lamp->AddSpacer(FromDIP(35));
 
         //显示灯控制按钮
@@ -942,7 +921,8 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         //m_lamp_control_button->SetTextColor(wxColour(51,51,51));
         m_lamp_control_button->SetMinSize((wxSize(FromDIP(108), FromDIP(29))));
         m_lamp_control_button->SetCornerRadius(0);
-        bSizer_control_lamp->Add(m_lamp_control_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        //bSizer_control_lamp->Add(m_lamp_control_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        bSizer_control_lamp->Add(m_lamp_control_button, wxSizerFlags(1).Expand());
         bSizer_control_lamp->AddSpacer(FromDIP(35));
 
         //显示过滤按钮
@@ -954,7 +934,8 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         //m_filter_button->SetTextColor(wxColour(51,51,51));
         m_filter_button->SetMinSize((wxSize(FromDIP(108), FromDIP(29))));
         m_filter_button->SetCornerRadius(0);
-        bSizer_control_lamp->Add(m_filter_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        //bSizer_control_lamp->Add(m_filter_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        bSizer_control_lamp->Add(m_filter_button, wxSizerFlags(1).Expand());
 
 //***灯控制布局添加至垂直布局
         m_panel_control_lamp->SetSizer(bSizer_control_lamp);
@@ -987,7 +968,7 @@ void SingleDeviceState::setupLayoutIdlePage(wxBoxSizer* idleSizer,wxPanel* paren
         m_panel_control_title2->SetBackgroundColour(wxColour(248,248,248));
 
         wxBoxSizer *bSizer_control_title = new wxBoxSizer(wxHORIZONTAL);
-        m_staticText_control2             = new Label(m_panel_control_title2,("Info and Control"));
+        m_staticText_control2             = new Label(m_panel_control_title2,_L("Info and Control"));
         m_staticText_control2->Wrap(-1);
         m_staticText_control2->SetFont(wxFont(wxFontInfo(16)));
         m_staticText_control2->SetForegroundColour(wxColour(51,51,51));
@@ -1017,7 +998,7 @@ void SingleDeviceState::setupLayoutIdlePage(wxBoxSizer* idleSizer,wxPanel* paren
         
         m_idle_device_pic = create_scaled_bitmap("monitor_device_idle", this, 112);
         m_idle_device_staticbitmap = new wxStaticBitmap(m_panel_idle, wxID_ANY, m_idle_device_pic);
-        m_staticText_idle = new Label(m_panel_idle, ("The Current Device has no Printing Projects"));
+        m_staticText_idle = new Label(m_panel_idle, _L("The Current Device has no Printing Projects"));
         m_staticText_idle->Wrap(-1);
         m_staticText_idle->SetFont(wxFont(wxFontInfo(16)));
         m_staticText_idle->SetForegroundColour(wxColour(51,51,51));
@@ -1061,7 +1042,7 @@ void SingleDeviceState::setupLayoutIdlePage(wxBoxSizer* idleSizer,wxPanel* paren
         m_idle_file_list_pic = create_scaled_bitmap("local_file_list", m_panel_idle_text, 18);
         m_idle_file_list_staticbitmap = new wxStaticBitmap(m_panel_idle_text, wxID_ANY, m_idle_file_list_pic);
 
-        m_staticText_file_list = new Label(m_panel_idle_text, ("Local File List"));
+        m_staticText_file_list = new Label(m_panel_idle_text, _L("Local File List"));
         //m_staticText_file_list->Wrap(-1);
         m_staticText_file_list->SetFont(wxFont(wxFontInfo(13)));
         m_staticText_file_list->SetForegroundColour(wxColour(51,51,51));
@@ -1098,8 +1079,9 @@ void SingleDeviceState::setupLayoutIdlePage(wxBoxSizer* idleSizer,wxPanel* paren
 
         m_idle_tempMixDevice = new TempMixDevice(parent,false);
         idleSizer->Add(m_idle_tempMixDevice, 0, wxALL | wxEXPAND , 0);
+        //idleSizer->Add(m_idle_tempMixDevice, wxSizerFlags(1).Expand());
 
-// //***温度控件
+//***温度控件
 
 //         wxBoxSizer *bSizer_temperature  = new wxBoxSizer(wxHORIZONTAL);
 //         auto m_panel_temperature = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(30)), wxTAB_TRAVERSAL);

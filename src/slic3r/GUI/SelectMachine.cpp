@@ -734,7 +734,7 @@ void SelectMachinePopup::update_user_devices()
                 }
             }
             op->Bind(EVT_UNBIND_MACHINE, [this, devOpr, devObj](wxCommandEvent &e) {
-                MessageDialog msg_wingow(nullptr, _L("Are you sure to unbind this device?"), _("Question"), wxYES_NO);
+                MessageDialog msg_wingow(nullptr, _L("Are you sure to unbind this device?"), _L("Question"), wxYES_NO);
                 if (wxID_YES == msg_wingow.ShowModal()) {
                     devOpr->unbind_lan_machine(devObj);
 
@@ -756,7 +756,7 @@ void SelectMachinePopup::update_user_devices()
                     devOpr->set_selected_machine("");
                 }*/
                 });
-
+            string name = devObj->get_dev_name();
             if (!devObj->is_online()) {
                 op->SetToolTip(_L("Offline"));
                 op->set_printer_state(PrinterState::OFFLINE_WAN);

@@ -7,6 +7,8 @@ BEGIN_EVENT_TABLE(Button, StaticBox)
 
 EVT_LEFT_DOWN(Button::mouseDown)
 EVT_LEFT_UP(Button::mouseReleased)
+EVT_ENTER_WINDOW(Button::mouseEnter)
+EVT_LEAVE_WINDOW(Button::mouseLeave)
 EVT_MOUSE_CAPTURE_LOST(Button::mouseCaptureLost)
 EVT_KEY_DOWN(Button::keyDownUp)
 EVT_KEY_UP(Button::keyDownUp)
@@ -154,6 +156,11 @@ void Button::Rescale()
     messureSize();
 }
 
+void Button::SetFlashForge(bool bFlashForge) 
+{
+    m_flashforge = bFlashForge; 
+}
+
 void Button::paintEvent(wxPaintEvent& evt)
 {
     // depending on your system you may need to look at double-buffered dcs
@@ -258,6 +265,11 @@ void Button::mouseDown(wxMouseEvent& event)
 {
     event.Skip();
     pressedDown = true;
+    if (m_flashforge) {
+        SetBorderWidth(0);
+        SetBorderColor(wxColour(255, 255, 255));
+        SetBackgroundColor(wxColour(217, 234, 255));
+    }
     if (canFocus)
         SetFocus();
     if (!HasCapture())
@@ -269,10 +281,34 @@ void Button::mouseReleased(wxMouseEvent& event)
     event.Skip();
     if (pressedDown) {
         pressedDown = false;
+        if (m_flashforge) {
+            SetBorderWidth(0);
+            SetBorderColor(wxColour(255, 255, 255));
+            SetBackgroundColor(wxColour(255, 255, 255));
+        }
         if (HasCapture())
             ReleaseMouse();
         if (wxRect({0, 0}, GetSize()).Contains(event.GetPosition()))
             sendButtonEvent();
+    }
+}
+
+void Button::mouseEnter(wxMouseEvent &event)
+{ 
+    event.Skip(); 
+    if (m_flashforge) {
+        SetBorderWidth(1);
+        SetBorderColor(wxColour(50, 141, 251));
+    }
+}
+
+void Button::mouseLeave(wxMouseEvent &event) 
+{
+    event.Skip();
+    if (m_flashforge) {
+        SetBorderWidth(0);
+        SetBorderColor(wxColour(255, 255, 255));
+        SetBackgroundColor(wxColour(255, 255, 255));
     }
 }
 

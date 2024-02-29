@@ -247,6 +247,7 @@ DeviceObjectOpr::DeviceObjectOpr()
 
     MultiComMgr::inst()->Bind(COM_CONNECTION_EXIT_EVENT, &DeviceObjectOpr::onConnectExit, this);
     MultiComMgr::inst()->Bind(COM_CONNECTION_READY_EVENT, &DeviceObjectOpr::onConnectReady, this);
+    MultiComMgr::inst()->Bind(COM_DEV_DETAIL_UPDATE_EVENT, &DeviceObjectOpr::onConnectUpdate, this);
 }
 
 DeviceObjectOpr::~DeviceObjectOpr()
@@ -448,6 +449,12 @@ void DeviceObjectOpr::get_my_machine_list(map<string, DeviceObject *> &devList)
     }
 }
 
+void DeviceObjectOpr::clear_my_machine_list() 
+{
+    m_user_devices.clear();
+    m_scan_devices.clear();
+}
+
 DeviceObject* DeviceObjectOpr::get_scan_device(const string& dev_id)
 {
     if (dev_id.empty())
@@ -564,6 +571,7 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
             devObj->set_connection_type(CONNECTTYPE_CLOUD);
             devObj->set_connecting(false);
             devObj->set_connected_ready(true);
+            devObj->set_online_state(data.wanDevInfo.status != "offline");
             m_user_devices.emplace(make_pair(macSN, devObj));
         }
     } else {
@@ -589,6 +597,25 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
         userObj->set_online_state(true);
         userObj->set_connecting(false);
         userObj->set_connected_ready(true);
+    }
+}
+
+void DeviceObjectOpr::onConnectUpdate(ComDevDetailUpdateEvent &event)
+{
+    int                   connectId = event.id;
+    const com_dev_data_t &data      = MultiComMgr::inst()->devData(connectId);
+    if (data.connectMode == COM_CONNECT_WAN) {
+        auto   it     = m_user_devices.find(data.wanDevInfo.devId);
+        if (it != m_user_devices.end()) {
+            it->second->set_online_state(data.wanDevInfo.status != "offline");
+        }
+        string name   = data.wanDevInfo.name;
+        string status = data.wanDevInfo.status;
+        string number = data.wanDevInfo.serialNumber;        
+
+        BOOST_LOG_TRIVIAL(info) << "+++++++++++++++++++++dev name: " << name.c_str() << "status: "<< status.c_str();
+    } else {
+
     }
 }
 

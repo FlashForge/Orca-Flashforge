@@ -124,6 +124,7 @@ public:
     void update_device_status(DeviceObject* obj);
     void update_connect_err_info(int code, wxString desc, wxString info);
     void show_status(int status);
+    int  getConnectInfoHeight();
 
 public:
     SideToolsPanel* get_panel() {return m_side_tools;};

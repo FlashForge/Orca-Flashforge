@@ -18,6 +18,7 @@ class Button : public StaticBox
     bool m_selected  = true;
     bool canFocus  = true;
     bool m_flashforge_selected = false;
+    bool m_flashforge = false;
 
     static const int buttonWidth = 200;
     static const int buttonHeight = 50;
@@ -61,6 +62,8 @@ public:
 
     void Rescale();
 
+    void SetFlashForge(bool bFlashForge = false);
+
 protected:
 #ifdef __WIN32__
     WXLRESULT MSWWindowProc(WXUINT nMsg, WXWPARAM wParam, WXLPARAM lParam) override;
@@ -78,6 +81,8 @@ private:
     // some useful events
     void mouseDown(wxMouseEvent& event);
     void mouseReleased(wxMouseEvent& event);
+    void mouseEnter(wxMouseEvent &event);
+    void mouseLeave(wxMouseEvent &event);
     void mouseCaptureLost(wxMouseCaptureLostEvent &event);
     void keyDownUp(wxKeyEvent &event);
 
