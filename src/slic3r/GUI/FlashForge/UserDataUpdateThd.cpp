@@ -75,6 +75,7 @@ void UserDataUpdateThd::updateUserProfile(const std::string &accessToken)
         fnetRet = m_networkIntfc->getUserProfile(accessToken.c_str(), &fnetProfile, ComTimeoutWan);
         fnet::FreeInDestructor freeProfile(fnetProfile, m_networkIntfc->freeUserProfile);
         if (fnetRet == FNET_OK) {
+            userProfile.uid = fnetProfile->uid;
             userProfile.nickname = fnetProfile->nickname;
             userProfile.headImgUrl = fnetProfile->headImgUrl;
             break;
