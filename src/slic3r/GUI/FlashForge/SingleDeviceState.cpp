@@ -403,7 +403,7 @@ wxBoxSizer* SingleDeviceState::create_monitoring_page()
         sizer->Add(m_panel_monitoring_title, 0, wxEXPAND | wxALL, 0);
 
         //播放控件
-        m_camera_play_url = wxString::Format("file://%s/web/orca/missing_connection.html?lang=http://192.168.4.9:8080/?action=stream", from_u8(resources_dir()));
+        m_camera_play_url = wxString::Format("file://%s/web/orca/missing_connection.html?lang=http://192.168.4.128:8080/?action=stream", from_u8(resources_dir()));
         m_browser = WebView::CreateWebView(this,m_camera_play_url);
         if(m_browser == nullptr){
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format("load web view of SingleDeviceState url failed");
@@ -451,6 +451,8 @@ wxBoxSizer* SingleDeviceState::create_machine_control_title()
             e.Skip();
             m_staticText_device_info->Hide();
             m_clear_button->Hide();
+            m_staticText_file_name->SetLabel("555666777888999");
+            Layout();
         });
 
         bSizer_h_title->Add(m_clear_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
@@ -590,7 +592,7 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         m_panel_control_title->SetBackgroundColour(wxColour(248,248,248));
 
         wxBoxSizer *bSizer_control_title = new wxBoxSizer(wxHORIZONTAL);
-        m_staticText_control = new Label(m_panel_control_title,("Info and Control"));
+        m_staticText_control = new Label(m_panel_control_title,_L("Info and Control"));
         m_staticText_control->Wrap(-1);
         m_staticText_control->SetFont(wxFont(wxFontInfo(16)));
         m_staticText_control->SetForegroundColour(wxColour(51,51,51));
@@ -623,38 +625,59 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         wxBoxSizer *bSizer_control_info = new wxBoxSizer(wxHORIZONTAL);
 
 //***水平布局添加最左侧空白
-        auto m_panel_separotor_left = new wxPanel(m_panel_control_info, wxID_ANY, wxDefaultPosition,wxDefaultSize, wxTAB_TRAVERSAL);
+        auto m_panel_separotor_left = new wxPanel(m_panel_control_info, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(17), -1),wxTAB_TRAVERSAL);
         m_panel_separotor_left->SetBackgroundColour(wxColour(255,255,255));
-        m_panel_separotor_left->SetMinSize(wxSize(FromDIP(10), -1));
+        //m_panel_separotor_left->SetMinSize(wxSize(FromDIP(10), -1));
 
         bSizer_control_info->Add(m_panel_separotor_left, 0, wxEXPAND | wxALL, 0);
 
 //添加垂直布局（显示文件内容）
         wxBoxSizer *bSizer_control_file_info = new wxBoxSizer(wxVERTICAL);
-        auto m_panel_control_file_info = new wxPanel(m_panel_control_info, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(145)), wxTAB_TRAVERSAL);
+        //auto m_panel_control_file_info = new wxPanel(m_panel_control_info, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(145)), wxTAB_TRAVERSAL);
+        auto m_panel_control_file_info = new wxPanel(m_panel_control_info, wxID_ANY, wxDefaultPosition, wxDefaultSize,wxTAB_TRAVERSAL);
         m_panel_control_file_info->SetBackgroundColour(wxColour(255,255,255));
 
+ //文件信息
+        wxBoxSizer *bSizer_control_file_name = new wxBoxSizer(wxHORIZONTAL);
+        auto m_panel_control_file_name = new wxPanel(m_panel_control_file_info, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+        m_panel_control_file_name->SetBackgroundColour(wxColour(255, 255, 255));
+
+        //显示文件标题
+        m_staticText_file_head = new Label(m_panel_control_file_name, _L("file: "));
+        m_staticText_file_head->Wrap(-1);
+        m_staticText_file_head->SetFont(wxFont(wxFontInfo(16)));
+        m_staticText_file_head->SetForegroundColour(wxColour(51, 51, 51));
+
         //显示文件名称
-        m_staticText_file_name = new Label(m_panel_control_file_info, ("file: 12345678"));
+        m_staticText_file_name = new Label(m_panel_control_file_name, "123456");
         m_staticText_file_name->Wrap(-1);
         m_staticText_file_name->SetFont(wxFont(wxFontInfo(16)));
-        m_staticText_file_name->SetForegroundColour(wxColour(51,51,51));
+        m_staticText_file_name->SetForegroundColour(wxColour(51, 51, 51));
 
-        bSizer_control_file_info->Add(m_staticText_file_name, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
-        
+        bSizer_control_file_name->Add(m_staticText_file_head);
+        bSizer_control_file_name->Add(m_staticText_file_name);
+        m_panel_control_file_name->SetSizer(bSizer_control_file_name);
+        m_panel_control_file_name->Layout();
+        bSizer_control_file_name->Fit(m_panel_control_file_name);
+
+
+        bSizer_control_file_info->Add(m_panel_control_file_name, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+ /*       
         //显示设备状态
-        m_staticText_device_state = new Label(m_panel_control_file_info, ("pause"));
+        m_staticText_device_state = new Label(m_panel_control_file_info, _L("pause"));
         m_staticText_device_state->Wrap(-1);
         m_staticText_device_state->SetFont(wxFont(wxFontInfo(16)));
         m_staticText_device_state->SetForegroundColour(wxColour(50,141,251));
 
         bSizer_control_file_info->Add(m_staticText_device_state, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+*/
 
-//文件中间白条（分隔）
-        auto m_panel_separotor_mid = new wxPanel(m_panel_control_file_info, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(11)), wxTAB_TRAVERSAL);
-        m_panel_separotor_mid->SetBackgroundColour(wxColour(255,255,255));
-
-        bSizer_control_file_info->Add(m_panel_separotor_mid, 0, wxEXPAND | wxALL, 0);
+////文件中间白条（分隔）
+//        auto m_panel_separotor_mid = new wxPanel(m_panel_control_file_info, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(24)), wxTAB_TRAVERSAL);
+//        m_panel_separotor_mid->SetBackgroundColour(wxColour(255,255,255));
+//
+//        bSizer_control_file_info->Add(m_panel_separotor_mid, 0, wxEXPAND | wxALL, 0);
+        bSizer_control_file_info->AddStretchSpacer();
 
         //显示倒计时
         m_staticText_count_time = new Label(m_panel_control_file_info, ("00:33:22"));
@@ -665,15 +688,22 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         bSizer_control_file_info->Add(m_staticText_count_time, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
 
         //显示剩余时间标签
-        m_staticText_time_label = new Label(m_panel_control_file_info, ("Remaining Time"));
+        m_staticText_time_label = new Label(m_panel_control_file_info, _L("Remaining Time"));
         m_staticText_time_label->Wrap(-1);
-        m_staticText_time_label->SetFont(wxFont(wxFontInfo(16)));
+        m_staticText_time_label->SetFont(wxFont(wxFontInfo(13)));
         m_staticText_time_label->SetForegroundColour(wxColour(153,153,153));
 
         bSizer_control_file_info->Add(m_staticText_time_label, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
 
+        auto m_panel_separotor_mid = new wxPanel(m_panel_control_file_info, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(11)),wxTAB_TRAVERSAL);
+        m_panel_separotor_mid->SetBackgroundColour(wxColour(255, 255, 255));
+
+        bSizer_control_file_info->Add(m_panel_separotor_mid, 0, wxEXPAND | wxALL, 0);
+
         //显示进度条
-        m_progress_bar = new ProgressBar(m_panel_control_file_info,wxID_ANY,100,wxDefaultPosition,wxSize(FromDIP(101),FromDIP(5)),true);
+        m_progress_bar = new ProgressBar(m_panel_control_file_info,wxID_ANY,100,wxDefaultPosition,wxSize(FromDIP(201),FromDIP(5)),true);
+        m_progress_bar->SetProgress(30);
+        m_progress_bar->SetProgressBackgroundColour(wxColour(50, 141, 251));
         bSizer_control_file_info->Add(m_progress_bar, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
 
         m_panel_control_file_info->SetSizer(bSizer_control_file_info);

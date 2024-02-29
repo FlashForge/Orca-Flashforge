@@ -132,8 +132,9 @@ protected:
     wxPanel*       m_panel_separator_top_title_right;
     wxPanel*       m_panel_top_right_info;
 
+    Label*   m_staticText_file_head;
     Label*   m_staticText_file_name;
-    Label*   m_staticText_device_state;
+//    Label*   m_staticText_device_state;
     Label*   m_staticText_count_time;
     Label*   m_staticText_time_label;
     ProgressBar* m_progress_bar;
