@@ -291,12 +291,14 @@ void MonitorPanel::on_printer_clicked(wxMouseEvent &event)
 
     if (!m_side_tools->is_in_interval()) {
         wxPoint pos = m_side_tools->ClientToScreen(wxPoint(0, 0));
+        wxPoint mainPos  = wxGetApp().mainframe->ClientToScreen(wxPoint(0, 0));
+        int     toolPosy = pos.y - mainPos.y;
         pos.y += m_side_tools->GetRect().height;
         //pos.x = pos.x < 0? 0:pos.x;
         m_select_machine.Move(pos);
 
-        wxSize sizeAll = wxGetApp().mainframe->GetSize();
-        int side_tools_height = sizeAll.y - rect.y - m_side_tools->GetRect().height - 10;
+        wxSize sizeAll = wxGetApp().mainframe->GetSize();        
+        int side_tools_height = sizeAll.y /*- rect.y*/ - toolPosy - m_side_tools->GetRect().height - m_side_tools->getConnectInfoHeight() - 10;
 
 //#ifdef __linux__
         m_select_machine.SetSize(wxSize(m_side_tools->GetSize().x, side_tools_height));
@@ -464,7 +466,23 @@ void MonitorPanel::show_status(int status)
 
 Freeze();
     // update panels
-    if (m_side_tools) { m_side_tools->show_status(status); };
+    if (m_side_tools) {
+        int  h                = m_side_tools->getConnectInfoHeight();
+        bool connectInfoEmpty = h == 0;
+        m_side_tools->show_status(status);
+        int  h1                = m_side_tools->getConnectInfoHeight();
+        bool connectInfoEmpty1 = h1 == 0;
+        wxSize listSize          = m_select_machine.GetSize();
+        if (connectInfoEmpty && !connectInfoEmpty1) {
+            m_select_machine.SetSize(wxSize(listSize.x, listSize.y - h1));
+            m_select_machine.SetMaxSize(wxSize(listSize.x, listSize.y - h1));
+            m_select_machine.SetMinSize(wxSize(listSize.x, listSize.y - h1));
+        } else if (!connectInfoEmpty && connectInfoEmpty1) {
+            m_select_machine.SetSize(wxSize(listSize.x, listSize.y + h));
+            m_select_machine.SetMaxSize(wxSize(listSize.x, listSize.y + h));
+            m_select_machine.SetMinSize(wxSize(listSize.x, listSize.y + h));
+        }
+    };
     //m_status_info_panel->show_status(status);
     m_hms_panel->show_status(status);
     m_upgrade_panel->show_status(status);

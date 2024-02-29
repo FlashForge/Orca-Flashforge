@@ -898,7 +898,7 @@ void LoginDialog::onPage1Login(wxCommandEvent& event)
             app_config->set("refresh_token",token_data.refreshToken);
             app_config->set("expire_time",std::to_string(token_data.expiresIn));
              Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data.accessToken);
-        } 
+        }
     }
     else if (login_result == ComErrno::COM_INVALID_VALIDATION){
         m_timer.Bind(wxEVT_TIMER, &LoginDialog::OnTimer, this);
