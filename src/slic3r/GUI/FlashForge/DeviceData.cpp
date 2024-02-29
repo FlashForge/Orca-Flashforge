@@ -240,7 +240,6 @@ string DeviceObject::get_printer_thumbnail_img_str()
 
 
 
-
 DeviceObjectOpr::DeviceObjectOpr()
 {
     read_local_machine_from_config();
@@ -301,16 +300,16 @@ void DeviceObjectOpr::read_local_machine_from_config()
 {
     AppConfig *config = GUI::wxGetApp().app_config;
     if (config) {
-        std::vector<MacInfoMap *> macInfo;
+        std::vector<MacInfoMap> macInfo;
         config->get_local_mahcines(macInfo);
 
         for (auto& mac : macInfo) {
-            auto it = mac->find("dev_id");
-            if (it != mac->end()) {
+            auto it = mac.find("dev_id");
+            if (it != mac.end()) {
                 string dev_id = it->second;
                 string dev_name;
-                it = mac->find("dev_name");
-                if (it != mac->end())
+                it = mac.find("dev_name");
+                if (it != mac.end())
                     dev_name = it->second;
                 if (m_local_devices.find(dev_id) == m_local_devices.end()) {
                     DeviceObject *obj = new DeviceObject(dev_id, dev_name);
@@ -581,7 +580,7 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
 
             AppConfig *config = GUI::wxGetApp().app_config;
             if (config) {
-                config->save_bind_machine_to_config(devObj->get_dev_id(), devObj->get_dev_name());
+                config->save_bind_machine_to_config(devObj->get_dev_id(), devObj->get_dev_name(), data.devDetail->location, devObj->get_dev_pid());
             }
         } else {
             userObj = it->second;

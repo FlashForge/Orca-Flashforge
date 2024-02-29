@@ -6258,13 +6258,12 @@ void Plater::priv::on_action_print_plate(SimpleEvent&)
     if (q != nullptr) {
         BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << ":received print plate event\n" ;
     }
-    
+#if 1
     if (!m_send_to_sdcard_dlg) m_send_to_sdcard_dlg = new SendToPrinterDialog(q);
     m_send_to_sdcard_dlg->prepare(partplate_list.get_curr_plate_index(), true);
 	m_send_to_sdcard_dlg->ShowModal();
     record_start_print_preset("print_plate");
-
-#if 0
+#else
     //BBS
     if (!m_select_machine_dlg) m_select_machine_dlg = new SelectMachineDialog(q);
     m_select_machine_dlg->set_print_type(PrintFromType::FROM_NORMAL);

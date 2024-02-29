@@ -34,7 +34,7 @@ public:
 	};
 
     typedef std::map<std::string, std::string> MacInfoMap;
-    typedef std::vector<MacInfoMap *>          LocalMacInfo; 
+    typedef std::vector<MacInfoMap>			   LocalMacInfo;	
 
     //BBS: remove GCodeViewer as seperate APP logic
 	explicit AppConfig() :
@@ -236,7 +236,7 @@ public:
     bool				is_engineering_region();
 
     void                get_local_mahcines(LocalMacInfo &local_machines);
-    void                save_bind_machine_to_config(const std::string& dev_id, const std::string& dev_name);
+    void                save_bind_machine_to_config(const std::string& dev_id, const std::string& dev_name, const std::string& placement, const unsigned short& pid);
     void                erase_local_machine(const std::string &dev_id, const std::string &dev_name);
 
 	// reset the current print / filament / printer selections, so that 

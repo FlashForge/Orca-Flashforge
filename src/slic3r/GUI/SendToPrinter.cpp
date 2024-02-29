@@ -709,6 +709,10 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/)
 	m_topPanel->SetSizer(m_topSizer);
 	m_topPanel->Layout();
 
+    m_sizer_material = new wxGridSizer(0, 4, 0, FromDIP(5));
+    m_material_panel = new wxPanel(this, wxID_ANY);
+    m_material_panel->SetSizer(m_sizer_material);
+
     auto line_materia = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 1), wxTAB_TRAVERSAL);
     line_materia->SetForegroundColour(wxColour("#DDDDDD"));
     line_materia->SetBackgroundColour(wxColour("#DDDDDD"));
@@ -881,6 +885,8 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/)
     m_sizer_main->AddSpacer(FromDIP(10));
     m_sizer_main->Add(m_topPanel, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT, FromDIP(30));
     m_sizer_main->AddSpacer(FromDIP(6));
+    m_sizer_main->Add(m_material_panel, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(40));
+    m_sizer_main->AddSpacer(FromDIP(12));
     m_sizer_main->Add(line_materia, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
     m_sizer_main->AddSpacer(FromDIP(12));
     m_sizer_main->Add(levelSizer, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
@@ -1384,21 +1390,125 @@ void SendToPrinterDialog::set_default()
         m_thumbnailPanel->set_thumbnail(image);
     }
     
+    //for black list
     std::vector<std::string> materials;
+    std::vector<std::string> brands;
     std::vector<std::string> display_materials;
-    {
-        auto preset_bundle = wxGetApp().preset_bundle;
-        for (auto filament_name : preset_bundle->filament_presets) {
-            for (auto iter = preset_bundle->filaments.lbegin(); iter != preset_bundle->filaments.end(); iter++) {
-                if (filament_name.compare(iter->name) == 0) {
-                    std::string display_filament_type;
-                    std::string filament_type = iter->config.get_filament_type(display_filament_type);
-                    display_materials.push_back(display_filament_type);
-                    materials.push_back(filament_type);
-                }
+
+    auto preset_bundle = wxGetApp().preset_bundle;
+    for (auto filament_name : preset_bundle->filament_presets) {
+        for (auto iter = preset_bundle->filaments.lbegin(); iter != preset_bundle->filaments.end(); iter++) {
+            if (filament_name.compare(iter->name) == 0) {
+                std::string display_filament_type;
+                std::string filament_type = iter->config.get_filament_type(display_filament_type);
+                display_materials.push_back(display_filament_type);
+                materials.push_back(filament_type);
+
+                if (iter->vendor && !iter->vendor->name.empty())
+                    brands.push_back(iter->vendor->name);
+                else
+                    brands.push_back("");
             }
         }
     }
+
+    //init MaterialItem
+    auto        extruders = wxGetApp().plater()->get_partplate_list().get_curr_plate()->get_used_extruders();
+    BitmapCache bmcache;
+
+    MaterialHash::iterator iter = m_materialList.begin();
+    while (iter != m_materialList.end()) {
+        int       id = iter->first;
+        Material* item = iter->second;
+        item->item->Destroy();
+        delete item;
+        iter++;
+    }
+    m_sizer_material->Clear();
+    m_materialList.clear();
+    m_filaments.clear();
+
+    for (auto i = 0; i < extruders.size(); i++) {
+        auto          extruder = extruders[i] - 1;
+        auto          colour   = wxGetApp().preset_bundle->project_config.opt_string("filament_colour", (unsigned int) extruder);
+        unsigned char rgb[4];
+        bmcache.parse_color4(colour, rgb);
+
+        auto          colour_rgb = wxColour((int) rgb[0], (int) rgb[1], (int) rgb[2], (int) rgb[3]);
+        if (extruder >= materials.size() || extruder < 0 || extruder >= display_materials.size())
+            continue;
+
+        MaterialItem* item = new MaterialItem(m_material_panel, colour_rgb, _L(display_materials[extruder]));
+        m_sizer_material->Add(item, 0, wxALL, FromDIP(4));
+#if 0
+        item->Bind(wxEVT_LEFT_UP, [this, item, materials, extruder](wxMouseEvent& e) {});
+        item->Bind(wxEVT_LEFT_DOWN, [this, item, materials, extruder](wxMouseEvent& e) {
+
+            DeviceManager* dev_manager = Slic3r::GUI::wxGetApp().getDeviceManager();
+            if (!dev_manager) return;
+            MachineObject* curr_obj = dev_manager->get_selected_machine();
+
+            MaterialHash::iterator iter = m_materialList.begin();
+            while (iter != m_materialList.end()) {
+                int           id = iter->first;
+                Material* item = iter->second;
+                MaterialItem* m = item->item;
+                m->on_normal();
+                iter++;
+            }
+
+            m_current_filament_id = extruder;
+            item->on_selected();
+
+
+            auto    mouse_pos = ClientToScreen(e.GetPosition());
+            wxPoint rect = item->ClientToScreen(wxPoint(0, 0));
+            // update ams data
+           
+            if (curr_obj && curr_obj->is_support_ams_mapping()) {
+                if (m_mapping_popup.IsShown()) return;
+                wxPoint pos = item->ClientToScreen(wxPoint(0, 0));
+                pos.y += item->GetRect().height;
+                m_mapping_popup.Move(pos);
+
+                if (curr_obj->has_ams() &&
+                    m_checkbox_list["use_ams"]->GetValue() &&
+                    curr_obj->dev_id == m_printer_last_select)
+                {
+                    m_mapping_popup.set_parent_item(item);
+                    m_mapping_popup.set_current_filament_id(extruder);
+                    m_mapping_popup.set_tag_texture(materials[extruder]);
+                    m_mapping_popup.update_ams_data(curr_obj->amsList);
+                    m_mapping_popup.Popup();
+                }
+            }
+         });
+#endif
+
+        Material* material_item = new Material();
+        material_item->id = extruder;
+        material_item->item = item;
+        m_materialList[i] = material_item;
+
+        // build for ams mapping
+        if (extruder < materials.size() && extruder >= 0) {
+            FilamentInfo info;
+            info.id = extruder;
+            info.type = materials[extruder];
+            info.brand = brands[extruder];
+            info.color = wxString::Format("#%02X%02X%02X%02X", colour_rgb.Red(), colour_rgb.Green(), colour_rgb.Blue(), colour_rgb.Alpha()).ToStdString();
+            m_filaments.push_back(info);
+        }
+    }
+
+    if (extruders.size() <= 4) {
+        m_sizer_material->SetCols(extruders.size());
+    }
+    else {
+        m_sizer_material->SetCols(4);
+    }
+    m_material_panel->Layout();
+    m_material_panel->Fit();
 
     m_topPanel->Layout();
     m_topPanel->Fit();

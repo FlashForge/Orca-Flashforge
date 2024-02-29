@@ -1,5 +1,8 @@
 #include "DeviceListPanel.hpp"
 #include "slic3r/GUI/I18N.hpp"
+#include "slic3r/GUI/FFUtils.hpp"
+#include "slic3r/GUI/GUI_App.hpp"
+#include "DeviceData.hpp"
 
 namespace Slic3r {
 namespace GUI {
@@ -73,121 +76,197 @@ void ListBoxPopup::resetSize(const wxSize &size)
 }
 
 
-
-
-BEGIN_EVENT_TABLE(MachineItemPanel, wxPanel)
-
-EVT_LEFT_DOWN(MachineItemPanel::mouseDown)
-EVT_LEFT_UP(MachineItemPanel::mouseReleased)
-EVT_MOUSE_CAPTURE_LOST(MachineItemPanel::mouseCaptureLost)
-EVT_ENTER_WINDOW(MachineItemPanel::onEnterPanel)
-EVT_LEAVE_WINDOW(MachineItemPanel::onLeavePanel)
-
-END_EVENT_TABLE()
-
-MachineItemPanel::MachineItemPanel(wxWindow *parent, int connectId /* = -1*/) 
+std::map<unsigned short, wxBitmap> DeviceItemPanel::m_machineBitmapMap;
+DeviceItemPanel::DeviceItemPanel(wxWindow *parent, const DeviceInfo& info) 
     : wxPanel(parent)
-    , m_connectId(connectId) 
 { 
-    initControl();
-    setPanelBoxSizer();
+    build();
+    connectEvent();
+    updateInfo(info);
 }
 
-void MachineItemPanel::initControl()
+void DeviceItemPanel::build()
 {
-    m_staticText_name = new wxStaticText(this, wxID_ANY, wxT("AD5M"));
-    m_staticBitmap_Icon = new wxStaticBitmap(this, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxDefaultSize, 0);
-    m_staticBitmap_Icon->SetBitmap(create_scaled_bitmap("device_Ad5m", nullptr, 100));
-    m_staticText_position = new wxStaticText(this, wxID_ANY, wxT("Store1"));
-    m_staticText_status   = new wxStaticText(this, wxID_ANY, wxT("Idle"));
+    Freeze();
+    SetSize(FromDIP(220), FromDIP(205));
+    SetMinSize(wxSize(FromDIP(220), FromDIP(205)));
+    SetMaxSize(wxSize(FromDIP(220), FromDIP(205)));
 
-    SetBackgroundColour(wxColour("#FFFFFF"));
-}
+    m_name_text = new wxStaticText(this, wxID_ANY, wxT("AD5M"));
+    m_name_text->SetBackgroundColour(m_bg_color);
+    m_icon = new wxStaticBitmap(this, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxSize(FromDIP(112), FromDIP(112)), wxALIGN_LEFT);
+    m_icon->SetMinSize(wxSize(FromDIP(112), FromDIP(112)));
+    m_icon->SetMaxSize(wxSize(FromDIP(112), FromDIP(112)));
+    m_icon->SetBackgroundColour(m_bg_color);
+    //m_icon->SetBitmap(create_scaled_bitmap("device_Ad5m", nullptr, FromDIP(112)));
+    m_placement_text = new wxStaticText(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_placement_text->SetBackgroundColour(m_bg_color);
+    m_status_text = new wxStaticText(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_status_text->SetBackgroundColour(m_bg_color);
 
-void MachineItemPanel::setPanelBoxSizer() 
-{
-    wxBoxSizer *hIconSizer = new wxBoxSizer(wxHORIZONTAL);
-    hIconSizer->AddStretchSpacer();
-    hIconSizer->Add(m_staticBitmap_Icon);
-    hIconSizer->AddStretchSpacer();
+    m_main_sizer = new wxBoxSizer(wxVERTICAL);
+    m_main_sizer->AddStretchSpacer(1);
+    m_main_sizer->Add(m_name_text, 0, wxEXPAND | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(10));
+    m_main_sizer->AddSpacer(FromDIP(3));
+    m_main_sizer->Add(m_icon, 0, wxALIGN_CENTER | wxLEFT | wxRIGHT, FromDIP(10));
+    m_main_sizer->AddSpacer(FromDIP(3));
+    m_main_sizer->Add(m_placement_text, 0, wxEXPAND | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(10));
+    m_main_sizer->AddSpacer(FromDIP(3));
+    m_main_sizer->Add(m_status_text, 0, wxEXPAND | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(10));
+    m_main_sizer->AddStretchSpacer(1);
 
-    wxBoxSizer *vBoxSizer = new wxBoxSizer(wxVERTICAL);
-    vBoxSizer->Add(m_staticText_name, 0, wxALL, 10);
-    vBoxSizer->Add(hIconSizer, 1, wxEXPAND);
-    vBoxSizer->Add(m_staticText_position, 0, wxALL, 10);
-    vBoxSizer->Add(m_staticText_status, 0, wxALL, 10);
-
-    SetSizer(vBoxSizer);
-    m_staticBitmap_Icon->SetSize(176, 99);
-    SetMinSize(wxSize(250, 250));
+    SetSizer(m_main_sizer);
     Layout();
     Fit();
+    Thaw();
 }
 
-void MachineItemPanel::mouseDown(wxMouseEvent& event)
+void DeviceItemPanel::connectEvent() 
 {
-    event.Skip();
-    m_pressed = true;
-    if (m_canFocus)
-        SetFocus();
-    if (!HasCapture())
-        CaptureMouse();  // get mouse input, it's useful in cur panel.
+    Bind(wxEVT_LEFT_DOWN, &DeviceItemPanel::mouseDown, this);
+    Bind(wxEVT_LEFT_UP, &DeviceItemPanel::mouseReleased, this);
+    Bind(wxEVT_ENTER_WINDOW, &DeviceItemPanel::onEnter, this);
+    Bind(wxEVT_LEAVE_WINDOW, &DeviceItemPanel::onLeave, this);
+    Bind(wxEVT_PAINT, &DeviceItemPanel::onPaint, this);
 }
-void MachineItemPanel::mouseReleased(wxMouseEvent& event)
+
+bool DeviceItemPanel::isPointIn(const wxPoint& pt)
 {
-    event.Skip();
-    if (m_pressed) {
-        m_pressed = false;
-        if (HasCapture())
-            ReleaseMouse();  // release last mouse capture
-        if (wxRect({0, 0}, GetSize()).Contains(event.GetPosition()))
-            sendButtonEvent();
+    return !(wxHT_WINDOW_OUTSIDE == HitTest(pt));
+}
+
+void DeviceItemPanel::mouseDown(wxMouseEvent& event)
+{
+    if (isPointIn(event.GetPosition())) {
+        m_pressed = true;
+        Refresh();
     }
-}
-void MachineItemPanel::mouseCaptureLost(wxMouseCaptureLostEvent& event)
-{
-    wxMouseEvent evt;
-    mouseReleased(evt);
+    event.Skip();
 }
 
-void MachineItemPanel::onEnterPanel(wxMouseEvent& event)
+void DeviceItemPanel::mouseReleased(wxMouseEvent& event)
 {
-    if (!m_hovered)
+    if (isPointIn(event.GetPosition())) {
+        sendEvent();
+    }
+    m_pressed = false;
+    Refresh();
+    event.Skip();
+}
+
+void DeviceItemPanel::onEnter(wxMouseEvent& event)
+{
+    if (isPointIn(event.GetPosition())) {
         m_hovered = true;
+        Refresh();
+        CaptureMouse();
+    }
+    event.Skip();
 }
 
-void MachineItemPanel::onLeavePanel(wxMouseEvent& event)
+void DeviceItemPanel::onLeave(wxMouseEvent& event)
 {
-    if (m_hovered) {
+    if (!isPointIn(event.GetPosition())) {
         m_hovered = false;
         m_pressed = false;
+        Refresh();
+        if (HasCapture()) {
+            ReleaseMouse(); 
+        }
     }
+    event.Skip();
 }
 
-void MachineItemPanel::sendButtonEvent()
+void DeviceItemPanel::onPaint(wxPaintEvent& event)
+{
+    wxPaintDC dc(this);
+    wxSize sz = GetSize();
+    wxPen pen;
+    pen.SetWidth(3);
+    dc.SetBrush(m_bg_color);
+    if (m_hovered && m_pressed) {
+        pen.SetColour(m_border_press_color);
+    } else if (m_hovered) {
+        pen.SetColour(m_border_hover_color);
+    } else {
+        pen.SetColour(m_border_color);
+    }
+    dc.SetPen(pen);
+    dc.DrawRoundedRectangle(0, 0, sz.x, sz.y, 7);
+    event.Skip();
+}
+
+void DeviceItemPanel::sendEvent()
 {
     wxCommandEvent event(wxEVT_COMMAND_BUTTON_CLICKED, GetId());
     event.SetEventObject(this);
-    GetEventHandler()->ProcessEvent(event);
+    wxPostEvent(this, event);
 }
 
-DevicePanel::DevicePanel(wxWindow *parent) 
-    : wxPanel(parent)
+void DeviceItemPanel::updateInfo(const DeviceInfo& info)
 {
-    MachineItemPanel *item1 = new MachineItemPanel(this);
-    MachineItemPanel *item2 = new MachineItemPanel(this);
-    wxGridSizer      *gridSizer = new wxGridSizer(5, FromDIP(5), FromDIP(5));
-    gridSizer->Add(item1, 1, wxALL, 20);
-    gridSizer->Add(item2, 1, wxALL, 20);
-
-    SetSizer(gridSizer);
+    m_name_text->SetLabel(info.name);
+    m_placement_text->SetLabel(info.placement);
+    if (info.pid != m_info.pid) {
+        m_icon->SetBitmap(machineBitmap(info.pid));
+    }
+    m_info = info;
+    updateStatus();
     Layout();
-    Fit();
-
-    SetBackgroundColour(wxColour(89, 129, 178, 0.5));
 }
 
+wxBitmap DeviceItemPanel::machineBitmap(unsigned short pid)
+{
+    wxBitmap bmp;
+    auto iter = m_machineBitmapMap.find(pid);
+    if (iter == m_machineBitmapMap.end()) {
+        wxString bmp_str = FFUtils::getBitmapFileName(pid);
+        if (!bmp_str.empty()) {
+            bmp = create_scaled_bitmap(bmp_str.ToStdString(), 0, 120);
+            m_machineBitmapMap[pid] = bmp;
+        }
+    } else {
+        bmp = iter->second;
+    }
+    return bmp;
+}
 
+void DeviceItemPanel::updateStatus()
+{
+    wxString status = _T("Idle");    
+    wxColour color("#00CD6D");
+    if (m_info.conn_id < 0) {
+        status = _L("Offline");
+        color = wxColour("#999999");
+    } else {
+        wxString rawstatus = m_info.status;
+        if ("printing" == rawstatus) {
+            status = _L("Printing");
+            color = wxColour("#4D54FF");
+        } else if ("pause" == rawstatus || "pausing" == rawstatus) {
+            status = _L("Paused");
+            color = wxColour("#982187");
+        } else if ("error" == rawstatus) {
+            status = _L("Error");
+            color = wxColour("#FD4A29");
+        } else if ("busy" == rawstatus || "calibrate_doing" == rawstatus || "heating" == rawstatus) {
+            status = _L("Busy");
+            color = wxColour("#F9B61C");
+        } else if ("completed" == rawstatus) {
+            status = _L("Completed");
+            color = wxColour("#328DFB");
+        } else if ("cancel" == rawstatus || "canceling" == rawstatus) {
+            status = _L("Cancel");
+            color = wxColour("#328DFB");
+        }
+        //} else if ("heating" == rawstatus) {
+        //    status = _L("Heating");
+        //    //color = wxColour("");
+        //}
+    }
+    m_status_text->SetLabel(status);
+    m_status_text->SetForegroundColour(color);
+}
 
 
 DeviceListPanel::DeviceListPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, 
@@ -196,9 +275,9 @@ DeviceListPanel::DeviceListPanel(wxWindow* parent, wxWindowID id, const wxPoint&
 {
     this->SetBackgroundColour(0xEEEEEE);
 
-    initControl();
-    setPanelBoxSizer();
+    build();
     connectEvent();
+    initDeviceList();
 }
 
 DeviceListPanel::~DeviceListPanel()
@@ -211,7 +290,7 @@ void DeviceListPanel::msw_rescale()
 	
 }
 
-void DeviceListPanel::initControl()
+void DeviceListPanel::build()
 {
     m_comboBox_position = new CustomComboBox(this, _L("Position"));
     wxArrayString names;
@@ -227,27 +306,7 @@ void DeviceListPanel::initControl()
     m_btn_outer_net = new wxButton(this, wxID_ANY, _L("Outer Net"));
     m_btn_inner_net = new wxButton(this, wxID_ANY, _L("LAN"));
     m_btn_mode         = new wxButton(this, wxID_ANY, _L("Mode"));
-    m_bitmap_no_device = new wxStaticBitmap(this, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxDefaultSize, 0);
-    m_bitmap_no_device->SetBitmap(create_scaled_bitmap("monitor_device_empty", nullptr, 250));
-    m_staticText_no_device = new wxStaticText(this, wxID_ANY, wxT("No Device"));
-    m_staticText_no_device->Wrap(-1);
-    m_staticText_no_device->SetForegroundColour(0x909090);
-    m_machinePanel = new DevicePanel(this);
-    m_machinePanel->Show(false);
-}
 
-void DeviceListPanel::initAllDeviceStatus(wxArrayString &names)
-{
-    names.Clear();
-    names.Add("All");
-    names.Add("Idle");
-    names.Add("Busy");
-    names.Add("Error");
-    names.Add("Printing");
-}
-
-void DeviceListPanel::setPanelBoxSizer()
-{
     wxBoxSizer* hTopSizer = new wxBoxSizer(wxHORIZONTAL);
     hTopSizer->AddSpacer(20);
     hTopSizer->Add(m_comboBox_position, 0, wxALL | wxALIGN_CENTER_VERTICAL);
@@ -265,36 +324,100 @@ void DeviceListPanel::setPanelBoxSizer()
     hTopSizer->Add(m_btn_mode, 0, wxALL | wxALIGN_RIGHT);
     hTopSizer->AddSpacer(20);
 
-    m_noDevice_sizer = new wxBoxSizer(wxVERTICAL);
-    m_noDevice_sizer->AddStretchSpacer();
-    m_noDevice_sizer->Add(m_bitmap_no_device, 0, wxALIGN_CENTER_HORIZONTAL);
-    m_noDevice_sizer->AddSpacer(20);
-    m_noDevice_sizer->Add(m_staticText_no_device, 1, wxALL | wxALIGN_CENTER_HORIZONTAL);
-    m_noDevice_sizer->AddStretchSpacer();
+    m_simple_book = new wxSimplebook(this);
+    // no device panel
+    m_no_device_panel = new wxPanel(m_simple_book);
+    m_no_device_bitmap = new wxStaticBitmap(m_no_device_panel, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxDefaultSize, 0);
+    m_no_device_bitmap->SetBitmap(create_scaled_bitmap("monitor_device_empty", nullptr, 250));
+    m_no_device_staticText = new wxStaticText(m_no_device_panel, wxID_ANY, wxT("No Device"));
+    m_no_device_staticText->Wrap(-1);
+    m_no_device_staticText->SetForegroundColour(0x909090);
+    m_no_device_sizer = new wxBoxSizer(wxVERTICAL);
+    m_no_device_sizer->AddStretchSpacer();
+    m_no_device_sizer->Add(m_no_device_bitmap, 0, wxALIGN_CENTER_HORIZONTAL);
+    m_no_device_sizer->AddSpacer(20);
+    m_no_device_sizer->Add(m_no_device_staticText, 1, wxALL | wxALIGN_CENTER_HORIZONTAL);
+    m_no_device_sizer->AddStretchSpacer();
+    m_no_device_panel->SetSizer(m_no_device_sizer);
+    m_no_device_panel->Layout();
+    m_simple_book->AddPage(m_no_device_panel, wxEmptyString, true);
+
+    m_device_panel = new wxPanel(m_simple_book);
+    m_device_panel->SetBackgroundColour(wxColour("#F0F0F0"));
+    m_device_sizer = new wxGridSizer(5);
+    m_device_sizer->SetHGap(FromDIP(50));
+    m_device_sizer->SetVGap(FromDIP(50));
+    m_device_panel->SetSizer(m_device_sizer);
+    m_simple_book->AddPage(m_device_panel, wxEmptyString, false);
 
     wxStaticLine *horLine = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxSize(160, 1), wxLI_HORIZONTAL);
     horLine->SetBackgroundColour(wxColour(255, 255, 255, 0));
     wxBoxSizer *vAllSizer = new wxBoxSizer(wxVERTICAL);
     vAllSizer->Add(hTopSizer);
     vAllSizer->Add(horLine, 0, wxALIGN_CENTER_HORIZONTAL | wxEXPAND, 10);
-    vAllSizer->Add(m_noDevice_sizer, 1, wxALL | wxALIGN_CENTER_HORIZONTAL);
-    vAllSizer->Add(m_machinePanel, 1, wxEXPAND);
+    vAllSizer->Add(m_simple_book, 1, wxEXPAND | wxALL | wxALIGN_CENTER_HORIZONTAL);
+    //vAllSizer->Add(m_machinePanel, 1, wxEXPAND);
 
     this->SetSizer(vAllSizer);
     this->Layout();
     this->Fit();
 }
 
+void DeviceListPanel::initAllDeviceStatus(wxArrayString &names)
+{
+    names.Clear();
+    names.Add("All");
+    names.Add("Idle");
+    names.Add("Busy");
+    names.Add("Error");
+    names.Add("Printing");
+}
+
 void DeviceListPanel::connectEvent()
 {
-    m_comboBox_position->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e) {
-        on_comboBox_position_clicked(e);
-        });
-    m_comboBox_status->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e) { 
-        on_comboBox_status_clicked(e); 
-        });
-
+    m_comboBox_position->Bind(wxEVT_LEFT_DOWN, &DeviceListPanel::on_comboBox_position_clicked, this);
+    m_comboBox_status->Bind(wxEVT_LEFT_DOWN, &DeviceListPanel::on_comboBox_status_clicked, this); 
     m_btn_mode->Bind(wxEVT_BUTTON, &DeviceListPanel::onModelBtnClicked, this);
+    Bind(wxEVT_SET_FOCUS, &DeviceListPanel::onFocus, this);
+}
+
+void DeviceListPanel::initDeviceList()
+{
+    std::map<std::string, DeviceObject*> devList;
+    wxGetApp().getDeviceObjectOpr()->get_my_machine_list(devList);
+
+    std::vector<std::string> devKeyList;
+    for (auto it: devList) {
+        devKeyList.emplace_back(it.first);
+    }
+    std::sort(devKeyList.begin(), devKeyList.end(), [&devList](auto& a, auto&b) {
+        if (devList[a] && devList[b]) {
+            return devList[a]->get_dev_name().compare(devList[b]->get_dev_name()) < 0;
+        }
+        return false;
+    });
+    //m_device_map
+    DeviceItemPanel::DeviceInfo info;
+    for (auto iter : devKeyList) {
+        //info.conn_id
+        auto obj = devList[iter];
+        if (!obj) continue;
+        info.name = obj->get_dev_name();
+        info.pid = obj->get_dev_pid();
+        info.wlanFlag = !obj->is_lan_mode_printer();
+        DeviceItemPanel* item = new DeviceItemPanel(m_device_panel, info);
+        m_device_map.emplace(std::make_pair(iter, item));
+        m_device_sizer->Add(item);
+    }
+    m_device_panel->Layout();
+}
+
+void DeviceListPanel::onFocus(wxFocusEvent& event)
+{
+    //if (event.()) {    
+        //updateDeviceList();
+    //}
+    event.Skip();
 }
 
 void DeviceListPanel::on_comboBox_position_clicked(wxMouseEvent &event)
@@ -321,9 +444,24 @@ void DeviceListPanel::on_comboBox_status_clicked(wxMouseEvent &event)
 
 void DeviceListPanel::onModelBtnClicked(wxCommandEvent &event)
 {
-    m_noDevice_sizer->Show(false);
-    m_machinePanel->Show(true);
+    m_simple_book->SetSelection(1);
+    m_simple_book->Layout();
     Layout();
+}
+
+void DeviceListPanel::onComConnectionReady(ComConnectionReadyEvent& event)
+{
+    event.Skip();
+}
+
+void DeviceListPanel::onComConnectionExit(ComConnectionExitEvent& event)
+{
+    event.Skip();
+}
+
+void DeviceListPanel::onComDevDetailUpdate(ComDevDetailUpdateEvent& event)
+{
+    event.Skip();
 }
 
 } // GUI

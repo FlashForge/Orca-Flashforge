@@ -49,10 +49,6 @@ const std::string AppConfig::SECTION_LOCAL_MACHINES = "local_machines";
 
 AppConfig::~AppConfig()
 {
-    for (auto &info : m_local_machines) {
-        delete info;
-        info = nullptr;
-    }
     m_local_machines.clear();
 }
 
@@ -607,9 +603,11 @@ std::string AppConfig::load()
                 }
             } else if (it.key() == SECTION_LOCAL_MACHINES) {
                 for (auto& j_machine : it.value()) {
-                    MacInfoMap *info = new MacInfoMap;
-                    info->insert(std::make_pair("dev_id", j_machine["dev_id"].get<std::string>()));
-                    info->insert(std::make_pair("dev_name", j_machine["dev_name"].get<std::string>()));
+                    MacInfoMap info;
+                    info.emplace(std::make_pair("dev_id", j_machine["dev_id"].get<std::string>()));
+                    info.emplace(std::make_pair("dev_name", j_machine["dev_name"].get<std::string>()));
+                    info.emplace(std::make_pair("dev_placement", j_machine["dev_placement"].get<std::string>()));
+                    info.emplace(std::make_pair("dev_pid", j_machine["dev_pid"].get<std::string>()));
                     m_local_machines.push_back(info);
                 }
             } else {
@@ -791,12 +789,18 @@ void AppConfig::save()
     // write binding machines
     for (const auto &mac : m_local_machines) {
         json j_mac;
-        auto it = mac->find("dev_id");
-        if (it != mac->end())
+        auto it = mac.find("dev_id");
+        if (it != mac.end())
             j_mac["dev_id"] = it->second;
-        it = mac->find("dev_name");
-        if (it != mac->end())
+        it = mac.find("dev_name");
+        if (it != mac.end())
             j_mac["dev_name"] = it->second;
+        it = mac.find("dev_placement");
+        if (it != mac.end())
+            j_mac["dev_placement"] = it->second;
+        it = mac.find("dev_pid");
+        if (it != mac.end())
+            j_mac["dev_pid"] = it->second;
         j[SECTION_LOCAL_MACHINES].push_back(j_mac);
     }
     boost::nowide::ofstream c;
@@ -1285,27 +1289,28 @@ void AppConfig::get_local_mahcines(LocalMacInfo& local_machines)
     local_machines.assign(m_local_machines.begin(), m_local_machines.end());
 }
 
-void AppConfig::save_bind_machine_to_config(const std::string& dev_id, const std::string& dev_name)
+void AppConfig::save_bind_machine_to_config(const std::string& dev_id, const std::string& dev_name, const std::string& placement, const unsigned short& pid)
 {
     bool update = false;
+    std::string pid_str = std::to_string(pid);
     for (auto& mac : m_local_machines) {
-        auto it = mac->find("dev_id");
-        if (it != mac->end() && it->second == dev_id) {
-            auto it_name = mac->find("dev_name");
-            if (it_name != mac->end() && it_name->second == dev_name) {
-                return;  // no need to update or add
-            }
-            it_name->second = dev_name;
+        auto it = mac.find("dev_id");
+        if (it != mac.end() && it->second == dev_id) {
+            mac["dev_name"] = dev_name;
+            mac["dev_placement"] = placement;
+            mac["dev_pid"] = placement;
             update = true;
             break;
         }
     }
 
     if (!update) {
-        MacInfoMap *macInfo = new MacInfoMap;
-        macInfo->insert(std::make_pair("dev_id", dev_id));
-        macInfo->insert(std::make_pair("dev_name", dev_name));
-        m_local_machines.push_back(macInfo);
+        MacInfoMap macInfo;
+        macInfo.emplace(std::make_pair("dev_id", dev_id));
+        macInfo.emplace(std::make_pair("dev_name", dev_name));
+        macInfo.emplace(std::make_pair("dev_placement", placement));
+        macInfo.emplace(std::make_pair("dev_pid", pid_str));
+        m_local_machines.emplace_back(macInfo);
     }
     m_dirty = true;
 }
@@ -1314,13 +1319,11 @@ void AppConfig::erase_local_machine(const std::string &dev_id, const std::string
 {
     auto it_mac = m_local_machines.begin();
     for (; it_mac != m_local_machines.end(); ++it_mac) {
-        MacInfoMap *macInfo = *it_mac;
-        auto        it_id   = macInfo->find("dev_id");
-        auto        it_name = macInfo->find("dev_name");
-        if (it_id != macInfo->end() && it_name != macInfo->end()) {
+        const MacInfoMap &macInfo = *it_mac;
+        auto        it_id   = macInfo.find("dev_id");
+        auto        it_name = macInfo.find("dev_name");
+        if (it_id != macInfo.end() && it_name != macInfo.end()) {
             if (it_id->second == dev_id && it_name->second == dev_name) {
-                delete macInfo;
-                macInfo = nullptr;
                 m_local_machines.erase(it_mac);
                 m_dirty = true;
                 break;
