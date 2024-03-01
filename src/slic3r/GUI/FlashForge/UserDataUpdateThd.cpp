@@ -82,7 +82,7 @@ void UserDataUpdateThd::updateUserProfile(const std::string &accessToken)
         } else if (fnetRet == FNET_UNAUTHORIZED) {
             break;
         } else if (i + 1 < tryCnt) {
-            boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
+            boost::this_thread::sleep_for(boost::chrono::seconds(1));
         }
     }
     if (!m_exitThread) {
@@ -102,7 +102,7 @@ void UserDataUpdateThd::updateWanDev(const std::string &accessToken)
         if (fnetRet == FNET_OK || fnetRet == FNET_UNAUTHORIZED) {
             break;
         } else if (i + 1 < tryCnt) {
-            boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
+            boost::this_thread::sleep_for(boost::chrono::seconds(1));
         }
     }
     if (!m_exitThread) {

@@ -102,12 +102,10 @@ ComErrno ComConnection::commandLoop()
                 ret = frontCommand->exec(m_networkIntfc, m_accessToken, m_deviceId);
             }
             processCommand(frontCommand.get(), ret);
-            if (m_connectMode == COM_CONNECT_LAN) {
-                if (ret == COM_OK || ret == COM_DEVICE_IS_BUSY) {
-                    errorCnt = 0;
-                } else if (ret == COM_VERIFY_LAN_DEV_FAILED || ++errorCnt > 5) {
-                    return ret;
-                }
+            if (ret == COM_OK || ret == COM_DEVICE_IS_BUSY) {
+                errorCnt = 0;
+            } else if (ret == COM_VERIFY_LAN_DEV_FAILED || ret == COM_UNAUTHORIZED || ++errorCnt > 5) {
+                return ret;
             }
             m_commandQue.pop(frontCommand->commandId());
         }
@@ -132,13 +130,13 @@ ComErrno ComConnection::initialize(fnet_dev_detail_t **detail)
     if (m_connectMode == COM_CONNECT_LAN) {
         ret = getDevDetail.exec(m_networkIntfc, m_ip, m_port, m_serialNumber, m_checkCode);
     } else {
-        int tryCnt = 3;
+        int tryCnt = 5;
         for (int i = 0; i < tryCnt; ++i) {
             ret = getDevDetail.exec(m_networkIntfc, m_accessToken, m_deviceId);
-            if (ret == FNET_OK || ret == FNET_UNAUTHORIZED) {
+            if (ret == COM_OK || ret == COM_UNAUTHORIZED || m_exitThread) {
                 break;
             } else if (i + 1 < tryCnt) {
-                boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
+                boost::this_thread::sleep_for(boost::chrono::seconds(1));
             }
         }
     }
