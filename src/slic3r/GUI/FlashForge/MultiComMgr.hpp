@@ -75,6 +75,8 @@ private:
 
     void onWanConnReadData(const WanConnReadDataEvent &event);
 
+    void onWanConnReconnect(const wxCommandEvent &);
+
     com_dev_data_t makeDevData(const fnet_wan_dev_info_t *wanDevInfo);
 
 private:

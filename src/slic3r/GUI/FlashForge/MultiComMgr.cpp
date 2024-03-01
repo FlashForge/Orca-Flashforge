@@ -81,6 +81,7 @@ ComErrno MultiComMgr::addWanDev(const std::string &accessToken)
     }
     m_wanAsyncConn->Bind(COM_WAN_DEV_MAINTAIN_EVENT, &MultiComMgr::onWanDevMaintian, this);
     m_wanAsyncConn->Bind(WAN_CONN_READ_DATA_EVENT, &MultiComMgr::onWanConnReadData, this);
+    m_wanAsyncConn->Bind(WAN_CONN_RECONNECT_EVENT, &MultiComMgr::onWanConnReconnect, this);
     m_userDataUpdateThd->setToken(accessToken);
     m_userDataUpdateThd->setUpdateUserProfile();
     m_userDataUpdateThd->setUpdateWanDev();
@@ -351,6 +352,20 @@ void MultiComMgr::onWanConnReadData(const WanConnReadDataEvent &event)
         break;
     }
     m_networkIntfc->freeString(event.readData.devId);
+}
+
+void MultiComMgr::onWanConnReconnect(const wxCommandEvent &)
+{
+    if (m_wanAsyncConn.get() == nullptr) {
+        return;
+    }
+    std::vector<std::string> devIds;
+    for (auto &item : m_devIdMap) {
+        devIds.push_back(item.first);
+    }
+    m_wanAsyncConn->postSubscribeApp(m_userId);
+    m_wanAsyncConn->postSubscribeDev(devIds);
+    m_userDataUpdateThd->setUpdateWanDev();
 }
 
 com_dev_data_t MultiComMgr::makeDevData(const fnet_wan_dev_info_t *wanDevInfo)

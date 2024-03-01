@@ -13,6 +13,7 @@ struct WanConnReadDataEvent : public wxCommandEvent {
     fnet_conn_read_data_t readData;
 };
 wxDECLARE_EVENT(WAN_CONN_READ_DATA_EVENT, WanConnReadDataEvent);
+wxDECLARE_EVENT(WAN_CONN_RECONNECT_EVENT, wxCommandEvent);
 
 class ComWanAsyncConn : public wxEvtHandler
 {
@@ -45,6 +46,8 @@ private:
     void run();
 
     static int readCallback(fnet_conn_read_data_t *readData, void *data);
+
+    static void reconnectCallback(void *data);
 
 private:
     void                          *m_conn;

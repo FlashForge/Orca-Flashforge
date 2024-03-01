@@ -5,6 +5,7 @@
 namespace Slic3r { namespace GUI {
 
 wxDEFINE_EVENT(WAN_CONN_READ_DATA_EVENT, WanConnReadDataEvent);
+wxDEFINE_EVENT(WAN_CONN_RECONNECT_EVENT, wxCommandEvent);
 
 ComWanAsyncConn::ComWanAsyncConn(fnet::FlashNetworkIntfc *networkIntfc)
     : m_conn(nullptr)
@@ -17,6 +18,8 @@ ComErrno ComWanAsyncConn::createConn(const std::string &accessToken)
     fnet_conn_settings_t settings;
     settings.readCallback = readCallback;
     settings.readCallbackData = this;
+    settings.reconnectCallback = reconnectCallback;
+    settings.reconnectCallbackData = this;
     settings.maxReconnectCnt = 5;
     settings.maxErrorCnt = 3;
     settings.msTimeout = ComTimeoutWan;
@@ -155,6 +158,11 @@ int ComWanAsyncConn::readCallback(fnet_conn_read_data_t *readData, void *data)
     event->readData = *readData;
     ((ComWanAsyncConn *)data)->QueueEvent(event);
     return 0;
+}
+
+void ComWanAsyncConn::reconnectCallback(void *data)
+{
+    ((ComWanAsyncConn *)data)->QueueEvent(new wxCommandEvent(WAN_CONN_RECONNECT_EVENT));
 }
 
 }} // namespace Slic3r::GUI
