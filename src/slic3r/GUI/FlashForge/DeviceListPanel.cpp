@@ -206,7 +206,11 @@ void DeviceItemPanel::sendEvent()
 void DeviceItemPanel::updateInfo(const DeviceInfo& info)
 {
     m_name_text->SetLabel(info.name);
-    m_placement_text->SetLabel(info.placement);
+    if (info.placement.empty()) {
+        m_placement_text->SetLabel(_L("Default"));
+    } else {
+        m_placement_text->SetLabel(info.placement);
+    }
     if (info.pid != m_info.pid) {
         m_icon->SetBitmap(machineBitmap(info.pid));
     }
@@ -292,6 +296,7 @@ void DeviceListPanel::msw_rescale()
 
 void DeviceListPanel::build()
 {
+    SetBackgroundColour(wxColour("#F0F0F0"));
     m_comboBox_position = new CustomComboBox(this, _L("Position"));
     wxArrayString names;
     names.Add("All");
@@ -342,20 +347,24 @@ void DeviceListPanel::build()
     m_no_device_panel->Layout();
     m_simple_book->AddPage(m_no_device_panel, wxEmptyString, true);
 
-    m_device_panel = new wxPanel(m_simple_book);
-    m_device_panel->SetBackgroundColour(wxColour("#F0F0F0"));
+    m_device_window = new wxScrolledWindow(m_simple_book);
+    m_device_window->EnableScrolling(true, true);
+    m_device_window->SetScrollRate(0, 10);
+    wxBoxSizer* device_sizer = new wxBoxSizer(wxVERTICAL);
+    //m_device_panel->SetBackgroundColour(wxColour("#F0F0F0"));
     m_device_sizer = new wxGridSizer(5);
-    m_device_sizer->SetHGap(FromDIP(50));
-    m_device_sizer->SetVGap(FromDIP(50));
-    m_device_panel->SetSizer(m_device_sizer);
-    m_simple_book->AddPage(m_device_panel, wxEmptyString, false);
+    m_device_sizer->SetHGap(FromDIP(40));
+    m_device_sizer->SetVGap(FromDIP(40));
+    device_sizer->Add(m_device_sizer, 0, wxALIGN_LEFT | wxALIGN_TOP | wxALL, FromDIP(40));
+    m_device_window->SetSizer(device_sizer);
+    m_simple_book->AddPage(m_device_window, wxEmptyString, false);
 
     wxStaticLine *horLine = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxSize(160, 1), wxLI_HORIZONTAL);
     horLine->SetBackgroundColour(wxColour(255, 255, 255, 0));
     wxBoxSizer *vAllSizer = new wxBoxSizer(wxVERTICAL);
     vAllSizer->Add(hTopSizer);
     vAllSizer->Add(horLine, 0, wxALIGN_CENTER_HORIZONTAL | wxEXPAND, 10);
-    vAllSizer->Add(m_simple_book, 1, wxEXPAND | wxALL | wxALIGN_CENTER_HORIZONTAL);
+    vAllSizer->Add(m_simple_book, 1, wxEXPAND);
     //vAllSizer->Add(m_machinePanel, 1, wxEXPAND);
 
     this->SetSizer(vAllSizer);
@@ -378,46 +387,63 @@ void DeviceListPanel::connectEvent()
     m_comboBox_position->Bind(wxEVT_LEFT_DOWN, &DeviceListPanel::on_comboBox_position_clicked, this);
     m_comboBox_status->Bind(wxEVT_LEFT_DOWN, &DeviceListPanel::on_comboBox_status_clicked, this); 
     m_btn_mode->Bind(wxEVT_BUTTON, &DeviceListPanel::onModelBtnClicked, this);
-    Bind(wxEVT_SET_FOCUS, &DeviceListPanel::onFocus, this);
+    MultiComMgr::inst()->Bind(COM_CONNECTION_READY_EVENT, &DeviceListPanel::onComConnectionReady, this);
+    MultiComMgr::inst()->Bind(COM_CONNECTION_EXIT_EVENT, &DeviceListPanel::onComConnectionExit, this);
+    MultiComMgr::inst()->Bind(COM_DEV_DETAIL_UPDATE_EVENT, &DeviceListPanel::onComDevDetailUpdate, this);
+    wxGetApp().getDeviceObjectOpr()->Bind(EVT_DEVICE_LIST_UPDATED, &DeviceListPanel::onDeviceListUpdated, this);
+}
+
+void DeviceListPanel::initLocalDevice(std::map<std::string, DeviceItemPanel::DeviceInfo>& deviceInfoMap)
+{
+    deviceInfoMap.clear();
+    AppConfig *config = wxGetApp().app_config;
+    if (config) {
+        std::vector<MacInfoMap> macInfo;
+        config->get_local_mahcines(macInfo);
+        DeviceItemPanel::DeviceInfo dev_info;
+        for (auto& mac : macInfo) {
+            auto it = mac.find("dev_id");
+            if (it != mac.end()) {
+                std::string dev_id = it->second;
+                it = mac.find("dev_name");
+                if (it != mac.end()) {
+                    dev_info.name = it->second;
+                }
+                it = mac.find("dev_placement");
+                if (it != mac.end()) {
+                    dev_info.placement = it->second;
+                }
+                it = mac.find("dev_pid");
+                if (it != mac.end()) {
+                    dev_info.pid = (unsigned short)std::stoi(it->second);
+                }
+                if (deviceInfoMap.find(dev_id) == deviceInfoMap.end()) {
+                    deviceInfoMap.emplace(dev_id, dev_info);
+                }
+            }
+        }
+    }
 }
 
 void DeviceListPanel::initDeviceList()
 {
-    std::map<std::string, DeviceObject*> devList;
-    wxGetApp().getDeviceObjectOpr()->get_my_machine_list(devList);
+    std::map<std::string, DeviceItemPanel::DeviceInfo> devList;
+    initLocalDevice(devList);
 
     std::vector<std::string> devKeyList;
     for (auto it: devList) {
         devKeyList.emplace_back(it.first);
     }
     std::sort(devKeyList.begin(), devKeyList.end(), [&devList](auto& a, auto&b) {
-        if (devList[a] && devList[b]) {
-            return devList[a]->get_dev_name().compare(devList[b]->get_dev_name()) < 0;
-        }
-        return false;
+        return devList[a].name.compare(devList[b].name) < 0;
     });
     //m_device_map
-    DeviceItemPanel::DeviceInfo info;
     for (auto iter : devKeyList) {
-        //info.conn_id
-        auto obj = devList[iter];
-        if (!obj) continue;
-        info.name = obj->get_dev_name();
-        info.pid = obj->get_dev_pid();
-        info.wlanFlag = !obj->is_lan_mode_printer();
-        DeviceItemPanel* item = new DeviceItemPanel(m_device_panel, info);
+        DeviceItemPanel* item = new DeviceItemPanel(m_device_window, devList[iter]);
         m_device_map.emplace(std::make_pair(iter, item));
         m_device_sizer->Add(item);
     }
-    m_device_panel->Layout();
-}
-
-void DeviceListPanel::onFocus(wxFocusEvent& event)
-{
-    //if (event.()) {    
-        //updateDeviceList();
-    //}
-    event.Skip();
+    m_device_window->Layout();
 }
 
 void DeviceListPanel::on_comboBox_position_clicked(wxMouseEvent &event)
@@ -451,12 +477,39 @@ void DeviceListPanel::onModelBtnClicked(wxCommandEvent &event)
 
 void DeviceListPanel::onComConnectionReady(ComConnectionReadyEvent& event)
 {
+#if 0
+    const com_dev_data_t &data = MultiComMgr::inst()->devData(event.id);
+    DeviceItemPanel::DeviceInfo info;
+    info.conn_id = event.id;
+    info.name = data.devDetail->name;
+    info.lanFlag = (data.connectMode == COM_CONNECT_LAN);
+    info.pid = data.devDetail->pid;
+    info.placement = data.devDetail->location;
+    info.status = data.devDetail->status;
+    std::string sn = (data.connectMode == COM_CONNECT_LAN) ? data.lanDevInfo.serialNumber : data.wanDevInfo.serialNumber;
+    auto iter = m_device_map.find(sn);
+    if (iter == m_device_map.end()) {
+        m_device_map.emplace(std::make_pair(sn, info));
+    } else {
+        iter->second->updateInfo(info);
+    }
+#endif
     event.Skip();
 }
 
 void DeviceListPanel::onComConnectionExit(ComConnectionExitEvent& event)
 {
     event.Skip();
+}
+
+void DeviceListPanel::onDeviceListUpdated(DeviceListUpdateEvent& event)
+{
+    std::string dev_id = event.GetDeviceId();
+    DeviceObject* dev_obj = event.GetDeviceObject();
+    //auto opr = wxGetApp().getDeviceObjectOpr();
+    //std::map<std::string, DeviceObject*> dev_list;
+    //opr->get_my_machine_list(dev_list);
+
 }
 
 void DeviceListPanel::onComDevDetailUpdate(ComDevDetailUpdateEvent& event)

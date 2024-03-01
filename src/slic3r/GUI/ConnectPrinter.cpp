@@ -3,6 +3,7 @@
 #include <slic3r/GUI/I18N.hpp>
 #include <slic3r/GUI/Widgets/Label.hpp>
 #include "libslic3r/AppConfig.hpp"
+#include "FlashForge/DeviceData.hpp"
 
 namespace Slic3r { namespace GUI {
 ConnectPrinterDialog::ConnectPrinterDialog(wxWindow *parent, wxWindowID id, const wxString &title, bool err_hint, const wxPoint &pos, const wxSize &size, long style)

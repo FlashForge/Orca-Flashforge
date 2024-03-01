@@ -51,9 +51,9 @@ class DeviceItemPanel : public wxPanel
 {
 public:
     struct DeviceInfo {
-        bool wlanFlag {true};  // wlan or not
+        bool lanFlag {false};  // lan or not
         int conn_id {-1};
-        unsigned short pid;
+        unsigned short pid {0};
         wxString name;
         wxString placement;
         wxString status;
@@ -97,6 +97,7 @@ private:
 };
 
 
+class DeviceListUpdateEvent;
 class DeviceListPanel : public wxPanel
 {
 public:
@@ -110,14 +111,15 @@ private:
     void build();
     void initAllDeviceStatus(wxArrayString& names);
     void connectEvent();
+    void initLocalDevice(std::map<std::string, DeviceItemPanel::DeviceInfo>& deviceInfoMap);
     void initDeviceList();
 
-    void onFocus(wxFocusEvent & event);
     void on_comboBox_position_clicked(wxMouseEvent &event);
     void on_comboBox_status_clicked(wxMouseEvent &event);
     void onModelBtnClicked(wxCommandEvent &event);
     void onComConnectionReady(ComConnectionReadyEvent& event);
     void onComConnectionExit(ComConnectionExitEvent& event);
+    void onDeviceListUpdated(DeviceListUpdateEvent& event);
     void onComDevDetailUpdate(ComDevDetailUpdateEvent& event);
 
 private: 
@@ -135,7 +137,7 @@ private:
     wxStaticBitmap* m_no_device_bitmap {nullptr};
     wxStaticText*   m_no_device_staticText {nullptr};
     wxBoxSizer     *m_no_device_sizer {nullptr};
-    wxPanel*        m_device_panel {nullptr};
+    wxScrolledWindow* m_device_window {nullptr};
     wxGridSizer*    m_device_sizer {nullptr};
 
     std::map<std::string, DeviceItemPanel*> m_device_map;

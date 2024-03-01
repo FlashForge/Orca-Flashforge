@@ -34,7 +34,7 @@ public:
 	};
 
     typedef std::map<std::string, std::string> MacInfoMap;
-    typedef std::vector<MacInfoMap>			   LocalMacInfo;	
+    typedef std::vector<MacInfoMap>			   LocalMacInfo;
 
     //BBS: remove GCodeViewer as seperate APP logic
 	explicit AppConfig() :

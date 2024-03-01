@@ -39,7 +39,7 @@
 #include "Widgets/ScrolledWindow.hpp"
 #include "Widgets/PopupWindow.hpp"
 #include "FlashForge/MultiComUtils.hpp"
-#include "FlashForge/DeviceData.hpp"
+#include "FlashForge/MultiComEvent.hpp"
 #include <wx/simplebook.h>
 #include <wx/hashmap.h>
 
@@ -113,6 +113,7 @@ private:
     wxArrayString m_ipAddressValues;
 };
 
+class DeviceObject;
 class MachineObjectPanel : public wxPanel
 {
 private:
@@ -188,7 +189,7 @@ public:
 
 
 class ThumbnailPanel;
-
+class DeviceObject;
 class SelectMachinePopup : public PopupWindow
 {
 public:

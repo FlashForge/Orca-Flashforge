@@ -10,7 +10,6 @@
 #include "../GUI/Tabbook.hpp"
 #include "../DeviceManager.hpp"
 #include "../wxExtensions.hpp"
-#include "../FlashForge/DeviceData.hpp"
 
 #define SIDE_TOOLS_GREY900 wxColour(38, 46, 48)
 #define SIDE_TOOLS_GREY600 wxColour(144, 144, 144)
@@ -91,6 +90,7 @@ protected:
     void on_mouse_left_up(wxMouseEvent &evt);
 };
 
+class DeviceObject;
 class SideTools : public wxPanel
 {
 public:
