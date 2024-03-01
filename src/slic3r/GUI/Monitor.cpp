@@ -29,6 +29,7 @@
 #include "Plater.hpp"
 #include "BindDialog.hpp"
 #include "FlashForge/DeviceListPanel.hpp"
+#include "FlashForge/DeviceData.hpp"
 
 namespace Slic3r {
 namespace GUI {
