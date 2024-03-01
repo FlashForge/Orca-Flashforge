@@ -185,7 +185,7 @@ void MultiComMgr::putCommand(com_id_t id, ComCommand *command)
     ComWanAsyncCommand *wanAsyncCommand = dynamic_cast<ComWanAsyncCommand *>(command);
     if (it->second->connectMode() != COM_CONNECT_WAN || wanAsyncCommand == nullptr) {
         m_ptrMap.left.at(id)->putCommand(commandPtr);
-    } else {
+    } else if (m_wanAsyncConn.get() != nullptr) {
         wanAsyncCommand->asyncExec(m_wanAsyncConn.get(), it->second->deviceId());
     }
 }
