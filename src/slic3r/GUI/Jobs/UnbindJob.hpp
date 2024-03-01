@@ -4,13 +4,13 @@
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>
 #include "PlaterJob.hpp"
-#include "../FlashForge/DeviceData.hpp"
 
 namespace fs = boost::filesystem;
 
 namespace Slic3r {
 namespace GUI {
 
+class DeviceObject;
 class UnbindJob : public PlaterJob
 {
     wxWindow *           m_event_handle{nullptr};

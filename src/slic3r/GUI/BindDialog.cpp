@@ -16,6 +16,7 @@
 #include "Widgets/WebView.hpp"
 #include "FlashForge/MultiComMgr.hpp"
 #include "FlashForge/LoginDialog.hpp"
+#include "FlashForge/DeviceData.hpp"
 
 namespace Slic3r {
 namespace GUI {

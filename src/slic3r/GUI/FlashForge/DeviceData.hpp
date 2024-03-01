@@ -1,6 +1,7 @@
 #ifndef slic3r_DeviceData_hpp_
 #define slic3r_DeviceData_hpp_
 
+#include <wx/event.h>
 #include "nlohmann/json.hpp"
 #include "FlashNetwork.h"
 #include "MultiComEvent.hpp"
@@ -106,7 +107,36 @@ private:
 
 typedef std::map<std::string, std::string> MacInfoMap;
 
-class DeviceObjectOpr
+
+class DeviceListUpdateEvent : public wxEvent
+{
+public:
+    DeviceListUpdateEvent(wxEventType type, const std::string& dev_id, DeviceObject* dev_obj)
+        : wxEvent(type), m_dev_id(dev_id), m_dev_obj(dev_obj) {}
+
+    DeviceListUpdateEvent *Clone() const {
+        return new DeviceListUpdateEvent(GetEventType(), m_dev_id, m_dev_obj);
+    }
+    void SetDeviceId(const std::string& dev_id) {
+        m_dev_id = dev_id;
+    }
+    const std::string& GetDeviceId() const {
+        return m_dev_id;
+    }
+    void SetDeviceObject(DeviceObject* dev_obj) {
+        m_dev_obj = dev_obj;
+    }
+    DeviceObject* GetDeviceObject() {
+        return m_dev_obj;
+    }
+
+private:
+    std::string     m_dev_id;
+    DeviceObject*   m_dev_obj;
+};
+wxDECLARE_EVENT(EVT_DEVICE_LIST_UPDATED, DeviceListUpdateEvent);
+
+class DeviceObjectOpr : public wxEvtHandler
 {
 public:
     DeviceObjectOpr();
@@ -114,9 +144,18 @@ public:
 
 public:
     void update_scan_machine();
+    void clear_scan_machine();
     void read_local_machine_from_config();
 
-    void get_local_machine(map<string, DeviceObject *>& macList);
+    void get_scan_machine(std::map<std::string, DeviceObject*>& macList);
+    void get_local_machine(std::map<std::string, DeviceObject *>& macList);
+    void get_user_machine(std::map<std::string, DeviceObject*>& macList);
+
+    /* return machine has access code and user machine if login*/
+    void get_my_machine_list(map<string, DeviceObject *> &devList);
+
+    // clear user machine
+    void clear_user_machine();
 
     bool set_selected_machine(const string &dev_id);
     DeviceObject* get_selected_machine();
@@ -124,20 +163,13 @@ public:
     void unbind_lan_machine(DeviceObject *obj);
     ComErrno unbind_wan_machine(DeviceObject *obj);
 
-    /* return machine has access code and user machine if login*/
-    void get_my_machine_list(map<string, DeviceObject *> &devList);
-
-    void clear_my_machine_list();
-
 private:
     DeviceObject *get_scan_device(const string &dev_id);
 
     // before connect, scan machine's access code which hasn't written in config file
     void get_my_machine_list_v2(map<string, DeviceObject *> &devList);
-
-    void clear_scan_machine();
-    
     string find_dev_id_from_connection(int connectId);
+    void sendDeviceListUpdateEvent(const std::string& dev_id, DeviceObject* dev_obj);
 
 private:
     void onConnectExit(ComConnectionExitEvent &event);

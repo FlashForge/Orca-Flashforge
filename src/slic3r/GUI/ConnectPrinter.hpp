@@ -20,9 +20,9 @@
 #include "Widgets/TextInput.hpp"
 #include "Widgets/Label.hpp"
 #include "DeviceManager.hpp"
-#include "FlashForge/DeviceData.hpp"
 
 namespace Slic3r { namespace GUI {
+class DeviceObject;
 class ConnectPrinterDialog : public DPIDialog
 {
 private:

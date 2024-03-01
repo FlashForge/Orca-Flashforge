@@ -14,7 +14,7 @@
 #include "ConnectPrinter.hpp"
 #include "FlashForge/MultiComMgr.hpp"
 #include "FlashForge/LoginDialog.hpp"
-
+#include "FlashForge/DeviceData.hpp"
 
 #include <wx/progdlg.h>
 #include <wx/clipbrd.h>
@@ -558,7 +558,7 @@ void SelectMachinePopup::update_other_devices()
 {
     DeviceObjectOpr *devOpr = wxGetApp().getDeviceObjectOpr();
     m_free_device_list.clear();
-    devOpr->get_local_machine(m_free_device_list);
+    devOpr->get_scan_machine(m_free_device_list);
 
     BOOST_LOG_TRIVIAL(trace) << "SelectMachinePopup update_other_devices start";
     this->Freeze();

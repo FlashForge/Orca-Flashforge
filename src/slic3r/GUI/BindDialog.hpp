@@ -19,7 +19,6 @@
 #include <wx/webrequest.h>
 #include "wxExtensions.hpp"
 #include "Plater.hpp"
-#include "FlashForge/DeviceData.hpp"
 #include "Widgets/StepCtrl.hpp"
 #include "Widgets/ProgressDialog.hpp"
 #include "Widgets/Button.hpp"
@@ -66,6 +65,7 @@ private:
 };
 
 
+class DeviceObject;
 class BindMachineDialog : public TitleDialog
 {
 private:

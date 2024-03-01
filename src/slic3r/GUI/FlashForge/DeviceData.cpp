@@ -236,10 +236,7 @@ string DeviceObject::get_printer_thumbnail_img_str()
     return "printer_thumbnail";
 }
 
-
-
-
-
+wxDEFINE_EVENT(EVT_DEVICE_LIST_UPDATED, DeviceListUpdateEvent);
 DeviceObjectOpr::DeviceObjectOpr()
 {
     read_local_machine_from_config();
@@ -252,14 +249,7 @@ DeviceObjectOpr::DeviceObjectOpr()
 DeviceObjectOpr::~DeviceObjectOpr()
 {
     clear_scan_machine();
-
-    for (auto it = m_user_devices.begin(); it != m_user_devices.end(); it++) {
-        if (it->second) {
-            delete it->second;
-            it->second = nullptr;
-        }
-    }
-    m_user_devices.clear();
+    clear_user_machine(); 
 
     for (auto it = m_local_devices.begin(); it != m_local_devices.end(); it++) {
         if (it->second) {
@@ -326,7 +316,20 @@ void DeviceObjectOpr::read_local_machine_from_config()
 
 void DeviceObjectOpr::get_local_machine(map<string, DeviceObject*>& macList)
 {
+    macList.clear();
+    macList.insert(m_local_devices.begin(), m_local_devices.end());
+}
+
+void DeviceObjectOpr::get_scan_machine(std::map<std::string, DeviceObject*>& macList)
+{
+    macList.clear();
     macList.insert(m_scan_devices.begin(), m_scan_devices.end());
+}
+
+void DeviceObjectOpr::get_user_machine(std::map<std::string, DeviceObject*>& macList)
+{
+    macList.clear();
+    macList.insert(m_user_devices.begin(), m_user_devices.end());
 }
 
 bool DeviceObjectOpr::set_selected_machine(const string &dev_id)
@@ -407,6 +410,7 @@ void DeviceObjectOpr::unbind_lan_machine(DeviceObject *obj)
         delete devIt->second;
         m_user_devices.erase(devIt);
     }
+    sendDeviceListUpdateEvent(dev_id, nullptr);
 }
 
 ComErrno DeviceObjectOpr::unbind_wan_machine(DeviceObject *obj)
@@ -415,7 +419,8 @@ ComErrno DeviceObjectOpr::unbind_wan_machine(DeviceObject *obj)
         return COM_ERROR;
     }
 
-    ComErrno ret = MultiComMgr::inst()->unbindWanDev(obj->get_dev_id(), obj->get_wan_dev_id());
+    std::string dev_id = obj->get_dev_id();
+    ComErrno ret = MultiComMgr::inst()->unbindWanDev(dev_id, obj->get_wan_dev_id());
     if (ret == COM_OK) {
         auto devIt = m_user_devices.find(obj->get_dev_id());
         if (devIt != m_user_devices.end()) {
@@ -423,13 +428,16 @@ ComErrno DeviceObjectOpr::unbind_wan_machine(DeviceObject *obj)
             m_user_devices.erase(devIt);
         }
     }
+    sendDeviceListUpdateEvent(dev_id, nullptr);
     return ret;
 }
 
 void DeviceObjectOpr::get_my_machine_list(map<string, DeviceObject *> &devList)
 {
+    devList.clear();
     devList.insert(m_user_devices.begin(), m_user_devices.end());
 
+#if 0
     for (auto it = m_scan_devices.begin(); it != m_scan_devices.end(); it++) {
         if (!it->second)
             continue;
@@ -440,6 +448,7 @@ void DeviceObjectOpr::get_my_machine_list(map<string, DeviceObject *> &devList)
             }
         }
     }
+#endif
 
     for (auto it = m_local_devices.begin(); it != m_local_devices.end(); it++) {
         if (devList.find(it->first) == devList.end()) {
@@ -448,10 +457,15 @@ void DeviceObjectOpr::get_my_machine_list(map<string, DeviceObject *> &devList)
     }
 }
 
-void DeviceObjectOpr::clear_my_machine_list() 
+void DeviceObjectOpr::clear_user_machine()
 {
+    for (auto it = m_user_devices.begin(); it != m_user_devices.end(); it++) {
+        if (it->second) {
+            delete it->second;
+            it->second = nullptr;
+        }
+    }
     m_user_devices.clear();
-    m_scan_devices.clear();
 }
 
 DeviceObject* DeviceObjectOpr::get_scan_device(const string& dev_id)
@@ -506,6 +520,13 @@ string DeviceObjectOpr::find_dev_id_from_connection(int connectId)
             return it->first;
     }
     return "";
+}
+
+void DeviceObjectOpr::sendDeviceListUpdateEvent(const std::string& dev_id, DeviceObject* dev_obj)
+{
+    DeviceListUpdateEvent event(EVT_DEVICE_LIST_UPDATED, dev_id, dev_obj);
+    event.SetEventObject(this);
+    wxPostEvent(this, event);
 }
 
 void DeviceObjectOpr::onConnectExit(ComConnectionExitEvent &event)
@@ -572,24 +593,27 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
             devObj->set_connected_ready(true);
             devObj->set_online_state(data.wanDevInfo.status != "offline");
             m_user_devices.emplace(make_pair(macSN, devObj));
+            sendDeviceListUpdateEvent(macSN, devObj);
         }
     } else {
         string serialNum = data.lanDevInfo.serialNumber;
         DeviceObject *devObj    = get_scan_device(serialNum);
-        if (devObj == nullptr)
+        if (devObj == nullptr) {
             return;
+        }
 
         DeviceObject *userObj = nullptr;
-        auto          it      = m_user_devices.find(serialNum);
-        if (it == m_user_devices.end()) {
+        auto it = m_local_devices.find(serialNum);
+        if (it == m_local_devices.end()) {
             userObj = new DeviceObject(*devObj->get_lan_dev_info());
             userObj->set_user_access_code(devObj->get_user_access_code(true));
-            m_user_devices.emplace(make_pair(serialNum, userObj));
+            m_local_devices.emplace(make_pair(serialNum, userObj));
 
             AppConfig *config = GUI::wxGetApp().app_config;
             if (config) {
                 config->save_bind_machine_to_config(devObj->get_dev_id(), devObj->get_dev_name(), data.devDetail->location, devObj->get_dev_pid());
             }
+            sendDeviceListUpdateEvent(serialNum, devObj);
         } else {
             userObj = it->second;
         }

@@ -8,6 +8,7 @@
 #include "slic3r/GUI/format.hpp"
 #include "slic3r/GUI/FlashForge/MultiComMgr.hpp"
 #include "slic3r/GUI/FlashForge/LoginDialog.hpp"
+#include "slic3r/GUI/FlashForge/DeviceData.hpp"
 
 namespace Slic3r {
 namespace GUI {
@@ -167,7 +168,7 @@ void ReLoginDialog::onLoginoutBtnClicked(wxCommandEvent& event)
                 BOOST_LOG_TRIVIAL(warning) << boost::format("MultiComUtils::signOut Failed!");
             }
             DeviceObjectOpr *devOpr = wxGetApp().getDeviceObjectOpr();
-            devOpr->clear_my_machine_list();
+            devOpr->clear_user_machine();
         }
         
         app_config->set("access_token","");
