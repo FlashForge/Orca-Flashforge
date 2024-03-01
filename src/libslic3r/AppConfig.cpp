@@ -1302,7 +1302,7 @@ void AppConfig::save_bind_machine_to_config(const std::string& dev_id, const std
         if (it != mac.end() && it->second == dev_id) {
             mac["dev_name"] = dev_name;
             mac["dev_placement"] = placement;
-            mac["dev_pid"] = placement;
+            mac["dev_pid"] = pid_str;
             update = true;
             break;
         }
