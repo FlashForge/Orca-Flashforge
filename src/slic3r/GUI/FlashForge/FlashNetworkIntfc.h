@@ -29,6 +29,7 @@ public:
     decltype(&fnet_ctrlLanDevLight) ctrlLanDevLight;
     decltype(&fnet_ctrlLanDevAirFilter) ctrlLanDevAirFilter;
     decltype(&fnet_ctrlLanDevPrint) ctrlLanDevPrint;
+    decltype(&fnet_ctrlLanDevJob) ctrlLanDevJob;
     decltype(&fnet_getTokenByPassword) getTokenByPassword;
     decltype(&fnet_refreshToken) refreshToken;
     decltype(&fnet_freeToken) freeToken;

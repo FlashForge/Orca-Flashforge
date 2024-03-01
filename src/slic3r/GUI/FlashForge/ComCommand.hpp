@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <wx/event.h>
+#include "ComWanAsyncConn.hpp"
 #include "FlashNetworkIntfc.h"
 #include "MultiComDef.hpp"
 #include "MultiComEvent.hpp"
@@ -148,6 +149,7 @@ public:
     {
         return COM_ERROR;
     }
+    virtual void asyncExec(ComWanAsyncConn *wanAsyncConn, const std::string &devId) = 0;
 };
 
 class ComTempCtrl : public ComWanAsyncCommand
@@ -167,9 +169,9 @@ public:
             checkCode.c_str(), &m_tempCtrl, ComTimeoutLan);
         return MultiComUtils::fnetRet2ComErrno(ret);
     }
-    const fnet_temp_ctrl_t &tempCtrl()
+    void asyncExec(ComWanAsyncConn *wanAsyncConn, const std::string &devId)
     {
-        return m_tempCtrl;
+        wanAsyncConn->postTempCtrl(devId, m_tempCtrl);
     }
 
 private:
@@ -191,9 +193,9 @@ public:
             checkCode.c_str(), &m_lightCtrl, ComTimeoutLan);
         return MultiComUtils::fnetRet2ComErrno(ret);
     }
-    const fnet_light_ctrl_t &lightCtrl()
+    void asyncExec(ComWanAsyncConn *wanAsyncConn, const std::string &devId)
     {
-        return m_lightCtrl;
+        wanAsyncConn->postLightCtrl(devId, m_lightCtrl);
     }
 
 private:
@@ -218,9 +220,9 @@ public:
             checkCode.c_str(), &m_airFilterCtrl, ComTimeoutLan);
         return MultiComUtils::fnetRet2ComErrno(ret);
     }
-    const fnet_air_filter_ctrl_t &airFilterCtrl()
+    void asyncExec(ComWanAsyncConn *wanAsyncConn, const std::string &devId)
     {
-        return m_airFilterCtrl;
+        wanAsyncConn->postAirFilterCtrl(devId, m_airFilterCtrl);
     }
 
 private:
@@ -247,13 +249,41 @@ public:
             checkCode.c_str(), &m_printCtrl, ComTimeoutLan);
         return MultiComUtils::fnetRet2ComErrno(ret);
     }
-    const fnet_print_ctrl_t &printCtrl()
+    void asyncExec(ComWanAsyncConn *wanAsyncConn, const std::string &devId)
     {
-        return m_printCtrl;
+        wanAsyncConn->postPrintCtrl(devId, m_printCtrl);
     }
 
 private:
     fnet_print_ctrl_t m_printCtrl;
+};
+
+class ComJobCtrl : public ComWanAsyncCommand
+{
+public:
+    ComJobCtrl(const std::string &jobId, const std::string &action)
+        : m_jobId(jobId)
+        , m_action(action)
+    {
+        m_jobCtrl.jobId = m_jobId.c_str();
+        m_jobCtrl.action = m_action.c_str();
+    }
+    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &ip,
+        unsigned int port, const std::string &serialNumber, const std::string &checkCode)
+    {
+        int ret = networkIntfc->ctrlLanDevJob(ip.c_str(), port, serialNumber.c_str(),
+            checkCode.c_str(), &m_jobCtrl, ComTimeoutLan);
+        return MultiComUtils::fnetRet2ComErrno(ret);
+    }
+    void asyncExec(ComWanAsyncConn *wanAsyncConn, const std::string &devId)
+    {
+        wanAsyncConn->postJobCtrl(devId, m_jobCtrl);
+    }
+
+private:
+    std::string m_jobId;
+    std::string m_action;
+    fnet_job_ctrl_t m_jobCtrl;
 };
 
 class ComCameraStreamCtrl : public ComWanAsyncCommand
