@@ -58,6 +58,7 @@ FlashNetworkIntfc::FlashNetworkIntfc(const char *libraryPath, const char *logFil
     INIT_FUNC_PTR(connectionRun, fnet_connectionRun);
     INIT_FUNC_PTR(connectionPost, fnet_connectionPost);
     INIT_FUNC_PTR(connectionStop, fnet_connectionStop);
+    INIT_FUNC_PTR(freeString, fnet_freeString);
     if (initlize(logFileDir, expireHours) == FNET_OK) {
         m_isOk = true;
     }

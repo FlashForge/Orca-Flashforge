@@ -23,11 +23,13 @@ public:
 
     void freeConn();
 
-    void postSyncBindDev(const std::string &devId);
+    void postSyncBindDev(const std::string &userId, const std::string &devId);
 
-    void postSyncUnbindDev(const std::string &devId);
+    void postSyncUnbindDev(const std::string &userId,const std::string &devId);
 
     void postSubscribeDev(const std::vector<std::string> &devIds);
+
+    void postSubscribeApp(const std::string &userId);
 
     void postTempCtrl(const std::string &devId, const fnet_temp_ctrl_t &tempCtrl);
 

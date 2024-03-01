@@ -79,6 +79,7 @@ private:
 
 private:
     int                                      m_idNum;
+    std::string                              m_userId;
     std::list<com_ptr_t>                     m_comPtrs;
     com_ptr_map_t                            m_ptrMap;
     std::map<com_id_t, com_dev_data_t>       m_datMap;

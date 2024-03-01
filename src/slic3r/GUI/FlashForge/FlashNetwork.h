@@ -25,12 +25,17 @@ typedef int (*fnet_progress_callback_t)(long long now, long long total, void *da
 // the corresponding free function needs to be called to release the readData->data and readData->devId.
 typedef int (*fnet_conn_read_callback_t)(fnet_conn_read_data_t *readData, void *data);
 
+// after the connection is reconnected, you need to resubscribe to the fnet_conn_read_data_t in the callback
+typedef void (*fnet_conn_reconnect_callback_t)(void *data);
+
 #pragma pack(push, 4)
 
 typedef enum fnet_conn_write_data_type {
     FNET_CONN_WRITE_SUB_DEVICE_STATUS,  // data, nullptr
-    FNET_CONN_WRITE_SYNC_BIND_DEVICE,   // data, nullptr
-    FNET_CONN_WRITE_SYNC_UNBIND_DEVICE, // data, nullptr
+    FNET_CONN_WRITE_SUB_DEVICE_BIND,    // data, nullptr
+    FNET_CONN_WRITE_SUB_APP_BIND,       // data, fnet_user_id_t
+    FNET_CONN_WRITE_SYNC_BIND_DEVICE,   // data, fnet_user_id_t
+    FNET_CONN_WRITE_SYNC_UNBIND_DEVICE, // data, fnet_user_id_t
     FNET_CONN_WRITE_TEMP_CTRL,          // data, fnet_temp_ctrl_t
     FNET_CONN_WRITE_LIGHT_CTRL,         // data, fnet_light_ctrl_t
     FNET_CONN_WRITE_AIR_FILTER_CTRL,    // data, fnet_air_filter_ctrl_t
@@ -58,6 +63,8 @@ typedef struct fnet_send_gcode_data {
 typedef struct fnet_conn_settings {
     fnet_conn_read_callback_t readCallback;
     void *readCallbackData;
+    fnet_conn_reconnect_callback_t reconnectCallback;
+    void *reconnectCallbackData;
     int maxReconnectCnt;
     int maxErrorCnt;
     int msTimeout;
@@ -73,6 +80,10 @@ typedef struct fnet_conn_write_data {
     const void *data;
     fnet_dev_ids_t devIds;
 } fnet_conn_write_data_t;
+
+typedef struct fnet_user_id {
+    const char *uid;
+} fnet_user_id_t;
 
 typedef struct fnet_temp_ctrl {
     double platformTemp;

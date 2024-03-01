@@ -40,23 +40,35 @@ void ComWanAsyncConn::freeConn()
     m_networkIntfc->freeConnection(m_conn);
 }
 
-void ComWanAsyncConn::postSyncBindDev(const std::string &devId)
+void ComWanAsyncConn::postSyncBindDev(const std::string &userId, const std::string &devId)
 {
     if (m_thread == nullptr) {
         return;
     }
     const char *ids = devId.c_str();
-    fnet_conn_write_data_t writeData = {FNET_CONN_WRITE_SYNC_BIND_DEVICE, nullptr, {&ids, 1}};
+    fnet_user_id_t fnetUserId = {userId.c_str()};
+    fnet_conn_write_data_t writeData = {FNET_CONN_WRITE_SYNC_BIND_DEVICE, &fnetUserId, {&ids, 1}};
     m_networkIntfc->connectionPost(m_conn, &writeData);
 }
 
-void ComWanAsyncConn::postSyncUnbindDev(const std::string &devId)
+void ComWanAsyncConn::postSyncUnbindDev(const std::string &userId,const std::string &devId)
 {
     if (m_thread == nullptr) {
         return;
     }
     const char *ids = devId.c_str();
-    fnet_conn_write_data_t writeData = {FNET_CONN_WRITE_SYNC_UNBIND_DEVICE, nullptr, {&ids, 1}};
+    fnet_user_id_t fnetUserId = {userId.c_str()};
+    fnet_conn_write_data_t writeData = {FNET_CONN_WRITE_SYNC_UNBIND_DEVICE, &fnetUserId, {&ids, 1}};
+    m_networkIntfc->connectionPost(m_conn, &writeData);
+}
+
+void ComWanAsyncConn::postSubscribeApp(const std::string &userId)
+{
+    if (m_thread == nullptr) {
+        return;
+    }
+    fnet_user_id_t fnetUserId = {userId.c_str()};
+    fnet_conn_write_data_t writeData  = {FNET_CONN_WRITE_SUB_APP_BIND, &fnetUserId, {nullptr, 0}};
     m_networkIntfc->connectionPost(m_conn, &writeData);
 }
 
@@ -70,6 +82,9 @@ void ComWanAsyncConn::postSubscribeDev(const std::vector<std::string> &devIds)
         ids.push_back(devId.c_str());
     }
     fnet_conn_write_data_t writeData = {FNET_CONN_WRITE_SUB_DEVICE_STATUS, nullptr, {ids.data(), 1}};
+    m_networkIntfc->connectionPost(m_conn, &writeData);
+
+    writeData.type = FNET_CONN_WRITE_SUB_DEVICE_BIND;
     m_networkIntfc->connectionPost(m_conn, &writeData);
 }
 

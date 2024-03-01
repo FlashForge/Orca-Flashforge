@@ -116,7 +116,7 @@ ComErrno MultiComMgr::bindWanDev(const std::string &serialNumber, unsigned short
         return COM_UNINITIALIZED;
     }
     std::string accessToken = m_userDataUpdateThd->getToken();
-    if (accessToken.empty() || m_wanAsyncConn.get() == nullptr) {
+    if (accessToken.empty() || m_userId.empty() || m_wanAsyncConn.get() == nullptr) {
         return COM_ERROR;
     }
     fnet_wan_dev_bind_data_t *bindData;
@@ -125,7 +125,7 @@ ComErrno MultiComMgr::bindWanDev(const std::string &serialNumber, unsigned short
     fnet::FreeInDestructor freeBinData(bindData, m_networkIntfc->freeBindData);
     if (ret == FNET_OK) {
         m_userDataUpdateThd->setUpdateWanDev();
-        m_wanAsyncConn->postSyncBindDev(bindData->devId);
+        m_wanAsyncConn->postSyncBindDev(m_userId, bindData->devId);
     }
     return MultiComUtils::fnetRet2ComErrno(ret);
 }
@@ -136,12 +136,12 @@ ComErrno MultiComMgr::unbindWanDev(const std::string &serialNumber, const std::s
         return COM_UNINITIALIZED;
     }
     std::string accessToken = m_userDataUpdateThd->getToken();
-    if (accessToken.empty() || m_wanAsyncConn.get() == nullptr) {
+    if (accessToken.empty() || m_userId.empty() || m_wanAsyncConn.get() == nullptr) {
         return COM_ERROR;
     }
     int ret = m_networkIntfc->unbindWanDev(accessToken.c_str(), devId.c_str(), ComTimeoutWan);
     if (ret == FNET_OK) {
-        m_wanAsyncConn->postSyncUnbindDev(devId);
+        m_wanAsyncConn->postSyncUnbindDev(m_userId, devId);
         for (auto &comPtr : m_comPtrs) {
             if (comPtr->deviceId() == devId) {
                 comPtr->disconnect(0);
@@ -239,6 +239,7 @@ void MultiComMgr::onWanDevMaintian(const ComWanDevMaintainEvent &event)
 {
     if (event.ret != COM_OK) {
         removeWanDev();
+        m_userId.clear();
     }
     QueueEvent(event.Clone());
 }
@@ -249,6 +250,8 @@ void MultiComMgr::onGetUserProfile(const ComGetUserProfileEvent &event)
         onWanDevMaintian(ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, event.ret));
         return;
     }
+    m_userId = event.userProfile.uid;
+    m_wanAsyncConn->postSubscribeApp(m_userId);
     QueueEvent(event.Clone());
 }
 
@@ -347,6 +350,7 @@ void MultiComMgr::onWanConnReadData(const WanConnReadDataEvent &event)
         procDevOfflineEvent(event.readData);
         break;
     }
+    m_networkIntfc->freeString(event.readData.devId);
 }
 
 com_dev_data_t MultiComMgr::makeDevData(const fnet_wan_dev_info_t *wanDevInfo)

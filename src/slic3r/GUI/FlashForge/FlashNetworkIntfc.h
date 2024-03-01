@@ -54,6 +54,7 @@ public:
     decltype(&fnet_connectionRun) connectionRun;
     decltype(&fnet_connectionPost) connectionPost;
     decltype(&fnet_connectionStop) connectionStop;
+    decltype(&fnet_freeString) freeString;
 
 public:
     FlashNetworkIntfc(const char *libraryPath, const char *logFileDir, int expireHours);
