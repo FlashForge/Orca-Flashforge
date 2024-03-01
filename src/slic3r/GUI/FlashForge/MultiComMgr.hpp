@@ -86,7 +86,6 @@ private:
     com_ptr_map_t                            m_ptrMap;
     std::map<com_id_t, com_dev_data_t>       m_datMap;
     std::set<com_id_t>                       m_readyIdSet;
-    std::set<std::string>                    m_serialNumberSet;
     std::map<std::string, com_id_t>          m_devIdMap;
     std::unique_ptr<UserDataUpdateThd>       m_userDataUpdateThd;
     std::unique_ptr<ComWanAsyncConn>         m_wanAsyncConn;

@@ -220,7 +220,6 @@ void MultiComMgr::initConnection(const com_ptr_t &comPtr, const com_dev_data_t &
     m_comPtrs.push_back(comPtr);
     m_ptrMap.insert(com_ptr_map_val_t(comPtr->id(), comPtr.get()));
     m_datMap.emplace(comPtr->id(), devData);
-    m_serialNumberSet.insert(comPtr->serialNumber());
     if (devData.connectMode == COM_CONNECT_WAN) {
         m_devIdMap.emplace(devData.wanDevInfo.devId, comPtr->id());
     }
@@ -268,11 +267,11 @@ void MultiComMgr::onGetWanDev(const GetWanDevEvent &event)
     }
     std::set<std::string> devIdSet;
     for (int i = 0; i < event.devCnt; ++i) {
-        devIdSet.insert(event.devInfos[i].serialNumber);
+        devIdSet.insert(event.devInfos[i].devId);
     }
     for (auto &comPtr : m_comPtrs) {
         if (comPtr->connectMode() == COM_CONNECT_WAN
-         && devIdSet.find(comPtr->serialNumber()) == devIdSet.end()) {
+         && devIdSet.find(comPtr->deviceId()) == devIdSet.end()) {
             comPtr.get()->disconnect(0);
         } else {
             comPtr->setAccessToken(event.accessToken);
@@ -280,7 +279,7 @@ void MultiComMgr::onGetWanDev(const GetWanDevEvent &event)
     }
     std::vector<std::string> addDevIds;
     for (int i = 0; i < event.devCnt; ++i) {
-        if (m_serialNumberSet.find(event.devInfos[i].serialNumber) == m_serialNumberSet.end()) {
+        if (m_devIdMap.find(event.devInfos[i].devId) == m_devIdMap.end()) {
             com_ptr_t comPtr = std::make_shared<ComConnection>(m_idNum++, event.accessToken,
                 event.devInfos[i].serialNumber, event.devInfos[i].devId, networkIntfc());
             initConnection(comPtr, makeDevData(&event.devInfos[i]));
@@ -308,7 +307,6 @@ void MultiComMgr::onConnectionExit(const ComConnectionExitEvent &event)
     if (comConnection->connectMode() == COM_CONNECT_WAN) {
         m_devIdMap.erase(m_datMap.at(comConnection->id()).wanDevInfo.devId);
     }
-    m_serialNumberSet.erase(comConnection->serialNumber());
     m_datMap.erase(event.id);
     m_ptrMap.left.erase(event.id);
     m_comPtrs.remove_if([comConnection](auto &ptr) { return ptr.get() == comConnection; });
