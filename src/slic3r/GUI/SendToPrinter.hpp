@@ -185,9 +185,9 @@ private:
     };
 
 private:
-	int									m_print_plate_idx;
-    int									m_current_filament_id;
-    int                                 m_print_error_code;
+	int									m_print_plate_idx{0};
+    int									m_current_filament_id{0};
+    int                                 m_print_error_code{0};
     bool								m_is_in_sending_mode{ false };
     bool								m_is_rename_mode{ false };
     bool								enable_prepare_mode{ true };
@@ -212,32 +212,36 @@ private:
     wxStaticText*                       m_stext_time = {nullptr};
     wxBoxSizer*							rename_sizer_v{ nullptr };
     wxBoxSizer*							rename_sizer_h{ nullptr };
-	wxBoxSizer*							sizer_thumbnail;
+	wxBoxSizer*							sizer_thumbnail {nullptr};
     TextInput*							m_rename_input{ nullptr };
     wxSimplebook*						m_rename_switch_panel{ nullptr };
-    wxPanel*                            m_renamePanel;
+    wxPanel*                            m_renamePanel {nullptr};
     wxStaticText*                       m_renameText { nullptr };
     Button*                             m_renameBtn {nullptr};
-
-	wxBoxSizer*							m_sizer_main;
-	wxStaticText*						m_file_name;
+    
+    std::vector<FilamentInfo>           m_filaments;
+    MaterialHash                        m_materialList;
+    wxGridSizer*                        m_sizer_material{ nullptr };
+    wxPanel*                            m_material_panel{nullptr};
+	wxBoxSizer*							m_sizer_main {nullptr};
+	wxStaticText*						m_file_name {nullptr};
     PrintDialogStatus					m_print_status{ PrintStatusInit };
-    FFCheckBox*                         m_levelCkb;
-    wxStaticText*                       m_levelLbl;
+    FFCheckBox*                         m_levelCkb {nullptr};
+    wxStaticText*                       m_levelLbl {nullptr};
     wxStaticText*                       m_selectPrinterLbl;
-    FFToggleButton*                     m_wlanBtn;
-    FFToggleButton*                     m_lanBtn;
-    wxSimplebook*                       m_machineBook;
+    FFToggleButton*                     m_wlanBtn {nullptr};
+    FFToggleButton*                     m_lanBtn {nullptr};
+    wxSimplebook*                       m_machineBook {nullptr};
     wxPanel*                            m_machinePanel {nullptr};
     wxBoxSizer*                         m_machineSizer {nullptr};
-    FFCheckBox*                         m_selectAll;
-    wxStaticText*                       m_selectAllLbl;
-    wxScrolledWindow*                   m_machineListWindow;
-    wxGridSizer*                        m_machineListSizer;
+    FFCheckBox*                         m_selectAll {nullptr};
+    wxStaticText*                       m_selectAllLbl {nullptr};
+    wxScrolledWindow*                   m_machineListWindow {nullptr};
+    wxGridSizer*                        m_machineListSizer {nullptr};
     wxPanel*                            m_machineLine {nullptr};
-    wxPanel*                            m_noMachinePanel;
-    wxStaticBitmap*                     m_noMachineBitmap;
-    wxStaticText*                       m_noMachineText;
+    wxPanel*                            m_noMachinePanel {nullptr};
+    wxStaticBitmap*                     m_noMachineBitmap {nullptr};
+    wxStaticText*                       m_noMachineText {nullptr};
     wxSimplebook*                       m_sendBook { nullptr };
     wxPanel*                            m_sendPanel { nullptr };
     wxPanel*                            m_errorPanel { nullptr };

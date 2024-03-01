@@ -338,6 +338,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/DeviceManager.cpp
     GUI/HttpServer.hpp
     GUI/HttpServer.cpp
+    GUI/FFUtils.hpp
+    GUI/FFUtils.cpp
     Config/Snapshot.cpp
     Config/Snapshot.hpp
     Config/Version.cpp

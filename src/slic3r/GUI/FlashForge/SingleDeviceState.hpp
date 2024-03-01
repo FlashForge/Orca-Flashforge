@@ -65,9 +65,8 @@ class SingleDeviceState : public wxScrolledWindow
 public:
     SingleDeviceState(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, 
             const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString);
-    //~SingleDeviceState();
+    ~SingleDeviceState(){};
 
-    wxBoxSizer* create_top_device_info_page();
     wxBoxSizer *create_monitoring_page();
     wxBoxSizer* create_machine_control_title();
     wxBoxSizer *create_machine_control_page();
@@ -132,8 +131,9 @@ protected:
     wxPanel*       m_panel_separator_top_title_right;
     wxPanel*       m_panel_top_right_info;
 
+    Label*   m_staticText_file_head;
     Label*   m_staticText_file_name;
-    Label*   m_staticText_device_state;
+//    Label*   m_staticText_device_state;
     Label*   m_staticText_count_time;
     Label*   m_staticText_time_label;
     ProgressBar* m_progress_bar;
