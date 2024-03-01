@@ -40,6 +40,8 @@ public:
 
     void postPrintCtrl(const std::string &devId, const fnet_print_ctrl_t &printCtrl);
 
+    void postJobCtrl(const std::string &devId, const fnet_job_ctrl_t &jobCtrl);
+
     void postCameraStreamCtrl(const std::string &devId, const fnet_camera_stream_ctrl_t &cameraStreamCtrl);
 
 private:

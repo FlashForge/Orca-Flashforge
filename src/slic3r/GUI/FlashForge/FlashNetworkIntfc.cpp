@@ -33,6 +33,7 @@ FlashNetworkIntfc::FlashNetworkIntfc(const char *libraryPath, const char *logFil
     INIT_FUNC_PTR(ctrlLanDevLight, fnet_ctrlLanDevLight);
     INIT_FUNC_PTR(ctrlLanDevAirFilter, fnet_ctrlLanDevAirFilter);
     INIT_FUNC_PTR(ctrlLanDevPrint, fnet_ctrlLanDevPrint);
+    INIT_FUNC_PTR(ctrlLanDevJob, fnet_ctrlLanDevJob);
     INIT_FUNC_PTR(getTokenByPassword, fnet_getTokenByPassword);
     INIT_FUNC_PTR(refreshToken, fnet_refreshToken);
     INIT_FUNC_PTR(freeToken, fnet_freeToken);

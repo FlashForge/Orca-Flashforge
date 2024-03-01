@@ -40,6 +40,7 @@ typedef enum fnet_conn_write_data_type {
     FNET_CONN_WRITE_LIGHT_CTRL,         // data, fnet_light_ctrl_t
     FNET_CONN_WRITE_AIR_FILTER_CTRL,    // data, fnet_air_filter_ctrl_t
     FNET_CONN_WRITE_PRINT_CTRL,         // data, fnet_print_ctrl_t
+    FNET_CONN_WRITE_JOB_CTRL,           // data, fnet_job_ctrl_t
     FNET_CONN_WRITE_CAMERA_STREAM_CTRL, // data, fnet_camera_stream_ctrl_t
 } fnet_conn_write_data_type_t;
 
@@ -108,6 +109,11 @@ typedef struct fnet_print_ctrl {
     double chamberFanSpeed;     // percent
 } fnet_print_ctrl_t;
 
+typedef struct fnet_job_ctrl {
+    const char *jobId;
+    const char *action;
+} fnet_job_ctrl_t;
+
 typedef struct fnet_camera_stream_ctrl {
     const char *action;
 } fnet_camera_stream_ctrl_t;
@@ -172,6 +178,7 @@ typedef struct fnet_dev_detail {
     char *name;
     char *location;
     char *status;
+    char *jobId;
     char *printFileName;
     char *printFileThumbUrl;
     int printLayer;
@@ -261,6 +268,9 @@ FNET_API int fnet_ctrlLanDevAirFilter(const char *ip, unsigned short port, const
 
 FNET_API int fnet_ctrlLanDevPrint(const char *ip, unsigned short port, const char *serialNumber,
     const char *checkCode, const fnet_print_ctrl_t *printCtrl, int msTimeout);
+
+FNET_API int fnet_ctrlLanDevJob(const char *ip, unsigned short port, const char *serialNumber,
+    const char *checkCode, const fnet_job_ctrl_t *jobCtrl, int msTimeout);
 
 FNET_API int fnet_lanDevSendGcode(const char *ip, unsigned short port, const char *serialNumber,
     const char *checkCode, const fnet_send_gcode_data_t *sendGcodeData, int msTimeout);
