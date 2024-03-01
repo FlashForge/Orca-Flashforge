@@ -182,30 +182,11 @@ void MultiComMgr::putCommand(com_id_t id, ComCommand *command)
     if (it == m_ptrMap.left.end()) {
         return;
     }
-    if (it->second->connectMode() != COM_CONNECT_WAN
-     || dynamic_cast<ComWanAsyncCommand *>(command) == nullptr) {
+    ComWanAsyncCommand *wanAsyncCommand = dynamic_cast<ComWanAsyncCommand *>(command);
+    if (it->second->connectMode() != COM_CONNECT_WAN || wanAsyncCommand == nullptr) {
         m_ptrMap.left.at(id)->putCommand(commandPtr);
-        return;
-    }
-    auto &typeId = typeid(*command);
-    if (typeId == typeid(ComTempCtrl)) {
-        auto &tempCtrl = ((ComTempCtrl *)command)->tempCtrl();
-        m_wanAsyncConn->postTempCtrl(it->second->deviceId(), tempCtrl);
-    } else if (typeId == typeid(ComLightCtrl)) {
-        auto &lightCtrl = ((ComLightCtrl *)command)->lightCtrl();
-        m_wanAsyncConn->postLightCtrl(it->second->deviceId(), lightCtrl);
-    } else if (typeId == typeid(ComAirFilterCtrl)) {
-        auto &airFilterCtrl = ((ComAirFilterCtrl *)command)->airFilterCtrl();
-        m_wanAsyncConn->postAirFilterCtrl(it->second->deviceId(), airFilterCtrl);
-    } else if (typeId == typeid(ComPrintCtrl)) {
-        auto &printCtrl = ((ComPrintCtrl *) command)->printCtrl();
-        m_wanAsyncConn->postPrintCtrl(it->second->deviceId(), printCtrl);
-    } else if (typeId == typeid(ComJobCtrl)) {
-        auto &jobCtrl = ((ComJobCtrl *) command)->jobCtrl();
-        m_wanAsyncConn->postJobCtrl(it->second->deviceId(), jobCtrl);
-    } else if (typeId == typeid(ComCameraStreamCtrl)) {
-        auto &cameraStreamCtrl = ((ComCameraStreamCtrl *)command)->cameraStreamCtrl();
-        m_wanAsyncConn->postCameraStreamCtrl(it->second->deviceId(), cameraStreamCtrl);
+    } else {
+        wanAsyncCommand->asyncExec(m_wanAsyncConn.get(), it->second->deviceId());
     }
 }
 
