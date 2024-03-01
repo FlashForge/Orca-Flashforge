@@ -28,7 +28,7 @@ void MaterialPanel::create_panel(wxWindow* parent)
         m_panel_printing_title->SetBackgroundColour(wxColour(248,248,248));
 
         //材料站标题
-        m_staticText_printing = new wxStaticText(m_panel_printing_title, wxID_ANY ,("Material Station"));
+        m_staticText_printing = new wxStaticText(m_panel_printing_title, wxID_ANY ,_L("Material Station"));
         m_staticText_printing->Wrap(-1);
         m_staticText_printing->SetFont(wxFont(wxFontInfo(16)));
         m_staticText_printing->SetForegroundColour(wxColour(51,51,51));
@@ -41,20 +41,21 @@ void MaterialPanel::create_panel(wxWindow* parent)
 
         //材料站内容
         wxBoxSizer *bSizer_task_name_hor = new wxBoxSizer(wxHORIZONTAL);
-        wxPanel*    task_name_panel      = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(108)), wxTAB_TRAVERSAL);
-        m_staticText_subtask_value = new wxStaticText(task_name_panel, wxID_ANY, ("Unconnected"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER | wxST_ELLIPSIZE_END);
+        wxPanel*    task_name_panel      = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(208)), wxTAB_TRAVERSAL);
+        m_staticText_subtask_value = new wxStaticText(task_name_panel, wxID_ANY, _L("Unconnected"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER | wxST_ELLIPSIZE_END);
         m_staticText_subtask_value->Wrap(-1);
         m_staticText_subtask_value->SetFont(wxFont(wxFontInfo(16)));
 
-        bSizer_task_name_hor->Add(m_staticText_subtask_value, 1, wxALL | wxEXPAND | wxALIGN_CENTER, 0);
+        bSizer_task_name_hor->Add(m_staticText_subtask_value, 0, wxALIGN_CENTER, 0);
 
         task_name_panel->SetSizer(bSizer_task_name_hor);
         task_name_panel->Layout();
         bSizer_task_name_hor->Fit(task_name_panel);
 
         sizer->Add(m_panel_printing_title, 0, wxEXPAND | wxALL, 0);
-        sizer->Add(0, FromDIP(12), 0);
-        sizer->Add(task_name_panel, 0, wxEXPAND | wxALIGN_CENTER, 0);
+        sizer->AddStretchSpacer();
+        sizer->Add(task_name_panel, 0, wxALIGN_CENTER, 0);
+        sizer->AddStretchSpacer();
 
         parent->SetSizer(sizer);
         parent->Layout();
@@ -331,7 +332,7 @@ wxBoxSizer* SingleDeviceState::create_monitoring_page()
         wxBoxSizer *bSizer_monitoring_title;
         bSizer_monitoring_title = new wxBoxSizer(wxHORIZONTAL);
 
-        m_staticText_monitoring = new Label(m_panel_monitoring_title, ("Camera"));
+        m_staticText_monitoring = new Label(m_panel_monitoring_title, _L("Camera"));
         m_staticText_monitoring->Wrap(-1);
         m_staticText_monitoring->SetFont(wxFont(wxFontInfo(16)));
         m_staticText_monitoring->SetForegroundColour(wxColour(51,51,51));
@@ -465,7 +466,7 @@ void SingleDeviceState::setupLayout()
         //第二段水平布局，左侧空白
         auto m_panel_separotor_left = new wxPanel(this, wxID_ANY, wxDefaultPosition,wxDefaultSize, wxTAB_TRAVERSAL);
         m_panel_separotor_left->SetBackgroundColour(wxColour(240, 240, 240));
-        m_panel_separotor_left->SetMinSize(wxSize(FromDIP(10), -1));
+        m_panel_separotor_left->SetMinSize(wxSize(FromDIP(24), -1));
 
         bSizer_status_below->Add(m_panel_separotor_left, 0, wxEXPAND | wxALL, 0);
         
@@ -492,7 +493,7 @@ void SingleDeviceState::setupLayout()
         //第二段水平布局，中间间隔
         auto m_panel_separator_middle = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE | wxTAB_TRAVERSAL);
         m_panel_separator_middle->SetBackgroundColour(wxColour(240, 240, 240));
-        m_panel_separator_middle->SetMinSize(wxSize(FromDIP(10), -1));
+        m_panel_separator_middle->SetMinSize(wxSize(FromDIP(12), -1));
 
         bSizer_status_below->Add(m_panel_separator_middle, 0, wxEXPAND | wxALL, 0);
 
@@ -512,7 +513,7 @@ void SingleDeviceState::setupLayout()
         m_machine_title->Add(m_machine_control, 0, wxALL, 0);
         bSizer_status_below->Add(m_machine_title, 0, wxALL, 0);
         //水平布局最右侧间隔
-        m_panel_separator_right = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(10), -1), wxTAB_TRAVERSAL);
+        m_panel_separator_right = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(35), -1), wxTAB_TRAVERSAL);
         m_panel_separator_right->SetBackgroundColour(wxColour(240, 240, 240));
 
         bSizer_status_below->Add(m_panel_separator_right, 0, wxEXPAND | wxALL, 0);
