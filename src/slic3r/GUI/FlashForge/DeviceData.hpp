@@ -167,8 +167,7 @@ private:
 private:
     void onConnectExit(ComConnectionExitEvent &event);
     void onConnectReady(ComConnectionReadyEvent &event);
-    void onConnectUpdate(ComDevDetailUpdateEvent &event);
-    void onConnectDevOffline(ComDevOfflineEvent &event);
+    void onConnectWanDevInfoUpdate(ComWanDevInfoUpdateEvent &event);
 
 private:
     string                            m_selected_machine;       /* dev_id */

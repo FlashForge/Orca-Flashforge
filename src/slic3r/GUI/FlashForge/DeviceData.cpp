@@ -243,8 +243,7 @@ DeviceObjectOpr::DeviceObjectOpr()
 
     MultiComMgr::inst()->Bind(COM_CONNECTION_EXIT_EVENT, &DeviceObjectOpr::onConnectExit, this);
     MultiComMgr::inst()->Bind(COM_CONNECTION_READY_EVENT, &DeviceObjectOpr::onConnectReady, this);
-    MultiComMgr::inst()->Bind(COM_DEV_DETAIL_UPDATE_EVENT, &DeviceObjectOpr::onConnectUpdate, this);
-    MultiComMgr::inst()->Bind(COM_DEV_OFFLINE_EVENT, &DeviceObjectOpr::onConnectDevOffline, this);
+    MultiComMgr::inst()->Bind(COM_WAN_DEV_INFO_UPDATE_EVENT, &DeviceObjectOpr::onConnectWanDevInfoUpdate, this);
 }
 
 DeviceObjectOpr::~DeviceObjectOpr()
@@ -645,26 +644,10 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
     }
 }
 
-void DeviceObjectOpr::onConnectUpdate(ComDevDetailUpdateEvent &event)
+void DeviceObjectOpr::onConnectWanDevInfoUpdate(ComWanDevInfoUpdateEvent &event)
 {
-    int                   connectId = event.id;
-    const com_dev_data_t &data      = MultiComMgr::inst()->devData(connectId);
-    if (data.connectMode == COM_CONNECT_WAN) {
-        auto   it     = m_user_devices.find(data.wanDevInfo.serialNumber);
-        if (it != m_user_devices.end()) {
-            it->second->set_online_state(data.wanDevInfo.status != "offline");
-        }
-        string name   = data.wanDevInfo.name;
-        string status = data.wanDevInfo.status;
-        BOOST_LOG_TRIVIAL(info) << "+++++++++++++++++++++dev name: " << name.c_str() << "status: "<< status.c_str();
-    }
-}
-
-void DeviceObjectOpr::onConnectDevOffline(ComDevOfflineEvent &event) 
-{
-    int                   connectId = event.id;
-    const com_dev_data_t &data      = MultiComMgr::inst()->devData(connectId);
-    if (data.connectMode == COM_CONNECT_WAN) {
+    const com_dev_data_t &data = MultiComMgr::inst()->devData(event.id);
+    if (data.connectMode == COM_CONNECT_WAN && data.wanDevInfo.status == "offline") {
         auto it = m_user_devices.find(data.wanDevInfo.serialNumber);
         if (it != m_user_devices.end()) {
             it->second->set_online_state(false);
@@ -672,8 +655,4 @@ void DeviceObjectOpr::onConnectDevOffline(ComDevOfflineEvent &event)
     }
 }
 
-
-
-}
-
-}
+}}

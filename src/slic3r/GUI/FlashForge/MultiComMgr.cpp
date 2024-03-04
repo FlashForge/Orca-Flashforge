@@ -216,7 +216,6 @@ void MultiComMgr::initConnection(const com_ptr_t &comPtr, const com_dev_data_t &
     comPtr->Bind(COM_CONNECTION_READY_EVENT, &MultiComMgr::onConnectionReady, this);
     comPtr->Bind(COM_CONNECTION_EXIT_EVENT, &MultiComMgr::onConnectionExit, this);
     comPtr->Bind(COM_DEV_DETAIL_UPDATE_EVENT, &MultiComMgr::onDevDetailUpdate, this);
-    comPtr->Bind(COM_DEV_OFFLINE_EVENT, &MultiComMgr::onDevOffline, this);
     comPtr->connect();
 }
 
@@ -250,16 +249,19 @@ void MultiComMgr::onGetWanDev(const GetWanDevEvent &event)
     if (m_userDataUpdateThd->getToken() != event.accessToken || m_wanAsyncConn.get() == nullptr) {
         return;
     }
-    std::set<std::string> devIdSet;
+    std::map<std::string, fnet_wan_dev_info_t *> devInfoMap;
     for (int i = 0; i < event.devCnt; ++i) {
-        devIdSet.insert(event.devInfos[i].devId);
+        devInfoMap.emplace(event.devInfos[i].devId, &event.devInfos[i]);
     }
     for (auto &comPtr : m_comPtrs) {
-        if (comPtr->connectMode() == COM_CONNECT_WAN
-         && devIdSet.find(comPtr->deviceId()) == devIdSet.end()) {
-            comPtr.get()->disconnect(0);
-        } else {
-            comPtr->setAccessToken(event.accessToken);
+        if (comPtr->connectMode() == COM_CONNECT_WAN) {
+            auto it = devInfoMap.find(comPtr->deviceId());
+            if (it == devInfoMap.end()) {
+                comPtr.get()->disconnect(0);
+            } else {
+                comPtr->setAccessToken(event.accessToken);
+                updateWanDevInfo(comPtr->id(), it->second->status, it->second->location);
+            }
         }
     }
     std::vector<std::string> addDevIds;
@@ -303,18 +305,8 @@ void MultiComMgr::onDevDetailUpdate(const ComDevDetailUpdateEvent &event)
     fnet_dev_detail_t *&devDetail = m_datMap.at(event.id).devDetail;
     m_networkIntfc->freeDevDetail(devDetail);
     devDetail = event.devDetail;
-    if (m_datMap.at(event.id).connectMode == COM_CONNECT_WAN) {
-        com_wan_dev_info_t &wanDevInfo = m_datMap.at(event.id).wanDevInfo;
-        wanDevInfo.status              = devDetail->status;
-    }
     QueueEvent(event.Clone());
-}
-
-void MultiComMgr::onDevOffline(const ComDevOfflineEvent &event) 
-{
-    com_wan_dev_info_t &wanDevInfo = m_datMap.at(event.id).wanDevInfo;
-    wanDevInfo.status              = "offline";
-    QueueEvent(event.Clone());
+    updateWanDevInfo(event.id, devDetail->status, devDetail->location);
 }
 
 void MultiComMgr::onWanConnReadData(const WanConnReadDataEvent &event)
@@ -330,7 +322,8 @@ void MultiComMgr::onWanConnReadData(const WanConnReadDataEvent &event)
     auto procDevOfflineEvent = [this](const fnet_conn_read_data_t &readData) {
         auto it = m_devIdMap.find(readData.devId);
         if (it != m_devIdMap.end()) {
-            QueueEvent(new ComDevOfflineEvent(COM_DEV_OFFLINE_EVENT, it->second));
+            m_datMap.at(it->second).wanDevInfo.status = "offline";
+            QueueEvent(new ComWanDevInfoUpdateEvent(COM_WAN_DEV_INFO_UPDATE_EVENT, it->second));
         }
     };
     switch (event.readData.type) {
@@ -376,6 +369,17 @@ com_dev_data_t MultiComMgr::makeDevData(const fnet_wan_dev_info_t *wanDevInfo)
     devData.devDetail = nullptr;
     memset(&devData.lanDevInfo, 0, sizeof(devData.lanDevInfo));
     return devData;
+}
+
+void MultiComMgr::updateWanDevInfo(com_id_t id, const std::string &status, const std::string &location)
+{
+    com_dev_data_t &devData = m_datMap.at(id);
+    if (devData.connectMode != COM_CONNECT_WAN) {
+        return;
+    }
+    devData.wanDevInfo.status = status;
+    devData.wanDevInfo.location = location;
+    QueueEvent(new ComWanDevInfoUpdateEvent(COM_WAN_DEV_INFO_UPDATE_EVENT, id));
 }
 
 }} // namespace Slic3r::GUI
