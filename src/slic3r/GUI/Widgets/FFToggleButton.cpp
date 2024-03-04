@@ -3,14 +3,6 @@
 
 FFToggleButton::FFToggleButton(wxWindow* parent, const wxString& label/*= ""*/, wxWindowID id/*= wxID_ANY*/)
 	: wxToggleButton(parent, id, label, wxDefaultPosition, wxDefaultSize, wxNO_BORDER)
-	, m_hoverFlag(false)
-	, m_pressFlag(false)
-	, m_normalColor("#999999")
-	, m_normalHoverColor("#95C5FF")
-	, m_normalPressColor("#328DFB")
-	, m_selectColor("#328DFB")
-	, m_selectHoverColor("#116FDF")
-	, m_selectPressColor("#999999")
 {
 	Bind(wxEVT_ENTER_WINDOW, [this](wxMouseEvent& e) { m_hoverFlag = true; updateState(); e.Skip(); });
 	Bind(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent& e) { m_hoverFlag = false; m_pressFlag = false; updateState(); e.Skip(); });
@@ -26,9 +18,38 @@ void FFToggleButton::SetValue(bool state)
 	updateState();
 }
 
+void FFToggleButton::setNormalColor(const wxColour& color)
+{
+	m_normalColor = color;	
+}
+
+void FFToggleButton::setNormalHoverColor(const wxColour& color)
+{
+	m_normalHoverColor = color;
+}
+
+void FFToggleButton::setNormalPressColor(const wxColour& color)
+{
+	m_normalPressColor = color;
+}
+
+void FFToggleButton::setSelectColor(const wxColour& color)
+{
+	m_selectColor = color;
+}
+
+void FFToggleButton::setSelectHoverColor(const wxColour& color)
+{
+	m_selectHoverColor = color;
+}
+
+void FFToggleButton::setSelectPressColor(const wxColour& color)
+{
+	m_selectPressColor = color;
+}
+
 void FFToggleButton::updateState()
 {
-	SetBackgroundColour(*wxWHITE);
 	if (GetValue()) {
 		if (m_pressFlag) {
 			SetForegroundColour(m_selectPressColor);

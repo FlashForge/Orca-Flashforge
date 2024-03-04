@@ -1,12 +1,14 @@
 #ifndef slic3r_DeviceListPanel_hpp_
 #define slic3r_DeviceListPanel_hpp_
 #include <wx/simplebook.h>
+#include <wx/tglbtn.h>
 #include "slic3r/GUI/Widgets/Button.hpp"
 #include "slic3r/GUI/Widgets/ComboBox.hpp"
 #include "slic3r/GUI/Widgets/PopupWindow.hpp"
 #include "MultiComMgr.hpp"
 #include "MultiComEvent.hpp"
 
+class FFToggleButton;
 namespace Slic3r {
 namespace GUI {
 
@@ -116,9 +118,8 @@ private:
 
     void on_comboBox_position_clicked(wxMouseEvent &event);
     void on_comboBox_status_clicked(wxMouseEvent &event);
-    void onModelBtnClicked(wxCommandEvent &event);
-    void onComConnectionReady(ComConnectionReadyEvent& event);
-    void onComConnectionExit(ComConnectionExitEvent& event);
+    void onNetworkTypeToggled(wxCommandEvent& event);
+    void on_static_mode_toggled(wxCommandEvent &event);
     void onDeviceListUpdated(DeviceListUpdateEvent& event);
     void onComDevDetailUpdate(ComDevDetailUpdateEvent& event);
 
@@ -128,9 +129,9 @@ private:
     CustomComboBox *m_comboBox_status;
     ListBoxPopup   *m_listBox_status;
     CustomComboBox *m_comboBox_type;
-    wxButton*       m_btn_outer_net;
-    wxButton*       m_btn_inner_net;
-    wxButton*       m_btn_mode;
+    FFToggleButton* m_wlan_btn;
+    FFToggleButton* m_lan_btn;
+    wxToggleButton* m_static_btn;
     
     wxSimplebook*   m_simple_book {nullptr};
     wxPanel*        m_no_device_panel {nullptr};

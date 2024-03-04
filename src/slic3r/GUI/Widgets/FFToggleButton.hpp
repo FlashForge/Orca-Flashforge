@@ -10,19 +10,25 @@ public:
 	~FFToggleButton() {};
 
 	void SetValue(bool state) override;
+	void setNormalColor(const wxColour& color);
+	void setNormalHoverColor(const wxColour& color);
+	void setNormalPressColor(const wxColour& color);
+	void setSelectColor(const wxColour& color);
+	void setSelectHoverColor(const wxColour& color);
+	void setSelectPressColor(const wxColour& color);
 
 private:
 	void updateState();
 
 private:
-	bool		m_hoverFlag;
-	bool		m_pressFlag;
-	wxColour	m_normalColor;
-	wxColour	m_normalHoverColor;
-	wxColour	m_normalPressColor;
-	wxColour	m_selectColor;
-	wxColour	m_selectHoverColor;
-	wxColour	m_selectPressColor;
+	bool		m_hoverFlag {false};
+	bool		m_pressFlag {false};
+	wxColour	m_normalColor {"#999999"};
+	wxColour	m_normalHoverColor {"#95C5FF"};
+	wxColour	m_normalPressColor {"#328DFB"};
+	wxColour	m_selectColor {"#328DFB"};
+	wxColour	m_selectHoverColor {"#116FDF"};
+	wxColour	m_selectPressColor {"#999999"};
 };
 
 #endif /* _Slic3r_GUI_FFToggleButton_hpp_ */

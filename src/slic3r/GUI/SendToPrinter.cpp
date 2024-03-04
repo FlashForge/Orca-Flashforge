@@ -626,7 +626,6 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/)
     m_renameText->SetMaxSize(wxSize(FromDIP(280), -1));
     m_renameText->Wrap(FromDIP(280));
     m_renameBtn = new Button(m_renamePanel, "", "ff_editable", wxBORDER_NONE, FromDIP(12));
-    m_renameBtn->SetBackgroundColor(*wxWHITE);
     m_renameBtn->SetBackgroundColour(*wxWHITE);
 
     rename_sizer_h->Add(m_renameText, 0, wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 0);
@@ -732,10 +731,12 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/)
     wxPanel* network_panel = new wxPanel(this);
     m_selectPrinterLbl = new wxStaticText(network_panel, wxID_ANY, _L("Select Printer"));
     m_wlanBtn = new FFToggleButton(network_panel, _L("Network"));
+    m_wlanBtn->SetBackgroundColour(*wxWHITE);
     m_wlanBtn->SetWindowStyle(m_wlanBtn->GetWindowStyle() | wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL);
     Bind(wxEVT_TOGGLEBUTTON, &SendToPrinterDialog::onNetworkTypeToggled, this);
     m_lanBtn = new FFToggleButton(network_panel, _L("Lan"));
     m_lanBtn->SetWindowStyle(m_wlanBtn->GetWindowStyle() | wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL);
+    m_lanBtn->SetBackgroundColour(*wxWHITE);
     Bind(wxEVT_TOGGLEBUTTON, &SendToPrinterDialog::onNetworkTypeToggled, this);
     auto networkLine = new wxPanel(network_panel, wxID_ANY, wxDefaultPosition, wxSize(1, -1), wxTAB_TRAVERSAL);
     networkLine->SetForegroundColour(wxColour("#DDDDDD"));

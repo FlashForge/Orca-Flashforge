@@ -410,7 +410,7 @@ void DeviceObjectOpr::unbind_lan_machine(DeviceObject *obj)
         delete devIt->second;
         m_user_devices.erase(devIt);
     }
-    sendDeviceListUpdateEvent(dev_id, nullptr);
+    sendDeviceListUpdateEvent(dev_id, -1);
 }
 
 ComErrno DeviceObjectOpr::unbind_wan_machine(DeviceObject *obj)
@@ -428,7 +428,7 @@ ComErrno DeviceObjectOpr::unbind_wan_machine(DeviceObject *obj)
             m_user_devices.erase(devIt);
         }
     }
-    sendDeviceListUpdateEvent(dev_id, nullptr);
+    sendDeviceListUpdateEvent(dev_id, -1);
     return ret;
 }
 
@@ -522,9 +522,9 @@ string DeviceObjectOpr::find_dev_id_from_connection(int connectId)
     return "";
 }
 
-void DeviceObjectOpr::sendDeviceListUpdateEvent(const std::string& dev_id, DeviceObject* dev_obj)
+void DeviceObjectOpr::sendDeviceListUpdateEvent(const std::string& dev_id, int conn_id)
 {
-    DeviceListUpdateEvent event(EVT_DEVICE_LIST_UPDATED, dev_id, dev_obj);
+    DeviceListUpdateEvent event(EVT_DEVICE_LIST_UPDATED, dev_id, conn_id);
     event.SetEventObject(this);
     wxPostEvent(this, event);
 }
@@ -593,7 +593,7 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
             devObj->set_connected_ready(true);
             devObj->set_online_state(data.wanDevInfo.status != "offline");
             m_user_devices.emplace(make_pair(macSN, devObj));
-            sendDeviceListUpdateEvent(macSN, devObj);
+            sendDeviceListUpdateEvent(macSN, connectId);
         }
     } else {
         string serialNum = data.lanDevInfo.serialNumber;
@@ -613,7 +613,7 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
             if (config) {
                 config->save_bind_machine_to_config(devObj->get_dev_id(), devObj->get_dev_name(), data.devDetail->location, devObj->get_dev_pid());
             }
-            sendDeviceListUpdateEvent(serialNum, devObj);
+            sendDeviceListUpdateEvent(serialNum, connectId);
         } else {
             userObj = it->second;
         }

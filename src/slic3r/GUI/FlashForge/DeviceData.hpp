@@ -108,31 +108,23 @@ private:
 typedef std::map<std::string, std::string> MacInfoMap;
 
 
-class DeviceListUpdateEvent : public wxEvent
+class DeviceListUpdateEvent : public wxCommandEvent
 {
 public:
-    DeviceListUpdateEvent(wxEventType type, const std::string& dev_id, DeviceObject* dev_obj)
-        : wxEvent(type), m_dev_id(dev_id), m_dev_obj(dev_obj) {}
+    DeviceListUpdateEvent(wxEventType type, const std::string& dev_id, int conn_id)
+        : wxCommandEvent(type), m_dev_id(dev_id), m_conn_id(conn_id) {}
 
     DeviceListUpdateEvent *Clone() const {
-        return new DeviceListUpdateEvent(GetEventType(), m_dev_id, m_dev_obj);
+        return new DeviceListUpdateEvent(GetEventType(), m_dev_id, m_conn_id);
     }
-    void SetDeviceId(const std::string& dev_id) {
-        m_dev_id = dev_id;
-    }
-    const std::string& GetDeviceId() const {
-        return m_dev_id;
-    }
-    void SetDeviceObject(DeviceObject* dev_obj) {
-        m_dev_obj = dev_obj;
-    }
-    DeviceObject* GetDeviceObject() {
-        return m_dev_obj;
-    }
+    void SetDeviceId(const std::string& dev_id) {m_conn_id = m_conn_id;}
+    const std::string& GetDeviceId() const { return m_dev_id;}
+    int GetConnectionId() {return m_conn_id;}
+    void SetConnectionId(int conn_id) {m_conn_id = conn_id;}
 
 private:
-    std::string     m_dev_id;
-    DeviceObject*   m_dev_obj;
+    int         m_conn_id {-1};
+    std::string m_dev_id;
 };
 wxDECLARE_EVENT(EVT_DEVICE_LIST_UPDATED, DeviceListUpdateEvent);
 
@@ -169,7 +161,7 @@ private:
     // before connect, scan machine's access code which hasn't written in config file
     void get_my_machine_list_v2(map<string, DeviceObject *> &devList);
     string find_dev_id_from_connection(int connectId);
-    void sendDeviceListUpdateEvent(const std::string& dev_id, DeviceObject* dev_obj);
+    void sendDeviceListUpdateEvent(const std::string& dev_id, int conn_id);
 
 private:
     void onConnectExit(ComConnectionExitEvent &event);
