@@ -163,10 +163,6 @@ public:
     void unbind_lan_machine(DeviceObject *obj);
     ComErrno unbind_wan_machine(DeviceObject *obj);
 
-    /* return machine has access code and user machine if login*/
-    void get_my_machine_list(map<string, DeviceObject *> &devList);
-
-    void clear_my_machine_list();
 
 private:
     DeviceObject *get_scan_device(const string &dev_id);

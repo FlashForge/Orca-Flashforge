@@ -428,7 +428,8 @@ ComErrno DeviceObjectOpr::unbind_wan_machine(DeviceObject *obj)
     if (it != m_dev_id_connect_map.end()) {
         m_dev_id_connect_map.erase(it);
     }
-    ComErrno ret = MultiComMgr::inst()->unbindWanDev(obj->get_dev_id(), obj->get_wan_dev_id());
+    string   dev_id = obj->get_dev_id();
+    ComErrno ret = MultiComMgr::inst()->unbindWanDev(dev_id, obj->get_wan_dev_id());
     if (ret == COM_OK) {
         auto devIt = m_user_devices.find(obj->get_dev_id());
         if (devIt != m_user_devices.end()) {
@@ -465,7 +466,7 @@ void DeviceObjectOpr::get_my_machine_list(map<string, DeviceObject *> &devList)
     }
 }
 
-void DeviceObjectOpr::clear_user_machine_list()
+void DeviceObjectOpr::clear_user_machine()
 {
     for (auto it = m_user_devices.begin(); it != m_user_devices.end(); ++it) {
         if (!it->second->is_lan_mode_printer()) {
