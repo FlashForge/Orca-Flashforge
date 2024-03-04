@@ -43,6 +43,10 @@ public:
     StartFilter(wxWindow* parent);
     ~StartFilter();
     void create_panel(wxWindow* parent);
+
+private:
+    void onAirFilterToggled(wxCommandEvent &event);
+
 private:
     SwitchButton* m_internal_circulate_switch;//内循环过滤
     SwitchButton* m_external_circulate_switch;//外循环过滤
@@ -56,7 +60,10 @@ public:
     void create_panel(wxWindow* parent);
     //void initData();
 private:
-
+    IconBottonText *m_device_speed{nullptr};
+    IconBottonText *m_device_z_axis{nullptr};
+    IconBottonText *m_device_nozzle_fan{nullptr};
+    IconBottonText *m_device_cooling_fan{nullptr};
 
 };
 
@@ -78,7 +85,10 @@ public:
     void setupLayoutDeviceInfo(wxBoxSizer *deviceStateSizer, wxPanel *parent);
 
     void msw_rescale();
-    void connectEvent();
+    void connectEvent(); 
+
+    void OnScriptMessage(wxWebViewEvent &evt);
+    void on_navigated(wxWebViewEvent &event);
 
 protected:
     wxPanel*  m_panel_monitoring_title;
@@ -162,6 +172,7 @@ protected:
     StartFilter*  m_busy_circula_filter;//忙碌状态，过滤按钮
 
     TempMixDevice* m_idle_tempMixDevice;//空闲状态，温度设备控件
+//
 };
 
 

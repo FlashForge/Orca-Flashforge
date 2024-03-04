@@ -693,6 +693,11 @@ void IconBottonText::setAdjustValue(double value)
     m_adjust_value = value; 
 }
 
+wxString IconBottonText::getTextValue() 
+{ 
+    return m_text_ctrl->GetValue(); 
+}
+
 void IconBottonText::onTextChange(wxCommandEvent &event) 
 {
     long value;
