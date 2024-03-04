@@ -356,7 +356,7 @@ void MonitorPanel::update_all()
 
     if (m_connect_fail_time1 > 0) {
         time_t connect_failed_time2 = time(nullptr);
-        if ((connect_failed_time2 - m_connect_fail_time1) / (double)CLOCKS_PER_SEC > 3) {
+        if ((connect_failed_time2 - m_connect_fail_time1) /*/ (double)CLOCKS_PER_SEC*/ > 5) {
             m_connect_fail_time1 = 0;
             obj->set_connected_ready(true);
         }

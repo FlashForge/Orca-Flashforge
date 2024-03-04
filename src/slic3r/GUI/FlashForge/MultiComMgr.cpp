@@ -216,6 +216,7 @@ void MultiComMgr::initConnection(const com_ptr_t &comPtr, const com_dev_data_t &
     comPtr->Bind(COM_CONNECTION_READY_EVENT, &MultiComMgr::onConnectionReady, this);
     comPtr->Bind(COM_CONNECTION_EXIT_EVENT, &MultiComMgr::onConnectionExit, this);
     comPtr->Bind(COM_DEV_DETAIL_UPDATE_EVENT, &MultiComMgr::onDevDetailUpdate, this);
+    comPtr->Bind(COM_DEV_OFFLINE_EVENT, &MultiComMgr::onDevOffline, this);
     comPtr->connect();
 }
 
@@ -302,6 +303,17 @@ void MultiComMgr::onDevDetailUpdate(const ComDevDetailUpdateEvent &event)
     fnet_dev_detail_t *&devDetail = m_datMap.at(event.id).devDetail;
     m_networkIntfc->freeDevDetail(devDetail);
     devDetail = event.devDetail;
+    if (m_datMap.at(event.id).connectMode == COM_CONNECT_WAN) {
+        com_wan_dev_info_t &wanDevInfo = m_datMap.at(event.id).wanDevInfo;
+        wanDevInfo.status              = devDetail->status;
+    }
+    QueueEvent(event.Clone());
+}
+
+void MultiComMgr::onDevOffline(const ComDevOfflineEvent &event) 
+{
+    com_wan_dev_info_t &wanDevInfo = m_datMap.at(event.id).wanDevInfo;
+    wanDevInfo.status              = "offline";
     QueueEvent(event.Clone());
 }
 

@@ -244,6 +244,7 @@ DeviceObjectOpr::DeviceObjectOpr()
     MultiComMgr::inst()->Bind(COM_CONNECTION_EXIT_EVENT, &DeviceObjectOpr::onConnectExit, this);
     MultiComMgr::inst()->Bind(COM_CONNECTION_READY_EVENT, &DeviceObjectOpr::onConnectReady, this);
     MultiComMgr::inst()->Bind(COM_DEV_DETAIL_UPDATE_EVENT, &DeviceObjectOpr::onConnectUpdate, this);
+    MultiComMgr::inst()->Bind(COM_DEV_OFFLINE_EVENT, &DeviceObjectOpr::onConnectDevOffline, this);
 }
 
 DeviceObjectOpr::~DeviceObjectOpr()
@@ -268,8 +269,8 @@ void DeviceObjectOpr::update_scan_machine()
     MultiComUtils::getLanDevList(devInfos);
 
     for (auto &elem : devInfos) {
-        if (elem.connectMode == 1)
-            continue;
+        //if (elem.connectMode == 1)
+        //    continue;
         string        dev_id = elem.serialNumber;
         DeviceObject *devObj = new DeviceObject(elem);
         devObj->set_connection_type(CONNECTTYPE_LAN);
@@ -284,6 +285,7 @@ void DeviceObjectOpr::update_scan_machine()
         }
         m_scan_devices.insert(make_pair(dev_id, devObj));
     }
+    BOOST_LOG_TRIVIAL(info) << "+++++++++++++++++++++m_scan_devices: " << m_scan_devices.size();
 }
 
 // connect_type: lan
@@ -398,6 +400,10 @@ void DeviceObjectOpr::unbind_lan_machine(DeviceObject *obj)
     if (it != m_dev_connect_map.end()) {
         MultiComMgr::inst()->removeLanDev(it->second);
     }
+    it = m_dev_id_connect_map.find(dev_id);
+    if (it != m_dev_id_connect_map.end()) {
+        m_dev_id_connect_map.erase(it);
+    }
 
     auto devIt = m_local_devices.find(dev_id);
     if (devIt != m_local_devices.end()) {
@@ -418,9 +424,11 @@ ComErrno DeviceObjectOpr::unbind_wan_machine(DeviceObject *obj)
     if (obj == nullptr) {
         return COM_ERROR;
     }
-
-    std::string dev_id = obj->get_dev_id();
-    ComErrno ret = MultiComMgr::inst()->unbindWanDev(dev_id, obj->get_wan_dev_id());
+    auto it = m_dev_id_connect_map.find(obj->get_dev_id());
+    if (it != m_dev_id_connect_map.end()) {
+        m_dev_id_connect_map.erase(it);
+    }
+    ComErrno ret = MultiComMgr::inst()->unbindWanDev(obj->get_dev_id(), obj->get_wan_dev_id());
     if (ret == COM_OK) {
         auto devIt = m_user_devices.find(obj->get_dev_id());
         if (devIt != m_user_devices.end()) {
@@ -457,15 +465,16 @@ void DeviceObjectOpr::get_my_machine_list(map<string, DeviceObject *> &devList)
     }
 }
 
-void DeviceObjectOpr::clear_user_machine()
+void DeviceObjectOpr::clear_user_machine_list()
 {
-    for (auto it = m_user_devices.begin(); it != m_user_devices.end(); it++) {
-        if (it->second) {
+    for (auto it = m_user_devices.begin(); it != m_user_devices.end(); ++it) {
+        if (!it->second->is_lan_mode_printer()) {
             delete it->second;
-            it->second = nullptr;
+            m_user_devices.erase(it);
         }
     }
-    m_user_devices.clear();
+    //m_user_devices.clear();
+    //m_scan_devices.clear();
 }
 
 DeviceObject* DeviceObjectOpr::get_scan_device(const string& dev_id)
@@ -514,8 +523,8 @@ void DeviceObjectOpr::clear_scan_machine()
 
 string DeviceObjectOpr::find_dev_id_from_connection(int connectId)
 {
-    auto it = m_dev_connect_map.begin();
-    for (; it != m_dev_connect_map.end(); ++it) {
+    auto it = /*m_dev_connect_map*/m_dev_id_connect_map.begin();
+    for (; it != m_dev_id_connect_map.end(); ++it) {
         if (it->second == connectId)
             return it->first;
     }
@@ -540,7 +549,16 @@ void DeviceObjectOpr::onConnectExit(ComConnectionExitEvent &event)
         if (event.ret == COM_VERIFY_LAN_DEV_FAILED) {
             unbind_lan_machine(devObj);
         } else {
-            devObj->set_online_state(false);
+            if (devObj->is_lan_mode_printer()) {
+                devObj->set_online_state(false);
+            } else {
+                auto tmpIt = m_dev_id_connect_map.find(devId);
+                if (tmpIt != m_dev_id_connect_map.end()) {
+                    m_dev_id_connect_map.erase(tmpIt);
+                }
+                delete it->second;
+                m_user_devices.erase(it);
+            }
         }
     } else {
         auto it = m_scan_devices.find(devId);
@@ -593,6 +611,8 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
             devObj->set_connected_ready(true);
             devObj->set_online_state(data.wanDevInfo.status != "offline");
             m_user_devices.emplace(make_pair(macSN, devObj));
+            //m_dev_connect_map.emplace()
+            m_dev_id_connect_map.emplace(make_pair(macSN, event.id));
             sendDeviceListUpdateEvent(macSN, devObj);
         }
     } else {
@@ -607,6 +627,8 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
         if (it == m_local_devices.end()) {
             userObj = new DeviceObject(*devObj->get_lan_dev_info());
             userObj->set_user_access_code(devObj->get_user_access_code(true));
+            m_user_devices.emplace(make_pair(serialNum, userObj));
+            m_dev_id_connect_map.emplace(make_pair(serialNum, event.id));
             m_local_devices.emplace(make_pair(serialNum, userObj));
 
             AppConfig *config = GUI::wxGetApp().app_config;
@@ -628,17 +650,25 @@ void DeviceObjectOpr::onConnectUpdate(ComDevDetailUpdateEvent &event)
     int                   connectId = event.id;
     const com_dev_data_t &data      = MultiComMgr::inst()->devData(connectId);
     if (data.connectMode == COM_CONNECT_WAN) {
-        auto   it     = m_user_devices.find(data.wanDevInfo.devId);
+        auto   it     = m_user_devices.find(data.wanDevInfo.serialNumber);
         if (it != m_user_devices.end()) {
             it->second->set_online_state(data.wanDevInfo.status != "offline");
         }
         string name   = data.wanDevInfo.name;
         string status = data.wanDevInfo.status;
-        string number = data.wanDevInfo.serialNumber;        
-
         BOOST_LOG_TRIVIAL(info) << "+++++++++++++++++++++dev name: " << name.c_str() << "status: "<< status.c_str();
-    } else {
+    }
+}
 
+void DeviceObjectOpr::onConnectDevOffline(ComDevOfflineEvent &event) 
+{
+    int                   connectId = event.id;
+    const com_dev_data_t &data      = MultiComMgr::inst()->devData(connectId);
+    if (data.connectMode == COM_CONNECT_WAN) {
+        auto it = m_user_devices.find(data.wanDevInfo.serialNumber);
+        if (it != m_user_devices.end()) {
+            it->second->set_online_state(false);
+        }
     }
 }
 
