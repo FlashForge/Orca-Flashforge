@@ -174,6 +174,9 @@ public:
     void create_panel(wxWindow* parent,wxString icon,int iconSize,wxString text,int textSize,wxString secondIcon  = "",wxString thirdIcon = "");
     void setLimit(double min,double max);
     void setAdjustValue(double value);
+    wxString getTextValue();
+
+private:
     void onTextChange(wxCommandEvent &event);
     void onTextFocusOut(wxFocusEvent &event);
     void onDecBtnClicked(wxMouseEvent &event);

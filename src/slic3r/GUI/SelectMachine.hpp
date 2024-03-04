@@ -231,7 +231,7 @@ private:
     void on_timer(wxTimerEvent &event);
 
 	void      update_other_devices();
-    void      update_user_devices();
+    void      update_user_devices();    
     bool      search_for_printer(MachineObject* obj);
     void      on_dissmiss_win(wxCommandEvent &event);
     wxWindow *create_title_panel(wxString text);

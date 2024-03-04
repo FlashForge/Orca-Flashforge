@@ -3,9 +3,18 @@
 #include "slic3r/GUI/BitmapCache.hpp"
 #include "slic3r/GUI/GUI.hpp"
 #include <slic3r/GUI/Widgets/WebView.hpp>
+#include "slic3r/GUI/FlashForge/MultiComMgr.hpp"
+#include <nlohmann/json.hpp>
+
+using namespace std::literals;
+using json   = nlohmann::json;
+namespace pt = boost::property_tree;
 
 namespace Slic3r {
 namespace GUI {
+
+const std::string CLOSE = "close";
+const std::string OPEN  = "open";
 
 MaterialPanel::MaterialPanel(wxWindow* parent)
     : wxPanel(parent, wxID_ANY,wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL)
@@ -103,6 +112,7 @@ void StartFilter::create_panel(wxWindow* parent)
         m_staticText_internal_circulate->SetFont(wxFont(wxFontInfo(16)));
         m_internal_circulate_switch = new SwitchButton(internal_circulate_panel);
         m_internal_circulate_switch->SetBackgroundColour(*wxWHITE);
+        m_internal_circulate_switch->Bind(wxEVT_TOGGLEBUTTON, &StartFilter::onAirFilterToggled, this);
 
         bSizer_internal_circulate_hor->AddSpacer(FromDIP(17));
         bSizer_internal_circulate_hor->Add(m_staticText_internal_circulate, 0, wxALL | wxEXPAND, 0);
@@ -121,6 +131,7 @@ void StartFilter::create_panel(wxWindow* parent)
         m_staticText_external_circulate->SetFont(wxFont(wxFontInfo(16)));
         m_external_circulate_switch = new SwitchButton(external_circulate_panel);
         m_external_circulate_switch->SetBackgroundColour(*wxWHITE);
+        m_external_circulate_switch->Bind(wxEVT_TOGGLEBUTTON, &StartFilter::onAirFilterToggled, this);
 
         bSizer_external_circulate_hor->AddSpacer(FromDIP(17));
         bSizer_external_circulate_hor->Add(m_staticText_external_circulate, 0, wxALL | wxEXPAND, 0);
@@ -143,6 +154,35 @@ void StartFilter::create_panel(wxWindow* parent)
         parent->Fit();  
 }
 
+void StartFilter::onAirFilterToggled(wxCommandEvent &event)
+{
+    event.Skip();
+    SwitchButton *click_btn   = dynamic_cast<SwitchButton *>(event.GetEventObject());
+    std::string inter_state = CLOSE;
+    std::string exter_state = CLOSE;
+
+    if (m_internal_circulate_switch) {
+        inter_state = m_internal_circulate_switch->GetValue() ? OPEN : CLOSE;
+    }
+
+    if (m_external_circulate_switch) {
+        exter_state = m_external_circulate_switch->GetValue() ? OPEN : CLOSE;
+    }
+
+    if (m_internal_circulate_switch->GetValue() && m_external_circulate_switch->GetValue()) {
+        if (click_btn == m_internal_circulate_switch) {
+            m_external_circulate_switch->SetValue(false);
+            exter_state = CLOSE;
+        } else if (click_btn == m_external_circulate_switch) {
+            m_internal_circulate_switch->SetValue(false);
+            inter_state = CLOSE;
+        }
+    }
+    ComAirFilterCtrl *filterCtrl = new ComAirFilterCtrl(inter_state, exter_state);
+    // 测试，临时将id写死
+    Slic3r::GUI::MultiComMgr::inst()->putCommand(0, filterCtrl);
+}
+
 DeviceDetail::DeviceDetail(wxWindow* parent)
     : wxPanel(parent, wxID_ANY,wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL)
 {
@@ -160,10 +200,34 @@ void DeviceDetail::create_panel(wxWindow* parent)
 
         wxBoxSizer *bSizer_confirm_row = new wxBoxSizer(wxHORIZONTAL);
         auto m_panel_confirm_row = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-        auto btn = new FFPushButton(m_panel_confirm_row, wxID_ANY, "push_button_confirm_normal", "push_button_confirm_hover","push_button_confirm_press", "push_button_confirm_normal");
-        btn->SetBackgroundColour(wxColour(255, 255, 255));
+        auto confirm_push_btn = new FFPushButton(m_panel_confirm_row, wxID_ANY, "push_button_confirm_normal", "push_button_confirm_hover","push_button_confirm_press", "push_button_confirm_normal");
+        confirm_push_btn->SetBackgroundColour(wxColour(255, 255, 255));
+        confirm_push_btn->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &event) {
+            event.Skip();
+            double speed;
+            double z_axis;
+            double nozzle_fan;
+            double cooling_fan;
+            if (m_device_speed) {
+                wxString str_speed = m_device_speed->getTextValue();
+                str_speed.ToDouble(&speed);
+                double ss = speed;
+            }
+            if (m_device_z_axis) {
+                m_device_z_axis->getTextValue().ToDouble(&z_axis);
+            }
+            if (m_device_nozzle_fan) {
+                m_device_nozzle_fan->getTextValue().ToDouble(&nozzle_fan);
+            }
+            if (m_device_cooling_fan) {
+                m_device_cooling_fan->getTextValue().ToDouble(&cooling_fan);
+            }
+            ComPrintCtrl *printCtrl = new ComPrintCtrl(z_axis, speed, cooling_fan, nozzle_fan);
+            Slic3r::GUI::MultiComMgr::inst()->putCommand(0, printCtrl);
+        });
+
         bSizer_confirm_row->AddStretchSpacer();
-        bSizer_confirm_row->Add(btn, 0, wxEXPAND | wxTOP , FromDIP(8));
+        bSizer_confirm_row->Add(confirm_push_btn, 0, wxEXPAND | wxTOP, FromDIP(8));
         bSizer_confirm_row->AddSpacer(FromDIP(25));
 
         m_panel_confirm_row->SetSizer(bSizer_confirm_row);
@@ -196,16 +260,16 @@ void DeviceDetail::create_panel(wxWindow* parent)
         bSizer_first_row->Add(device_initial_speed, 0, wxEXPAND | wxALL, 0);
         bSizer_first_row->AddSpacer(FromDIP(18));
 
-        IconBottonText *device_speed = new IconBottonText(m_panel_first_row, wxString("device_speed"), 17, wxString("90"), 12);
-        device_speed->setLimit(10, 150);
-        device_speed->setAdjustValue(1);
-        bSizer_first_row->Add(device_speed, 0, wxEXPAND | wxALL, 0);
+        m_device_speed = new IconBottonText(m_panel_first_row, wxString("device_speed"), 17, wxString("90"), 12);
+        m_device_speed->setLimit(10, 150);
+        m_device_speed->setAdjustValue(1);
+        bSizer_first_row->Add(m_device_speed, 0, wxEXPAND | wxALL, 0);
         bSizer_first_row->AddSpacer(FromDIP(18));
 
-        IconBottonText *device_z_axis = new IconBottonText(m_panel_first_row, wxString("device_z_axis"), 17, wxString("0.02"), 12,wxString("device_z_dec"), wxString("push_button_arrow_dec_normal"));
-        device_z_axis->setLimit(-5, 5);
-        device_z_axis->setAdjustValue(0.01);
-        bSizer_first_row->Add(device_z_axis, 0, wxEXPAND | wxALL, 0);
+        m_device_z_axis = new IconBottonText(m_panel_first_row, wxString("device_z_axis"), 17, wxString("0.02"), 12,wxString("device_z_dec"), wxString("push_button_arrow_dec_normal"));
+        m_device_z_axis->setLimit(-5, 5);
+        m_device_z_axis->setAdjustValue(0.01);
+        bSizer_first_row->Add(m_device_z_axis, 0, wxEXPAND | wxALL, 0);
         bSizer_first_row->AddStretchSpacer();
 
         m_panel_first_row->SetSizer(bSizer_first_row);
@@ -227,16 +291,16 @@ void DeviceDetail::create_panel(wxWindow* parent)
         bSizer_second_row->Add(device_fill_rate, 0, wxEXPAND | wxALL, 0);
         bSizer_second_row->AddSpacer(FromDIP(18));
 
-        IconBottonText *device_nozzle_fan = new IconBottonText(m_panel_second_row, wxString("device_nozzle_fan"), 17, wxString("50"), 12);
-        device_nozzle_fan->setLimit(0, 100);
-        device_nozzle_fan->setAdjustValue(1);
-        bSizer_second_row->Add(device_nozzle_fan, 0, wxEXPAND | wxALL, 0);
+        m_device_nozzle_fan = new IconBottonText(m_panel_second_row, wxString("device_nozzle_fan"), 17, wxString("50"), 12);
+        m_device_nozzle_fan->setLimit(0, 100);
+        m_device_nozzle_fan->setAdjustValue(1);
+        bSizer_second_row->Add(m_device_nozzle_fan, 0, wxEXPAND | wxALL, 0);
         bSizer_second_row->AddSpacer(FromDIP(18));
 
-        IconBottonText *device_cooling_fan = new IconBottonText(m_panel_second_row, wxString("device_cooling_fan"), 17, wxString("100"), 12);
-        device_cooling_fan->setLimit(0, 100);
-        device_cooling_fan->setAdjustValue(1);
-        bSizer_second_row->Add(device_cooling_fan, 0, wxEXPAND | wxALL, 0);
+        m_device_cooling_fan = new IconBottonText(m_panel_second_row, wxString("device_cooling_fan"), 17, wxString("100"), 12);
+        m_device_cooling_fan->setLimit(0, 100);
+        m_device_cooling_fan->setAdjustValue(1);
+        bSizer_second_row->Add(m_device_cooling_fan, 0, wxEXPAND | wxALL, 0);
         bSizer_second_row->AddStretchSpacer();
 
         m_panel_second_row->SetSizer(bSizer_second_row);
@@ -350,7 +414,13 @@ wxBoxSizer* SingleDeviceState::create_monitoring_page()
 
         //播放控件
         m_camera_play_url = wxString::Format("file://%s/web/orca/missing_connection.html?lang=http://192.168.4.128:8080/?action=stream", from_u8(resources_dir()));
+#if 0
+        m_camera_play_url = wxString::Format("file://%s/web/orca/missing_connection.html?lang=http://115.231.29.48:1370/ffspace/SNMMOC98989898.m3u8",from_u8(resources_dir()));
+        m_camera_play_url =wxString::Format("file://%s/web/homepage/index.html",from_u8(resources_dir()));
+#endif
         m_browser = WebView::CreateWebView(this,m_camera_play_url);
+        Bind(wxEVT_WEBVIEW_SCRIPT_MESSAGE_RECEIVED, &SingleDeviceState::OnScriptMessage, this);
+        m_browser->Bind(wxEVT_WEBVIEW_NAVIGATED, &SingleDeviceState::on_navigated, this);
         if(m_browser == nullptr){
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format("load web view of SingleDeviceState url failed");
             return sizer;
@@ -1379,10 +1449,18 @@ void SingleDeviceState::connectEvent()
 
    m_lamp_control_button->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e) {
        if (m_lamp_control_button->GetFlashForgeSelected()) {
+           // 关灯
+           ComLightCtrl *lightctrl = new ComLightCtrl(CLOSE);
+           // 测试，临时将id写死
+           Slic3r::GUI::MultiComMgr::inst()->putCommand(0, lightctrl);
            m_lamp_control_button->SetIcon("device_lamp_control");
            m_lamp_control_button->Refresh();
            m_lamp_control_button->SetFlashForgeSelected(false);
        } else {
+           //开灯
+           ComLightCtrl *lightctrl = new ComLightCtrl(OPEN);
+           // 测试，临时将id写死
+           Slic3r::GUI::MultiComMgr::inst()->putCommand(0, lightctrl);
            m_lamp_control_button->SetIcon("device_lamp_control_press");
            m_lamp_control_button->Refresh();
            m_lamp_control_button->SetFlashForgeSelected(true);
@@ -1415,6 +1493,31 @@ void SingleDeviceState::connectEvent()
 //         Layout();
 //     });  
 
+}
+
+void SingleDeviceState::on_navigated(wxWebViewEvent &event) 
+{
+   wxString strInput = event.GetString();
+}
+
+void SingleDeviceState::OnScriptMessage(wxWebViewEvent &evt)
+{
+   wxString          strInput = evt.GetString();
+   std::string       cmd      = evt.GetString().ToUTF8().data();
+   std::stringstream ss(cmd), oss;
+   pt::ptree         root, response;
+   pt::read_json(ss, root);
+   if (root.empty())
+            return;
+
+   boost::optional<std::string> sequence_id = root.get_optional<std::string>("sequence_id");
+   boost::optional<std::string> command     = root.get_optional<std::string>("command");
+   if (command.has_value()) {
+       std::string command_str = command.value();
+       if (command_str.compare("request_rtsp_conitnue") == 0) {
+       // 外网视频继续播放
+       }
+   }
 }
 
 }

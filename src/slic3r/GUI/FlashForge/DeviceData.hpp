@@ -155,6 +155,7 @@ public:
     void unbind_lan_machine(DeviceObject *obj);
     ComErrno unbind_wan_machine(DeviceObject *obj);
 
+
 private:
     DeviceObject *get_scan_device(const string &dev_id);
 
@@ -167,6 +168,7 @@ private:
     void onConnectExit(ComConnectionExitEvent &event);
     void onConnectReady(ComConnectionReadyEvent &event);
     void onConnectUpdate(ComDevDetailUpdateEvent &event);
+    void onConnectDevOffline(ComDevOfflineEvent &event);
 
 private:
     string                            m_selected_machine;       /* dev_id */
@@ -174,6 +176,7 @@ private:
     map<string, DeviceObject *>       m_user_devices;        /* dev_id -> DeviceObject*, when user login, the user's devices that has bound. And machine connected successfully. */
     map<string, DeviceObject*>        m_local_devices;      /* dev_id -> DeviceObject*,  in lan connectMode, device has input access code. Read data from appconfig. */
     map<string, com_id_t>             m_dev_connect_map;   /* dev_id -> connectId */
+    map<string, com_id_t>             m_dev_id_connect_map;
 };
 
 }
