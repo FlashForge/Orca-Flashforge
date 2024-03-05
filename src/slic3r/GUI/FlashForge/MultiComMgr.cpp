@@ -1,5 +1,4 @@
 #include "MultiComMgr.hpp"
-#include <memory>
 #include "FreeInDestructor.h"
 
 namespace Slic3r { namespace GUI {

@@ -299,9 +299,9 @@ public:
     {
         return COM_OK;
     }
-    const fnet_camera_stream_ctrl_t &cameraStreamCtrl()
+    void asyncExec(ComWanAsyncConn *wanAsyncConn, const std::string &devId)
     {
-        return m_cameraStreamCtrl;
+        wanAsyncConn->postCameraStreamCtrl(devId, m_cameraStreamCtrl);
     }
 
 private:
