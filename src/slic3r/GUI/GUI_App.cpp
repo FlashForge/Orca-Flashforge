@@ -3545,8 +3545,9 @@ void GUI_App::ShowUserLogin(bool show)
             }
         Slic3r::GUI::MultiComMgr::inst()->Bind(COM_GET_USER_PROFILE_EVENT, [this](ComGetUserProfileEvent &event){
             if(event.ret == ComErrno::COM_OK){
-                LoginDialog::SetUsrInfo(com_user_profile_t{event.userProfile.nickname,event.userProfile.headImgUrl});
+                LoginDialog::SetUsrInfo(com_user_profile_t{event.userProfile.uid, event.userProfile.nickname, event.userProfile.headImgUrl});
                 if(app_config){
+                    app_config->set("usr_uid", event.userProfile.uid);
                     app_config->set("usr_pic",event.userProfile.headImgUrl);
                     app_config->set("usr_name",event.userProfile.nickname);
                     //BOOST_LOG_TRIVIAL(info) << "login success," << " pic is : " << event.userProfile.headImgUrl << " name is: "<< event.userProfile.nickname;
@@ -3555,7 +3556,13 @@ void GUI_App::ShowUserLogin(bool show)
                 }
             }
             event.Skip();
-        });    
+        });  
+        Slic3r::GUI::MultiComMgr::inst()->Bind(COM_WAN_DEV_MAINTAIN_EVENT, [this](ComWanDevMaintainEvent &event) {
+            if (event.ret != ComErrno::COM_OK) {
+                //login out
+                handle_login_out();
+            }
+        });
         m_login_dlg->ShowModal();
         }catch(std::exception &e){
             ;
@@ -3910,6 +3917,7 @@ std::string GUI_App::handle_web_request(std::string cmd)
                         if (usr_name.empty()) {
                             usr_name = app_config->get("usr_input_name");
                         }
+                        std::string usr_uid = app_config->get("usr_uid");
                         std::string usr_pic = app_config->get("usr_pic");
                         std::string expire_time = app_config->get("expire_time");
                         if(!access_token.empty() && !refresh_token.empty()){
@@ -3926,13 +3934,13 @@ std::string GUI_App::handle_web_request(std::string cmd)
                             //未过期，自动登录
                             //校验token是否有效
                             ComErrno login_result = MultiComUtils::checkToken(access_token);
-                            if(login_result == ComErrno::COM_OK){
+                            ComErrno add_dev_result = Slic3r::GUI::MultiComMgr::inst()->addWanDev(access_token);
+                            if (login_result == ComErrno::COM_OK && add_dev_result == COM_OK) {
                                 handle_login_result(usr_pic,usr_name);
                                 LoginDialog::SetToken(access_token,refresh_token);
-                                LoginDialog::SetUsrInfo(com_user_profile_t{usr_name,usr_pic});
-                                Slic3r::GUI::MultiComMgr::inst()->addWanDev(access_token);
+                                LoginDialog::SetUsrInfo(com_user_profile_t{usr_uid,usr_name, usr_pic});
                             }
-                            else{
+                            else if(login_result != ComErrno::COM_OK && add_dev_result == COM_OK){
                                 //尝试更新token值，若还是无效，则清空已有信息
                                 com_token_data_t token_data{std::stoi(expire_time),access_token,refresh_token};
                                 ComErrno relogin_refresh_token = MultiComUtils::refreshToken(refresh_token,token_data);
@@ -3940,7 +3948,6 @@ std::string GUI_App::handle_web_request(std::string cmd)
                                     handle_login_result(usr_pic,usr_name);
                                     LoginDialog::SetToken(token_data.accessToken,token_data.refreshToken);
                                     LoginDialog::SetUsrInfo(com_user_profile_t{usr_name,usr_pic});
-                                    Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data.accessToken);
                                     app_config->set("access_token",token_data.accessToken);
                                     app_config->set("refresh_token",token_data.refreshToken);
                                     app_config->set("expire_time",std::to_string(token_data.expiresIn));
@@ -3951,7 +3958,11 @@ std::string GUI_App::handle_web_request(std::string cmd)
                                     app_config->set("expire_time","");
                                     app_config->set("usr_name","");
                                     app_config->set("usr_pic","");
+                                    app_config->set("usr_uid", "");
                                 }
+                            } else {
+                                //addWanDev接口所在服务器连接失败
+                                BOOST_LOG_TRIVIAL(warning) << boost::format("Slic3r::GUI::MultiComMgr::inst()->addWanDev Failed!");
                             }
                         }
                         //get_login_info();

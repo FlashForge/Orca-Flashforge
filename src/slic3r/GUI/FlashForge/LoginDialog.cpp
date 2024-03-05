@@ -26,6 +26,7 @@ namespace GUI {
     bool LoginDialog::m_usr_is_login = false;
     com_user_profile_t LoginDialog::m_usr_info = {};
     std::string  LoginDialog::m_usr_name = "";
+    bool LoginDialog::m_first_call_client_token = true;
 
     CountdownButton::CountdownButton(wxWindow* parent, wxString text, wxString icon /*= ""*/, long style /*= 0*/, int iconSize /*= 0*/, wxWindowID btn_id /*= wxID_ANY*/)
         : FFButton(parent,wxID_ANY,text,10)
@@ -37,6 +38,7 @@ namespace GUI {
 
     void CountdownButton::OnTimer(wxTimerEvent& event)
     {
+        event.Skip();
         std::lock_guard lock(m_mutex);
         m_countdown--;
         if (m_countdown > 0)
@@ -123,6 +125,11 @@ LoginDialog::LoginDialog()
     this->SetMinSize(wxSize(FromDIP(330), FromDIP(439)));
 }
 
+LoginDialog::~LoginDialog() 
+{
+    m_first_call_client_token = true;
+}
+
 com_token_data_t LoginDialog::GetLoginToken()
 {
     return m_token_data;
@@ -189,10 +196,6 @@ void LoginDialog::initWidget()
 
 void LoginDialog::initData()
 {
-    ComErrno get_result = MultiComUtils::getClientToken(m_client_SMS_token);
-   if(get_result == ComErrno::COM_ERROR){
-        BOOST_LOG_TRIVIAL(warning) << boost::format("MultiComUtils::getClientToken Failed!");
-   }
    m_panel_checkbox_page1->Refresh();
    m_privacy_policy_page1->Refresh();
    m_service_link_page1->Refresh();
@@ -203,6 +206,7 @@ void LoginDialog::initData()
 void LoginDialog::initBindEvent()
 {
     m_switch_title_1->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e){
+       e.Skip();
         m_page_body_page1_panel->Show();
         m_page_body_page2_panel->Hide();
         m_switch_title_1->SetForegroundColour(wxColour(51,51,51));
@@ -227,6 +231,7 @@ void LoginDialog::initBindEvent()
         Layout();
         });
     m_switch_title_2->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e){
+        e.Skip();
         m_page_body_page2_panel->Show();
         m_page_body_page1_panel->Hide();
         m_switch_title_2->SetForegroundColour(wxColour(51,51,51));
@@ -443,6 +448,7 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     m_get_code_button->SetBorderColor(wxColour(50,141,251));
     m_get_code_button->SetBGColor(wxColour(50,141,251));
     m_get_code_button->Bind(wxEVT_LEFT_UP, [this](wxMouseEvent& event){
+        event.Skip();
         wxString usrname_value = m_username_ctrl_page1->GetValue();
         double num;
         if(usrname_value.ToDouble(&num)){
@@ -454,7 +460,6 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
                 }
                 else{
                     page1ShowErrorLabel(_L("Mobile Phone Number Error"));
-                    event.Skip();
                     return;
                 }
             }
@@ -468,23 +473,31 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
                 }
                 else{
                     page1ShowErrorLabel(_L("Email Address Error"));
-                    event.Skip();
                     return;
                 }
             }
         }
 
         if(m_get_code_button->GetState()){
-            event.Skip();
             return;
         }
+        if (m_first_call_client_token) {
+            ComErrno get_result = MultiComUtils::getClientToken(m_client_SMS_token);
+            if (get_result == ComErrno::COM_ERROR) {
+                page1ShowErrorLabel(_L("Server connection exception"));
+                BOOST_LOG_TRIVIAL(warning) << boost::format("MultiComUtils::getClientToken Failed!");
+                return;
+            } else if (get_result == ComErrno::COM_OK) {
+                m_first_call_client_token = false;
+            }
+        }
+
         m_get_code_button->SetState(true);
         m_get_code_button->startTimer();
         ComErrno send_result =MultiComUtils::sendSMSCode(m_client_SMS_token.accessToken,m_username_ctrl_page1->GetValue().ToStdString());
         if(send_result == ComErrno::COM_ERROR){
             BOOST_LOG_TRIVIAL(warning) << boost::format("MultiComUtils::sendSMSCode Failed!");
         }
-        event.Skip();
     });
 
 
@@ -558,6 +571,7 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     m_service_link_page1 = new wxStaticText(m_panel_checkbox_page1, wxID_ANY,  _L("《Term of Sevrvice》"));
     m_service_link_page1->SetForegroundColour(wxColour(50,141,251));
     m_service_link_page1->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
+        event.Skip();
         wxString url = "http://dev.auth.flashforge.shop/en/userAgreement";
         AppConfig *app_config = wxGetApp().app_config;
         if(app_config){
@@ -573,6 +587,7 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     m_privacy_policy_page1 = new wxStaticText(m_panel_checkbox_page1, wxID_ANY,  _L("《Privacy Policy》"));
     m_privacy_policy_page1->SetForegroundColour(wxColour(50,141,251));
     m_privacy_policy_page1->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e){
+        e.Skip();
         wxString url = "http://dev.auth.flashforge.shop/en/privacyPolicy";
         AppConfig *app_config = wxGetApp().app_config;
         if(app_config){
@@ -647,6 +662,7 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     auto register_link = new wxStaticText(parent, wxID_ANY, _L("Register"));
     register_link->SetForegroundColour(wxColour(50,141,251));
     register_link->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
+        event.Skip();
         wxString url = "http://dev.auth.flashforge.shop/en/signUp";
         wxLaunchDefaultBrowser(url);
     });
@@ -654,6 +670,7 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     auto forget_password_link = new wxStaticText(parent, wxID_ANY,  _L("Forget Password"));
     forget_password_link->SetForegroundColour(wxColour(50,141,251));
     forget_password_link->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
+        event.Skip();
         wxString url = "http://dev.auth.flashforge.shop/en/resetPassword";
         wxLaunchDefaultBrowser(url);
     });
@@ -755,6 +772,7 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     m_service_link_page2 = new wxStaticText(m_panel_checkbox_page2, wxID_ANY,  _L("《Term of Sevrvice》"));
     m_service_link_page2->SetForegroundColour(wxColour(50,141,251));
     m_service_link_page2->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
+        event.Skip();
         wxString url = "http://dev.auth.flashforge.shop/en/userAgreement";
         AppConfig *app_config = wxGetApp().app_config;
         if(app_config){
@@ -770,6 +788,7 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     m_privacy_policy_page2 = new wxStaticText(m_panel_checkbox_page2, wxID_ANY,  _L("《Privacy Policy》"));
     m_privacy_policy_page2->SetForegroundColour(wxColour(50,141,251));
     m_privacy_policy_page2->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
+        event.Skip();
         wxString url = "http://dev.auth.flashforge.shop/en/privacyPolicy";
         AppConfig *app_config = wxGetApp().app_config;
         if(app_config){
@@ -833,6 +852,7 @@ void LoginDialog::onUsrNameOrPasswordChangedPage1(wxCommandEvent& event)
 
 void LoginDialog::onAgreeCheckBoxChangedPage1(wxCommandEvent& event)
 {
+        event.Skip();
         wxString username = m_username_ctrl_page1->GetValue();
         wxString verifycode = m_verifycode_ctrl_page1->GetValue();
         bool agree = m_page1_checkBox->GetValue();
@@ -850,6 +870,7 @@ void LoginDialog::onAgreeCheckBoxChangedPage1(wxCommandEvent& event)
 
 void LoginDialog::onUsrNameOrPasswordChangedPage2(wxCommandEvent& event)
 {
+        event.Skip();
         wxString username = m_username_ctrl_page2->GetValue();
         wxString password = m_password_ctrl_page2->GetValue();
         bool agree = m_page2_checkBox->GetValue();
@@ -866,6 +887,7 @@ void LoginDialog::onUsrNameOrPasswordChangedPage2(wxCommandEvent& event)
 
 void LoginDialog::onAgreeCheckBoxChangedPage2(wxCommandEvent& event)
 {
+        event.Skip();
         wxString username = m_username_ctrl_page2->GetValue();
         wxString password = m_password_ctrl_page2->GetValue();
         bool agree = m_page2_checkBox->GetValue();
@@ -915,22 +937,28 @@ void LoginDialog::onPage4Login(wxMouseEvent& event)
     com_token_data_t token_data;
     ComErrno login_result =  MultiComUtils::getTokenBySMSCode(usrname.ToStdString(),verify_code.ToStdString(),token_data);
     if(login_result == ComErrno::COM_OK){
-        m_usr_name = usrname.ToStdString();
-        LoginDialog::m_token_data = token_data;
-        wxGetApp().handle_login_result("default.jpg",usrname.ToStdString());
-        this->Hide();
-        AppConfig *app_config = wxGetApp().app_config;
-        if(app_config){
-            //主动点击登录，设置token值
-            app_config->set("usr_input_name", usrname.ToStdString());
-            app_config->set("access_token",token_data.accessToken);
-            app_config->set("refresh_token",token_data.refreshToken);
-            app_config->set("expire_time",std::to_string(token_data.expiresIn));
-             Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data.accessToken);
-        } 
+        ComErrno add_dev_result = Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data.accessToken);
+        if (add_dev_result == COM_OK) {
+             m_usr_name = usrname.ToStdString();
+             LoginDialog::m_token_data = token_data;
+             wxGetApp().handle_login_result("default.jpg", usrname.ToStdString());
+             this->Hide();
+             AppConfig *app_config = wxGetApp().app_config;
+             if (app_config) {
+                // 主动点击登录，设置token值
+                app_config->set("usr_input_name", usrname.ToStdString());
+                app_config->set("access_token", token_data.accessToken);
+                app_config->set("refresh_token", token_data.refreshToken);
+                app_config->set("expire_time", std::to_string(token_data.expiresIn));
+             } 
+        } else {
+             page1ShowErrorLabel(_L("Server connection exception"));
+        }
     }
     else if (login_result == ComErrno::COM_INVALID_VALIDATION){
         page1ShowErrorLabel(_L("Verify code is incorrect"));
+    } else if (login_result == ComErrno::COM_ERROR) {
+        page1ShowErrorLabel(_L("Server connection exception"));
     }
     event.Skip();
 }
@@ -987,6 +1015,7 @@ void LoginDialog::onPage2Login(wxCommandEvent& event)
 
 void LoginDialog::onPage3Login(wxMouseEvent& event)
 {
+    event.Skip();
     wxString usrname = m_username_ctrl_page2->GetValue();
     wxString password = m_password_ctrl_page2->GetValue();
     double num;
@@ -1019,28 +1048,33 @@ void LoginDialog::onPage3Login(wxMouseEvent& event)
         }
     }
 
+    // 1、getTokenByPassword   2、addWanDev
     com_token_data_t token_data;
     ComErrno login_result =  MultiComUtils::getTokenByPassword(usrname.ToStdString(),password.ToStdString(),token_data);
     if(login_result == ComErrno::COM_OK){
-        m_usr_name = usrname.ToStdString();
-        LoginDialog::m_token_data = token_data;
-        wxGetApp().handle_login_result("default.jpg",usrname.ToStdString());
-        this->Hide();
-        AppConfig *app_config = wxGetApp().app_config;
-        if(app_config){
-            //主动点击登录，设置token值
-            app_config->set("usr_input_name", usrname.ToStdString());
-            app_config->set("access_token",token_data.accessToken);
-            app_config->set("refresh_token",token_data.refreshToken);
-            app_config->set("expire_time",std::to_string(token_data.expiresIn));
-             Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data.accessToken);
+        ComErrno add_dev_result =  Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data.accessToken);
+        if (add_dev_result == COM_OK) {
+            m_usr_name = usrname.ToStdString();
+            LoginDialog::m_token_data = token_data;
+            wxGetApp().handle_login_result("default.jpg", usrname.ToStdString());
+            this->Hide();
+            AppConfig *app_config = wxGetApp().app_config;
+            if (app_config) {
+                // 主动点击登录，设置token值
+                app_config->set("usr_input_name", usrname.ToStdString());
+                app_config->set("access_token", token_data.accessToken);
+                app_config->set("refresh_token", token_data.refreshToken);
+                app_config->set("expire_time", std::to_string(token_data.expiresIn));
+            }
+        } else {
+            page2ShowErrorLabel(_L("Server connection exception"));
         }
-        
     }
     else if (login_result == ComErrno::COM_INVALID_VALIDATION){
-        page2ShowErrorLabel(_L("Verify code is incorrect"));
+        page2ShowErrorLabel(_L("Password is incorrect"));
+    } else if (login_result == ComErrno::COM_ERROR) {
+        page2ShowErrorLabel(_L("Server connection exception"));
     }
-    event.Skip();
 }
 
 void LoginDialog::page2ShowErrorLabel(const wxString& labelInfo)
@@ -1067,6 +1101,7 @@ void LoginDialog::page2ShowErrorLabel(const wxString& labelInfo)
 
 void LoginDialog::OnTimer(wxTimerEvent& event)
 {
+    event.Skip();
     if(m_error_label_panel->IsShown()){
         m_error_label_panel->Show(false);
     }
@@ -1079,7 +1114,6 @@ void LoginDialog::OnTimer(wxTimerEvent& event)
     if(m_error_label_page2->IsShown()){
         m_error_label_page2->Show(false);
     }
-
     m_timer.Stop();
 }
 
