@@ -646,11 +646,12 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
 
 void DeviceObjectOpr::onConnectWanDevInfoUpdate(ComWanDevInfoUpdateEvent &event)
 {
+    event.Skip();
     const com_dev_data_t &data = MultiComMgr::inst()->devData(event.id);
-    if (data.connectMode == COM_CONNECT_WAN && data.wanDevInfo.status == "offline") {
+    if (data.connectMode == COM_CONNECT_WAN) {
         auto it = m_user_devices.find(data.wanDevInfo.serialNumber);
         if (it != m_user_devices.end()) {
-            it->second->set_online_state(false);
+            it->second->set_online_state(data.wanDevInfo.status != "offline");
         }
     }
 }
