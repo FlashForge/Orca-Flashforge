@@ -3947,7 +3947,7 @@ std::string GUI_App::handle_web_request(std::string cmd)
                                 if(relogin_refresh_token == ComErrno::COM_OK){
                                     handle_login_result(usr_pic,usr_name);
                                     LoginDialog::SetToken(token_data.accessToken,token_data.refreshToken);
-                                    LoginDialog::SetUsrInfo(com_user_profile_t{usr_name,usr_pic});
+                                    LoginDialog::SetUsrInfo(com_user_profile_t{usr_uid,usr_name, usr_pic});
                                     app_config->set("access_token",token_data.accessToken);
                                     app_config->set("refresh_token",token_data.refreshToken);
                                     app_config->set("expire_time",std::to_string(token_data.expiresIn));
