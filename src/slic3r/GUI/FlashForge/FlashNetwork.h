@@ -94,28 +94,28 @@ typedef struct fnet_temp_ctrl {
 } fnet_temp_ctrl_t;
 
 typedef struct fnet_light_ctrl {
-    const char *lightStatus;
+    const char *lightStatus;        // "open", "close"
 } fnet_light_ctrl_t;
 
 typedef struct fnet_air_filter_ctrl {
-    const char *internalFanStatus;
-    const char *externalFanStatus;
+    const char *internalFanStatus;  // "open", "close"
+    const char *externalFanStatus;  // "open", "close"
 } fnet_air_filter_ctrl_t;
 
 typedef struct fnet_print_ctrl {
-    double zAxisCompensation;   // mm
-    double printSpeedAdjust;    // percent
-    double coolingFanSpeed;     // percent
-    double chamberFanSpeed;     // percent
+    double zAxisCompensation;       // mm
+    double printSpeedAdjust;        // percent
+    double coolingFanSpeed;         // percent
+    double chamberFanSpeed;         // percent
 } fnet_print_ctrl_t;
 
 typedef struct fnet_job_ctrl {
     const char *jobId;
-    const char *action;
+    const char *action;             // "pause", "continue", "cancel"
 } fnet_job_ctrl_t;
 
 typedef struct fnet_camera_stream_ctrl {
-    const char *action;
+    const char *action;             // "open", "close"
 } fnet_camera_stream_ctrl_t;
 
 typedef struct fnet_lan_dev_info {
@@ -125,8 +125,8 @@ typedef struct fnet_lan_dev_info {
     unsigned short port;
     unsigned short vid;
     unsigned short pid;
-    unsigned short connectMode; // 0 lan mode, 1 wan mode
-    unsigned short bindStatus;  // 0 unbound, 1 bound
+    unsigned short connectMode;     // 0 lan mode, 1 wan mode
+    unsigned short bindStatus;      // 0 unbound, 1 bound
 } fnet_lan_dev_info_t;
 
 typedef struct fnet_file_data {
@@ -161,7 +161,7 @@ typedef struct fnet_wan_dev_info {
     char *name;
     char *model;
     char *imageUrl;
-    char *status;
+    char *status;               // "ready", "busy", "calibrate_doing", "error", "heating", "printing", "pausing", "pause", "canceling", "cancel", "completed"
     char *location;
     char *serialNumber;
 } fnet_wan_dev_info_t;
@@ -177,13 +177,13 @@ typedef struct fnet_dev_detail {
     char *ipAddr;
     char *name;
     char *location;
-    char *status;
+    char *status;               // "ready", "busy", "calibrate_doing", "error", "heating", "printing", "pausing", "pause", "canceling", "cancel", "completed"
     char *jobId;
     char *printFileName;
     char *printFileThumbUrl;
     int printLayer;
     int targetPrintLayer;
-    double printProgress;       // percent
+    double printProgress;       // [0.0, 1.0]
     double rightTemp;
     double rightTargetTemp;
     double leftTemp;
@@ -204,11 +204,11 @@ typedef struct fnet_dev_detail {
     double estimatedLeftLen;    // mm
     double coolingFanSpeed;     // percent
     double chamberFanSpeed;     // percent
-    char *internalFanStatus;
-    char *externalFanStatus;
-    char *doorStatus;
-    char *lightStatus;
-    char *autoShutdown;
+    char *internalFanStatus;    // "open", "close"
+    char *externalFanStatus;    // "open", "close"
+    char *doorStatus;           // "open", "close"
+    char *lightStatus;          // "open", "close"
+    char *autoShutdown;         // "open", "close"
     double autoShutdownTime;    // minute
     double tvoc;
     double remainingDiskSpace;  // GB
