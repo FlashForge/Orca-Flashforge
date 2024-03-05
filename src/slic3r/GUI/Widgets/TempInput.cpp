@@ -5,6 +5,7 @@
 #include <wx/dcgraph.h>
 #include "../GUI.hpp"
 #include "../GUI_App.hpp"
+#include "slic3r/GUI/FlashForge/MultiComMgr.hpp"
 
 wxDEFINE_EVENT(wxCUSTOMEVT_SET_TEMP_FINISH, wxCommandEvent);
 
@@ -18,6 +19,8 @@ EVT_MOUSEWHEEL(TempInput::mouseWheelMoved)
 EVT_PAINT(TempInput::paintEvent)
 END_EVENT_TABLE()
 
+const std::string CLOSE = "close";
+const std::string OPEN  = "open";
 
 TempInput::TempInput()
     : label_color(std::make_pair(wxColour(0xAC,0xAC,0xAC), (int) StateColor::Disabled),std::make_pair(0x323A3C, (int) StateColor::Normal))
@@ -816,6 +819,7 @@ void StartFiltering::create_panel(wxWindow* parent)
     bSizer_internal_circulate_hor->Add(m_staticText_internal_circulate, 0, wxALL | wxEXPAND, 0);
     bSizer_internal_circulate_hor->AddSpacer(FromDIP(7));
     bSizer_internal_circulate_hor->Add(m_internal_circulate_switch, 0, wxALL | wxEXPAND, 0);
+    m_internal_circulate_switch->Bind(wxEVT_TOGGLEBUTTON, &StartFiltering::onAirFilterToggled, this);
 
     internal_circulate_panel->SetSizer(bSizer_internal_circulate_hor);
     internal_circulate_panel->Layout();
@@ -829,6 +833,7 @@ void StartFiltering::create_panel(wxWindow* parent)
     m_staticText_external_circulate->SetFont(wxFont(wxFontInfo(16)));
     m_external_circulate_switch = new SwitchButton(external_circulate_panel);
     m_external_circulate_switch->SetBackgroundColour(*wxWHITE);
+    m_external_circulate_switch->Bind(wxEVT_TOGGLEBUTTON, &StartFiltering::onAirFilterToggled, this);
 
     bSizer_external_circulate_hor->AddSpacer(FromDIP(17));
     bSizer_external_circulate_hor->Add(m_staticText_external_circulate, 0, wxALL | wxEXPAND, 0);
@@ -847,6 +852,35 @@ void StartFiltering::create_panel(wxWindow* parent)
     sizer->AddSpacer(FromDIP(12));
 
     parent->SetSizer(sizer);
+}
+
+void StartFiltering::onAirFilterToggled(wxCommandEvent &event) 
+{
+    event.Skip();
+    SwitchButton *click_btn   = dynamic_cast<SwitchButton *>(event.GetEventObject());
+    std::string   inter_state = CLOSE;
+    std::string   exter_state = CLOSE;
+
+    if (m_internal_circulate_switch) {
+        inter_state = m_internal_circulate_switch->GetValue() ? OPEN : CLOSE;
+    }
+
+    if (m_external_circulate_switch) {
+        exter_state = m_external_circulate_switch->GetValue() ? OPEN : CLOSE;
+    }
+
+    if (m_internal_circulate_switch->GetValue() && m_external_circulate_switch->GetValue()) {
+        if (click_btn == m_internal_circulate_switch) {
+            m_external_circulate_switch->SetValue(false);
+            exter_state = CLOSE;
+        } else if (click_btn == m_external_circulate_switch) {
+            m_internal_circulate_switch->SetValue(false);
+            inter_state = CLOSE;
+        }
+    }
+    Slic3r::GUI::ComAirFilterCtrl *filterCtrl = new Slic3r::GUI::ComAirFilterCtrl(inter_state, exter_state);
+    // 测试，临时将id写死
+    Slic3r::GUI::MultiComMgr::inst()->putCommand(0, filterCtrl);
 }
 
 TempMixDevice::TempMixDevice(wxWindow* parent,bool idle, wxString nozzleTemp, wxString platformTemp, wxString cavityTemp,const wxPoint &pos,const wxSize & size,long style)
@@ -955,6 +989,8 @@ void TempMixDevice::create_panel(wxWindow* parent,bool idle, wxString nozzleTemp
     parent->SetSizer(idleSizer);
 }
 
+
+
 void TempMixDevice::setupLayoutIdleDeviceState(wxBoxSizer *deviceStateSizer, wxPanel *parent,bool idle) 
 {
 //***灯控制布局
@@ -988,10 +1024,18 @@ void TempMixDevice::setupLayoutIdleDeviceState(wxBoxSizer *deviceStateSizer, wxP
     m_idle_lamp_control_button->SetCornerRadius(0);
     m_idle_lamp_control_button->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e) {
         if (m_idle_lamp_control_button->GetFlashForgeSelected()) {
+            // 关灯
+            Slic3r::GUI::ComLightCtrl *lightctrl = new Slic3r::GUI::ComLightCtrl(CLOSE);
+            // 测试，临时将id写死
+            Slic3r::GUI::MultiComMgr::inst()->putCommand(0, lightctrl);
             m_idle_lamp_control_button->SetIcon("device_lamp_control");
             m_idle_lamp_control_button->Refresh();
             m_idle_lamp_control_button->SetFlashForgeSelected(false);
         } else {
+            // 开灯
+            Slic3r::GUI::ComLightCtrl *lightctrl = new Slic3r::GUI::ComLightCtrl(OPEN);
+            // 测试，临时将id写死
+            Slic3r::GUI::MultiComMgr::inst()->putCommand(0, lightctrl);
             m_idle_lamp_control_button->SetIcon("device_lamp_control_press");
             m_idle_lamp_control_button->Refresh();
             m_idle_lamp_control_button->SetFlashForgeSelected(true);

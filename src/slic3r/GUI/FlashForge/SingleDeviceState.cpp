@@ -5,6 +5,8 @@
 #include <slic3r/GUI/Widgets/WebView.hpp>
 #include "slic3r/GUI/FlashForge/MultiComMgr.hpp"
 #include <nlohmann/json.hpp>
+#include "slic3r/GUI/GUI.hpp"
+#include "slic3r/GUI/GUI_App.hpp"
 
 using namespace std::literals;
 using json   = nlohmann::json;
@@ -15,6 +17,9 @@ namespace GUI {
 
 const std::string CLOSE = "close";
 const std::string OPEN  = "open";
+const std::string CANCEL = "cancel";
+const std::string PAUSE  = "pause";
+const std::string CONTINUE = "continue";
 
 MaterialPanel::MaterialPanel(wxWindow* parent)
     : wxPanel(parent, wxID_ANY,wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL)
@@ -252,12 +257,12 @@ void DeviceDetail::create_panel(wxWindow* parent)
 
         wxBoxSizer *bSizer_first_row = new wxBoxSizer(wxVERTICAL);
         auto m_panel_first_row = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, -1), wxTAB_TRAVERSAL);
-        IconText* device_material = new IconText(m_panel_first_row,wxString("device_material"),15,wxString("PLA"),12);
-        bSizer_first_row->Add(device_material, 0, wxEXPAND | wxALL, 0);
+        m_device_material = new IconText(m_panel_first_row, wxString("device_material"), 15, wxString("PLA"), 12);
+        bSizer_first_row->Add(m_device_material, 0, wxEXPAND | wxALL, 0);
         bSizer_first_row->AddSpacer(FromDIP(18));
 
-        IconText *device_initial_speed = new IconText(m_panel_first_row, wxString("device_initial_speed"), 13, wxString("150mm/s"), 12);
-        bSizer_first_row->Add(device_initial_speed, 0, wxEXPAND | wxALL, 0);
+        m_device_initial_speed = new IconText(m_panel_first_row, wxString("device_initial_speed"), 13, wxString("150mm/s"), 12);
+        bSizer_first_row->Add(m_device_initial_speed, 0, wxEXPAND | wxALL, 0);
         bSizer_first_row->AddSpacer(FromDIP(18));
 
         m_device_speed = new IconBottonText(m_panel_first_row, wxString("device_speed"), 17, wxString("90"), 12);
@@ -283,12 +288,12 @@ void DeviceDetail::create_panel(wxWindow* parent)
         wxBoxSizer *bSizer_second_row  = new wxBoxSizer(wxVERTICAL);
         auto m_panel_second_row = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, -1), wxTAB_TRAVERSAL);
 
-        IconText *device_layer = new IconText(m_panel_second_row, wxString("device_layer"), 13, wxString("1185/1500"), 12);
-        bSizer_second_row->Add(device_layer, 0, wxEXPAND | wxALL, 0);
+        m_device_layer = new IconText(m_panel_second_row, wxString("device_layer"), 13, wxString("1185/1500"), 12);
+        bSizer_second_row->Add(m_device_layer, 0, wxEXPAND | wxALL, 0);
         bSizer_second_row->AddSpacer(FromDIP(18));
 
-        IconText *device_fill_rate = new IconText(m_panel_second_row, wxString("device_fill_rate"), 13, wxString("20%"), 12);
-        bSizer_second_row->Add(device_fill_rate, 0, wxEXPAND | wxALL, 0);
+        m_device_fill_rate = new IconText(m_panel_second_row, wxString("device_fill_rate"), 13, wxString("20%"), 12);
+        bSizer_second_row->Add(m_device_fill_rate, 0, wxEXPAND | wxALL, 0);
         bSizer_second_row->AddSpacer(FromDIP(18));
 
         m_device_nozzle_fan = new IconBottonText(m_panel_second_row, wxString("device_nozzle_fan"), 17, wxString("50"), 12);
@@ -416,16 +421,17 @@ wxBoxSizer* SingleDeviceState::create_monitoring_page()
         m_camera_play_url = wxString::Format("file://%s/web/orca/missing_connection.html?lang=http://192.168.4.128:8080/?action=stream", from_u8(resources_dir()));
 #if 0
         m_camera_play_url = wxString::Format("file://%s/web/orca/missing_connection.html?lang=http://115.231.29.48:1370/ffspace/SNMMOC98989898.m3u8",from_u8(resources_dir()));
-        m_camera_play_url =wxString::Format("file://%s/web/homepage/index.html",from_u8(resources_dir()));
+        //m_camera_play_url =wxString::Format("file://%s/web/homepage/index.html",from_u8(resources_dir()));
 #endif
         m_browser = WebView::CreateWebView(this,m_camera_play_url);
-        Bind(wxEVT_WEBVIEW_SCRIPT_MESSAGE_RECEIVED, &SingleDeviceState::OnScriptMessage, this);
+        wxEvtHandler::Bind(wxEVT_WEBVIEW_SCRIPT_MESSAGE_RECEIVED, &SingleDeviceState::OnScriptMessage, this);
         m_browser->Bind(wxEVT_WEBVIEW_NAVIGATED, &SingleDeviceState::on_navigated, this);
         if(m_browser == nullptr){
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format("load web view of SingleDeviceState url failed");
             return sizer;
         }
         m_browser->SetMinSize(wxSize(FromDIP(574), FromDIP(288)));
+        m_browser->EnableContextMenu(true);
         sizer->Add(m_browser, 1, wxEXPAND | wxALL, 0);
 
         return sizer;
@@ -811,10 +817,18 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         m_print_button->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e) {
             e.Skip();
             if (!m_print_button_pressed_down) {
+                std::string printState = PAUSE;
+                std::string jobId = Slic3r::GUI::MultiComMgr::inst()->devData(0).devDetail->jobId;
+                ComJobCtrl *jobCtrl    = new ComJobCtrl(jobId, printState);
+                Slic3r::GUI::MultiComMgr::inst()->putCommand(0, jobCtrl);
                 m_print_button->SetLabel(_L("continue print"));
                 m_print_button->SetIcon("device_continue_print");
                 m_print_button->Refresh();
             } else {
+                std::string printState = CONTINUE;
+                std::string jobId = Slic3r::GUI::MultiComMgr::inst()->devData(0).devDetail->jobId;
+                ComJobCtrl *jobCtrl = new ComJobCtrl(jobId, printState);
+                Slic3r::GUI::MultiComMgr::inst()->putCommand(0, jobCtrl);
                 m_print_button->SetLabel(_L("pause print"));
                 m_print_button->SetIcon("device_pause_print");
                 m_print_button->Refresh();
@@ -842,6 +856,14 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         m_cancel_button->SetCornerRadius(0);
         m_cancel_button->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e) { 
             e.Skip();
+            //取消打印指令
+            std::string printState = CANCEL;
+#if 0
+            std::string jobId = Slic3r::GUI::MultiComMgr::inst()->devData(0).devDetail->jobId;
+            ComJobCtrl *jobCtrl = new ComJobCtrl(jobId, printState);
+            // 测试，临时将id写死
+            Slic3r::GUI::MultiComMgr::inst()->putCommand(0, jobCtrl);
+#endif
             m_machine_ctrl_panel->Hide();
             m_machine_idle_panel->Show();
             Layout();
@@ -1514,8 +1536,9 @@ void SingleDeviceState::OnScriptMessage(wxWebViewEvent &evt)
    boost::optional<std::string> command     = root.get_optional<std::string>("command");
    if (command.has_value()) {
        std::string command_str = command.value();
-       if (command_str.compare("request_rtsp_conitnue") == 0) {
+       if (command_str.compare("homepage_login_or_register") == 0) {
        // 外网视频继续播放
+            
        }
    }
 }

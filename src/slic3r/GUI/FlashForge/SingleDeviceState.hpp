@@ -60,6 +60,10 @@ public:
     void create_panel(wxWindow* parent);
     //void initData();
 private:
+    IconText       *m_device_material{nullptr};
+    IconText       *m_device_initial_speed{nullptr};
+    IconText       *m_device_layer{nullptr};
+    IconText       *m_device_fill_rate{nullptr};
     IconBottonText *m_device_speed{nullptr};
     IconBottonText *m_device_z_axis{nullptr};
     IconBottonText *m_device_nozzle_fan{nullptr};

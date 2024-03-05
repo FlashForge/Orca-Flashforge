@@ -199,6 +199,10 @@ public:
     StartFiltering(wxWindow* parent);
     ~StartFiltering(){};
     void create_panel(wxWindow* parent);
+
+private:
+    void onAirFilterToggled(wxCommandEvent &event);
+
 private:
     SwitchButton* m_internal_circulate_switch;//内循环过滤
     SwitchButton* m_external_circulate_switch;//外循环过滤
