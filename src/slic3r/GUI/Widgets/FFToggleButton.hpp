@@ -31,4 +31,35 @@ private:
 	wxColour	m_selectPressColor {"#999999"};
 };
 
+
+class FFBitmapToggleButton : public wxBitmapToggleButton
+{
+public:
+	FFBitmapToggleButton(wxWindow* parent, wxWindowID id = wxID_ANY,
+		const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize);
+	~FFBitmapToggleButton() {};
+
+	void SetValue(bool state) override;
+	void setNormalBitmap(const wxBitmap& bmp);
+	void setNormalHoverBitmap(const wxBitmap& bmp);
+	void setNormalPressBitmap(const wxBitmap& bmp);
+	void setSelectBitmap(const wxBitmap& bmp);
+	void setSelectHoverBitmap(const wxBitmap& bmp);
+	void setSelectPressBitmap(const wxBitmap& bmp);
+
+private:
+	void updateState();
+
+private:
+	bool		m_hoverFlag {false};
+	bool		m_pressFlag {false};
+	wxBitmap	m_normalBitmap;
+	wxBitmap	m_normalHoverBitmap;
+	wxBitmap	m_normalPressBitmap;
+	wxBitmap	m_selectBitmap;
+	wxBitmap	m_selectHoverBitmap;
+	wxBitmap	m_selectPressBitmap;
+
+};
+
 #endif /* _Slic3r_GUI_FFToggleButton_hpp_ */

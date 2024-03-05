@@ -4,6 +4,9 @@
 FFToggleButton::FFToggleButton(wxWindow* parent, const wxString& label/*= ""*/, wxWindowID id/*= wxID_ANY*/)
 	: wxToggleButton(parent, id, label, wxDefaultPosition, wxDefaultSize, wxNO_BORDER)
 {
+	if (parent) {
+		SetBackgroundColour(parent->GetBackgroundColour());
+	}
 	Bind(wxEVT_ENTER_WINDOW, [this](wxMouseEvent& e) { m_hoverFlag = true; updateState(); e.Skip(); });
 	Bind(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent& e) { m_hoverFlag = false; m_pressFlag = false; updateState(); e.Skip(); });
 	Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e) { m_pressFlag = true; updateState(); e.Skip(); });
@@ -69,3 +72,77 @@ void FFToggleButton::updateState()
 	}
 	Update();
 }
+
+
+FFBitmapToggleButton::FFBitmapToggleButton(wxWindow* parent, wxWindowID id/*=wxID_ANY*/
+		, const wxPoint& pos/*=wxDefaultPosition*/, const wxSize& size/*=wxDefaultSize*/)
+	: wxBitmapToggleButton(parent, id, wxNullBitmap, pos, size, wxNO_BORDER)
+{
+	if (parent) {
+		SetBackgroundColour(parent->GetBackgroundColour());
+	}
+	Bind(wxEVT_ENTER_WINDOW, [this](wxMouseEvent& e) { m_hoverFlag = true; updateState(); e.Skip(); });
+	Bind(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent& e) { m_hoverFlag = false; m_pressFlag = false; updateState(); e.Skip(); });
+	Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e) { m_pressFlag = true; updateState(); e.Skip(); });
+	Bind(wxEVT_LEFT_UP, [this](wxMouseEvent& e) { m_pressFlag = false; updateState(); e.Skip(); });
+	Bind(wxEVT_TOGGLEBUTTON, [this](wxCommandEvent& e) { updateState(); e.Skip(); });
+}
+
+void FFBitmapToggleButton::SetValue(bool state)
+{
+	wxToggleButton::SetValue(state);
+	updateState();
+}
+
+void FFBitmapToggleButton::setNormalBitmap(const wxBitmap& bmp)
+{
+	m_normalBitmap = bmp;
+}
+
+void FFBitmapToggleButton::setNormalHoverBitmap(const wxBitmap& bmp)
+{
+	m_normalHoverBitmap = bmp;
+}
+
+void FFBitmapToggleButton::setNormalPressBitmap(const wxBitmap& bmp)
+{
+	m_normalPressBitmap = bmp;
+}
+
+void FFBitmapToggleButton::setSelectBitmap(const wxBitmap& bmp)
+{
+	m_selectBitmap = bmp;
+}
+
+void FFBitmapToggleButton::setSelectHoverBitmap(const wxBitmap& bmp)
+{
+	m_selectHoverBitmap = bmp;
+}
+
+void FFBitmapToggleButton::setSelectPressBitmap(const wxBitmap& bmp)
+{
+	m_selectPressBitmap = bmp;
+}
+
+void FFBitmapToggleButton::updateState()
+{
+	if (GetValue()) {
+		if (m_pressFlag) {
+			SetBitmap(m_selectBitmap);
+		} else if (m_hoverFlag) {
+			SetBitmap(m_selectHoverBitmap);
+		} else {
+			SetBitmap(m_selectBitmap);
+		}
+	} else {
+		if (m_pressFlag) {
+			SetBitmap(m_normalPressBitmap);
+		} else if (m_hoverFlag) {
+			SetBitmap(m_normalHoverBitmap);
+		} else {
+			SetBitmap(m_normalBitmap);
+		}
+	}
+	Update();
+}
+
