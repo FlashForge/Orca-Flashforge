@@ -3,37 +3,77 @@
 #include "slic3r/GUI/FFUtils.hpp"
 #include "slic3r/GUI/GUI_App.hpp"
 #include "slic3r/GUI/Widgets/FFToggleButton.hpp"
+#include "slic3r/GUI/wxExtensions.hpp"
 #include "DeviceData.hpp"
 
 namespace Slic3r {
 namespace GUI {
 
-CustomComboBox::CustomComboBox(wxWindow* parent, const wxString& name)
+DropDownButton::DropDownButton(wxWindow* parent/*=nullptr*/, const wxString& name/*=wxEmptyString*/, const wxBitmap& bitmap/*=wxNullBitmap*/)
     : wxPanel(parent)
-    , m_name(name)
 {
-    initControl();
-    setCustomBoxSizer();
-}
+    if (parent) {
+        SetBackgroundColour(parent->GetBackgroundColour());
+    }
+    m_text = new wxStaticText(this, wxID_ANY, name, wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT);
+    m_bitmap = new wxStaticBitmap(this, wxID_ANY, bitmap, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    if (!bitmap.IsNull()) {
+        auto sz = bitmap.GetSize();
+        m_bitmap->SetSize(bitmap.GetSize());
+        m_bitmap->SetMinSize(bitmap.GetSize());
+    }
 
-void CustomComboBox::initControl()
-{
-    m_staticText_name = new wxStaticText(this, wxID_ANY, m_name);
-    m_staticBitmap = new wxStaticBitmap(this, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxDefaultSize, 0);
-    m_staticBitmap->SetBitmap(create_scaled_bitmap("custom_comboBox_down", nullptr, 10));
-}
+    m_sizer = new wxBoxSizer(wxHORIZONTAL);
+    m_sizer->AddStretchSpacer(1);
+    m_sizer->Add(m_text, 0, wxALIGN_CENTER_VERTICAL);
+    m_sizer->AddSpacer(FromDIP(12));
+    m_sizer->Add(m_bitmap, 0, wxALIGN_CENTER_VERTICAL);
+    m_sizer->AddStretchSpacer(1);
 
-void CustomComboBox::setCustomBoxSizer()
-{
-    wxBoxSizer *hTopBoxSizer = new wxBoxSizer(wxLI_HORIZONTAL);
-    hTopBoxSizer->Add(m_staticText_name, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-    hTopBoxSizer->AddSpacer(20);
-    hTopBoxSizer->Add(m_staticBitmap, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-
-    SetSizer(hTopBoxSizer);
+    SetSizer(m_sizer);
     Layout();
     Fit();
+    //initControl();
+    //setCustomBoxSizer();
+
+    Bind(wxEVT_ENTER_WINDOW, &DropDownButton::onEnter, this);
+	Bind(wxEVT_LEAVE_WINDOW, &DropDownButton::onLeave, this);
+    m_text->Bind(wxEVT_ENTER_WINDOW, &DropDownButton::onEnter, this);
+    m_bitmap->Bind(wxEVT_ENTER_WINDOW, &DropDownButton::onEnter, this);
 }
+
+wxPoint DropDownButton::convertEventPoint(const wxMouseEvent& event)
+{
+    wxPoint pnt = event.GetPosition();
+    if (event.GetId() == m_text->GetId()) {
+        pnt += m_text->GetPosition();
+    } else if (event.GetId() == m_bitmap->GetId()) {
+        pnt += m_bitmap->GetPosition();
+    }
+    return pnt;
+}
+
+void DropDownButton::onEnter(wxMouseEvent& event)
+{
+    if (isPointIn(convertEventPoint(event))) {
+        if (!HasCapture()) CaptureMouse();
+    }
+    event.Skip();
+}
+
+void DropDownButton::onLeave(wxMouseEvent& event)
+{
+    if (!isPointIn(convertEventPoint(event))) {
+        if (HasCapture()) ReleaseMouse();
+    }
+    event.Skip();
+}
+
+bool DropDownButton::isPointIn(const wxPoint& pnt)
+{
+    return !(wxHT_WINDOW_OUTSIDE == HitTest(pnt));
+}
+
 
 ListBoxPopup::ListBoxPopup(wxWindow *parent, const wxArrayString &names)
     : PopupWindow(parent, wxBORDER_NONE | wxPU_CONTAINS_CONTROLS), m_dismiss(false)
@@ -303,47 +343,47 @@ void DeviceListPanel::msw_rescale()
 void DeviceListPanel::build()
 {
     SetBackgroundColour(wxColour("#F0F0F0"));
-    m_comboBox_position = new CustomComboBox(this, _L("Position"));
+    m_comboBox_position = new DropDownButton(this, _L("Position"), create_scaled_bitmap("device_dropdown", this, 8));
     wxArrayString names;
     names.Add("All");
     names.Add("Offen");
     names.Add("Store1");
     names.Add("Store2");
     m_listBox_position = new ListBoxPopup(this, names);
-    m_comboBox_status  = new CustomComboBox(this, _L("Status"));
+    m_comboBox_status  = new DropDownButton(this, _L("Status"), create_scaled_bitmap("device_dropdown", this, 8));
     initAllDeviceStatus(names);
     m_listBox_status = new ListBoxPopup(this, names);
-    m_comboBox_type = new CustomComboBox(this, _L("Machine Type"));
+    m_comboBox_type = new DropDownButton(this, _L("Machine Type"), create_scaled_bitmap("device_dropdown", this, 8));
     m_wlan_btn = new FFToggleButton(this, _L("Network"));
-    m_wlan_btn->SetBackgroundColour(GetBackgroundColour());
     m_wlan_btn->SetValue(true);
     m_lan_btn = new FFToggleButton(this, _L("LAN"));
-    m_lan_btn->SetBackgroundColour(GetBackgroundColour());
     m_lan_btn->SetValue(true);
-    m_static_btn = new wxToggleButton(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(FromDIP(16), FromDIP(16)));
+    m_static_btn = new FFBitmapToggleButton(this, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(16), FromDIP(16)));
+    m_static_btn->setNormalBitmap(create_scaled_bitmap("device_more", this, 16));
+    m_static_btn->setNormalHoverBitmap(create_scaled_bitmap("device_more_hover", this, 16));
+    m_static_btn->setNormalPressBitmap(create_scaled_bitmap("device_more_press", this, 16));
+    m_static_btn->setSelectBitmap(create_scaled_bitmap("device_back", this, 16));
+    m_static_btn->setSelectHoverBitmap(create_scaled_bitmap("device_back_hover", this, 16));
+    m_static_btn->setSelectPressBitmap(create_scaled_bitmap("device_back_press", this, 16));
     m_static_btn->SetValue(false);
-    m_static_btn->SetMinSize(wxSize(FromDIP(16), FromDIP(16)));
-    m_static_btn->SetMaxSize(wxSize(FromDIP(16), FromDIP(16)));
-    m_static_btn->SetBitmap(create_scaled_bitmap("device_more", this, FromDIP(16)));
-    m_static_btn->SetBitmapHover(create_scaled_bitmap("device_more_hover", this, FromDIP(16)));
-    m_static_btn->SetBitmapPressed(create_scaled_bitmap("device_more_press", this, FromDIP(16)));
+
+    wxPanel *lan_line = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(1, -1));
+    lan_line->SetBackgroundColour("#666666");
 
     wxBoxSizer* hTopSizer = new wxBoxSizer(wxHORIZONTAL);
-    hTopSizer->AddSpacer(20);
     hTopSizer->Add(m_comboBox_position, 0, wxALIGN_CENTER_VERTICAL);
-    hTopSizer->AddSpacer(50);
+    hTopSizer->AddSpacer(FromDIP(50));
     hTopSizer->Add(m_comboBox_status, 0, wxALIGN_CENTER_VERTICAL);
-    hTopSizer->AddSpacer(50);
+    hTopSizer->AddSpacer(FromDIP(50));
     hTopSizer->Add(m_comboBox_type, 0, wxALIGN_CENTER_VERTICAL);
     hTopSizer->AddStretchSpacer(1);
     hTopSizer->Add(m_wlan_btn, 0, wxALIGN_CENTER_VERTICAL);
-    hTopSizer->AddSpacer(10);
-    hTopSizer->Add(new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxSize(1, 28), wxLI_VERTICAL), 0, wxALIGN_CENTER_VERTICAL, 10);
-    hTopSizer->AddSpacer(10);
+    hTopSizer->AddSpacer(FromDIP(10));
+    hTopSizer->Add(lan_line, 0, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxTOP | wxBOTTOM, 3);
+    hTopSizer->AddSpacer(FromDIP(10));
     hTopSizer->Add(m_lan_btn, 0, wxALIGN_CENTER_VERTICAL);
-    hTopSizer->AddSpacer(30);
+    hTopSizer->AddSpacer(FromDIP(30));
     hTopSizer->Add(m_static_btn, 0, wxALIGN_CENTER_VERTICAL);
-    hTopSizer->AddSpacer(20);
 
     m_simple_book = new wxSimplebook(this);
     // no device panel
@@ -352,7 +392,7 @@ void DeviceListPanel::build()
     m_no_device_bitmap->SetBitmap(create_scaled_bitmap("monitor_device_empty", nullptr, 250));
     m_no_device_staticText = new wxStaticText(m_no_device_panel, wxID_ANY, wxT("No Device"));
     m_no_device_staticText->Wrap(-1);
-    m_no_device_staticText->SetForegroundColour(0x909090);
+    m_no_device_staticText->SetForegroundColour("#909090");
     m_no_device_sizer = new wxBoxSizer(wxVERTICAL);
     m_no_device_sizer->AddStretchSpacer();
     m_no_device_sizer->Add(m_no_device_bitmap, 0, wxALIGN_CENTER_HORIZONTAL);
@@ -371,19 +411,23 @@ void DeviceListPanel::build()
     m_device_sizer = new wxGridSizer(5);
     m_device_sizer->SetHGap(FromDIP(40));
     m_device_sizer->SetVGap(FromDIP(40));
-    device_sizer->Add(m_device_sizer, 0, wxALIGN_LEFT | wxALIGN_TOP | wxALL, FromDIP(40));
+    device_sizer->Add(m_device_sizer, 0, wxALIGN_LEFT | wxALIGN_TOP);
     m_device_window->SetSizer(device_sizer);
     m_simple_book->AddPage(m_device_window, wxEmptyString, false);
 
-    wxStaticLine *horLine = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxSize(160, 1), wxLI_HORIZONTAL);
-    horLine->SetBackgroundColour(wxColour(255, 255, 255, 0));
-    wxBoxSizer *vAllSizer = new wxBoxSizer(wxVERTICAL);
-    vAllSizer->Add(hTopSizer, 0, wxEXPAND);
-    vAllSizer->Add(horLine, 0, wxALIGN_CENTER_HORIZONTAL | wxEXPAND, 10);
-    vAllSizer->Add(m_simple_book, 1, wxEXPAND);
-    //vAllSizer->Add(m_machinePanel, 1, wxEXPAND);
+    wxPanel *hor_line = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 1));
+    hor_line->SetBackgroundColour("#ffffff");
+    wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
+    sizer->AddSpacer(FromDIP(10));
+    sizer->Add(hTopSizer, 0, wxEXPAND | wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT, FromDIP(40));
+    sizer->AddSpacer(FromDIP(10));
+    sizer->Add(hor_line, 0, wxALIGN_CENTER_HORIZONTAL | wxEXPAND | wxLEFT | wxRIGHT, FromDIP(40));
+    sizer->AddSpacer(FromDIP(40));
+    sizer->Add(m_simple_book, 1, wxEXPAND | wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT, FromDIP(40));
+    sizer->AddSpacer(FromDIP(40));
+    //sizer->Add(m_machinePanel, 1, wxEXPAND);
 
-    this->SetSizer(vAllSizer);
+    this->SetSizer(sizer);
     this->Layout();
     this->Fit();
 }
@@ -498,9 +542,10 @@ void DeviceListPanel::onNetworkTypeToggled(wxCommandEvent& event)
 
 void DeviceListPanel::on_static_mode_toggled(wxCommandEvent &event)
 {
-    m_simple_book->SetSelection(1);
-    m_simple_book->Layout();
-    Layout();
+    //m_simple_book->SetSelection(1);
+    //m_simple_book->Layout();
+    //Layout();
+    event.Skip();
 }
 
 void DeviceListPanel::onDeviceListUpdated(DeviceListUpdateEvent& event)

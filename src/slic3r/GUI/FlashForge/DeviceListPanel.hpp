@@ -9,24 +9,28 @@
 #include "MultiComEvent.hpp"
 
 class FFToggleButton;
+class FFBitmapToggleButton;
+
 namespace Slic3r {
 namespace GUI {
 
 #define LISTBOX_HEIGHT 40
 
-class CustomComboBox : public wxPanel
+class DropDownButton : public wxPanel
 {
-private:
-    wxStaticText    *m_staticText_name;
-    wxStaticBitmap  *m_staticBitmap;
-    wxString         m_name;
-
 public:
-    CustomComboBox(wxWindow* parent = nullptr, const wxString& name = wxEmptyString);
+    DropDownButton(wxWindow* parent = nullptr, const wxString& name = wxEmptyString, const wxBitmap& bitmap = wxNullBitmap);
 
 private:
-    void initControl();
-    void setCustomBoxSizer();
+    wxPoint convertEventPoint(const wxMouseEvent& event);
+    bool isPointIn(const wxPoint& pnt);
+    void onEnter(wxMouseEvent& event);
+    void onLeave(wxMouseEvent& event);
+
+private:
+    wxStaticText*   m_text;
+    wxStaticBitmap* m_bitmap;
+    wxBoxSizer*     m_sizer;
 };
 
 class ListBoxPopup : public PopupWindow
@@ -48,6 +52,7 @@ private:
     bool         m_dismiss { false };
     wxListBox   *m_listBox;
 };
+
 
 class DeviceItemPanel : public wxPanel
 {
@@ -124,14 +129,14 @@ private:
     void onComDevDetailUpdate(ComDevDetailUpdateEvent& event);
 
 private: 
-    CustomComboBox* m_comboBox_position;
+    DropDownButton* m_comboBox_position;
     ListBoxPopup*   m_listBox_position;
-    CustomComboBox *m_comboBox_status;
+    DropDownButton *m_comboBox_status;
     ListBoxPopup   *m_listBox_status;
-    CustomComboBox *m_comboBox_type;
+    DropDownButton *m_comboBox_type;
     FFToggleButton* m_wlan_btn;
     FFToggleButton* m_lan_btn;
-    wxToggleButton* m_static_btn;
+    FFBitmapToggleButton* m_static_btn;
     
     wxSimplebook*   m_simple_book {nullptr};
     wxPanel*        m_no_device_panel {nullptr};
