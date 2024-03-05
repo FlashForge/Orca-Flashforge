@@ -15,6 +15,7 @@ DeviceObject::DeviceObject(const string &dev_id, const string &dev_name)
     , m_is_online(false)
 {
     m_bind_state = "free";
+    m_deviceType = DT_LOCAL;
 }
 
 DeviceObject::DeviceObject(const fnet_lan_dev_info &devInfo)
@@ -24,6 +25,7 @@ DeviceObject::DeviceObject(const fnet_lan_dev_info &devInfo)
     m_dev_id     = m_lan_info->serialNumber;
     m_dev_name   = m_lan_info->name;
     m_bind_state = "free";
+    m_deviceType = DT_LOCAL;
 }
 
 DeviceObject::DeviceObject(const device_wan_info &wanInfo)
@@ -34,6 +36,7 @@ DeviceObject::DeviceObject(const device_wan_info &wanInfo)
     m_dev_id = m_wan_info->serialNum;
     m_dev_name   = m_wan_info->name;
     m_bind_state = "free";
+    m_deviceType = DT_USER;
 }
 
 DeviceObject::~DeviceObject()
@@ -161,6 +164,11 @@ fnet_lan_dev_info * DeviceObject::get_lan_dev_info()
     return m_lan_info;
 }
 
+void DeviceObject::set_lan_dev_info(fnet_lan_dev_info *info) 
+{ 
+    m_lan_info = info; 
+}
+
 string DeviceObject::get_dev_name()
 {
     return m_dev_name;
@@ -236,6 +244,17 @@ string DeviceObject::get_printer_thumbnail_img_str()
     return "printer_thumbnail";
 }
 
+void DeviceObject::set_device_type(DeviceType type) 
+{ 
+    m_deviceType = type;
+}
+
+DeviceType DeviceObject::device_type() 
+{ 
+    return m_deviceType;
+}
+
+
 wxDEFINE_EVENT(EVT_DEVICE_LIST_UPDATED, DeviceListUpdateEvent);
 DeviceObjectOpr::DeviceObjectOpr()
 {
@@ -276,6 +295,14 @@ void DeviceObjectOpr::update_scan_machine()
         auto it = m_local_devices.find(dev_id);
         if (it != m_local_devices.end()) {
             devObj->set_user_access_code(it->second->get_user_access_code(), false);
+            if (it->second->get_lan_dev_info() == nullptr) {
+                auto info    = devObj->get_lan_dev_info();
+                auto lanInfo = new fnet_lan_dev_info(*info);
+                if (it->second->has_access_right()) {
+                    lanInfo->bindStatus = 1;
+                }
+                it->second->set_lan_dev_info(lanInfo);
+            }            
         } else {
             it = m_user_devices.find(dev_id);
             if (it != m_user_devices.end()) {
@@ -346,11 +373,13 @@ bool DeviceObjectOpr::set_selected_machine(const string &dev_id)
             devObj->set_connecting(true);
             com_id_t id = MultiComMgr::inst()->addLanDev(*devObj->get_lan_dev_info(), devObj->get_user_access_code(true));
             if (id != ComInvalidId) {
-                auto it = m_dev_connect_map.find(dev_id);
-                if (it != m_dev_connect_map.end())
-                    m_dev_connect_map.erase(it);
-
-                m_dev_connect_map.emplace(dev_id, id);
+                 auto it = m_lan_dev_connect_map.find(dev_id);
+                if (it != m_lan_dev_connect_map.end())
+                     m_lan_dev_connect_map.erase(it);
+                id_connect_mode mode;
+                mode.id = id;
+                mode.mode = COM_CONNECT_LAN;
+                m_lan_dev_connect_map.emplace(make_pair(dev_id, mode));
             }
         }
 
@@ -369,17 +398,17 @@ DeviceObject *DeviceObjectOpr::get_selected_machine()
     if (it != m_user_devices.end()) {
         return it->second;
     } else {
-        it = m_scan_devices.find(m_selected_machine);
-        if (it != m_scan_devices.end())
-            return it->second;
-    }
-
-    // return local machine has access code
-    it = m_local_devices.find(m_selected_machine);
-    if (it != m_local_devices.end()) {
-        if (it->second->has_access_right())
-            return it->second;
-    }
+        // return local machine has access code
+        it = m_local_devices.find(m_selected_machine);
+        if (it != m_local_devices.end()) {
+            if (it->second->has_access_right())
+                return it->second;
+        } else {
+            it = m_scan_devices.find(m_selected_machine);
+            if (it != m_scan_devices.end())
+                return it->second;
+        }
+    }    
     return nullptr;
 }
 
@@ -395,25 +424,14 @@ void DeviceObjectOpr::unbind_lan_machine(DeviceObject *obj)
     if (config) {
         config->erase_local_machine(dev_id, obj->get_dev_name());
     }
-    auto it = m_dev_connect_map.find(dev_id);
-    if (it != m_dev_connect_map.end()) {
-        MultiComMgr::inst()->removeLanDev(it->second);
+    auto it = m_lan_dev_connect_map.find(dev_id);
+    if (it != m_lan_dev_connect_map.end()) {
+        m_lan_dev_connect_map.erase(it);
     }
-    it = m_dev_id_connect_map.find(dev_id);
-    if (it != m_dev_id_connect_map.end()) {
-        m_dev_id_connect_map.erase(it);
-    }
-
     auto devIt = m_local_devices.find(dev_id);
-    if (devIt != m_local_devices.end()) {
+    if (devIt != m_local_devices.end()) {        
         delete devIt->second;
         m_local_devices.erase(devIt);
-    }
-
-    devIt = m_user_devices.find(dev_id);
-    if (devIt != m_user_devices.end()) {
-        delete devIt->second;
-        m_user_devices.erase(devIt);
     }
     sendDeviceListUpdateEvent(dev_id, -1);
 }
@@ -423,14 +441,14 @@ ComErrno DeviceObjectOpr::unbind_wan_machine(DeviceObject *obj)
     if (obj == nullptr) {
         return COM_ERROR;
     }
-    auto it = m_dev_id_connect_map.find(obj->get_dev_id());
-    if (it != m_dev_id_connect_map.end()) {
-        m_dev_id_connect_map.erase(it);
-    }
     string   dev_id = obj->get_dev_id();
     ComErrno ret = MultiComMgr::inst()->unbindWanDev(dev_id, obj->get_wan_dev_id());
     if (ret == COM_OK) {
-        auto devIt = m_user_devices.find(obj->get_dev_id());
+        auto it = m_wan_dev_connect_map.find(dev_id);
+        if (it != m_wan_dev_connect_map.end()) {
+            m_wan_dev_connect_map.erase(it);        
+        }
+        auto devIt = m_user_devices.find(dev_id);
         if (devIt != m_user_devices.end()) {
             delete devIt->second;
             m_user_devices.erase(devIt);
@@ -438,6 +456,21 @@ ComErrno DeviceObjectOpr::unbind_wan_machine(DeviceObject *obj)
     }
     sendDeviceListUpdateEvent(dev_id, -1);
     return ret;
+}
+
+void DeviceObjectOpr::removeUserDev(DeviceObject *obj) 
+{
+    string dev_id = obj->get_dev_id();
+    auto it = m_wan_dev_connect_map.find(dev_id);
+    if (it != m_wan_dev_connect_map.end()) {
+        m_wan_dev_connect_map.erase(it);
+    }
+    auto devIt = m_user_devices.find(dev_id);
+    if (devIt != m_user_devices.end()) {
+        delete devIt->second;
+        m_user_devices.erase(devIt);
+    }
+    sendDeviceListUpdateEvent(dev_id, -1);
 }
 
 void DeviceObjectOpr::get_my_machine_list(map<string, DeviceObject *> &devList)
@@ -459,8 +492,14 @@ void DeviceObjectOpr::get_my_machine_list(map<string, DeviceObject *> &devList)
 #endif
 
     for (auto it = m_local_devices.begin(); it != m_local_devices.end(); it++) {
-        if (devList.find(it->first) == devList.end()) {
+        auto tmpIt = devList.find(it->first);
+        if (tmpIt == devList.end()) {
             devList.emplace(make_pair(it->first, it->second));
+        } else {
+            if (tmpIt->second->device_type() == DT_BOTH) {
+                devList.erase(tmpIt);
+                devList.emplace(make_pair(it->first, it->second));
+            }
         }
     }
 }
@@ -473,8 +512,6 @@ void DeviceObjectOpr::clear_user_machine()
             m_user_devices.erase(it);
         }
     }
-    //m_user_devices.clear();
-    //m_scan_devices.clear();
 }
 
 DeviceObject* DeviceObjectOpr::get_scan_device(const string& dev_id)
@@ -521,12 +558,20 @@ void DeviceObjectOpr::clear_scan_machine()
     m_scan_devices.clear();
 }
 
-string DeviceObjectOpr::find_dev_id_from_connection(int connectId)
+string DeviceObjectOpr::find_dev_from_id(id_connect_mode &mode, int connectId) 
 {
-    auto it = /*m_dev_connect_map*/m_dev_id_connect_map.begin();
-    for (; it != m_dev_id_connect_map.end(); ++it) {
-        if (it->second == connectId)
+    for (auto it = m_lan_dev_connect_map.begin(); it != m_lan_dev_connect_map.end(); ++it) {
+        if (it->second.id == connectId) {
+            mode = it->second;
             return it->first;
+        }
+    }
+
+    for (auto it = m_wan_dev_connect_map.begin(); it != m_wan_dev_connect_map.end(); ++it) {
+        if (it->second.id == connectId) {
+            mode = it->second;
+            return it->first;
+        }
     }
     return "";
 }
@@ -541,6 +586,80 @@ void DeviceObjectOpr::sendDeviceListUpdateEvent(const std::string& dev_id, int c
 void DeviceObjectOpr::onConnectExit(ComConnectionExitEvent &event)
 {
     event.Skip();
+    id_connect_mode mode;
+    string devId = find_dev_from_id(mode, event.id);
+    if (devId.empty())
+        return;
+    DeviceObject *devObj = nullptr;
+    if (mode.mode == COM_CONNECT_WAN) {
+        auto it = m_user_devices.find(devId);
+        if (it != m_user_devices.end()) {
+            devObj = it->second;
+            if (event.ret == COM_VERIFY_LAN_DEV_FAILED) {
+                unbind_lan_machine(devObj);
+            } else {
+                if (devObj->is_lan_mode_printer()) {
+                    devObj->set_online_state(false);
+                } else {
+                    auto tmpIt = m_local_devices.find(devId);
+                    if (tmpIt != m_local_devices.end()) {
+                        tmpIt->second->set_device_type(DT_LOCAL);
+                    }
+                    removeUserDev(it->second);
+                }
+            }
+        }
+    } else {
+        auto it = m_local_devices.find(devId);
+        if (it != m_local_devices.end()) {
+            devObj = it->second;
+            devObj->set_connecting(false);
+            if (event.ret == COM_VERIFY_LAN_DEV_FAILED) {
+                auto tmpIt = m_user_devices.find(devId);
+                if (tmpIt != m_user_devices.end()) {
+                    tmpIt->second->set_device_type(DT_USER);
+                }
+                unbind_lan_machine(devObj);
+            } else {
+                if (devObj->is_lan_mode_printer()) {
+                    devObj->set_online_state(false);
+                }
+            }
+        } else {
+            auto it = m_scan_devices.find(devId);
+            if (it != m_scan_devices.end()) {
+                devObj = it->second;
+                devObj->set_connecting(false);
+                if (devObj->get_user_access_code().empty()) {
+                    // first bind
+                    if (event.ret == COM_VERIFY_LAN_DEV_FAILED) {
+                        // popop input access code dialog again.
+                        ConnectPrinterDialog dlg(wxGetApp().mainframe, wxID_ANY, _L("Input access code"), true);
+                        dlg.set_device_object(devObj);
+                        if (dlg.ShowModal() == wxID_OK) {
+                            wxGetApp().mainframe->jump_to_monitor(devObj->get_dev_id());
+                        }
+                    } else if (event.ret == COM_ERROR) {
+                        devObj->set_connected_ready(false); // connect finished, and failed.
+                    } else {
+                        // do nothing, this device still belongs to other device. (Including exit successfully)
+                    }
+                } else {
+                    if (event.ret == COM_VERIFY_LAN_DEV_FAILED) {
+                        // notify the device access code has changed, this device should unbind and move to other device.
+                        auto tmpIt = m_user_devices.find(devId);
+                        if (tmpIt != m_user_devices.end()) {
+                            tmpIt->second->set_device_type(DT_USER);
+                        }
+                        unbind_lan_machine(devObj);
+                    } else {
+                        devObj->set_online_state(false);
+                    }
+                }
+            }
+        } 
+    }
+    #if 0
     string        devId = find_dev_id_from_connection(event.id);
     DeviceObject *devObj = nullptr;
     auto it = m_user_devices.find(devId);
@@ -552,43 +671,64 @@ void DeviceObjectOpr::onConnectExit(ComConnectionExitEvent &event)
             if (devObj->is_lan_mode_printer()) {
                 devObj->set_online_state(false);
             } else {
-                auto tmpIt = m_dev_id_connect_map.find(devId);
-                if (tmpIt != m_dev_id_connect_map.end()) {
-                    m_dev_id_connect_map.erase(tmpIt);
+                auto tmpIt = m_local_devices.find(devId);
+                if (tmpIt != m_local_devices.end()) {
+                    tmpIt->second->set_device_type(DT_LOCAL);
                 }
-                delete it->second;
-                m_user_devices.erase(it);
+                unbind_wan_machine(it->second);
             }
         }
     } else {
-        auto it = m_scan_devices.find(devId);
-        if (it != m_scan_devices.end()) {
+        it = m_local_devices.find(devId);
+        if (it != m_local_devices.end()) {
             devObj = it->second;
             devObj->set_connecting(false);
-            if (devObj->get_user_access_code().empty()) {
-                // first bind
-                if (event.ret == COM_VERIFY_LAN_DEV_FAILED) {
-                    // popop input access code dialog again.
-                    ConnectPrinterDialog dlg(wxGetApp().mainframe, wxID_ANY, _L("Input access code"), true);
-                    dlg.set_device_object(devObj);
-                    if (dlg.ShowModal() == wxID_OK) {
-                        wxGetApp().mainframe->jump_to_monitor(devObj->get_dev_id());
-                    }
-                } else if (event.ret == COM_ERROR) {
-                    devObj->set_connected_ready(false); // connect finished, and failed.
-                } else {
-                    // do nothing, this device still belongs to other device. (Including exit successfully)
+            if (event.ret == COM_VERIFY_LAN_DEV_FAILED) {
+                auto tmpIt = m_user_devices.find(devId);
+                if (tmpIt != m_user_devices.end()) {
+                    tmpIt->second->set_device_type(DT_USER);
                 }
+                unbind_lan_machine(devObj);
             } else {
-                if (event.ret == COM_VERIFY_LAN_DEV_FAILED) {
-                    // notify the device access code has changed, this device should unbind and move to other device.
-                    unbind_lan_machine(devObj);
-                } else {
+                if (devObj->is_lan_mode_printer()) {
                     devObj->set_online_state(false);
                 }
             }
-        }
+        } else {
+            auto it = m_scan_devices.find(devId);
+            if (it != m_scan_devices.end()) {
+                devObj = it->second;
+                devObj->set_connecting(false);
+                if (devObj->get_user_access_code().empty()) {
+                    // first bind
+                    if (event.ret == COM_VERIFY_LAN_DEV_FAILED) {
+                        // popop input access code dialog again.
+                        ConnectPrinterDialog dlg(wxGetApp().mainframe, wxID_ANY, _L("Input access code"), true);
+                        dlg.set_device_object(devObj);
+                        if (dlg.ShowModal() == wxID_OK) {
+                            wxGetApp().mainframe->jump_to_monitor(devObj->get_dev_id());
+                        }
+                    } else if (event.ret == COM_ERROR) {
+                        devObj->set_connected_ready(false); // connect finished, and failed.
+                    } else {
+                        // do nothing, this device still belongs to other device. (Including exit successfully)
+                    }
+                } else {
+                    if (event.ret == COM_VERIFY_LAN_DEV_FAILED) {
+                        // notify the device access code has changed, this device should unbind and move to other device.
+                        auto tmpIt = m_user_devices.find(devId);
+                        if (tmpIt != m_user_devices.end()) {
+                            tmpIt->second->set_device_type(DT_USER);
+                        }
+                        unbind_lan_machine(devObj);
+                    } else {
+                        devObj->set_online_state(false);
+                    }
+                }
+            }
+        }        
     }
+    #endif
 }
 
 void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
@@ -610,8 +750,16 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
             devObj->set_connecting(false);
             devObj->set_connected_ready(true);
             devObj->set_online_state(data.wanDevInfo.status != "offline");
+            auto tmpIt = m_local_devices.find(macSN);
+            if (tmpIt != m_local_devices.end()) {
+                devObj->set_device_type(DT_BOTH);
+            } else
+                devObj->set_device_type(DT_USER);
             m_user_devices.emplace(make_pair(macSN, devObj));
-            m_dev_id_connect_map.emplace(make_pair(macSN, event.id));
+            id_connect_mode mode;
+            mode.id = connectId;
+            mode.mode = COM_CONNECT_WAN;
+            m_wan_dev_connect_map.emplace(make_pair(macSN, mode));
             sendDeviceListUpdateEvent(macSN, connectId);
         }
     } else {
@@ -626,8 +774,10 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
         if (it == m_local_devices.end()) {
             userObj = new DeviceObject(*devObj->get_lan_dev_info());
             userObj->set_user_access_code(devObj->get_user_access_code(true));
-            m_user_devices.emplace(make_pair(serialNum, userObj));
-            m_dev_id_connect_map.emplace(make_pair(serialNum, event.id));
+            id_connect_mode mode;
+            mode.id   = connectId;
+            mode.mode = COM_CONNECT_WAN;
+            m_lan_dev_connect_map.emplace(make_pair(serialNum, mode));
             m_local_devices.emplace(make_pair(serialNum, userObj));
 
             AppConfig *config = GUI::wxGetApp().app_config;
@@ -641,6 +791,11 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
         userObj->set_online_state(true);
         userObj->set_connecting(false);
         userObj->set_connected_ready(true);
+        auto tmpIt = m_user_devices.find(serialNum);
+        if (tmpIt != m_user_devices.end()) {
+            userObj->set_device_type(DT_BOTH);
+        } else
+            userObj->set_device_type(DT_LOCAL);
     }
 }
 

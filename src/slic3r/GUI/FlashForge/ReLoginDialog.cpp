@@ -167,8 +167,8 @@ void ReLoginDialog::onLoginoutBtnClicked(wxCommandEvent& event)
             if(login_out_result != ComErrno::COM_OK){
                 BOOST_LOG_TRIVIAL(warning) << boost::format("MultiComUtils::signOut Failed!");
             }
-            DeviceObjectOpr *devOpr = wxGetApp().getDeviceObjectOpr();
-            devOpr->clear_user_machine();
+            //DeviceObjectOpr *devOpr = wxGetApp().getDeviceObjectOpr();
+            //devOpr->clear_user_machine();
         }
         
         app_config->set("access_token","");
