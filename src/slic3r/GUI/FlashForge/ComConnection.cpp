@@ -1,4 +1,5 @@
 #include "ComConnection.hpp"
+#include <array>
 #include "MultiComEvent.hpp"
 
 namespace Slic3r { namespace GUI {
@@ -130,13 +131,14 @@ ComErrno ComConnection::initialize(fnet_dev_detail_t **detail)
     if (m_connectMode == COM_CONNECT_LAN) {
         ret = getDevDetail.exec(m_networkIntfc, m_ip, m_port, m_serialNumber, m_checkCode);
     } else {
-        int tryCnt = 5;
+        int tryCnt = 3;
         for (int i = 0; i < tryCnt; ++i) {
             ret = getDevDetail.exec(m_networkIntfc, m_accessToken, m_deviceId);
             if (ret == COM_OK || ret == COM_UNAUTHORIZED || m_exitThread) {
                 break;
             } else if (i + 1 < tryCnt) {
-                boost::this_thread::sleep_for(boost::chrono::seconds(1));
+                int sleepTimes[] = {1, 3, 5};
+                boost::this_thread::sleep_for(boost::chrono::seconds(sleepTimes[i < 3 ? i : 2]));
             }
         }
     }
