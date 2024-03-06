@@ -28,12 +28,24 @@ enum ActiveState {
     UpdateToDate
 };
 
+enum DeviceType {
+    DT_USER,
+    DT_LOCAL,
+    DT_BOTH,
+};
+
 struct device_wan_info
 {
     string name;
     string bind_dev_id;
     int pid;
     string serialNum;
+};
+
+struct id_connect_mode
+{
+    com_id_t id;
+    ComConnectMode mode;
 };
 
 class DeviceObject
@@ -66,6 +78,7 @@ public:
     void        reset_update_time();
 
     fnet_lan_dev_info *get_lan_dev_info();
+    void               set_lan_dev_info(fnet_lan_dev_info * info);
     string      get_dev_name();
     string      get_dev_id();  // serialNumber
     unsigned short     get_dev_pid();
@@ -84,6 +97,8 @@ public:
     bool        is_connected_ready();
 
     string      get_printer_thumbnail_img_str();
+    void        set_device_type(DeviceType type);
+    DeviceType  device_type();
 
 private:
     fnet_lan_dev_info *m_lan_info { nullptr };
@@ -98,7 +113,7 @@ private:
     bool                m_is_connecting { false };
     bool                m_is_connected_ready { true };
     string              m_dev_connection_type; /* lan | cloud */
-
+    DeviceType          m_deviceType;
     std::chrono::system_clock::time_point last_update_time; /* last received print data from machine */
 
     /* printing status */
@@ -155,14 +170,16 @@ public:
     void unbind_lan_machine(DeviceObject *obj);
     ComErrno unbind_wan_machine(DeviceObject *obj);
 
+    string find_dev_from_id(id_connect_mode& mode, int connectId);
 
 private:
     DeviceObject *get_scan_device(const string &dev_id);
 
     // before connect, scan machine's access code which hasn't written in config file
     void get_my_machine_list_v2(map<string, DeviceObject *> &devList);
-    string find_dev_id_from_connection(int connectId);
+    
     void sendDeviceListUpdateEvent(const std::string& dev_id, int conn_id);
+    void removeUserDev(DeviceObject *obj);
 
 private:
     void onConnectExit(ComConnectionExitEvent &event);
@@ -174,8 +191,9 @@ private:
     map<string, DeviceObject *>       m_scan_devices;       /* dev_id -> DeviceObject*, scan in lan (only lan connectMode, and wan connectMode)   */
     map<string, DeviceObject *>       m_user_devices;        /* dev_id -> DeviceObject*, when user login, the user's devices that has bound. And machine connected successfully. */
     map<string, DeviceObject*>        m_local_devices;      /* dev_id -> DeviceObject*,  in lan connectMode, device has input access code. Read data from appconfig. */
-    map<string, com_id_t>             m_dev_connect_map;   /* dev_id -> connectId */
-    map<string, com_id_t>             m_dev_id_connect_map;
+    //map<string, com_id_t>             m_dev_connect_map;   /* dev_id -> connectId */
+    map<string, id_connect_mode>      m_lan_dev_connect_map;
+    map<string, id_connect_mode>      m_wan_dev_connect_map;
 };
 
 }

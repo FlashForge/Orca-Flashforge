@@ -160,6 +160,7 @@ public:
     void show_edit_printer_name(bool show);
     void update_machine_info(MachineObject *info, bool is_my_devices = false);
     void update_device_info(DeviceObject *info, bool is_my_devices = false);
+    DeviceObject *device_info();
 
 protected:
     void OnPaint(wxPaintEvent &event);
@@ -190,6 +191,7 @@ public:
 
 class ThumbnailPanel;
 class DeviceObject;
+class DeviceListUpdateEvent;
 class SelectMachinePopup : public PopupWindow
 {
 public:
@@ -237,6 +239,7 @@ private:
     wxWindow *create_title_panel(wxString text);
     void      on_connect_exit(ComConnectionExitEvent &event);
     void      on_connect_ready(ComConnectionReadyEvent &event);
+    void      on_devList_Updated(DeviceListUpdateEvent &event);
 };
 
 #define SELECT_MACHINE_DIALOG_BUTTON_SIZE wxSize(FromDIP(68), FromDIP(23))

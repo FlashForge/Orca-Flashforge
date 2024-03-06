@@ -47,6 +47,7 @@ class LoginDialog : public TitleDialog
 {
 public:
     LoginDialog();
+    ~LoginDialog();
 
     static com_token_data_t GetLoginToken();
     static void SetToken(const std::string& accessToken, const std::string& refreshToken);
@@ -139,6 +140,7 @@ private:
     static com_token_data_t  m_token_data;
     static bool m_usr_is_login;
     static com_user_profile_t m_usr_info;
+    static bool  m_first_call_client_token;
 
     wxTimer m_timer;
 
