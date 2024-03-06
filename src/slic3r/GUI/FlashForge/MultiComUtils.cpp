@@ -132,6 +132,24 @@ ComErrno MultiComUtils::signOut(const std::string &accessToken)
     return fnetRet2ComErrno(intfc->signOut(accessToken.c_str(), ComTimeoutWan));
 }
 
+ComErrno MultiComUtils::getUserProfile(const std::string &accessToken, com_user_profile_t &userProfile)
+{
+    fnet::FlashNetworkIntfc *intfc = MultiComMgr::inst()->networkIntfc();
+    if (intfc == nullptr) {
+        return COM_UNINITIALIZED;
+    }
+    fnet_user_profile_t *fnetProfile;
+    int fnetRet = intfc->getUserProfile(accessToken.c_str(), &fnetProfile, ComTimeoutWan);
+    if (fnetRet != FNET_OK) {
+        return MultiComUtils::fnetRet2ComErrno(fnetRet);
+    }
+    fnet::FreeInDestructor freeProfile(fnetProfile, intfc->freeUserProfile);
+    userProfile.uid = fnetProfile->uid;
+    userProfile.nickname = fnetProfile->nickname;
+    userProfile.headImgUrl = fnetProfile->headImgUrl;
+    return COM_OK;
+}
+
 ComErrno MultiComUtils::fnetRet2ComErrno(int networkRet)
 {
     switch (networkRet) {

@@ -17,12 +17,13 @@ ComConnection::ComConnection(com_id_t id, const std::string &checkCode,
 {
 }
 
-ComConnection::ComConnection(com_id_t id, const std::string &accessToken,
+ComConnection::ComConnection(com_id_t id, const std::string &uid, const std::string &accessToken,
     const std::string &serialNumber, const std::string &devId, fnet::FlashNetworkIntfc *networkIntfc)
     : m_id(id)
     , m_connectMode(COM_CONNECT_WAN)
     , m_serialNumber(serialNumber)
     , m_port(0)
+    , m_uid(uid)
     , m_accessToken(accessToken)
     , m_deviceId(devId)
     , m_getDetailClock(clock())
@@ -100,7 +101,7 @@ ComErrno ComConnection::commandLoop()
             if (m_connectMode == COM_CONNECT_LAN) {
                 ret = frontCommand->exec(m_networkIntfc, m_ip, m_port, m_serialNumber, m_checkCode);
             } else {
-                ret = frontCommand->exec(m_networkIntfc, m_accessToken, m_deviceId);
+                ret = frontCommand->exec(m_networkIntfc, m_uid, m_accessToken, m_deviceId);
             }
             processCommand(frontCommand.get(), ret);
             if (ret == COM_OK || ret == COM_DEVICE_IS_BUSY) {
@@ -133,7 +134,7 @@ ComErrno ComConnection::initialize(fnet_dev_detail_t **detail)
     } else {
         int tryCnt = 3;
         for (int i = 0; i < tryCnt; ++i) {
-            ret = getDevDetail.exec(m_networkIntfc, m_accessToken, m_deviceId);
+            ret = getDevDetail.exec(m_networkIntfc, m_uid, m_accessToken, m_deviceId);
             if (ret == COM_OK || ret == COM_UNAUTHORIZED || m_exitThread) {
                 break;
             } else if (i + 1 < tryCnt) {

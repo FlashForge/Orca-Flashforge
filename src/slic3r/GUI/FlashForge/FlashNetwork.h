@@ -307,25 +307,26 @@ FNET_API int fnet_getUserProfile(const char *accessToken, fnet_user_profile_t **
 
 FNET_API void fnet_freeUserProfile(fnet_user_profile_t *profile);
 
-FNET_API int fnet_bindWanDev(const char *accessToken, const char *serialNumber,
+FNET_API int fnet_bindWanDev(const char *uid, const char *accessToken, const char *serialNumber,
     unsigned short pid, const char *name, fnet_wan_dev_bind_data_t **bindData, int msTimeout);
 
 FNET_API void fent_freeBindData(fnet_wan_dev_bind_data_t *bindData);
 
-FNET_API int fnet_unbindWanDev(const char *accessToken, const char *devId, int msTimeout);
+FNET_API int fnet_unbindWanDev(const char *uid, const char *accessToken, const char *devId,
+    int msTimeout);
 
-FNET_API int fnet_getWanDevList(const char *accessToken, fnet_wan_dev_info_t **infos,
+FNET_API int fnet_getWanDevList(const char *uid, const char *accessToken, fnet_wan_dev_info_t **infos,
     int *devCnt, int msTimeout);
 
 FNET_API void fnet_freeWanDevList(fnet_wan_dev_info_t *infos, int devCnt);
 
-FNET_API int fnet_getWanDevDetail(const char *accessToken, const char *devId,
+FNET_API int fnet_getWanDevDetail(const char *uid, const char *accessToken, const char *devId,
     fnet_dev_detail_t **detail, int msTimeout);
 
-FNET_API int fnet_wanDevSendGcode(const char *accessToken, const char *devId,
+FNET_API int fnet_wanDevSendGcode(const char *uid, const char *accessToken, const char *devId,
     const fnet_send_gcode_data_t *sendGcodeData, int msTimeout);
 
-FNET_API int fnet_createConnection(void **conn, const char *accessToken,
+FNET_API int fnet_createConnection(void **conn, const char *uid, const char *accessToken,
     const fnet_conn_settings_t *settings);
 
 FNET_API void fnet_freeConnection(void *conn);

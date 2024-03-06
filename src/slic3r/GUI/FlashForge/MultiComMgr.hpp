@@ -63,8 +63,6 @@ private:
 
     void onWanDevMaintian(const ComWanDevMaintainEvent &event);
 
-    void onGetUserProfile(const ComGetUserProfileEvent &event);
-
     void onGetWanDev(const GetWanDevEvent &event);
 
     void onConnectionReady(const ComConnectionReadyEvent &event);
@@ -83,7 +81,8 @@ private:
 
 private:
     int                                      m_idNum;
-    std::string                              m_userId;
+    std::string                              m_uid;
+    std::string                              m_accessToken;
     std::list<com_ptr_t>                     m_comPtrs;
     com_ptr_map_t                            m_ptrMap;
     std::map<com_id_t, com_dev_data_t>       m_datMap;

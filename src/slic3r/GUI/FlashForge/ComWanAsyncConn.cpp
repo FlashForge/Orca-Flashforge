@@ -13,7 +13,7 @@ ComWanAsyncConn::ComWanAsyncConn(fnet::FlashNetworkIntfc *networkIntfc)
 {
 }
 
-ComErrno ComWanAsyncConn::createConn(const std::string &accessToken)
+ComErrno ComWanAsyncConn::createConn(const std::string &uid, const std::string &accessToken)
 {
     fnet_conn_settings_t settings;
     settings.readCallback = readCallback;
@@ -23,7 +23,7 @@ ComErrno ComWanAsyncConn::createConn(const std::string &accessToken)
     settings.maxReconnectCnt = 5;
     settings.maxErrorCnt = 3;
     settings.msTimeout = ComTimeoutWan;
-    int fnetRet = m_networkIntfc->createConnection(&m_conn, accessToken.c_str(), &settings);
+    int fnetRet = m_networkIntfc->createConnection(&m_conn, uid.c_str(), accessToken.c_str(), &settings);
     ComErrno ret = MultiComUtils::fnetRet2ComErrno(fnetRet);
     if (ret != COM_OK) {
         return ret;
@@ -43,34 +43,34 @@ void ComWanAsyncConn::freeConn()
     m_networkIntfc->freeConnection(m_conn);
 }
 
-void ComWanAsyncConn::postSyncBindDev(const std::string &userId, const std::string &devId)
+void ComWanAsyncConn::postSyncBindDev(const std::string &uid, const std::string &devId)
 {
     if (m_thread == nullptr) {
         return;
     }
     const char *ids = devId.c_str();
-    fnet_user_id_t fnetUserId = {userId.c_str()};
+    fnet_user_id_t fnetUserId = {uid.c_str()};
     fnet_conn_write_data_t writeData = {FNET_CONN_WRITE_SYNC_BIND_DEVICE, &fnetUserId, {&ids, 1}};
     m_networkIntfc->connectionPost(m_conn, &writeData);
 }
 
-void ComWanAsyncConn::postSyncUnbindDev(const std::string &userId,const std::string &devId)
+void ComWanAsyncConn::postSyncUnbindDev(const std::string &uid,const std::string &devId)
 {
     if (m_thread == nullptr) {
         return;
     }
     const char *ids = devId.c_str();
-    fnet_user_id_t fnetUserId = {userId.c_str()};
+    fnet_user_id_t fnetUserId = {uid.c_str()};
     fnet_conn_write_data_t writeData = {FNET_CONN_WRITE_SYNC_UNBIND_DEVICE, &fnetUserId, {&ids, 1}};
     m_networkIntfc->connectionPost(m_conn, &writeData);
 }
 
-void ComWanAsyncConn::postSubscribeApp(const std::string &userId)
+void ComWanAsyncConn::postSubscribeApp(const std::string &uid)
 {
     if (m_thread == nullptr) {
         return;
     }
-    fnet_user_id_t fnetUserId = {userId.c_str()};
+    fnet_user_id_t fnetUserId = {uid.c_str()};
     fnet_conn_write_data_t writeData  = {FNET_CONN_WRITE_SUB_APP_BIND, &fnetUserId, {nullptr, 0}};
     m_networkIntfc->connectionPost(m_conn, &writeData);
 }

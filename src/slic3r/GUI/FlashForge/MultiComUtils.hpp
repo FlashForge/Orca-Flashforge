@@ -35,6 +35,8 @@ public:
 
     static ComErrno signOut(const std::string &accessToken);
 
+    static ComErrno getUserProfile(const std::string &accessToken, com_user_profile_t &userProfile);
+
     static ComErrno fnetRet2ComErrno(int networkRet);
 
     static void asyncCall(wxEvtHandler *evtHandler, const std::function<ComErrno()> &func);

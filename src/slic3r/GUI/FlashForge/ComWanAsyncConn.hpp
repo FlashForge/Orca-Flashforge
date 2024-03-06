@@ -20,17 +20,17 @@ class ComWanAsyncConn : public wxEvtHandler
 public:
     ComWanAsyncConn(fnet::FlashNetworkIntfc *networkIntfc);
 
-    ComErrno createConn(const std::string &accessToken);
+    ComErrno createConn(const std::string &uid, const std::string &accessToken);
 
     void freeConn();
 
-    void postSyncBindDev(const std::string &userId, const std::string &devId);
+    void postSyncBindDev(const std::string &uid, const std::string &devId);
 
-    void postSyncUnbindDev(const std::string &userId,const std::string &devId);
+    void postSyncUnbindDev(const std::string &uid,const std::string &devId);
 
     void postSubscribeDev(const std::vector<std::string> &devIds);
 
-    void postSubscribeApp(const std::string &userId);
+    void postSubscribeApp(const std::string &uid);
 
     void postTempCtrl(const std::string &devId, const fnet_temp_ctrl_t &tempCtrl);
 

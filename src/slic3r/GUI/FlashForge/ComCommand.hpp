@@ -32,8 +32,8 @@ public:
     virtual ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &ip,
         unsigned int port, const std::string &serialNumber, const std::string &checkCode) = 0;
 
-    virtual ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &accessToken,
-        const std::string &deviceId) = 0;
+    virtual ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &uid,
+        const std::string &accessToken, const std::string &deviceId) = 0;
 
 protected:
     int m_commandId;
@@ -54,11 +54,11 @@ public:
             ip.c_str(), port, serialNumber.c_str(), checkCode.c_str(), &m_devDetail, ComTimeoutLan);
         return MultiComUtils::fnetRet2ComErrno(ret);
     }
-    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &accessToken,
-        const std::string &deviceId)
+    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &uid,
+        const std::string &accessToken, const std::string &deviceId)
     {
         int ret = networkIntfc->getWanDevDetail(
-            accessToken.c_str(), deviceId.c_str(), &m_devDetail, ComTimeoutWan);
+            uid.c_str(), accessToken.c_str(), deviceId.c_str(), &m_devDetail, ComTimeoutWan);
         return MultiComUtils::fnetRet2ComErrno(ret);
     }
     fnet_dev_detail_t *devDetail()
@@ -98,11 +98,11 @@ public:
             checkCode.c_str(), &m_sendGcodeData, ComTimeoutLan);
         return MultiComUtils::fnetRet2ComErrno(ret);
     }
-    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &accessToken,
-        const std::string &deviceId)
+    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &uid,
+        const std::string &accessToken, const std::string &deviceId)
     {
         int ret = networkIntfc->wanDevSendGcode(
-            accessToken.c_str(), deviceId.c_str(), &m_sendGcodeData, ComTimeoutWan);
+            uid.c_str(), accessToken.c_str(), deviceId.c_str(), &m_sendGcodeData, ComTimeoutWan);
         return MultiComUtils::fnetRet2ComErrno(ret);
     }
     void abort()
@@ -144,8 +144,8 @@ private:
 class ComWanAsyncCommand : public ComCommand
 {
 public:
-    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &accessToken,
-        const std::string &deviceId)
+    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &uid,
+        const std::string &accessToken, const std::string &deviceId)
     {
         return COM_ERROR;
     }

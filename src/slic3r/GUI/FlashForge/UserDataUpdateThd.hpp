@@ -26,26 +26,23 @@ public:
 
     void exit();
 
-    std::string getToken();
+    void getUidToken(std::string &uid, std::string &accessToken);
+
+    void setUidToken(const std::string &uid, const std::string &accessToken);
 
     void setToken(const std::string &accessToken);
-
-    void setUpdateUserProfile();
 
     void setUpdateWanDev();
 
 private:
     void run();
 
-    void updateUserProfile(const std::string &accessToken);
-
-    void updateWanDev(const std::string &accessToken);
+    void updateWanDev(const std::string &uid, const std::string &accessToken);
 
 private:
+    std::string              m_uid;
     std::string              m_accessToken;
-    boost::mutex             m_tokenMutex;
-    std::atomic_bool         m_updateUserProfile;
-    std::atomic_bool         m_updateWanDev;
+    boost::mutex             m_uidTokenMutex;
     WaitEvent                m_loopWaitEvent;
     std::atomic_bool         m_exitThread;
     boost::thread            m_thread;

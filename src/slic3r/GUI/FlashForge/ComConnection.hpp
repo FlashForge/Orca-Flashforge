@@ -21,8 +21,8 @@ public:
     ComConnection(com_id_t id, const std::string &checkCode, const fnet_lan_dev_info_t &devInfo,
         fnet::FlashNetworkIntfc *networkIntfc);
     
-    ComConnection(com_id_t id, const std::string &accessToken, const std::string &serialNumber,
-        const std::string &devId, fnet::FlashNetworkIntfc *networkIntfc);
+    ComConnection(com_id_t id, const std::string &uid, const std::string &accessToken,
+        const std::string &serialNumber, const std::string &devId, fnet::FlashNetworkIntfc *networkIntfc);
 
     com_id_t id() const { return m_id; }
 
@@ -62,6 +62,7 @@ private:
     std::string                     m_ip;
     unsigned short                  m_port;
     std::string                     m_checkCode;
+    std::string                     m_uid;
     std::string                     m_accessToken;
     std::string                     m_deviceId;
     clock_t                         m_getDetailClock;
