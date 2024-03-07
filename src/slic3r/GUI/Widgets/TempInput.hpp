@@ -73,9 +73,11 @@ public:
 
     void SetTagTemp(int temp);
     void SetTagTemp(wxString temp);
+    void SetTagTemp(int temp, bool notifyModify);
 
     void SetCurrTemp(int temp);
     void SetCurrTemp(wxString temp);
+    void SetCurrTemp(int temp, bool notifyModify);
    
     bool AllisNum(std::string str);
     void SetFinish();
@@ -167,14 +169,16 @@ public:
                        int textSize = 12,
                        wxString secondIcon = "",
                        wxString thirdIcon = "",
+                       bool positiveOrder = true,
                        const wxPoint &pos = wxDefaultPosition,
                        const wxSize & size = wxDefaultSize,
                        long style = wxTAB_TRAVERSAL);
     ~IconBottonText(){};
-    void create_panel(wxWindow* parent,wxString icon,int iconSize,wxString text,int textSize,wxString secondIcon  = "",wxString thirdIcon = "");
+    void create_panel(wxWindow* parent,wxString icon,int iconSize,wxString text,int textSize,wxString secondIcon  = "",wxString thirdIcon = "",bool positiveOrder = true);
     void setLimit(double min,double max);
     void setAdjustValue(double value);
     wxString getTextValue();
+    void setText(wxString text);
 
 private:
     void onTextChange(wxCommandEvent &event);

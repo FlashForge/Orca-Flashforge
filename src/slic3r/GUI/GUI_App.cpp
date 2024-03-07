@@ -3963,6 +3963,12 @@ std::string GUI_App::handle_web_request(std::string cmd)
                             } else {
                                 //addWanDev接口所在服务器连接失败
                                 BOOST_LOG_TRIVIAL(warning) << boost::format("Slic3r::GUI::MultiComMgr::inst()->addWanDev Failed!");
+                                app_config->set("access_token", "");
+                                app_config->set("refresh_token", "");
+                                app_config->set("expire_time", "");
+                                app_config->set("usr_name", "");
+                                app_config->set("usr_pic", "");
+                                app_config->set("usr_uid", "");
                             }
                         }
                         //get_login_info();
@@ -4137,10 +4143,9 @@ void GUI_App::handle_login_result(std::string url, std::string name)
     if(!url.empty()){
         jsonObj["data"]["avatar"] = url;
     }
-    if(!name.empty()){
+    if (!name.empty()) {
         jsonObj["data"]["name"] = name;
     }
-
 
     // 将JSON对象转换为字符串
     std::string newJsonStr = jsonObj.dump();

@@ -828,6 +828,7 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
 void LoginDialog::onUsrNameOrPasswordChangedPage1(wxCommandEvent& event)
 {
     //
+        event.Skip();
         wxString username = m_username_ctrl_page1->GetValue();
         wxString verifycode = m_verifycode_ctrl_page1->GetValue();
         bool agree = m_page1_checkBox->GetValue();

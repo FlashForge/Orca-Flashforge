@@ -177,6 +177,24 @@ void TempInput::SetTagTemp(wxString temp)
     Refresh();
 }
 
+void TempInput::SetTagTemp(int temp, bool notifyModify)
+{
+    if (notifyModify) {
+        Freeze();
+        text_ctrl->Freeze();
+        text_ctrl->SetValue(wxString::Format("%d", temp));
+        text_ctrl->Thaw();
+        Thaw();
+        messureSize();
+        Refresh();
+    } else {
+        text_ctrl->SetValue(wxString::Format("%d", temp));
+        messureSize();
+        Refresh();
+    }
+
+}
+
 void TempInput::SetCurrTemp(int temp) 
 { 
     SetLabel(wxString::Format("%d", temp)); 
@@ -185,6 +203,17 @@ void TempInput::SetCurrTemp(int temp)
 void TempInput::SetCurrTemp(wxString temp) 
 {
     SetLabel(temp);
+}
+
+void TempInput::SetCurrTemp(int temp, bool notifyModify)
+{
+    if (notifyModify) {
+        Freeze();
+        SetLabel(wxString::Format("%d", temp));
+        Thaw();
+    } else {
+        SetLabel(wxString::Format("%d", temp));
+    }
 }
 
 void TempInput::Warning(bool warn, WarningType type)
@@ -626,14 +655,15 @@ void IconText::setTextColor(wxColour colour)
     Refresh();
 }
 
-IconBottonText::IconBottonText(wxWindow* parent,wxString icon,int iconSize,wxString text,int textSize,wxString secondIcon,wxString thirdIcon,const wxPoint &pos,const wxSize & size,long style)
+IconBottonText::IconBottonText(wxWindow* parent,wxString icon,int iconSize,wxString text,int textSize,wxString secondIcon,wxString thirdIcon,bool positiveOrder,const wxPoint &pos,const wxSize & size,long style)
                 : wxPanel(parent, wxID_ANY,pos, size, style)
 {
     SetBackgroundColour(*wxWHITE);
-    create_panel(this,icon,iconSize,text,textSize,secondIcon,thirdIcon);
+    create_panel(this, icon, iconSize, text, textSize, secondIcon, thirdIcon, positiveOrder);
 }
 
-void IconBottonText::create_panel(wxWindow* parent,wxString icon,int iconSize,wxString text,int textSize,wxString secondIcon,wxString thirdIcon)
+void IconBottonText::create_panel(
+    wxWindow *parent, wxString icon, int iconSize, wxString text, int textSize, wxString secondIcon, wxString thirdIcon, bool positiveOrder)
 {
     wxBoxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
     auto m_panel_page = new wxPanel(this, wxID_ANY, wxDefaultPosition,wxDefaultSize,wxBORDER_NONE);
@@ -668,14 +698,26 @@ void IconBottonText::create_panel(wxWindow* parent,wxString icon,int iconSize,wx
     m_inc_btn->Bind(wxEVT_LEFT_UP, &IconBottonText::onIncBtnClicked, this);
     m_inc_btn->SetBackgroundColour(*wxWHITE);
 
-    sizer->Add(icon_static,0, wxALIGN_CENTER | wxALL | wxEXPAND ,0);
-    sizer->AddSpacer(FromDIP(5));
-    sizer->Add(m_dec_btn, 0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND, 0);
-    sizer->AddSpacer(FromDIP(5));
-    sizer->Add(m_text_ctrl, 0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND, 0);
-    sizer->Add(m_unitLabel, 0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND, 0);
-    sizer->AddSpacer(FromDIP(5));
-    sizer->Add(m_inc_btn, 0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND, 0);
+    if (positiveOrder) {
+        sizer->Add(icon_static, 0, wxALIGN_CENTER | wxALL | wxEXPAND, 0);
+        sizer->AddSpacer(FromDIP(5));
+        sizer->Add(m_dec_btn, 0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND, 0);
+        sizer->AddSpacer(FromDIP(5));
+        sizer->Add(m_text_ctrl, 0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND, 0);
+        sizer->Add(m_unitLabel, 0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND, 0);
+        sizer->AddSpacer(FromDIP(5));
+        sizer->Add(m_inc_btn, 0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND, 0);
+    } else {
+        sizer->Add(icon_static, 0, wxALIGN_CENTER | wxALL | wxEXPAND, 0);
+        sizer->AddSpacer(FromDIP(5));
+        sizer->Add(m_inc_btn, 0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND, 0);
+        sizer->AddSpacer(FromDIP(5));
+        sizer->Add(m_text_ctrl, 0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND, 0);
+        sizer->Add(m_unitLabel, 0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND, 0);
+        sizer->AddSpacer(FromDIP(5));
+        sizer->Add(m_dec_btn, 0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND, 0);
+    }
+
 
     m_panel_page->SetSizer(sizer);
     m_panel_page->Layout();
@@ -699,6 +741,12 @@ void IconBottonText::setAdjustValue(double value)
 wxString IconBottonText::getTextValue() 
 { 
     return m_text_ctrl->GetValue(); 
+}
+
+void IconBottonText::setText(wxString text) 
+{
+    m_text_ctrl->SetValue(text);
+    Refresh();
 }
 
 void IconBottonText::onTextChange(wxCommandEvent &event) 

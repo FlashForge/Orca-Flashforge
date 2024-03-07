@@ -17,9 +17,13 @@ namespace GUI {
 
 const std::string CLOSE = "close";
 const std::string OPEN  = "open";
-const std::string CANCEL = "cancel";
+const std::string CANCEL ="cancel";
 const std::string PAUSE  = "pause";
 const std::string CONTINUE = "continue";
+const wxString    TEMPERATURE = _L("Temperature");
+const wxString    TEMP_CANCEL  = _L("cancel");
+const wxString    TEMP_CONFIRM = _L("confirm");
+
 
 MaterialPanel::MaterialPanel(wxWindow* parent)
     : wxPanel(parent, wxID_ANY,wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL)
@@ -74,7 +78,6 @@ void MaterialPanel::create_panel(wxWindow* parent)
         parent->SetSizer(sizer);
         parent->Layout();
         parent->Fit();
-
 }
 
 StartFilter::StartFilter(wxWindow* parent)
@@ -98,7 +101,7 @@ void StartFilter::create_panel(wxWindow* parent)
         m_panel_filtering_title->SetBackgroundColour(wxColour(248,248,248));
 
         //过滤标题
-        auto m_staticText_filtering = new wxStaticText(m_panel_filtering_title, wxID_ANY ,("Start Filtering"));
+        auto m_staticText_filtering = new wxStaticText(m_panel_filtering_title, wxID_ANY ,_L("Start Filtering"));
         m_staticText_filtering->Wrap(-1);
         m_staticText_filtering->SetFont(wxFont(wxFontInfo(16)));
         m_staticText_filtering->SetForegroundColour(wxColour(51,51,51));
@@ -112,7 +115,7 @@ void StartFilter::create_panel(wxWindow* parent)
         //内循环过滤
         wxBoxSizer *bSizer_internal_circulate_hor = new wxBoxSizer(wxHORIZONTAL);
         wxPanel*    internal_circulate_panel      = new wxPanel(parent, wxID_ANY, wxDefaultPosition,wxDefaultSize, wxTAB_TRAVERSAL);
-        auto m_staticText_internal_circulate = new wxStaticText(internal_circulate_panel, wxID_ANY, ("Internal Circulate"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
+        auto m_staticText_internal_circulate = new wxStaticText(internal_circulate_panel, wxID_ANY, _L("Internal Circulate"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
         m_staticText_internal_circulate->Wrap(-1);
         m_staticText_internal_circulate->SetFont(wxFont(wxFontInfo(16)));
         m_internal_circulate_switch = new SwitchButton(internal_circulate_panel);
@@ -131,7 +134,7 @@ void StartFilter::create_panel(wxWindow* parent)
         //外循环过滤
         wxBoxSizer *bSizer_external_circulate_hor = new wxBoxSizer(wxHORIZONTAL);
         wxPanel*    external_circulate_panel      = new wxPanel(parent, wxID_ANY, wxDefaultPosition,wxDefaultSize, wxTAB_TRAVERSAL);
-        auto m_staticText_external_circulate = new wxStaticText(external_circulate_panel, wxID_ANY, ("External Circulate"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
+        auto m_staticText_external_circulate = new wxStaticText(external_circulate_panel, wxID_ANY, _L("External Circulate"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
         m_staticText_external_circulate->Wrap(-1);
         m_staticText_external_circulate->SetFont(wxFont(wxFontInfo(16)));
         m_external_circulate_switch = new SwitchButton(external_circulate_panel);
@@ -157,6 +160,12 @@ void StartFilter::create_panel(wxWindow* parent)
         parent->SetSizer(sizer);
         parent->Layout();
         parent->Fit();  
+}
+
+void StartFilter::setAirFilterState(bool internalOpen, bool externalOpen)
+{ 
+    m_internal_circulate_switch->SetValue(internalOpen);
+    m_external_circulate_switch->SetValue(externalOpen);
 }
 
 void StartFilter::onAirFilterToggled(wxCommandEvent &event)
@@ -185,7 +194,92 @@ void StartFilter::onAirFilterToggled(wxCommandEvent &event)
     }
     ComAirFilterCtrl *filterCtrl = new ComAirFilterCtrl(inter_state, exter_state);
     // 测试，临时将id写死
-    Slic3r::GUI::MultiComMgr::inst()->putCommand(0, filterCtrl);
+    //Slic3r::GUI::MultiComMgr::inst()->putCommand(0, filterCtrl);
+}
+
+ModifyTemp::ModifyTemp(wxWindow *parent) 
+    : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL)
+{
+    SetBackgroundColour(*wxWHITE);
+    create_panel(this);
+}
+
+void ModifyTemp::create_panel(wxWindow *parent) 
+{
+    wxBoxSizer *sizer                  = new wxBoxSizer(wxVERTICAL);
+    wxBoxSizer *bSizer_temp_title = new wxBoxSizer(wxHORIZONTAL);
+
+    auto m_panel_temp_title = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(36)), wxTAB_TRAVERSAL);
+    m_panel_temp_title->SetBackgroundColour(wxColour(248, 248, 248));
+
+    // 温度标题
+    m_staticText_title = new wxStaticText(m_panel_temp_title, wxID_ANY, TEMPERATURE);
+    m_staticText_title->Wrap(-1);
+    m_staticText_title->SetFont(wxFont(wxFontInfo(16)));
+    m_staticText_title->SetForegroundColour(wxColour(51, 51, 51));
+
+    bSizer_temp_title->Add(m_staticText_title, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(17));
+    bSizer_temp_title->Add(0, 0, 1, wxEXPAND, 0);
+    m_panel_temp_title->SetSizer(bSizer_temp_title);
+    m_panel_temp_title->Layout();
+    bSizer_temp_title->Fit(m_panel_temp_title);
+
+    // 确认、取消按钮
+    //垂直布局、水平布局
+    wxBoxSizer *bSizer_operate_hor = new wxBoxSizer(wxHORIZONTAL);
+    wxPanel    *operate_panel      = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(109)), wxTAB_TRAVERSAL);
+    m_cancel_btn = new FFButton(operate_panel, wxID_ANY, TEMP_CANCEL);
+    m_cancel_btn->SetFont(wxFont(wxFontInfo(16)));
+    m_cancel_btn->SetFontHoverColor(wxColour(255, 255, 255));
+    m_cancel_btn->SetBGHoverColor(wxColour(127, 127, 127));
+    m_cancel_btn->SetBorderHoverColor(wxColour(127, 127, 127));
+
+    m_cancel_btn->SetFontPressColor(wxColour(255, 255, 255));
+    m_cancel_btn->SetBGPressColor(wxColour(31, 31, 31));
+    m_cancel_btn->SetBorderPressColor(wxColour(31, 31, 31));
+
+    m_cancel_btn->SetFontColor(wxColour(255, 255, 255));
+    m_cancel_btn->SetBorderColor(wxColour(75, 75, 75));
+    m_cancel_btn->SetBGColor(wxColour(75, 75, 75));
+
+    bSizer_operate_hor->AddStretchSpacer();
+    bSizer_operate_hor->Add(m_cancel_btn, 0, wxALIGN_CENTER, 0);
+    bSizer_operate_hor->AddSpacer(FromDIP(19));
+
+    m_confirm_btn = new FFButton(operate_panel, wxID_ANY, TEMP_CONFIRM);
+    m_confirm_btn->SetFont(wxFont(wxFontInfo(16)));
+    m_confirm_btn->SetFontHoverColor(wxColour(255, 255, 255));
+    m_confirm_btn->SetBGHoverColor(wxColour(149, 197, 255));
+    m_confirm_btn->SetBorderHoverColor(wxColour(149, 197, 255));
+
+    m_confirm_btn->SetFontPressColor(wxColour(255, 255, 255));
+    m_confirm_btn->SetBGPressColor(wxColour(17, 111, 223));
+    m_confirm_btn->SetBorderPressColor(wxColour(17, 111, 223));
+
+    m_confirm_btn->SetFontColor(wxColour(255, 255, 255));
+    m_confirm_btn->SetBorderColor(wxColour(50, 141, 251));
+    m_confirm_btn->SetBGColor(wxColour(50, 141, 251));
+
+    bSizer_operate_hor->Add(m_confirm_btn, 0, wxALIGN_CENTER, 0);
+    bSizer_operate_hor->AddStretchSpacer();
+
+    operate_panel->SetSizer(bSizer_operate_hor);
+    operate_panel->Layout();
+    bSizer_operate_hor->Fit(operate_panel);
+
+    sizer->Add(m_panel_temp_title, 0, wxEXPAND | wxALL, 0);
+    sizer->AddSpacer(FromDIP(12));
+    sizer->Add(operate_panel, 0, wxEXPAND | wxALL, 0);
+    sizer->AddSpacer(FromDIP(12));
+
+    parent->SetSizer(sizer);
+    parent->Layout();
+    parent->Fit();
+}
+
+void ModifyTemp::setLabel(wxString labelText) 
+{
+    m_staticText_title->SetLabel(labelText); 
 }
 
 DeviceDetail::DeviceDetail(wxWindow* parent)
@@ -228,7 +322,7 @@ void DeviceDetail::create_panel(wxWindow* parent)
                 m_device_cooling_fan->getTextValue().ToDouble(&cooling_fan);
             }
             ComPrintCtrl *printCtrl = new ComPrintCtrl(z_axis, speed, cooling_fan, nozzle_fan);
-            Slic3r::GUI::MultiComMgr::inst()->putCommand(0, printCtrl);
+            //Slic3r::GUI::MultiComMgr::inst()->putCommand(0, printCtrl);
         });
 
         bSizer_confirm_row->AddStretchSpacer();
@@ -271,7 +365,7 @@ void DeviceDetail::create_panel(wxWindow* parent)
         bSizer_first_row->Add(m_device_speed, 0, wxEXPAND | wxALL, 0);
         bSizer_first_row->AddSpacer(FromDIP(18));
 
-        m_device_z_axis = new IconBottonText(m_panel_first_row, wxString("device_z_axis"), 17, wxString("0.02"), 12,wxString("device_z_dec"), wxString("push_button_arrow_dec_normal"));
+        m_device_z_axis = new IconBottonText(m_panel_first_row, wxString("device_z_axis"), 17, wxString("0.02"), 12,wxString("device_z_dec"), wxString("push_button_arrow_dec_normal"),false);
         m_device_z_axis->setLimit(-5, 5);
         m_device_z_axis->setAdjustValue(0.01);
         bSizer_first_row->Add(m_device_z_axis, 0, wxEXPAND | wxALL, 0);
@@ -328,6 +422,56 @@ void DeviceDetail::create_panel(wxWindow* parent)
         parent->Fit(); 
 }
 
+void DeviceDetail::setMaterialName(wxString materialName) 
+{
+    m_device_material->setText(materialName);
+}
+
+void DeviceDetail::setInitialSpeed(double initialSpeed)
+{ 
+    auto aInitialSpeed = static_cast<int>(initialSpeed);
+    m_device_initial_speed->setText(wxString::Format("%d mm/s", aInitialSpeed));
+}
+
+void DeviceDetail::setSpeed(double speed) 
+{ 
+    auto aspeed = static_cast<int>(speed);
+    m_device_speed->setText(wxString::Format("%d", aspeed));
+}
+
+void DeviceDetail::setZAxis(double value) 
+{
+    auto aValue = wxString::Format("%.2f", value);
+    m_device_z_axis->setText(aValue);
+}
+
+void DeviceDetail::setLayer(int printLayer, int targetLayer)
+{
+    wxString str_printerLayer = wxString::Format("%d", printLayer);
+    wxString str_targetLayer  = wxString::Format("%d", targetLayer);
+    str_printerLayer.Append("/");
+    str_printerLayer.Append(str_targetLayer);
+    m_device_layer->setText(str_printerLayer);
+}
+
+void DeviceDetail::setFillRate(double fillRate) 
+{
+    auto aFillRate = static_cast<int>(fillRate);
+    m_device_fill_rate->setText(wxString::Format("%d %%", aFillRate));
+}
+
+void DeviceDetail::setCoolingFanSpeed(double fanSpeed) 
+{ 
+    auto aFanSpeed = static_cast<int>(fanSpeed);
+    m_device_nozzle_fan->setText(wxString::Format("%d", aFanSpeed));
+}
+
+void DeviceDetail::setChamberFanSpeed(double fanSpeed) 
+{ 
+     auto aFanSpeed = static_cast<int>(fanSpeed);
+    m_device_cooling_fan->setText(wxString::Format("%d", aFanSpeed));
+}
+
 SingleDeviceState::SingleDeviceState(wxWindow* parent, wxWindowID id, const wxPoint& pos, 
         const wxSize& size, long style, const wxString& name)
         : wxScrolledWindow(parent, id, pos, size, wxHSCROLL | wxVSCROLL)
@@ -336,6 +480,30 @@ SingleDeviceState::SingleDeviceState(wxWindow* parent, wxWindowID id, const wxPo
         this->SetBackgroundColour(wxColour(240,240,240));
         setupLayout();
         connectEvent();
+}
+
+void SingleDeviceState::setCurId(int curId) 
+{ 
+    m_cur_id = curId; 
+    //根据ID值查询设备相关信息，在设备状态中显示
+}
+
+void SingleDeviceState::modifyVideoPlayerAddress(const std::string &urlAddress)
+{
+   std::string jsonStr = R"({"command": "modify_rtsp_player_address","address": "http://115.231.29.48:1370/ffspace/SNMMOC98989898.m3u8","sequence_id": "10001"})";
+   // 将JSON字符串解析为JSON对象
+   json jsonObj = json::parse(jsonStr);
+   if (!urlAddress.empty()) {
+      jsonObj["address"] = urlAddress;
+   } else {
+      return;
+   }
+   // 将JSON对象转换为字符串
+   std::string newJsonStr = jsonObj.dump();
+   wxString    strJS      = wxString::Format("window.postMessage(%s)", wxString::FromUTF8(newJsonStr));
+   if (m_browser) {
+     WebView::RunScript(m_browser, strJS);
+   }
 }
 
 wxBoxSizer* SingleDeviceState::create_monitoring_page()
@@ -419,10 +587,10 @@ wxBoxSizer* SingleDeviceState::create_monitoring_page()
 
         //播放控件
         m_camera_play_url = wxString::Format("file://%s/web/orca/missing_connection.html?lang=http://192.168.4.128:8080/?action=stream", from_u8(resources_dir()));
-#if 0
-        m_camera_play_url = wxString::Format("file://%s/web/orca/missing_connection.html?lang=http://115.231.29.48:1370/ffspace/SNMMOC98989898.m3u8",from_u8(resources_dir()));
+//#if 0
+        //m_camera_play_url = wxString::Format("file://%s/web/orca/missing_connection.html?lang=http://115.231.29.48:1370/ffspace/SNMMOC98989898.m3u8",from_u8(resources_dir()));
         //m_camera_play_url =wxString::Format("file://%s/web/homepage/index.html",from_u8(resources_dir()));
-#endif
+//#endif
         m_browser = WebView::CreateWebView(this,m_camera_play_url);
         wxEvtHandler::Bind(wxEVT_WEBVIEW_SCRIPT_MESSAGE_RECEIVED, &SingleDeviceState::OnScriptMessage, this);
         m_browser->Bind(wxEVT_WEBVIEW_NAVIGATED, &SingleDeviceState::on_navigated, this);
@@ -818,9 +986,11 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
             e.Skip();
             if (!m_print_button_pressed_down) {
                 std::string printState = PAUSE;
+                double time = Slic3r::GUI::MultiComMgr::inst()->devData(0).devDetail->printProgress;
+                double      total_time = Slic3r::GUI::MultiComMgr::inst()->devData(0).devDetail->estimatedTime;
                 std::string jobId = Slic3r::GUI::MultiComMgr::inst()->devData(0).devDetail->jobId;
                 ComJobCtrl *jobCtrl    = new ComJobCtrl(jobId, printState);
-                Slic3r::GUI::MultiComMgr::inst()->putCommand(0, jobCtrl);
+                //Slic3r::GUI::MultiComMgr::inst()->putCommand(0, jobCtrl);
                 m_print_button->SetLabel(_L("continue print"));
                 m_print_button->SetIcon("device_continue_print");
                 m_print_button->Refresh();
@@ -828,7 +998,7 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
                 std::string printState = CONTINUE;
                 std::string jobId = Slic3r::GUI::MultiComMgr::inst()->devData(0).devDetail->jobId;
                 ComJobCtrl *jobCtrl = new ComJobCtrl(jobId, printState);
-                Slic3r::GUI::MultiComMgr::inst()->putCommand(0, jobCtrl);
+                //Slic3r::GUI::MultiComMgr::inst()->putCommand(0, jobCtrl);
                 m_print_button->SetLabel(_L("pause print"));
                 m_print_button->SetIcon("device_pause_print");
                 m_print_button->Refresh();
@@ -906,6 +1076,8 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         StateColor tempinput_border_colour(std::make_pair(*wxWHITE, (int)StateColor::Disabled), std::make_pair(wxColour(0, 150, 136), (int)StateColor::Focused),
                                         std::make_pair(wxColour(0, 150, 136), (int)StateColor::Hovered),std::make_pair(*wxWHITE, (int)StateColor::Normal));
         m_tempCtrl_top->SetBorderColor(tempinput_border_colour);
+        m_tempCtrl_top->Bind(wxEVT_TEXT,&SingleDeviceState::onTargetTempModify, this);  
+
         //bSizer_control_temperature->Add(m_tempCtrl_top, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
         bSizer_control_temperature->Add(m_tempCtrl_top, wxSizerFlags(1).Expand());
 
@@ -928,6 +1100,7 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         //StateColor tempinput_border_colour(std::make_pair(*wxWHITE, (int)StateColor::Disabled), std::make_pair(wxColour(0, 150, 136), (int)StateColor::Focused),
         //                                std::make_pair(wxColour(0, 150, 136), (int)StateColor::Hovered),std::make_pair(*wxWHITE, (int)StateColor::Normal));
         m_tempCtrl_bottom->SetBorderColor(tempinput_border_colour);
+        m_tempCtrl_bottom->Bind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);  
         //bSizer_control_temperature->Add(m_tempCtrl_bottom, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
         bSizer_control_temperature->Add(m_tempCtrl_bottom, wxSizerFlags(1).Expand());
 
@@ -950,6 +1123,7 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         //StateColor tempinput_border_colour(std::make_pair(*wxWHITE, (int)StateColor::Disabled), std::make_pair(wxColour(0, 150, 136), (int)StateColor::Focused),
         //                                std::make_pair(wxColour(0, 150, 136), (int)StateColor::Hovered),std::make_pair(*wxWHITE, (int)StateColor::Normal));
         m_tempCtrl_mid->SetBorderColor(tempinput_border_colour);
+        m_tempCtrl_mid->Bind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);  
         //bSizer_control_temperature->Add(m_tempCtrl_mid, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
         bSizer_control_temperature->Add(m_tempCtrl_mid, wxSizerFlags(1).Expand());
 
@@ -1032,6 +1206,10 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         m_busy_circula_filter = new StartFilter(parent);
         busySizer->Add(m_busy_circula_filter, 0, wxALL | wxEXPAND , 0);
         m_busy_circula_filter->Hide();
+//添加温度修改确认页面
+        m_busy_temp_brn = new ModifyTemp(parent);
+        busySizer->Add(m_busy_temp_brn, 0, wxALL | wxEXPAND, 0);
+        m_busy_temp_brn->Hide();
 }
 
 void SingleDeviceState::setupLayoutIdlePage(wxBoxSizer* idleSizer,wxPanel* parent)
@@ -1069,7 +1247,7 @@ void SingleDeviceState::setupLayoutIdlePage(wxBoxSizer* idleSizer,wxPanel* paren
         m_panel_idle = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
         m_panel_idle->SetBackgroundColour(*wxWHITE);
         
-        m_idle_device_pic = create_scaled_bitmap("monitor_device_idle", this, 112);
+        m_idle_device_pic = create_scaled_bitmap("adventurer_5m", this, 112);
         m_idle_device_staticbitmap = new wxStaticBitmap(m_panel_idle, wxID_ANY, m_idle_device_pic);
         m_staticText_idle = new Label(m_panel_idle, _L("The Current Device has no Printing Projects"));
         m_staticText_idle->Wrap(-1);
@@ -1421,6 +1599,13 @@ void SingleDeviceState::msw_rescale()
 
 void SingleDeviceState::connectEvent()
 {
+//device info modify
+    //外网数据更新
+   MultiComMgr::inst()->Bind(COM_WAN_DEV_INFO_UPDATE_EVENT, &SingleDeviceState::onConnectWanDevInfoUpdate, this);
+   //局域网数据更新
+   MultiComMgr::inst()->Bind(COM_DEV_DETAIL_UPDATE_EVENT, &SingleDeviceState::onComDevDetailUpdate, this);
+
+
 //local file list
    m_staticText_file_list->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e){
         if(m_idle_tempMixDevice && m_idle_tempMixDevice->IsShown()){
@@ -1444,8 +1629,11 @@ void SingleDeviceState::connectEvent()
             m_busy_device_detial->Layout();
             m_device_info_button->SetBackgroundColor(wxColour(217,234,255));
         }
-        if(m_busy_circula_filter){
-            m_busy_circula_filter->Hide();    
+        if (m_busy_circula_filter) {
+            m_busy_circula_filter->Hide();
+        }
+        if (m_busy_temp_brn) {
+            m_busy_temp_brn->Hide();
         }
         if(m_filter_button){
             m_filter_button->SetBackgroundColor(wxColour(255,255,255));
@@ -1463,6 +1651,9 @@ void SingleDeviceState::connectEvent()
         if(m_busy_device_detial){
             m_busy_device_detial->Hide();
         }
+        if (m_busy_temp_brn) {
+            m_busy_temp_brn->Hide();
+        }
         if(m_device_info_button){
             m_device_info_button->SetBackgroundColor(wxColour(255,255,255));
         }
@@ -1474,7 +1665,7 @@ void SingleDeviceState::connectEvent()
            // 关灯
            ComLightCtrl *lightctrl = new ComLightCtrl(CLOSE);
            // 测试，临时将id写死
-           Slic3r::GUI::MultiComMgr::inst()->putCommand(0, lightctrl);
+           //Slic3r::GUI::MultiComMgr::inst()->putCommand(0, lightctrl);
            m_lamp_control_button->SetIcon("device_lamp_control");
            m_lamp_control_button->Refresh();
            m_lamp_control_button->SetFlashForgeSelected(false);
@@ -1482,7 +1673,7 @@ void SingleDeviceState::connectEvent()
            //开灯
            ComLightCtrl *lightctrl = new ComLightCtrl(OPEN);
            // 测试，临时将id写死
-           Slic3r::GUI::MultiComMgr::inst()->putCommand(0, lightctrl);
+           //Slic3r::GUI::MultiComMgr::inst()->putCommand(0, lightctrl);
            m_lamp_control_button->SetIcon("device_lamp_control_press");
            m_lamp_control_button->Refresh();
            m_lamp_control_button->SetFlashForgeSelected(true);
@@ -1522,6 +1713,132 @@ void SingleDeviceState::on_navigated(wxWebViewEvent &event)
    wxString strInput = event.GetString();
 }
 
+void SingleDeviceState::onConnectWanDevInfoUpdate(ComWanDevInfoUpdateEvent &event) 
+{
+    event.Skip();
+    if (m_cur_id == event.id) {
+        //当前选中的设备，获取相应数据，更新界面显示
+        const com_dev_data_t &data = MultiComMgr::inst()->devData(event.id);
+        fillValue(data);
+   }
+}
+
+void SingleDeviceState::onComDevDetailUpdate(ComDevDetailUpdateEvent &event) 
+{
+    event.Skip();
+   if (m_cur_id == event.id) {
+        // 当前选中的设备，获取相应数据，更新界面显示
+        bool  valid = false;
+        const com_dev_data_t& data  = MultiComMgr::inst()->devData(m_cur_id, &valid);
+        fillValue(data);
+   }
+}
+
+void SingleDeviceState::onTargetTempModify(wxCommandEvent &event) 
+{
+   event.Skip();
+   wxTextCtrl *click_btn = dynamic_cast<wxTextCtrl *>(event.GetEventObject());
+   if (event.GetEventType() == wxEVT_TEXT) {
+       if (click_btn && m_tempCtrl_top && m_tempCtrl_bottom && m_tempCtrl_mid) {
+            m_busy_temp_brn->Show();
+            m_busy_temp_brn->Layout();
+            if (m_busy_circula_filter) {
+                m_busy_circula_filter->Hide();
+            }
+            if (m_busy_device_detial) {
+                m_busy_device_detial->Hide();
+            }
+            if (m_filter_button) {
+                m_filter_button->SetBackgroundColor(wxColour(255, 255, 255));
+            }
+            if (m_device_info_button) {
+                m_device_info_button->SetBackgroundColor(wxColour(255, 255, 255));
+            }
+            Layout();
+        }
+   }
+}
+
+std::string SingleDeviceState::convertSecondsToHMS(int totalSeconds)
+{
+   int hours   = totalSeconds / 3600;
+   int remainingSeconds = totalSeconds % 3600;
+   int minutes          = remainingSeconds / 60;
+   int secs             = remainingSeconds % 60; 
+
+   std::ostringstream stream;  
+   stream << std::setfill('0') << std::setw(2) << hours << ":" << std::setfill('0') << std::setw(2) << minutes << ":" << std::setfill('0')<< std::setw(2) << secs;  
+   return stream.str();  
+}
+
+void SingleDeviceState::fillValue(const com_dev_data_t &data)
+{
+   std::string state = data.devDetail->status; // 状态
+   // 如果是离线，则切换至离线页面
+
+   std::string printFileName = data.devDetail->printFileName; // 文件名
+   m_staticText_file_name->SetLabel(printFileName);
+
+   std::string filePic = data.devDetail->printFileThumbUrl; // 图片地址
+
+   double estimatedTime = data.devDetail->estimatedTime; // 剩余时间
+   m_staticText_count_time->SetLabel(convertSecondsToHMS(estimatedTime));
+
+   double printProgress = data.devDetail->printProgress; // 打印进度
+   m_progress_bar->SetProgress(printProgress * 100);
+
+   double rightTemp = data.devDetail->rightTemp; // 右喷头温度
+   m_tempCtrl_top->Unbind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);  
+   m_tempCtrl_top->SetCurrTemp(rightTemp,true);
+   double rightTargetTemp = data.devDetail->rightTargetTemp; // 右喷头目标温度
+   m_tempCtrl_top->SetTagTemp(rightTargetTemp, true);
+   m_tempCtrl_top->Bind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);  
+   double platTemp = data.devDetail->platTemp; // 平台温度
+   m_tempCtrl_bottom->Unbind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this); 
+   m_tempCtrl_bottom->SetCurrTemp(platTemp, true);
+   double platTargetTemp = data.devDetail->platTargetTemp; // 平台目标温度
+   m_tempCtrl_bottom->SetTagTemp(platTargetTemp, true);
+   m_tempCtrl_bottom->Bind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);  
+   double chamberTemp = data.devDetail->chamberTemp; // 腔体温度
+   m_tempCtrl_mid->Unbind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this); 
+   m_tempCtrl_mid->SetCurrTemp(chamberTemp, true);
+   double chamberTargetTemp = data.devDetail->chamberTargetTemp; // 腔体目标物温度
+   m_tempCtrl_mid->SetTagTemp(chamberTargetTemp, true);
+   m_tempCtrl_mid->Bind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);  
+   std::string lightStatus = data.devDetail->lightStatus; // 灯状态
+   if (lightStatus.compare(CLOSE) == 0) {
+        m_lamp_control_button->SetIcon("device_lamp_control");
+        m_lamp_control_button->Refresh();
+        m_lamp_control_button->SetFlashForgeSelected(false);
+   } else if (lightStatus.compare(OPEN) == 0) {
+        m_lamp_control_button->SetIcon("device_lamp_control_press");
+        m_lamp_control_button->Refresh();
+        m_lamp_control_button->SetFlashForgeSelected(true);
+   }
+   std::string internalFanStatus = data.devDetail->internalFanStatus; // 内循环状态
+   bool        internal_open     = internalFanStatus.compare(OPEN) ? false: true;
+   std::string externalFanStatus = data.devDetail->externalFanStatus; // 外循环状态
+   bool        external_open     = externalFanStatus.compare(OPEN) ? false: true;
+   m_busy_circula_filter->setAirFilterState(internal_open, external_open);
+   std::string rightFilamentType = data.devDetail->rightFilamentType; // 材料类型
+   m_busy_device_detial->setMaterialName(rightFilamentType);
+   double currentPrintSpeed = data.devDetail->currentPrintSpeed; // 初始打印速度
+   m_busy_device_detial->setInitialSpeed(currentPrintSpeed);
+   double printSpeedAdjust = data.devDetail->printSpeedAdjust; // 速度
+   m_busy_device_detial->setSpeed(printSpeedAdjust);
+   double zAxisCompensation = data.devDetail->zAxisCompensation; // z轴坐标
+   m_busy_device_detial->setZAxis(zAxisCompensation);
+   int printLayer       = data.devDetail->printLayer;       // 当前层
+   int targetPrintLayer = data.devDetail->targetPrintLayer; // 目标层数
+   m_busy_device_detial->setLayer(printLayer, targetPrintLayer);
+   double fillAmount = data.devDetail->fillAmount; // 填充率
+   m_busy_device_detial->setFillRate(fillAmount);
+   double coolingFanSpeed = data.devDetail->coolingFanSpeed; // 喷头风扇
+   m_busy_device_detial->setCoolingFanSpeed(coolingFanSpeed);
+   double chamberFanSpeed = data.devDetail->chamberFanSpeed; // 冷却风扇（腔体风扇）
+   m_busy_device_detial->setChamberFanSpeed(chamberFanSpeed);
+}
+
 void SingleDeviceState::OnScriptMessage(wxWebViewEvent &evt)
 {
    wxString          strInput = evt.GetString();
@@ -1536,9 +1853,11 @@ void SingleDeviceState::OnScriptMessage(wxWebViewEvent &evt)
    boost::optional<std::string> command     = root.get_optional<std::string>("command");
    if (command.has_value()) {
        std::string command_str = command.value();
-       if (command_str.compare("homepage_login_or_register") == 0) {
-       // 外网视频继续播放
-            
+       if (command_str.compare("rtsp_player_continue") == 0) {
+            // 外网视频继续播放
+            ComCameraStreamCtrl *cameraStreamCtrl = new ComCameraStreamCtrl(OPEN);
+            // 测试，临时将id写死
+            //Slic3r::GUI::MultiComMgr::inst()->putCommand(0, cameraStreamCtrl);
        }
    }
 }

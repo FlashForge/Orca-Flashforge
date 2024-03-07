@@ -20,6 +20,7 @@
 #include "slic3r/GUI/Widgets/TempInput.hpp"
 //#include "slic3r/GUI/Widgets/StaticLine.hpp"
 #include "slic3r/GUI/Widgets/FFButton.hpp"
+#include "MultiComEvent.hpp"
 
 namespace Slic3r { 
 namespace GUI {
@@ -43,6 +44,7 @@ public:
     StartFilter(wxWindow* parent);
     ~StartFilter();
     void create_panel(wxWindow* parent);
+    void setAirFilterState(bool internalOpen,bool externalOpen);
 
 private:
     void onAirFilterToggled(wxCommandEvent &event);
@@ -52,6 +54,19 @@ private:
     SwitchButton* m_external_circulate_switch;//外循环过滤
 };
 
+class ModifyTemp : public wxPanel
+{
+public:
+    ModifyTemp(wxWindow *parent);
+    void create_panel(wxWindow *parent);
+    void setLabel(wxString labelText);
+
+private:
+    wxStaticText *m_staticText_title{nullptr};
+    FFButton     *m_cancel_btn{nullptr};
+    FFButton     *m_confirm_btn{nullptr};
+};
+
 class DeviceDetail : public wxPanel
 {
 public:
@@ -59,6 +74,15 @@ public:
     //~DeviceDetail();
     void create_panel(wxWindow* parent);
     //void initData();
+    void setMaterialName(wxString materialName);
+    void setInitialSpeed(double initialSpeed);
+    void setSpeed(double speed);
+    void setZAxis(double value);
+    void setLayer(int printLayer, int targetLayer);
+    void setFillRate(double fillRate);
+    void setCoolingFanSpeed(double fanSpeed);
+    void setChamberFanSpeed(double fanSpeed);
+
 private:
     IconText       *m_device_material{nullptr};
     IconText       *m_device_initial_speed{nullptr};
@@ -78,6 +102,10 @@ public:
             const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString);
     ~SingleDeviceState(){};
 
+    void setCurId(int curId);
+    void modifyVideoPlayerAddress(const std::string &urlAddress);
+
+
     wxBoxSizer *create_monitoring_page();
     wxBoxSizer* create_machine_control_title();
     wxBoxSizer *create_machine_control_page();
@@ -93,8 +121,20 @@ public:
 
     void OnScriptMessage(wxWebViewEvent &evt);
     void on_navigated(wxWebViewEvent &event);
+    void onConnectWanDevInfoUpdate(ComWanDevInfoUpdateEvent &event);
+    void onComDevDetailUpdate(ComDevDetailUpdateEvent &event);
+    void onTargetTempModify(wxCommandEvent &event);
+
+private:
+    std::string convertSecondsToHMS(int totalSeconds);
+    void  fillValue(const com_dev_data_t &data);
 
 protected:
+//data
+
+    int m_cur_id = 0;
+
+//UI
     wxPanel*  m_panel_monitoring_title;
     Label*   m_staticText_monitoring;
 
@@ -160,9 +200,9 @@ protected:
     bool m_print_button_pressed_down = false;
 
 //temperature 
-    TempInput* m_tempCtrl_top;
-    TempInput* m_tempCtrl_bottom;
-    TempInput* m_tempCtrl_mid;
+    TempInput* m_tempCtrl_top;  //喷头温度
+    TempInput* m_tempCtrl_bottom;   //平台温度
+    TempInput* m_tempCtrl_mid;  //腔体温度
 
     Button* m_device_info_button;
     Button* m_lamp_control_button;
@@ -174,6 +214,7 @@ protected:
 
     DeviceDetail* m_busy_device_detial; //忙碌状态，文件信息按钮
     StartFilter*  m_busy_circula_filter;//忙碌状态，过滤按钮
+    ModifyTemp   *m_busy_temp_brn;      //忙碌状态，温度修改确认按钮
 
     TempMixDevice* m_idle_tempMixDevice;//空闲状态，温度设备控件
 //

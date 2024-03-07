@@ -6,23 +6,42 @@
 <title>Printer Connection Required</title>
 <!-- <link rel="stylesheet" type="text/css" href="css/home.css" />
 <link rel="stylesheet" type="text/css" href="css/dark.css" /> -->
-<script type="text/javascript" src="../data/text.js"></script>	
+<!-- <script type="text/javascript" src="../data/text.js"></script>	 -->
 <script type="text/javascript" src="../homepage/js/jquery-3.6.0.min.js"></script>
+<!-- <script type="text/javascript" src="../include/swiper/swiper-bundle.min.js"></script>
 <script type="text/javascript" src="../homepage/js/json2.js"></script>
-<script type="text/javascript" src="../homepage/js/globalapi.js"></script>
-<script type="text/javascript" src="../homepage/js/home.js"></script>
+<script type="text/javascript" src="../include/globalapi.js"></script>	
+<script type="text/javascript" src="js/home.js"></script> -->
+<!-- <script type="text/javascript" src="../include/jquery-2.1.1.min.js"></script> -->
+<script type="text/javascript" src="../include/json2.js"></script>
+<script type="text/javascript" src="../include/globalapi.js"></script>
+<link rel="stylesheet" type="text/css" href="../include/swiper/swiper-bundle.min.css" />
+<script type="text/javascript" src="../include/swiper/swiper-bundle.min.js"></script>
+<script type="text/javascript" src="../data/text.js"></script>
+<script type="text/javascript" src="../orca/js/home.js"></script>	
+
 <script src="js/hls.js"></script>
 <style>
   body {
     margin: 0;
   }
-  img {
+  #videoStream {
     width: 100vw;
     height: 100vh;
   }
   video {
     width: 100vw;
     height: 100vh;
+  }
+  .container {
+    position: relative;
+  }
+  #zanting {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8%;
   }
 </style>
 </head>
@@ -33,7 +52,10 @@
           style="display: block;-webkit-user-select: none;margin: auto;background-color: hsl(0, 0%, 25%);" 
           alt="Live Stream"
         >
+        <img id="zanting" src="zanting.svg" alt="" >
         <video id="video" autoplay></video>
+
+        <div id="url-studio" style="display: none;"></div>
         <!-- 控制按钮 -->
         <!-- <button id="toggleButton">暂停</button> -->
         <!-- <h1 class="trans">Printer Connection</h1>
@@ -46,7 +68,8 @@
        var urlParams = new URLSearchParams(rtsp_address);
        var lang = urlParams.get('lang');
        var videoStreamImg = document.getElementById("videoStream");
-       videoStreamImg.src = 'zanting.jpg';
+       videoStreamImg.src = 'hei.svg';
+       videoStreamImg.style.backgroundImage = 'url("hei.svg")'
 
 
        let streamPaused = false;
@@ -54,19 +77,28 @@
        videoStreamImg.addEventListener('click', function() {
            if (!streamPaused) {
             if (lang) {
+              videoStreamImg.src = '';
+              videoStreamImg.style.backgroundImage = 'url("")'
+              var zanting = document.getElementById("zanting")
+              zanting.style.display = 'none'
               videoStreamImg.src = lang;
               streamPaused = true;
               setTimeout(function() {
-                  videoStreamImg.src = 'zanting.jpg';
+                  videoStreamImg.src = 'hei.svg';
+                  zanting.style.display = 'block'
+                  videoStreamImg.style.backgroundImage = 'url("hei.svg")'
                   streamPaused = false;
               }, 600000); // 10分钟后暂停，10分钟 = 600000毫秒
             } else {
-              videoStreamImg.src = 'zanting.jpg';
+              videoStreamImg.src = 'hei.svg';
               streamPaused = false;
               alert('无法获取视频流路径')
             }
            } else {
-             videoStreamImg.src = 'zanting.jpg';
+             videoStreamImg.src = 'hei.svg';
+             var zanting = document.getElementById("zanting")
+             zanting.style.display = 'block'
+             videoStreamImg.style.backgroundImage = 'url("hei.svg")'
              streamPaused = false;
            }
        });
@@ -74,73 +106,77 @@
        var video = document.getElementById("video");
        video.style.display = "none"
 
+
+      //  function SendWXMessage ( strMsg ) {
+      //    window.postMessage(strMsg, '*')
+      //  }
+
        if (lang) {
         if (lang.endsWith(".m3u8")) {
-          console.log('.m3u8')
+          // console.log('.m3u8')
           video.style.display = "block"
           videoStreamImg.style.display = "none"
-          video.style.backgroundImage = "url('zanting.jpg')"
+          video.style.backgroundImage = "url('hei.svg')"
           video.style.backgroundSize = "cover"
           video.style.backgroundRepeat = "no-repeat"
           video.style.backgroundPosition = "center"
           video.addEventListener('click', function() {
-            console.log("点击事件")
-            if (Hls.isSupported()) {
-              var video = document.getElementById('video')
-              video.style.backgroundImage = "none"
-              var hls = new Hls()
-              // 绑定视频流地址
-              hls.loadSource(lang)
-              // 绑定 video 容器
-              hls.attachMedia(video)
-              if (!streamPaused) {
-                if (video.style.backgroundImage === 'none') {
-                  setTimeout(function() {
-                    alert('无法获取视频流路径')
-                  }, 200);
-                }
-                setTimeout(function() {
-                    video.style.backgroundImage = "url('zanting.jpg')"
-                    video.style.backgroundSize = "cover"
-                    video.style.backgroundRepeat = "no-repeat"
-                    video.style.backgroundPosition = "center"
-                    streamPaused = false;
-                }, 600000); // 10分钟后暂停，10分钟 = 600000毫秒
-                streamPaused = true;
-                // 当 HLS 实例绑定到视频并且媒体元数据已加载时播放视频
-                // hls.on(Hls.Events.MANIFEST_PARSED, function () {
-                //   video.play()
-                // })
-              } else {
-                video.style.backgroundImage = "url('zanting.jpg')"
-                video.style.backgroundSize = "cover"
-                video.style.backgroundRepeat = "no-repeat"
-                video.style.backgroundPosition = "center"
-                streamPaused = false;
-              }
-            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-              if (!streamPaused) {
-                // 对于原生支持 HLS 的平台（如 Safari），直接播放
-                video.style.backgroundImage = "none"
-                video.src = lang
-                setTimeout(function() {
-                  video.style.backgroundImage = "url('zanting.jpg')"
-                  video.style.backgroundSize = "cover"
-                  video.style.backgroundRepeat = "no-repeat"
-                  video.style.backgroundPosition = "center"
-                  streamPaused = false;
-                }, 600000); // 10分钟后暂停，10分钟 = 600000毫秒
-                streamPaused = true;
-                // video.addEventListener('loadedmetadata', function () {
-                //   video.play()
-                // })
-              } else {
-                video.style.backgroundImage = "url('zanting.jpg')"
-                video.style.backgroundSize = "cover"
-                video.style.backgroundRepeat = "no-repeat"
-                video.style.backgroundPosition = "center"
-                streamPaused = false;
-              }
+            if (!streamPaused) {
+              OnGetUrl()
+              setTimeout(function() {
+                var element = document.getElementById('url-studio');
+                var content = element.innerHTML;
+                lang = content
+                if (Hls.isSupported()) {
+                  var video = document.getElementById('video')
+                  video.style.backgroundImage = "none"
+                  var zanting = document.getElementById("zanting")
+                  zanting.style.display = 'none'
+                  var hls = new Hls()
+                  // 绑定视频流地址
+                  hls.loadSource(lang)
+                  // 绑定 video 容器
+                  hls.attachMedia(video)
+                  if (!streamPaused) {
+                    setTimeout(function() {
+                        video.style.backgroundImage = "url('hei.svg')"
+                        video.style.backgroundSize = "cover"
+                        video.style.backgroundRepeat = "no-repeat"
+                        video.style.backgroundPosition = "center"
+                        var zanting = document.getElementById("zanting")
+                        zanting.style.display = 'block'
+                        streamPaused = false;
+                    }, 600000); // 10分钟后暂停，10分钟 = 600000毫秒
+                    streamPaused = true;
+                  }
+                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                  if (!streamPaused) {
+                    // 对于原生支持 HLS 的平台（如 Safari），直接播放
+                    video.style.backgroundImage = "none"
+                    var zanting = document.getElementById("zanting")
+                    zanting.style.display = 'none'
+                    video.src = lang
+                    setTimeout(function() {
+                      video.style.backgroundImage = "url('hei.svg')"
+                      video.style.backgroundSize = "cover"
+                      video.style.backgroundRepeat = "no-repeat"
+                      video.style.backgroundPosition = "center"
+                      var zanting = document.getElementById("zanting")
+                      zanting.style.display = 'block'
+                      streamPaused = false;
+                    }, 600000); // 10分钟后暂停，10分钟 = 600000毫秒
+                    streamPaused = true;
+                  }
+                } 
+              },10)
+            } else {
+              video.style.backgroundImage = "url('hei.svg')"
+              video.style.backgroundSize = "cover"
+              video.style.backgroundRepeat = "no-repeat"
+              video.style.backgroundPosition = "center"
+              var zanting = document.getElementById("zanting")
+              zanting.style.display = 'block'
+              streamPaused = false;
             }
           })
         }
