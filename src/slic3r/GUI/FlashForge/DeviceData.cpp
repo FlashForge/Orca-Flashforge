@@ -254,6 +254,13 @@ DeviceType DeviceObject::device_type()
     return m_deviceType;
 }
 
+int DeviceObject::connectMode() 
+{ 
+    if (m_lan_info == nullptr)
+        return 0;
+    return m_lan_info->connectMode; 
+}
+
 
 wxDEFINE_EVENT(EVT_DEVICE_LIST_UPDATED, DeviceListUpdateEvent);
 DeviceObjectOpr::DeviceObjectOpr()
@@ -295,14 +302,9 @@ void DeviceObjectOpr::update_scan_machine()
         auto it = m_local_devices.find(dev_id);
         if (it != m_local_devices.end()) {
             devObj->set_user_access_code(it->second->get_user_access_code(), false);
-            if (it->second->get_lan_dev_info() == nullptr) {
-                auto info    = devObj->get_lan_dev_info();
-                auto lanInfo = new fnet_lan_dev_info(*info);
-                if (it->second->has_access_right()) {
-                    lanInfo->bindStatus = 1;
-                }
-                it->second->set_lan_dev_info(lanInfo);
-            }            
+            auto info    = devObj->get_lan_dev_info();
+            auto lanInfo = new fnet_lan_dev_info(*info);
+            it->second->set_lan_dev_info(lanInfo);
         } else {
             it = m_user_devices.find(dev_id);
             if (it != m_user_devices.end()) {
@@ -496,7 +498,7 @@ void DeviceObjectOpr::get_my_machine_list(map<string, DeviceObject *> &devList)
         if (tmpIt == devList.end()) {
             devList.emplace(make_pair(it->first, it->second));
         } else {
-            if (tmpIt->second->device_type() == DT_BOTH) {
+            if (tmpIt->second->device_type() == DT_BOTH && it->second->connectMode() == 0) {
                 devList.erase(tmpIt);
                 devList.emplace(make_pair(it->first, it->second));
             }
@@ -595,19 +597,19 @@ void DeviceObjectOpr::onConnectExit(ComConnectionExitEvent &event)
         auto it = m_user_devices.find(devId);
         if (it != m_user_devices.end()) {
             devObj = it->second;
-            if (event.ret == COM_VERIFY_LAN_DEV_FAILED) {
-                unbind_lan_machine(devObj);
-            } else {
-                if (devObj->is_lan_mode_printer()) {
-                    devObj->set_online_state(false);
-                } else {
+            //if (event.ret == COM_VERIFY_LAN_DEV_FAILED) {
+            //    unbind_lan_machine(devObj);
+            //} else {
+                //if (devObj->is_lan_mode_printer()) {
+                //    devObj->set_online_state(false);
+                //} else {
                     auto tmpIt = m_local_devices.find(devId);
                     if (tmpIt != m_local_devices.end()) {
                         tmpIt->second->set_device_type(DT_LOCAL);
                     }
                     removeUserDev(it->second);
-                }
-            }
+                //}
+            //}
         }
     } else {
         auto it = m_local_devices.find(devId);
@@ -622,7 +624,10 @@ void DeviceObjectOpr::onConnectExit(ComConnectionExitEvent &event)
                 unbind_lan_machine(devObj);
             } else {
                 if (devObj->is_lan_mode_printer()) {
+                    bool state = devObj->is_online();
                     devObj->set_online_state(false);
+                    if (state)
+                        sendDeviceListUpdateEvent(devObj->get_dev_id(), event.id);
                 }
             }
         } else {
@@ -640,7 +645,10 @@ void DeviceObjectOpr::onConnectExit(ComConnectionExitEvent &event)
                             wxGetApp().mainframe->jump_to_monitor(devObj->get_dev_id());
                         }
                     } else if (event.ret == COM_ERROR) {
+                        bool state = devObj->is_online();
                         devObj->set_connected_ready(false); // connect finished, and failed.
+                        if (state)
+                            sendDeviceListUpdateEvent(devObj->get_dev_id(), event.id);
                     } else {
                         // do nothing, this device still belongs to other device. (Including exit successfully)
                     }
@@ -653,7 +661,10 @@ void DeviceObjectOpr::onConnectExit(ComConnectionExitEvent &event)
                         }
                         unbind_lan_machine(devObj);
                     } else {
+                        bool state = devObj->is_online();
                         devObj->set_online_state(false);
+                        if (state)
+                            sendDeviceListUpdateEvent(devObj->get_dev_id(), event.id);
                     }
                 }
             }
@@ -753,6 +764,7 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
             auto tmpIt = m_local_devices.find(macSN);
             if (tmpIt != m_local_devices.end()) {
                 devObj->set_device_type(DT_BOTH);
+                tmpIt->second->set_device_type(DT_BOTH);
             } else
                 devObj->set_device_type(DT_USER);
             m_user_devices.emplace(make_pair(macSN, devObj));
@@ -794,6 +806,7 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
         auto tmpIt = m_user_devices.find(serialNum);
         if (tmpIt != m_user_devices.end()) {
             userObj->set_device_type(DT_BOTH);
+            tmpIt->second->set_device_type(DT_BOTH);
         } else
             userObj->set_device_type(DT_LOCAL);
     }
@@ -806,7 +819,10 @@ void DeviceObjectOpr::onConnectWanDevInfoUpdate(ComWanDevInfoUpdateEvent &event)
     if (data.connectMode == COM_CONNECT_WAN) {
         auto it = m_user_devices.find(data.wanDevInfo.serialNumber);
         if (it != m_user_devices.end()) {
+            bool state = it->second->is_online();
             it->second->set_online_state(data.wanDevInfo.status != "offline");
+            if (state != it->second->is_online())
+                sendDeviceListUpdateEvent(data.wanDevInfo.serialNumber, event.id);
         }
     }
 }

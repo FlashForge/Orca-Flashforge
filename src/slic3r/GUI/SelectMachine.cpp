@@ -321,11 +321,21 @@ void MachineObjectPanel::on_mouse_left_up(wxMouseEvent &evt)
             auto right  = left + m_unbind_img.GetBmpSize().x;
             auto top    = (GetSize().y - m_unbind_img.GetBmpSize().y) / 2;
             auto bottom = (GetSize().y - m_unbind_img.GetBmpSize().y) / 2 + m_unbind_img.GetBmpSize().y;
-
+            DeviceObject *obj    = nullptr;
             if ((evt.GetPosition().x >= left && evt.GetPosition().x <= right) && evt.GetPosition().y >= top && evt.GetPosition().y <= bottom) {
                 wxCommandEvent event(EVT_UNBIND_MACHINE, GetId());
                 event.SetEventObject(this);
                 GetEventHandler()->ProcessEvent(event);
+            } else if (is_wan_offline_lan_unbind(obj)) {
+                if (obj) {
+                    if (obj->is_lan_mode_printer()) {
+                        ConnectPrinterDialog dlg(wxGetApp().mainframe, wxID_ANY, _L("Input access code"));
+                        dlg.set_device_object(obj);
+                        if (dlg.ShowModal() == wxID_OK) {
+                            wxGetApp().mainframe->jump_to_monitor(obj->get_dev_id());
+                        }
+                    }
+                }
             } else {
                 if (m_devInfo) {
                     wxGetApp().mainframe->jump_to_monitor(m_devInfo->get_dev_id());
@@ -365,6 +375,31 @@ void MachineObjectPanel::on_mouse_left_up(wxMouseEvent &evt)
         }
     }
 }
+
+bool MachineObjectPanel::is_wan_offline_lan_unbind(DeviceObject *&obj)
+{
+    if (m_devInfo->is_lan_mode_printer() || m_devInfo->is_online()) {
+        return false;
+    }
+    DeviceObjectOpr                      *devOpr = wxGetApp().getDeviceObjectOpr();
+    std::map<std::string, DeviceObject *> scan_dev_list, local_dev_list;
+    devOpr->get_local_machine(local_dev_list);
+    auto it = local_dev_list.find(m_devInfo->get_dev_id());
+    if (it != local_dev_list.end()) {
+        return false;
+    }
+    devOpr->get_scan_machine(scan_dev_list);
+    it = scan_dev_list.find(m_devInfo->get_dev_id());
+    if (it == scan_dev_list.end()) {
+        return false;
+    }
+    if (it->second->has_access_right()) {
+        return false;
+    }
+    obj = it->second;
+    return true;
+}
+
 
 SelectMachinePopup::SelectMachinePopup(wxWindow *parent)
     : PopupWindow(parent, wxBORDER_NONE | wxPU_CONTAINS_CONTROLS), m_dismiss(false), m_updateConnect(false)
@@ -540,30 +575,31 @@ void SelectMachinePopup::on_connect_exit(ComConnectionExitEvent &event)
     if (this->IsShown() && m_refresh_timer && !m_refresh_timer->IsRunning()) {
         m_refresh_timer->Start(MACHINE_LIST_REFRESH_INTERVAL);
     }
-    DeviceObjectOpr *devOpr = wxGetApp().getDeviceObjectOpr();
-    id_connect_mode  mode;
-    string dev_id = devOpr->find_dev_from_id(mode, event.id);
-    if (dev_id.empty()) {
-        return;
-    }
-    std::map<std::string, DeviceObject *> userList;
-    std::map<std::string, DeviceObject *> localList;
-    devOpr->get_user_machine(userList);
-    devOpr->get_local_machine(localList);
-    auto it = localList.find(dev_id);
-    if (it != localList.end() && !it->second->is_online() && it->second->device_type() == DT_BOTH) {
-        it = userList.find(dev_id);
-        if (it != userList.end()) {
-            DeviceObject *userDev = it->second;
-            for (int j = 0; j < m_user_list_machine_panel.size(); j++) {
-                DeviceObject *dev = m_user_list_machine_panel[j]->mPanel->device_info();
-                if (dev->get_dev_id() == dev_id) {
-                    m_user_list_machine_panel[j]->mPanel->update_device_info(userDev, true);
-                    break;
-                }
-            }
-        }        
-    }
+    //DeviceObjectOpr *devOpr = wxGetApp().getDeviceObjectOpr();
+    //id_connect_mode  mode;
+    //string dev_id = devOpr->find_dev_from_id(mode, event.id);
+    //if (dev_id.empty()) {
+    //    return;
+    //}
+    //std::map<std::string, DeviceObject *> userList;
+    //std::map<std::string, DeviceObject *> localList;
+    //devOpr->get_user_machine(userList);
+    //devOpr->get_local_machine(localList);
+    //auto it = localList.find(dev_id);
+    //if (it != localList.end() && !it->second->is_online() && it->second->device_type() == DT_BOTH) {
+    //    it = userList.find(dev_id);
+    //    if (it != userList.end() && it->second->is_online()) {
+    //        DeviceObject *userDev = it->second;
+    //        for (int j = 0; j < m_user_list_machine_panel.size(); j++) {
+    //            DeviceObject *dev = m_user_list_machine_panel[j]->mPanel->device_info();
+    //            if (dev->get_dev_id() == dev_id) {
+    //                m_user_list_machine_panel[j]->mPanel->update_device_info(userDev, true);
+    //                Refresh();
+    //                break;
+    //            }
+    //        }
+    //    }        
+    //}
 }
 
 void SelectMachinePopup::on_connect_ready(ComConnectionReadyEvent &event)
@@ -599,12 +635,32 @@ void SelectMachinePopup::update_other_devices()
     m_free_device_list.clear();
     devOpr->get_scan_machine(m_free_device_list);
 
+    // sort list
+    std::vector<std::pair<std::string, DeviceObject *>> other_machine_list;
+    for (auto &it : m_free_device_list) {
+        other_machine_list.push_back(it);
+    }
+
+    std::sort(other_machine_list.begin(), other_machine_list.end(), [&](auto &a, auto &b) {
+        if (a.second && b.second) {
+            if (a.second->connectMode() == 0 && b.second->connectMode() == 1)
+                return true;
+            else if (a.second->connectMode() == 1 && b.second->connectMode() == 0) {
+                return false;
+            } else
+                a.second->get_dev_name().compare(b.second->get_dev_name()) < 0;
+            
+            // return a.second->get_dev_name().compare(b.second->get_dev_name()) < 0;
+        }
+        return false;
+    });
+
     BOOST_LOG_TRIVIAL(trace) << "SelectMachinePopup update_other_devices start";
     this->Freeze();
     m_scrolledWindow->Freeze();
     int i = 0;
 
-    for (auto &elem : m_free_device_list) {
+    for (auto &elem : other_machine_list) {
         DeviceObject* deviceObj = elem.second;
         //MachineObject *     mobj = elem.second;
         /* do not show printer bind state is empty */
@@ -714,9 +770,14 @@ void SelectMachinePopup::update_user_devices()
     std::sort(user_machine_list.begin(), user_machine_list.end(), [&](auto& a, auto&b) {
             if (a.second && b.second) {
                 if (a.second->is_online() && !b.second->is_online()) return true;
-                else {
+                else if (!a.second->is_online() && b.second->is_online()) {
+                    return false;
+                } else {
                     if (a.second->is_lan_mode_printer() && !b.second->is_lan_mode_printer())
                         return true;
+                    else if (!a.second->is_lan_mode_printer() && b.second->is_lan_mode_printer()) {
+                        return false;
+                    }
                     else
                         a.second->get_dev_name().compare(b.second->get_dev_name()) < 0;
                 }

@@ -169,6 +169,9 @@ protected:
     void on_mouse_enter(wxMouseEvent &evt);
     void on_mouse_leave(wxMouseEvent &evt);
     void on_mouse_left_up(wxMouseEvent &evt);
+
+private:
+    bool is_wan_offline_lan_unbind(DeviceObject* &obj);
 };
 
 #define SELECT_MACHINE_POPUP_SIZE wxSize(FromDIP(216), FromDIP(674))

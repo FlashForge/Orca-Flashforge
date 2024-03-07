@@ -100,6 +100,8 @@ public:
     void        set_device_type(DeviceType type);
     DeviceType  device_type();
 
+    int connectMode();
+
 private:
     fnet_lan_dev_info *m_lan_info { nullptr };
     device_wan_info   *m_wan_info { nullptr };
