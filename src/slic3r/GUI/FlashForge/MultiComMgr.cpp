@@ -253,7 +253,8 @@ void MultiComMgr::onGetWanDev(const GetWanDevEvent &event)
                 comPtr.get()->disconnect(0);
             } else {
                 comPtr->setAccessToken(event.accessToken);
-                updateWanDevInfo(comPtr->id(), it->second->status, it->second->location);
+                updateWanDevInfo(comPtr->id(), it->second->name, it->second->status,
+                    it->second->location);
             }
         }
     }
@@ -299,7 +300,7 @@ void MultiComMgr::onDevDetailUpdate(const ComDevDetailUpdateEvent &event)
     m_networkIntfc->freeDevDetail(devDetail);
     devDetail = event.devDetail;
     QueueEvent(event.Clone());
-    updateWanDevInfo(event.id, devDetail->status, devDetail->location);
+    updateWanDevInfo(event.id, devDetail->name, devDetail->status, devDetail->location);
 }
 
 void MultiComMgr::onWanConnReadData(const WanConnReadDataEvent &event)
@@ -364,12 +365,14 @@ com_dev_data_t MultiComMgr::makeDevData(const fnet_wan_dev_info_t *wanDevInfo)
     return devData;
 }
 
-void MultiComMgr::updateWanDevInfo(com_id_t id, const std::string &status, const std::string &location)
+void MultiComMgr::updateWanDevInfo(com_id_t id, const std::string &name, const std::string &status,
+    const std::string &location)
 {
     com_dev_data_t &devData = m_datMap.at(id);
     if (devData.connectMode != COM_CONNECT_WAN) {
         return;
     }
+    devData.wanDevInfo.name = name;
     devData.wanDevInfo.status = status;
     devData.wanDevInfo.location = location;
     QueueEvent(new ComWanDevInfoUpdateEvent(COM_WAN_DEV_INFO_UPDATE_EVENT, id));
