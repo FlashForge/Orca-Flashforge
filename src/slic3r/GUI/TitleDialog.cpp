@@ -1,6 +1,6 @@
 #include "TitleDialog.hpp"
 #include <wx/stattext.h>
-#include "wx/graphics.h"
+#include <wx/graphics.h>
 #include "wxExtensions.hpp"
 
 
