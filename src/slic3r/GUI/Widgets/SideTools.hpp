@@ -39,6 +39,19 @@ enum MonitorStatus {
 
 namespace Slic3r { namespace GUI {
 
+
+class DevListBtnClickedEvent : public wxCommandEvent
+{
+public:
+    DevListBtnClickedEvent(wxEventType type)
+        : wxCommandEvent(type)
+    {}
+
+    DevListBtnClickedEvent *Clone() const { return new DevListBtnClickedEvent(GetEventType()); }
+
+};
+wxDECLARE_EVENT(EVT_DEV_LIST_BTN_CLICKED, DevListBtnClickedEvent);
+
 class SideToolsPanel : public wxPanel
 {
 private:

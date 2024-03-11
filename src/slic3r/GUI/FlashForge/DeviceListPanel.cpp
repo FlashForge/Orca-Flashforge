@@ -1,9 +1,13 @@
 #include "DeviceListPanel.hpp"
+#include <boost/log/trivial.hpp>
+#include <wx/graphics.h>
 #include "slic3r/GUI/I18N.hpp"
 #include "slic3r/GUI/FFUtils.hpp"
 #include "slic3r/GUI/GUI_App.hpp"
 #include "slic3r/GUI/Widgets/FFToggleButton.hpp"
+#include "slic3r/GUI/Widgets/FFCheckBox.hpp"
 #include "slic3r/GUI/wxExtensions.hpp"
+#include "slic3r/GUI/FFUtils.hpp"
 #include "DeviceData.hpp"
 
 namespace Slic3r {
@@ -25,9 +29,9 @@ DropDownButton::DropDownButton(wxWindow* parent/*=nullptr*/, const wxString& nam
 
     m_sizer = new wxBoxSizer(wxHORIZONTAL);
     m_sizer->AddStretchSpacer(1);
-    m_sizer->Add(m_text, 0, wxALIGN_CENTER_VERTICAL);
+    m_sizer->Add(m_text, 0, wxALIGN_CENTER_VERTICAL | wxTOP | wxBOTTOM, FromDIP(3));
     m_sizer->AddSpacer(FromDIP(12));
-    m_sizer->Add(m_bitmap, 0, wxALIGN_CENTER_VERTICAL);
+    m_sizer->Add(m_bitmap, 0, wxALIGN_CENTER_VERTICAL | wxTOP | wxBOTTOM, FromDIP(3));
     m_sizer->AddStretchSpacer(1);
 
     SetSizer(m_sizer);
@@ -56,7 +60,11 @@ wxPoint DropDownButton::convertEventPoint(const wxMouseEvent& event)
 void DropDownButton::onEnter(wxMouseEvent& event)
 {
     if (isPointIn(convertEventPoint(event))) {
-        if (!HasCapture()) CaptureMouse();
+        if (!HasCapture()) {
+            //BOOST_LOG_TRIVIAL(error) << "DropDownButton::onEnter";
+            //flush_logs();
+            CaptureMouse();
+        }
     }
     event.Skip();
 }
@@ -64,7 +72,11 @@ void DropDownButton::onEnter(wxMouseEvent& event)
 void DropDownButton::onLeave(wxMouseEvent& event)
 {
     if (!isPointIn(convertEventPoint(event))) {
-        if (HasCapture()) ReleaseMouse();
+        if (HasCapture()) {
+            //BOOST_LOG_TRIVIAL(debug) << "DropDownButton::onLeave";
+            //flush_logs();
+            ReleaseMouse();
+        }
     }
     event.Skip();
 }
@@ -75,45 +87,286 @@ bool DropDownButton::isPointIn(const wxPoint& pnt)
 }
 
 
-ListBoxPopup::ListBoxPopup(wxWindow *parent, const wxArrayString &names)
-    : PopupWindow(parent, wxBORDER_NONE | wxPU_CONTAINS_CONTROLS), m_dismiss(false)
+wxDEFINE_EVENT(EVT_FILTER_ITEM_CLICKED, wxCommandEvent);
+FilterPopupWindow::FilterItem::FilterItem(wxWindow* parent, const wxString& text, bool top_corner_round/*=false*/,
+    bool bottom_corner_round/*=false*/, bool can_checked/*=false*/)
+    : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxNO_BORDER)
+    , m_topCornerRound(top_corner_round)
+    , m_bottomCornerRound(bottom_corner_round)
+    , m_can_check(can_checked)
 {
-    m_listBox = new wxListBox(this, wxID_ANY);
-    m_listBox->InsertItems(names, m_listBox->GetCount());
-    m_listBox->SetSelection(0);
-
-    wxBoxSizer *vSizer = new wxBoxSizer(wxVERTICAL);
-    vSizer->Add(m_listBox, 0, wxALL);
-    SetSizer(vSizer);
+    //SetBackgroundColour(wxColour("#eeeeee"));
+    SetMinSize(wxSize(FromDIP(80), FromDIP(30)));
+    SetMaxSize(wxSize(-1, FromDIP(30)));
+    SetSize(wxSize(-1, FromDIP(30)));
+    m_check_box = new FFCheckBox(this);
+    m_check_box->Show(can_checked);
+    m_check_box->SetValue(false);
+    m_text = new wxStaticText(this, wxID_ANY, text);
+    wxBoxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
+    sizer->AddSpacer(FromDIP(15));
+    if (can_checked) {
+        sizer->Add(m_check_box, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT | wxTOP | wxBOTTOM, FromDIP(5));
+    }
+    sizer->Add(m_text, 1, wxALIGN_CENTER_VERTICAL | wxTOP | wxBOTTOM, FromDIP(5));
+    sizer->AddSpacer(FromDIP(15));
+    SetSizer(sizer);
     Layout();
     Fit();
+    Bind(wxEVT_PAINT, &FilterItem::onPaint, this);
+    Bind(wxEVT_ENTER_WINDOW, &FilterItem::onEnter, this);
+    Bind(wxEVT_LEAVE_WINDOW, &FilterItem::onLeave, this);
+    Bind(wxEVT_LEFT_DOWN, &FilterItem::onMouseDown, this);
+    Bind(wxEVT_LEFT_UP, &FilterItem::onMouseUp, this);
+    m_text->Bind(wxEVT_ENTER_WINDOW, &FilterItem::onEnter, this);
+    m_check_box->Bind(wxEVT_ENTER_WINDOW, &FilterItem::onEnter, this);
 }
 
-void ListBoxPopup::Popup(wxWindow *WXUNUSED(focus))
+void FilterPopupWindow::FilterItem::setSelect(bool select)
 {
+    if (m_selectFlag != select) {
+        m_selectFlag = select;
+        Refresh();
+    }    
+}
+
+bool FilterPopupWindow::FilterItem::isSelect() const
+{
+    return m_selectFlag;
+}
+
+void FilterPopupWindow::FilterItem::setChecked(bool check)
+{
+    if (m_check_box->GetValue() != check) {
+        m_check_box->SetValue(check);
+        Refresh();
+    }
+}
+bool FilterPopupWindow::FilterItem::isChecked() const
+{
+    return m_check_box->GetValue();
+}
+
+wxString FilterPopupWindow::FilterItem::getText() const
+{
+    return m_text->GetLabel();
+}
+
+void FilterPopupWindow::FilterItem::setText(const wxString& text)
+{
+    m_text->SetLabel(text);
+}
+
+void FilterPopupWindow::FilterItem::setTopCornerRound(bool round)
+{
+    if (m_topCornerRound != round) {
+        m_topCornerRound = round;
+        Refresh();
+    }
+}
+        
+void FilterPopupWindow::FilterItem::setBottomCornerRound(bool round)
+{
+    if (m_bottomCornerRound != round) {
+        m_bottomCornerRound = round;
+        Refresh();
+    }
+}
+
+bool FilterPopupWindow::FilterItem::Show(bool show/*=true*/)
+{
+    if (m_can_check) {
+        m_check_box->Show(show);
+    }
+    m_text->Show(show);
+    return wxPanel::Show(show);
+}
+
+void FilterPopupWindow::FilterItem::onPaint(wxPaintEvent& event)
+{
+    wxPaintDC dc(this);
+    auto sz = GetSize();
+    dc.SetPen(*wxTRANSPARENT_PEN);
+    if (!m_topCornerRound || !m_bottomCornerRound) {
+        dc.SetBrush(wxColour("#dddddd"));
+        dc.DrawRectangle(0, 0, sz.x, sz.y);
+    }
+    wxColour color("#ffffff");
+    if (m_pressFlag) {
+        color = wxColour("#328DFB");
+    } else if (m_hoverFlag) {
+        color = wxColour("#D9EAFF");
+    } else if (m_selectFlag) {
+        color = wxColour("#328DFB");
+    }
+    dc.SetBrush(color);
+    if (!m_topCornerRound && !m_bottomCornerRound) {
+        dc.DrawRectangle(0, 0, sz.x, sz.y);
+    } else if (m_topCornerRound && m_bottomCornerRound) {
+        dc.DrawRoundedRectangle(0, 0, sz.x, sz.y, 6);
+    } else if (m_topCornerRound) {
+        dc.DrawRoundedRectangle(0, 0, sz.x, sz.y, 6);
+        dc.DrawRectangle(0, 6, sz.x, sz.y);
+    } else if (m_bottomCornerRound) {
+        dc.DrawRoundedRectangle(0, 0, sz.x, sz.y, 6);
+        dc.DrawRectangle(0, 0, sz.x, 6);
+    }
+    m_text->SetBackgroundColour(color);
+    m_check_box->SetBackgroundColour(color);
+}
+
+void FilterPopupWindow::FilterItem::onEnter(wxMouseEvent& event)
+{
+    wxPoint pnt = event.GetPosition();
+    if (event.GetId() == m_text->GetId()) {
+        pnt += m_text->GetPosition();
+    } else if (event.GetId() == m_check_box->GetId()) {
+        pnt += m_check_box->GetPosition();
+    }
+    if (isPointIn(pnt)) {
+        if (!HasCapture()) {
+            //BOOST_LOG_TRIVIAL(error) << "FilterItem::onEnter";
+            //flush_logs();
+            CaptureMouse();
+        }
+        m_hoverFlag = true;
+    }
+    Refresh();
+    event.Skip();
+}
+
+void FilterPopupWindow::FilterItem::onLeave(wxMouseEvent& event)
+{
+    if (HasCapture()) {
+        //BOOST_LOG_TRIVIAL(error) << "FilterItem::onLeave";
+        //flush_logs();
+        ReleaseMouse();
+    }
+    m_hoverFlag = false;
+    m_pressFlag = false;
+    Refresh();
+    event.Skip();
+}
+
+void FilterPopupWindow::FilterItem::onMouseDown(wxMouseEvent& event)
+{
+    if (isPointIn(event.GetPosition())) {
+        if (m_can_check) {
+            m_check_box->SetValue(!m_check_box->GetValue());
+            sendEvent();
+        }
+        m_pressFlag = true;
+        Refresh();
+    }
+    event.Skip();
+}
+
+void FilterPopupWindow::FilterItem::onMouseUp(wxMouseEvent& event)
+{
+    if (isPointIn(event.GetPosition())) {
+        m_pressFlag = false;
+        if (!m_can_check) {
+            sendEvent();
+        }
+        Refresh();
+    }
+    event.Skip();
+}
+
+void FilterPopupWindow::FilterItem::sendEvent()
+{
+    wxCommandEvent event(EVT_FILTER_ITEM_CLICKED);
+    event.SetEventObject(this);
+    event.SetString(m_text->GetLabel());
+    wxPostEvent(this, event);
+}
+
+//void onMouseUp(wxMouseEvent& event);
+bool FilterPopupWindow::FilterItem::isPointIn(const wxPoint& pnt)
+{
+    return true;
+}
+
+
+FilterPopupWindow::FilterPopupWindow(wxWindow* parent)
+    : PopupWindow(parent, wxBORDER_NONE | wxPU_CONTAINS_CONTROLS | wxFRAME_SHAPED)
+    , m_sizer(new wxBoxSizer(wxVERTICAL))
+{
+    //SetBackgroundColour(wxColour("#eeeeee"));
+    wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
+    sizer->Add(m_sizer, 1, wxEXPAND | wxALL, 1);
+    SetSizer(sizer);
+#ifdef __WINDOWS__
+    SetDoubleBuffered(true);
+#endif //__WINDOWS__
+    Bind(wxEVT_PAINT, &FilterPopupWindow::onPaint, this);
+}
+
+FilterPopupWindow::~FilterPopupWindow()
+{
+}
+
+void FilterPopupWindow::Create()
+{
+    //Freeze();
+    m_sizer->Clear();
+    int max_width = 0;
+    int height = m_items.size() * FromDIP(30);
+    for (auto btn : m_items) {
+        max_width = std::max(btn->GetSize().x, max_width);
+    }
+
+    for (auto btn : m_items) {
+        btn->SetSize(max_width, FromDIP(30));
+        btn->Layout();
+        m_sizer->Add(btn, 0, wxEXPAND);
+    }
+    SetSize(wxSize(max_width+2, height+2));
+    Layout();
+    //Fit();
+    //Thaw();
+    Refresh();
+}
+
+void FilterPopupWindow::Popup(wxWindow* focus/*=nullptr*/)
+{
+    Create();
+    wxGraphicsPath path = wxGraphicsRenderer::GetDefaultRenderer()->CreatePath();
+    wxSize size = GetSize();
+    path.AddRoundedRectangle(0, 0, size.x, size.y, 6);
+    SetShape(path);
     PopupWindow::Popup();
 }
 
-void ListBoxPopup::OnDismiss()
-{
-
-}
-
-bool ListBoxPopup::ProcessLeftDown(wxMouseEvent &event)
+bool FilterPopupWindow::ProcessLeftDown(wxMouseEvent &event)
 {
     return PopupWindow::ProcessLeftDown(event);
 }
 
-bool ListBoxPopup::Show(bool show)
+void FilterPopupWindow::AddItem(FilterItem* item)
 {
-    return PopupWindow::Show(show);
+    bool ret = item->Show(true);
+    item->Raise();
+    m_items.emplace_back(item);
 }
 
-void ListBoxPopup::resetSize(const wxSize &size)
+void FilterPopupWindow::ClearItem()
 {
-    m_listBox->SetSize(size.x, m_listBox->GetCount() * LISTBOX_HEIGHT);
-    SetSize(size.x, GetSize().y);
-    Fit();
+    bool ret;
+    for (auto& iter : m_items) {
+        ret = iter->Show(false);
+    }
+    m_items.clear();
+    m_sizer->Clear();
+}
+
+void FilterPopupWindow::onPaint(wxPaintEvent& event)
+{
+    auto sz = GetSize();
+    wxPaintDC dc(this);
+    dc.SetBrush(wxColour("#dddddd"));
+    dc.SetPen(*wxTRANSPARENT_PEN);
+    dc.DrawRectangle(0, 0, sz.x, sz.y);
 }
 
 
@@ -164,11 +417,30 @@ void DeviceItemPanel::build()
 
 void DeviceItemPanel::connectEvent() 
 {
-    Bind(wxEVT_LEFT_DOWN, &DeviceItemPanel::mouseDown, this);
-    Bind(wxEVT_LEFT_UP, &DeviceItemPanel::mouseReleased, this);
-    Bind(wxEVT_ENTER_WINDOW, &DeviceItemPanel::onEnter, this);
-    Bind(wxEVT_LEAVE_WINDOW, &DeviceItemPanel::onLeave, this);
+    blockMouseEvent(false);
+    //Bind(wxEVT_LEFT_DOWN, &DeviceItemPanel::mouseDown, this);
+    //Bind(wxEVT_LEFT_UP, &DeviceItemPanel::mouseReleased, this);
+    //Bind(wxEVT_ENTER_WINDOW, &DeviceItemPanel::onEnter, this);
+    //Bind(wxEVT_LEAVE_WINDOW, &DeviceItemPanel::onLeave, this);
+    //Bind(wxEVT_MOTION, &DeviceItemPanel::onMotion, this);
+    //Bind(wxEVT_MOUSE_CAPTURE_LOST, &DeviceItemPanel::onMouseCaptureLost, this);
     Bind(wxEVT_PAINT, &DeviceItemPanel::onPaint, this);
+}
+
+void DeviceItemPanel::blockMouseEvent(bool block)
+{
+    m_blockFlag = block;
+    if (block) {
+        Unbind(wxEVT_LEFT_DOWN, &DeviceItemPanel::mouseDown, this);
+        Unbind(wxEVT_LEFT_UP, &DeviceItemPanel::mouseReleased, this);
+        Unbind(wxEVT_ENTER_WINDOW, &DeviceItemPanel::onEnter, this);
+        Unbind(wxEVT_LEAVE_WINDOW, &DeviceItemPanel::onLeave, this);
+    } else {
+        Bind(wxEVT_LEFT_DOWN, &DeviceItemPanel::mouseDown, this);
+        Bind(wxEVT_LEFT_UP, &DeviceItemPanel::mouseReleased, this);
+        Bind(wxEVT_ENTER_WINDOW, &DeviceItemPanel::onEnter, this);
+        Bind(wxEVT_LEAVE_WINDOW, &DeviceItemPanel::onLeave, this);
+    }
 }
 
 bool DeviceItemPanel::isPointIn(const wxPoint& pt)
@@ -200,7 +472,11 @@ void DeviceItemPanel::onEnter(wxMouseEvent& event)
     if (isPointIn(event.GetPosition())) {
         m_hovered = true;
         Refresh();
-        CaptureMouse();
+        if (!HasCapture()) {
+            //BOOST_LOG_TRIVIAL(error) << "DeviceItemPanel::onEnter";
+            //flush_logs();
+            CaptureMouse();
+        }
     }
     event.Skip();
 }
@@ -212,7 +488,9 @@ void DeviceItemPanel::onLeave(wxMouseEvent& event)
         m_pressed = false;
         Refresh();
         if (HasCapture()) {
-            ReleaseMouse(); 
+            //BOOST_LOG_TRIVIAL(error) << "DeviceIemPanel::onLeave";
+            //flush_logs();
+            ReleaseMouse();
         }
     }
     event.Skip();
@@ -285,7 +563,7 @@ void DeviceItemPanel::updateStatus()
 {
     wxString status = _T("Idle");    
     wxColour color("#00CD6D");
-    if (m_info.conn_id < 0) {
+    if (m_info.conn_id < 0 || "offline" == m_info.status) {
         status = _L("Offline");
         color = wxColour("#999999");
     } else {
@@ -342,18 +620,17 @@ void DeviceListPanel::msw_rescale()
 
 void DeviceListPanel::build()
 {
+    m_filter_popup = new FilterPopupWindow(this);
+    m_default_filter_item = new FilterPopupWindow::FilterItem(m_filter_popup, _L("All"), true);
+    m_default_filter_item->Bind(EVT_FILTER_ITEM_CLICKED, &DeviceListPanel::onFilterItemClicked, this);
+    m_default_filter_item->Show(false);
     SetBackgroundColour(wxColour("#F0F0F0"));
-    m_comboBox_position = new DropDownButton(this, _L("Position"), create_scaled_bitmap("device_dropdown", this, 8));
-    wxArrayString names;
-    names.Add("All");
-    names.Add("Offen");
-    names.Add("Store1");
-    names.Add("Store2");
-    m_listBox_position = new ListBoxPopup(this, names);
-    m_comboBox_status  = new DropDownButton(this, _L("Status"), create_scaled_bitmap("device_dropdown", this, 8));
-    initAllDeviceStatus(names);
-    m_listBox_status = new ListBoxPopup(this, names);
-    m_comboBox_type = new DropDownButton(this, _L("Machine Type"), create_scaled_bitmap("device_dropdown", this, 8));
+    m_placement_btn = new DropDownButton(this, _L("Position"), create_scaled_bitmap("device_dropdown", this, 8));
+    //m_listBox_position = new ListBoxPopup(this, names);
+    m_status_btn  = new DropDownButton(this, _L("Status"), create_scaled_bitmap("device_dropdown", this, 8));
+    //initAllDeviceStatus(names);
+    //m_status = new ListBoxPopup(this, names);
+    m_type_btn = new DropDownButton(this, _L("Machine Type"), create_scaled_bitmap("device_dropdown", this, 8));
     m_wlan_btn = new FFToggleButton(this, _L("Network"));
     m_wlan_btn->SetValue(true);
     m_lan_btn = new FFToggleButton(this, _L("LAN"));
@@ -371,11 +648,11 @@ void DeviceListPanel::build()
     lan_line->SetBackgroundColour("#666666");
 
     wxBoxSizer* hTopSizer = new wxBoxSizer(wxHORIZONTAL);
-    hTopSizer->Add(m_comboBox_position, 0, wxALIGN_CENTER_VERTICAL);
+    hTopSizer->Add(m_placement_btn, 0, wxALIGN_CENTER_VERTICAL);
     hTopSizer->AddSpacer(FromDIP(50));
-    hTopSizer->Add(m_comboBox_status, 0, wxALIGN_CENTER_VERTICAL);
+    hTopSizer->Add(m_status_btn, 0, wxALIGN_CENTER_VERTICAL);
     hTopSizer->AddSpacer(FromDIP(50));
-    hTopSizer->Add(m_comboBox_type, 0, wxALIGN_CENTER_VERTICAL);
+    hTopSizer->Add(m_type_btn, 0, wxALIGN_CENTER_VERTICAL);
     hTopSizer->AddStretchSpacer(1);
     hTopSizer->Add(m_wlan_btn, 0, wxALIGN_CENTER_VERTICAL);
     hTopSizer->AddSpacer(FromDIP(10));
@@ -444,13 +721,15 @@ void DeviceListPanel::initAllDeviceStatus(wxArrayString &names)
 
 void DeviceListPanel::connectEvent()
 {
-    m_comboBox_position->Bind(wxEVT_LEFT_DOWN, &DeviceListPanel::on_comboBox_position_clicked, this);
-    m_comboBox_status->Bind(wxEVT_LEFT_DOWN, &DeviceListPanel::on_comboBox_status_clicked, this);
+    m_placement_btn->Bind(wxEVT_LEFT_DOWN, &DeviceListPanel::onFilterButtonClicked, this);
+    m_status_btn->Bind(wxEVT_LEFT_DOWN, &DeviceListPanel::onFilterButtonClicked, this);
+    m_type_btn->Bind(wxEVT_LEFT_DOWN, &DeviceListPanel::onFilterButtonClicked, this);
     m_wlan_btn->Bind(wxEVT_TOGGLEBUTTON, &DeviceListPanel::onNetworkTypeToggled, this);
     m_lan_btn->Bind(wxEVT_TOGGLEBUTTON, &DeviceListPanel::onNetworkTypeToggled, this);
     m_static_btn->Bind(wxEVT_TOGGLEBUTTON, &DeviceListPanel::on_static_mode_toggled, this);
     MultiComMgr::inst()->Bind(COM_DEV_DETAIL_UPDATE_EVENT, &DeviceListPanel::onComDevDetailUpdate, this);
     wxGetApp().getDeviceObjectOpr()->Bind(EVT_DEVICE_LIST_UPDATED, &DeviceListPanel::onDeviceListUpdated, this);
+    m_filter_popup->Bind(wxEVT_SHOW, &DeviceListPanel::onPopupShow, this);
 }
 
 void DeviceListPanel::initLocalDevice(std::map<std::string, DeviceItemPanel::DeviceInfo>& deviceInfoMap)
@@ -461,6 +740,8 @@ void DeviceListPanel::initLocalDevice(std::map<std::string, DeviceItemPanel::Dev
         std::vector<MacInfoMap> macInfo;
         config->get_local_mahcines(macInfo);
         DeviceItemPanel::DeviceInfo dev_info;
+        dev_info.lanFlag = true;
+        dev_info.status = "offline";
         for (auto& mac : macInfo) {
             auto it = mac.find("dev_id");
             if (it != mac.end()) {
@@ -507,37 +788,236 @@ void DeviceListPanel::initDeviceList()
     for (auto iter : devKeyList) {
         DeviceItemPanel* item = new DeviceItemPanel(m_device_window, devList[iter]);
         m_device_map.emplace(std::make_pair(iter, item));
-        m_device_sizer->Add(item);
+        //m_device_sizer->Add(item);
+    }
+    //m_device_window->Layout();
+    //Layout();
+    if (!m_device_map.empty()) {
+        updateFilterMap();
+    }
+    filterDeviceList();
+}
+
+void DeviceListPanel::filterDeviceList()
+{
+    Freeze();
+    m_device_sizer->Clear();
+    for (const auto& iter : m_device_map) {
+        const auto& dev_info = iter.second->deviceInfo();
+        std::string type_str = FFUtils::getPrinterName(dev_info.pid);
+        if ((m_filter_placement_default || dev_info.placement == m_filter_placement)
+            && (m_filter_status_default || dev_info.status == m_filter_status)
+            && (m_filter_types.find(type_str) != m_filter_types.end())
+            && ((m_wlan_btn->GetValue() && !dev_info.lanFlag) || (m_lan_btn->GetValue() && dev_info.lanFlag))) {
+            iter.second->Show(true);
+            m_device_sizer->Add(iter.second);
+        } else {
+            iter.second->Show(false);
+        }
     }
     m_device_window->Layout();
     Layout();
+    Thaw();
 }
 
-void DeviceListPanel::on_comboBox_position_clicked(wxMouseEvent &event)
+void DeviceListPanel::updateFilterMap()
 {
-    auto    mouse_pos = ClientToScreen(event.GetPosition());
-    wxPoint rect      = m_comboBox_position->ClientToScreen(wxPoint(0, 0));
-    wxPoint pos       = m_comboBox_position->ClientToScreen(wxPoint(0, 0));
-    pos.y += m_comboBox_position->GetRect().height;
-    m_listBox_position->Move(pos);
-    m_listBox_position->resetSize(wxSize(m_comboBox_position->GetSize().x, -1));
-    m_listBox_position->Popup();
+    updatePlacementMap();
+    updateStatusMap();
+    updateTypeMap();
 }
 
-void DeviceListPanel::on_comboBox_status_clicked(wxMouseEvent &event) 
+void DeviceListPanel::updatePlacementMap()
 {
-    auto    mouse_pos = ClientToScreen(event.GetPosition());
-    wxPoint rect      = m_comboBox_status->ClientToScreen(wxPoint(0, 0));
-    wxPoint pos       = m_comboBox_status->ClientToScreen(wxPoint(0, 0));
-    pos.y += m_comboBox_status->GetRect().height;
-    m_listBox_status->Move(pos);
-    m_listBox_status->resetSize(wxSize(m_comboBox_status->GetSize().x, -1));
-    m_listBox_status->Popup();
+    FilterItemMap backMap;
+    for (const auto& iter : m_placement_item_map) {
+        backMap.emplace(std::make_pair(iter.first, iter.second));
+    }
+    m_placement_item_map.clear();
+    for (auto& iter : m_device_map) {
+        std::string placement = iter.second->deviceInfo().placement;
+        auto it = backMap.find(placement);
+        if (it != backMap.end()) {
+            m_placement_item_map.emplace(std::make_pair(placement, it->second));
+            it->second = nullptr;
+        } else if (m_placement_item_map.find(placement) == m_placement_item_map.end()) {
+            auto item = new FilterPopupWindow::FilterItem(m_filter_popup, placement);
+            item->Show(false);
+            item->Bind(EVT_FILTER_ITEM_CLICKED, &DeviceListPanel::onFilterItemClicked, this);
+            m_placement_item_map.emplace(std::make_pair(placement, item));
+        }
+    }
+    for (auto& iter : backMap) {
+        if (iter.second) {
+            iter.second->Destroy();
+            iter.second = nullptr;
+        }
+    }
+    backMap.clear();
+}
+
+void DeviceListPanel::updateStatusMap()
+{
+    FilterItemMap backMap;
+    for (const auto& iter : m_status_item_map) {
+        backMap.emplace(std::make_pair(iter.first, iter.second));
+    }
+    m_status_item_map.clear();
+    for (auto& iter : m_device_map) {
+        std::string status = iter.second->deviceInfo().status;
+        auto it = backMap.find(status);
+        if (it != backMap.end()) {
+            m_status_item_map.emplace(std::make_pair(status, it->second));
+            it->second = nullptr;
+        } else if (m_status_item_map.find(status) == m_status_item_map.end()) {
+            auto item = new FilterPopupWindow::FilterItem(m_filter_popup, status);
+            item->Bind(EVT_FILTER_ITEM_CLICKED, &DeviceListPanel::onFilterItemClicked, this);
+            item->Show(false);
+            m_status_item_map.emplace(std::make_pair(status, item));
+        }
+    }
+    for (auto& iter : backMap) {
+        if (iter.second) {
+            iter.second->Destroy();
+            iter.second = nullptr;
+        }
+    }
+    backMap.clear();
+}
+
+void DeviceListPanel::updateTypeMap()
+{
+    FilterItemMap backMap;
+    for (const auto& iter : m_type_item_map) {
+        backMap.emplace(std::make_pair(iter.first, iter.second));
+    }
+    m_type_item_map.clear();
+    m_filter_types.clear();
+    for (auto& iter : m_device_map) {
+        auto pid = iter.second->deviceInfo().pid;
+        auto type_str = FFUtils::getPrinterName(pid);
+        auto it = backMap.find(type_str);
+        if (it != backMap.end()) {
+            m_type_item_map.emplace(std::make_pair(type_str, it->second));
+            it->second = nullptr;
+        } else if (m_type_item_map.find(type_str) == m_type_item_map.end()) {
+            auto item = new FilterPopupWindow::FilterItem(m_filter_popup, type_str, false, false, true);
+            item->Bind(EVT_FILTER_ITEM_CLICKED, &DeviceListPanel::onFilterItemClicked, this);
+            bool show = item->Show(false);
+            m_type_item_map.emplace(std::make_pair(type_str, item));
+        }
+        if (m_filter_types.find(type_str) == m_filter_types.end()) {
+            m_filter_types.emplace(type_str);
+        }
+    }
+    for (auto& iter : backMap) {
+        if (iter.second) {
+            iter.second->Destroy();
+            iter.second = nullptr;
+        }
+    }
+    backMap.clear();
+}
+
+void DeviceListPanel::onPopupShow(wxShowEvent& event)
+{
+    bool show = event.IsShown();
+    //BOOST_LOG_TRIVIAL(error) << "onPopupShow: " << show ? "true" : "false";
+    //flush_logs();
+    for (auto& iter : m_device_map)  {
+        if (iter.second) {
+            iter.second->blockMouseEvent(show);
+        }
+    }
+}
+
+void DeviceListPanel::onFilterItemClicked(wxCommandEvent& event)
+{
+    if (Filter_Popup_Type_Placement == m_filter_popup_type) {
+        if (event.GetEventObject() == m_default_filter_item) {
+            m_filter_placement_default = true;
+            m_filter_placement = "";
+        } else {
+            m_filter_placement_default = false;
+            m_filter_placement = event.GetString().ToStdString();
+        }
+        m_filter_popup->Dismiss();
+    } else if (Filter_Popup_Type_Status == m_filter_popup_type) {
+        if (event.GetEventObject() == m_default_filter_item) {
+            m_filter_status_default = true;
+            m_filter_status = "";
+        } else {
+            m_filter_status_default = false;
+            m_filter_status = event.GetString().ToStdString();
+        }
+        m_filter_popup->Dismiss();
+    } else if (Filter_Popup_Type_Device_Type == m_filter_popup_type) {
+        auto type_str = event.GetString().ToStdString();
+        auto iter = m_filter_types.find(type_str);
+        if (iter == m_filter_types.end()) {
+            m_filter_types.emplace(type_str);
+        } else {
+            m_filter_types.erase(iter);
+        }
+    }
+    filterDeviceList();
+}
+
+void DeviceListPanel::onFilterButtonClicked(wxMouseEvent &event)
+{
+    wxPoint pos;
+    m_filter_popup->ClearItem();
+    if (event.GetEventObject() == m_placement_btn) {
+        m_filter_popup_type = Filter_Popup_Type_Placement;
+        m_default_filter_item->setBottomCornerRound(m_placement_item_map.empty());
+        m_default_filter_item->setSelect(m_filter_placement_default);
+        m_filter_popup->AddItem(m_default_filter_item);
+        for (auto& iter : m_placement_item_map) {
+            iter.second->setBottomCornerRound(false);
+            iter.second->setSelect(!m_filter_placement_default && (iter.first == m_filter_placement));
+            m_filter_popup->AddItem(iter.second);
+        }
+        if (!m_placement_item_map.empty()) {
+            m_placement_item_map.rbegin()->second->setBottomCornerRound(true);
+        }
+        pos = m_placement_btn->ClientToScreen(wxPoint(0, 0));
+        pos.y += m_placement_btn->GetSize().y + 2;
+    } else if (event.GetEventObject() == m_status_btn) {
+        m_filter_popup_type = Filter_Popup_Type_Status;
+        m_default_filter_item->setBottomCornerRound(m_status_item_map.empty());
+        m_default_filter_item->setSelect(m_filter_status_default);
+        m_filter_popup->AddItem(m_default_filter_item);
+        for (auto& iter : m_status_item_map) {
+            iter.second->setBottomCornerRound(false);
+            iter.second->setSelect(!m_filter_status_default && (iter.first == m_filter_status));
+            m_filter_popup->AddItem(iter.second);
+        }
+        if (!m_status_item_map.empty()) {
+            m_status_item_map.rbegin()->second->setBottomCornerRound(true);
+        }
+        pos = m_status_btn->ClientToScreen(wxPoint(0, 0));
+        pos.y += m_status_btn->GetSize().y + 2;
+    } else if (event.GetEventObject() == m_type_btn) {
+        m_filter_popup_type = Filter_Popup_Type_Device_Type;
+        for (auto& iter : m_type_item_map) {
+            iter.second->setBottomCornerRound(false);
+            iter.second->setChecked(m_filter_types.find(iter.first) != m_filter_types.end());
+            m_filter_popup->AddItem(iter.second);
+        }
+        if (!m_type_item_map.empty()) {
+            m_type_item_map.begin()->second->setTopCornerRound(true);
+            m_type_item_map.rbegin()->second->setBottomCornerRound(true);
+        }
+        pos = m_type_btn->ClientToScreen(wxPoint(0, 0));
+        pos.y += m_type_btn->GetSize().y + 2;
+    }
+    m_filter_popup->Move(pos);
+    m_filter_popup->Popup();
 }
 
 void DeviceListPanel::onNetworkTypeToggled(wxCommandEvent& event)
 {
-    
+    filterDeviceList();
 }
 
 void DeviceListPanel::on_static_mode_toggled(wxCommandEvent &event)
@@ -553,7 +1033,7 @@ void DeviceListPanel::onDeviceListUpdated(DeviceListUpdateEvent& event)
     std::string dev_id = event.GetDeviceId();
     int conn_id = event.GetConnectionId();
     bool valid = false;
-    const com_dev_data_t &data      = MultiComMgr::inst()->devData(conn_id, &valid);
+    const com_dev_data_t &data = MultiComMgr::inst()->devData(conn_id, &valid);
     if (valid) {
         DeviceItemPanel::DeviceInfo dev_info;
         dev_info.conn_id = conn_id;
@@ -562,6 +1042,7 @@ void DeviceListPanel::onDeviceListUpdated(DeviceListUpdateEvent& event)
         dev_info.pid = data.devDetail->pid;
         dev_info.placement = data.devDetail->location;
         dev_info.status = data.devDetail->status;
+        if (dev_info.status.empty()) dev_info.status = "offline";
 
         //
         auto iter = m_device_map.find(dev_id);
@@ -584,9 +1065,8 @@ void DeviceListPanel::onDeviceListUpdated(DeviceListUpdateEvent& event)
             Layout();
         }
     }
-
+    updateFilterMap();
     event.Skip();
-
 }
 
 void DeviceListPanel::onComDevDetailUpdate(ComDevDetailUpdateEvent& event)

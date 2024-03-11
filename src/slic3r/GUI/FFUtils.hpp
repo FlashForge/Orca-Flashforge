@@ -1,5 +1,6 @@
 #ifndef _slic3r_gui_FFUtils_hpp_
-#define _slic3r_gui_FFUtils_cpp_
+#define _slic3r_gui_FFUtils_hpp_
+#include <string.h>
 #include <wx/string.h>
 
 namespace Slic3r::GUI
@@ -9,6 +10,10 @@ class FFUtils
 {
 public:
 	static  wxString getBitmapFileName(unsigned short pid);
+
+	static std::string getPrinterName(unsigned short pid);
+
+	static unsigned short getPrinterPID(const std::string& type);
 };
 
 }

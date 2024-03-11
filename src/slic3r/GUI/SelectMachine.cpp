@@ -544,7 +544,7 @@ bool SelectMachinePopup::Show(bool show) {
             m_user_list_machine_panel[i]->mPanel->Hide();
         }
 
-         for (int j = 0; j < m_other_list_machine_panel.size(); j++) {
+        for (int j = 0; j < m_other_list_machine_panel.size(); j++) {
             m_other_list_machine_panel[j]->mPanel->update_device_info(nullptr);
             m_other_list_machine_panel[j]->mPanel->Hide();
         }

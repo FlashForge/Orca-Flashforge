@@ -113,7 +113,8 @@ AddMachinePanel::~AddMachinePanel() {
 
     init_timer();
 
-    m_side_tools->get_panel()->Connect(wxEVT_LEFT_DOWN, wxMouseEventHandler(MonitorPanel::on_printer_clicked), NULL, this);
+    //m_side_tools->get_panel()->Connect(wxEVT_LEFT_DOWN, wxMouseEventHandler(MonitorPanel::on_printer_clicked), NULL, this);
+    m_side_tools->get_panel()->Connect(EVT_DEV_LIST_BTN_CLICKED, wxMouseEventHandler(MonitorPanel::on_printer_clicked), NULL, this);
 
     Bind(wxEVT_TIMER, &MonitorPanel::on_timer, this);
     Bind(wxEVT_SIZE, &MonitorPanel::on_size, this);
@@ -126,8 +127,8 @@ AddMachinePanel::~AddMachinePanel() {
 
 MonitorPanel::~MonitorPanel()
 {
-    m_side_tools->get_panel()->Disconnect(wxEVT_LEFT_DOWN, wxMouseEventHandler(MonitorPanel::on_printer_clicked), NULL, this);
-
+    //m_side_tools->get_panel()->Disconnect(wxEVT_LEFT_DOWN, wxMouseEventHandler(MonitorPanel::on_printer_clicked), NULL, this);
+    m_side_tools->get_panel()->Disconnect(EVT_DEV_LIST_BTN_CLICKED, wxMouseEventHandler(MonitorPanel::on_printer_clicked), NULL, this);
     if (m_refresh_timer)
         m_refresh_timer->Stop();
     delete m_refresh_timer;
@@ -290,7 +291,6 @@ void MonitorPanel::on_printer_clicked(wxMouseEvent &event)
 {
     auto mouse_pos = ClientToScreen(event.GetPosition());
     wxPoint rect = m_side_tools->ClientToScreen(wxPoint(0, 0));
-
     if (!m_side_tools->is_in_interval()) {
         wxPoint pos = m_side_tools->ClientToScreen(wxPoint(0, 0));
         wxPoint mainPos  = wxGetApp().mainframe->ClientToScreen(wxPoint(0, 0));
