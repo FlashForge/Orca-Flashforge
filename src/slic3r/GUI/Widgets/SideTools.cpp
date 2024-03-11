@@ -11,6 +11,8 @@
 #include "../FlashForge/DeviceData.hpp"
 
 namespace Slic3r { namespace GUI {
+
+    wxDEFINE_EVENT(EVT_DEV_LIST_BTN_CLICKED, DevListBtnClickedEvent);
 	SideToolsPanel::SideToolsPanel(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size)
 {
     wxPanel::Create(parent, id, pos, size);
@@ -215,6 +217,17 @@ void SideToolsPanel::doRender(wxDC &dc)
 void SideToolsPanel::on_mouse_left_down(wxMouseEvent &evt)
 {
     m_click = true;
+    wxSize        bmpsize = m_none_add_img.GetBmpSize();    
+    auto          left   = GetSize().x - m_none_add_img.GetBmpSize().x - FromDIP(36);
+    auto          right  = left + m_none_add_img.GetBmpSize().x + FromDIP(6);
+    auto          top    = (GetSize().y - m_none_add_img.GetBmpSize().y) / 2 - FromDIP(6);
+    auto          bottom = (GetSize().y - m_none_add_img.GetBmpSize().y) / 2 + m_none_add_img.GetBmpSize().y + FromDIP(6);
+    if ((evt.GetPosition().x >= left && evt.GetPosition().x <= right) && evt.GetPosition().y >= top && evt.GetPosition().y <= bottom) {
+        wxCommandEvent event(EVT_DEV_LIST_BTN_CLICKED);
+        event.SetEventObject(this);
+        GetEventHandler()->ProcessEvent(event);
+    }
+
     Refresh();
 }
 

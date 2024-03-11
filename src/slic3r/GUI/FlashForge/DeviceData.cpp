@@ -304,6 +304,7 @@ void DeviceObjectOpr::update_scan_machine()
             devObj->set_user_access_code(it->second->get_user_access_code(), false);
             auto info    = devObj->get_lan_dev_info();
             auto lanInfo = new fnet_lan_dev_info(*info);
+            lanInfo->connectMode = 0;
             it->second->set_lan_dev_info(lanInfo);
         } else {
             it = m_user_devices.find(dev_id);
@@ -313,7 +314,6 @@ void DeviceObjectOpr::update_scan_machine()
         }
         m_scan_devices.insert(make_pair(dev_id, devObj));
     }
-    BOOST_LOG_TRIVIAL(info) << "+++++++++++++++++++++m_scan_devices: " << m_scan_devices.size();
 }
 
 // connect_type: lan
@@ -498,7 +498,7 @@ void DeviceObjectOpr::get_my_machine_list(map<string, DeviceObject *> &devList)
         if (tmpIt == devList.end()) {
             devList.emplace(make_pair(it->first, it->second));
         } else {
-            if (tmpIt->second->device_type() == DT_BOTH && it->second->connectMode() == 0) {
+            if (tmpIt->second->device_type() == DT_BOTH && !tmpIt->second->is_online()) {
                 devList.erase(tmpIt);
                 devList.emplace(make_pair(it->first, it->second));
             }
@@ -645,11 +645,8 @@ void DeviceObjectOpr::onConnectExit(ComConnectionExitEvent &event)
                             wxGetApp().mainframe->jump_to_monitor(devObj->get_dev_id());
                         }
                     } else if (event.ret == COM_ERROR) {
-                        bool state = devObj->is_online();
                         devObj->set_connected_ready(false); // connect finished, and failed.
-                        if (state)
-                            sendDeviceListUpdateEvent(devObj->get_dev_id(), event.id);
-                    } else {
+                      } else {
                         // do nothing, this device still belongs to other device. (Including exit successfully)
                     }
                 } else {
