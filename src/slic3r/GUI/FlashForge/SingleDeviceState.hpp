@@ -230,6 +230,7 @@ protected:
     int         m_pid = 0x0023;
 
     std::string      m_file_pic_url;
+    std::vector<char> m_pic_data;
     wxPanel         *m_panel_control_material{nullptr};
 
     std::string     m_cur_dev_state;

@@ -4,6 +4,7 @@
 #include "slic3r/GUI/GUI.hpp"
 #include <slic3r/GUI/Widgets/WebView.hpp>
 #include "slic3r/GUI/FlashForge/MultiComMgr.hpp"
+#include "slic3r/GUI/FlashForge/MultiComUtils.hpp"
 #include <nlohmann/json.hpp>
 #include "slic3r/GUI/GUI.hpp"
 #include "slic3r/GUI/GUI_App.hpp"
@@ -34,6 +35,8 @@ const wxString    TEMP_CANCEL  = _L("cancel");
 const wxString    TEMP_CONFIRM = _L("confirm");
 
 const int TEXT_LENGTH = 20;
+const int MATERIAL_PIC_WIDTH  = 78;
+const int MATERIAL_PIC_HEIGHT = 84;
 
 
 MaterialPanel::MaterialPanel(wxWindow* parent)
@@ -1683,10 +1686,7 @@ void SingleDeviceState::connectEvent()
 #endif
 //busy button slot
    m_device_info_button->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e){
-       //m_material_pic = create_scaled_bitmap("device_idle_file_info", this, 60);
-       m_material_staticbitmap->SetBitmap(create_scaled_bitmap("device_idle_file_info", this, 60));
-       //m_material_staticbitmap->Refresh();
-       m_device_info_button->SetIcon("device_idle_file_info");
+       //m_device_info_button->SetIcon("device_idle_file_info");
        m_device_info_button->Refresh();
         if(m_busy_device_detial){
             m_busy_device_detial->Show();
@@ -1910,8 +1910,26 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
    m_staticText_file_name->SetLabel(truncatedString);
    m_staticText_file_name->SetToolTip(printFileName);
 
-   if (m_file_pic_url != data.devDetail->printFileThumbUrl) {
-        m_file_pic_url      = data.devDetail->printFileThumbUrl;// 图片地址
+   std::string file_pic_path = data.devDetail->printFileThumbUrl;// 图片地址
+   if (m_file_pic_url != file_pic_path && !file_pic_path.empty()) {
+        m_file_pic_url = file_pic_path; 
+        Bind(COM_ASYNC_CALL_FINISH_EVENT, [&](ComAsyncCallFinishEvent &event) {
+            event.Skip();
+            if (event.ret == COM_OK) {
+                if (!m_pic_data.empty()) {
+                    //translate pic data from vector to wxImage object
+                    wxMemoryInputStream stream(m_pic_data.data(), m_pic_data.size());
+                    wxImage image(stream, wxBITMAP_TYPE_ANY,-1);
+                    image.Rescale(MATERIAL_PIC_WIDTH, MATERIAL_PIC_HEIGHT);
+                    //translate pic data  from wxImage object to wxBitmap object
+                    wxBitmap bitmap(image,-1);
+                    m_material_staticbitmap->SetBitmap(bitmap);
+                }
+            }
+        });
+        MultiComUtils::asyncCall(this, [&]() { 
+            return MultiComUtils::downloadFile(m_file_pic_url, m_pic_data); 
+        });     
    }
    //m_material_staticbitmap->SetBitmap(create_scaled_bitmap(filePic, this, 60));
 
