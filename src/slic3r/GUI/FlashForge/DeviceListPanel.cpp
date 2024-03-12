@@ -726,7 +726,7 @@ void DeviceStaticItemPanel::setCount(int count)
 
 DeviceListPanel::DeviceListPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, 
         const wxSize& size)
-    : wxScrolledWindow(parent, id, pos, size, wxHSCROLL | wxVSCROLL | wxTAB_TRAVERSAL)
+    : wxPanel(parent, id, pos, size, wxTAB_TRAVERSAL)
 {
     this->SetBackgroundColour(0xEEEEEE);
 
@@ -747,7 +747,7 @@ void DeviceListPanel::msw_rescale()
 
 void DeviceListPanel::build()
 {
-    SetScrollRate(5, 5);
+    //SetScrollRate(5, 5);
     m_filter_popup = new FilterPopupWindow(this);
     m_default_filter_item = new FilterPopupWindow::FilterItem(m_filter_popup, _L("All"), true);
     m_default_filter_item->Bind(EVT_FILTER_ITEM_CLICKED, &DeviceListPanel::onFilterItemClicked, this);
@@ -805,7 +805,14 @@ void DeviceListPanel::build()
     m_no_device_panel->Layout();
     m_simple_book->AddPage(m_no_device_panel, wxEmptyString, true);
 
-    m_device_window = new wxPanel(m_simple_book);
+    m_device_scrolled_window = new wxScrolledWindow(m_simple_book, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHSCROLL | wxVSCROLL);
+    m_device_scrolled_window->SetScrollRate(5, 5);
+    m_device_panel = new wxPanel(m_device_scrolled_window);
+    wxBoxSizer* scroll_sizer = new wxBoxSizer(wxVERTICAL);
+    scroll_sizer->AddSpacer(FromDIP(30));
+    scroll_sizer->Add(m_device_panel, 1, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
+    scroll_sizer->AddSpacer(FromDIP(30));
+    m_device_scrolled_window->SetSizer(scroll_sizer);
     //m_device_window->EnableScrolling(true, true);
     //m_device_window->SetScrollRate(0, 10);
     wxBoxSizer* device_sizer = new wxBoxSizer(wxVERTICAL);
@@ -814,8 +821,8 @@ void DeviceListPanel::build()
     m_device_sizer->SetHGap(FromDIP(30));
     m_device_sizer->SetVGap(FromDIP(30));
     device_sizer->Add(m_device_sizer, 0, wxALIGN_LEFT | wxALIGN_TOP);
-    m_device_window->SetSizer(device_sizer);
-    m_simple_book->AddPage(m_device_window, wxEmptyString, false);
+    m_device_panel->SetSizer(device_sizer);
+    m_simple_book->AddPage(m_device_scrolled_window, wxEmptyString, false);
 
     wxPanel *hor_line = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 1));
     hor_line->SetBackgroundColour("#ffffff");
@@ -824,9 +831,9 @@ void DeviceListPanel::build()
     sizer->Add(hTopSizer, 0, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(30));
     sizer->AddSpacer(FromDIP(10));
     sizer->Add(hor_line, 0, wxALIGN_CENTER_HORIZONTAL | wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
-    sizer->AddSpacer(FromDIP(30));
-    sizer->Add(m_simple_book, 1, wxEXPAND | wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT, FromDIP(30));
-    sizer->AddSpacer(FromDIP(30));
+    //sizer->AddSpacer(FromDIP(30));
+    sizer->Add(m_simple_book, 1, wxEXPAND | wxALIGN_CENTER_HORIZONTAL);
+    //sizer->AddSpacer(FromDIP(30));
     //sizer->Add(m_machinePanel, 1, wxEXPAND);
 
     this->SetSizer(sizer);
@@ -901,7 +908,7 @@ void DeviceListPanel::initDeviceList()
     });
     //m_device_map
     for (const auto& iter : devKeyList) {
-        DeviceInfoItemPanel* item = new DeviceInfoItemPanel(m_device_window, devList[iter]);
+        DeviceInfoItemPanel* item = new DeviceInfoItemPanel(m_device_panel, devList[iter]);
         item->Show(false);
         m_device_map.emplace(std::make_pair(iter, item));
         //m_device_sizer->Add(item);
@@ -917,7 +924,7 @@ void DeviceListPanel::initDeviceList()
         }
     }
     for (const auto& iter : statusMap) {
-        auto item = new DeviceStaticItemPanel(m_device_window, iter.first, iter.second);
+        auto item = new DeviceStaticItemPanel(m_device_panel, iter.first, iter.second);
         item->Show(false);
         m_device_stat_map.emplace(std::make_pair(iter.first, item));
     }
@@ -951,7 +958,7 @@ void DeviceListPanel::filterDeviceList()
             iter.second->Show(false);
         }
     }
-    m_device_window->Layout();
+    m_device_panel->Layout();
     Layout();
     Thaw();
 }
@@ -999,6 +1006,7 @@ void DeviceListPanel::updateStatusMap()
         backMap.emplace(std::make_pair(iter.first, iter.second));
     }
     m_status_item_map.clear();
+    wxColour color;
     for (auto& iter : m_device_map) {
         std::string status = iter.second->deviceInfo().status;
         auto it = backMap.find(status);
@@ -1006,7 +1014,7 @@ void DeviceListPanel::updateStatusMap()
             m_status_item_map.emplace(std::make_pair(status, it->second));
             it->second = nullptr;
         } else if (m_status_item_map.find(status) == m_status_item_map.end()) {
-            auto item = new FilterPopupWindow::FilterItem(m_filter_popup, status);
+            auto item = new FilterPopupWindow::FilterItem(m_filter_popup, DeviceItemPanel::statusText(status, color));
             item->Bind(EVT_FILTER_ITEM_CLICKED, &DeviceListPanel::onFilterItemClicked, this);
             item->Show(false);
             m_status_item_map.emplace(std::make_pair(status, item));
@@ -1086,7 +1094,7 @@ void DeviceListPanel::updateStaticMap()
             it->second->setCount(iter.second);
             m_device_stat_map.emplace(std::make_pair(iter.first, it->second));
         } else {
-            auto item = new DeviceStaticItemPanel(m_device_window, iter.first, iter.second);
+            auto item = new DeviceStaticItemPanel(m_device_panel, iter.first, iter.second);
             item->Show(false);
             m_device_stat_map.emplace(std::make_pair(iter.first, item));
         }
@@ -1105,7 +1113,7 @@ void DeviceListPanel::updateSizer()
             iter.second->Show(true);
             m_device_sizer->Add(iter.second);
         }
-        m_device_window->Layout();
+        m_device_panel->Layout();
         Layout();
         Thaw();
     } else {
@@ -1138,8 +1146,8 @@ void DeviceListPanel::updateDeviceWindowSize()
         hcnt = 1;
     }
     int height = hcnt * 205 + (hcnt - 1) * 30;
-    m_device_window->SetMinSize(wxSize(FromDIP(width), FromDIP(height)));
-    m_simple_book->SetMinSize(wxSize(FromDIP(width), FromDIP(height)));
+    m_device_panel->SetMinSize(wxSize(FromDIP(width), FromDIP(height)));
+    //m_simple_book->SetMinSize(wxSize(FromDIP(width), FromDIP(height)));
     Layout();
     Fit();
 }
@@ -1269,7 +1277,7 @@ void DeviceListPanel::onDeviceListUpdated(DeviceListUpdateEvent& event)
         dev_info.status = data.devDetail->status;
         if (dev_info.status.empty()) dev_info.status = "offline";
 
-        DeviceInfoItemPanel* info_item = new DeviceInfoItemPanel(m_device_window, dev_info);
+        DeviceInfoItemPanel* info_item = new DeviceInfoItemPanel(m_device_panel, dev_info);
         auto info_iter = m_device_map.find(dev_id);
         if (info_iter == m_device_map.end()) {
             m_device_map.emplace(std::make_pair(dev_id, info_item));

@@ -112,10 +112,10 @@ public:
     DeviceItemPanel(wxWindow *parent);
     virtual ~DeviceItemPanel();
 
-    void blockMouseEvent(bool block);
+    void blockMouseEvent(bool block);    
+    static wxString statusText(const std::string& status, wxColour& color);
 
 protected:
-    wxString statusText(const std::string& status, wxColour& color);
     void leaveWindow();
     void mouseDown(wxMouseEvent &event);
     void mouseReleased(wxMouseEvent &event);
@@ -187,7 +187,6 @@ private:
     std::string     m_status;
     wxStaticText*   m_status_text {nullptr};
     wxStaticText*   m_count_text {nullptr};
-
 };
 
 
@@ -199,7 +198,7 @@ struct StringCompareFunc {
 typedef std::map<std::string, FilterPopupWindow::FilterItem*, StringCompareFunc> FilterItemMap;
 
 class DeviceListUpdateEvent;
-class DeviceListPanel : public wxScrolledWindow
+class DeviceListPanel : public wxPanel
 {
 public:
     enum FilterPopupType {
@@ -252,7 +251,8 @@ private:
     wxStaticBitmap* m_no_device_bitmap {nullptr};
     wxStaticText*   m_no_device_staticText {nullptr};
     wxBoxSizer     *m_no_device_sizer {nullptr};
-    wxPanel*        m_device_window {nullptr};
+    wxScrolledWindow* m_device_scrolled_window {nullptr};
+    wxPanel*        m_device_panel {nullptr};
     wxGridSizer*    m_device_sizer {nullptr};
     
     FilterPopupType m_filter_popup_type {Filter_Popup_Type_None};
