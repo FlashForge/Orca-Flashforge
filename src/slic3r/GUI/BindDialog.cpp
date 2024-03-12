@@ -146,7 +146,7 @@ void RoundImagePanel::CreateRegion(wxDC &dc)
 
 
 BindMachineDialog::BindMachineDialog()
-    : TitleDialog(static_cast<wxWindow *>(wxGetApp().mainframe), _L("Log in printer"), 6)
+    : TitleDialog(static_cast<wxWindow *>(wxGetApp().mainframe), _L("Register printer"), 6)
 {
 #ifdef __WINDOWS__
     SetDoubleBuffered(true);
@@ -195,7 +195,7 @@ BindMachineDialog::BindMachineDialog()
     topSizer->Add(linkBitmap, 0, wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(20));
     topSizer->Add(m_user_sizer, 1, wxEXPAND | wxALIGN_CENTER, 0);
 
-    m_bind_text = new wxStaticText(m_normal_panel, wxID_ANY, _L("Would you like to log out the printer?"));
+    m_bind_text = new wxStaticText(m_normal_panel, wxID_ANY, _L("Would you like to register the printer to this account?"));
     m_bind_text->SetForegroundColour(wxColour("#333333"));
     m_bind_text->SetFont(::Label::Body_14);
     m_bind_text->Wrap(-1);
@@ -284,11 +284,15 @@ BindMachineDialog::BindMachineDialog()
     // result panel
     m_result_panel = new wxPanel(m_simplebook);    
     m_result_text = new wxStaticText(m_result_panel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
+    m_result_text->SetFont(wxFont(wxFontInfo(24)));
     m_result_btn = new FFButton(m_result_panel, wxID_ANY, _L("OK"), 4, false);
     m_result_btn->SetFontUniformColor(*wxWHITE);
     m_result_btn->SetBGColor(wxColour("#419488"));
     m_result_btn->SetBGHoverColor(wxColour("#65A79E"));
     m_result_btn->SetBGPressColor(wxColour("#1A8676"));
+    m_result_btn->SetSize(wxSize(-1, FromDIP(30)));
+    m_result_btn->SetMinSize(wxSize(- 1, FromDIP(30)));
+    m_result_btn->SetMaxSize(wxSize(- 1, FromDIP(30)));
     m_result_btn->Bind(wxEVT_BUTTON, &BindMachineDialog::on_result_ok, this);
 
     m_result_sizer = new wxBoxSizer(wxVERTICAL);
@@ -297,7 +301,7 @@ BindMachineDialog::BindMachineDialog()
     m_result_sizer->Add(m_result_text, 0, wxALIGN_CENTER);
     m_result_sizer->AddStretchSpacer(1);
     m_result_sizer->Add(m_result_btn, 0, wxALIGN_CENTER | wxALIGN_BOTTOM);
-    m_result_sizer->AddSpacer(FromDIP(50));
+    m_result_sizer->AddSpacer(FromDIP(30));
     m_result_panel->SetSizer(m_result_sizer);
     m_result_panel->Layout();
     m_simplebook->AddPage(m_result_panel, wxEmptyString, false);   
@@ -387,7 +391,7 @@ void BindMachineDialog::on_close(wxCloseEvent &event)
 void BindMachineDialog::on_bind_fail(wxCommandEvent &event)
 {
     m_result_code = event.GetInt();
-    m_result_text->SetLabel(_L("The device is registered fail!"));
+    m_result_text->SetLabel(_L("The device registration failed!"));
     m_result_text->SetForegroundColour(wxColor("#EA3522"));
     m_result_sizer->Layout();
     m_simplebook->SetSelection(1);
@@ -398,7 +402,7 @@ void BindMachineDialog::on_bind_fail(wxCommandEvent &event)
 void BindMachineDialog::on_bind_success(wxCommandEvent &event)
 {
     m_result_code = 0;
-    m_result_text->SetLabel(_L("The device is registered successfully!"));
+    m_result_text->SetLabel(_L("The device registration successful!"));
     m_result_text->SetForegroundColour(wxColor("#419488"));
     m_result_sizer->Layout();
     m_simplebook->SetSelection(1);
@@ -542,7 +546,7 @@ UnBindMachineDialog::UnBindMachineDialog()
     topSizer->Add(linkBitmap, 0, wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(20));
     topSizer->Add(m_user_sizer, 1, wxEXPAND | wxALIGN_CENTER, 0);
 
-    m_unbind_text = new wxStaticText(this, wxID_ANY, _L("Would you like to log out the printer?"));
+    m_unbind_text = new wxStaticText(this, wxID_ANY, _L("Would you like to log the printer out of this account?"));
     m_unbind_text->SetForegroundColour(wxColour("#333333"));
     m_unbind_text->SetFont(::Label::Body_14);
     m_unbind_text->Wrap(-1);
