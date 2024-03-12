@@ -203,6 +203,7 @@ public:
     StartFiltering(wxWindow* parent);
     ~StartFiltering(){};
     void create_panel(wxWindow* parent);
+    void setBtnState(bool internalOpen, bool externalOpen);
 
 private:
     void onAirFilterToggled(wxCommandEvent &event);
@@ -230,9 +231,10 @@ public:
     void setDeviceInfoBtnIcon(const wxString &icon);
 
     void modifyTemp(wxString nozzleTemp = "--", wxString platformTemp = "--", wxString cavityTemp = "--");
-    void modifyDeviceInfo();
-    void modifyDeviceLampState();
-    void modifyDeviceFilterState();    
+    void modifyDeviceInfo(wxString machineType, wxString sprayNozzle,wxString printSize,wxString version,wxString number,wxString material);
+    void modifyDeviceLampState(bool bOpen);
+    void modifyDeviceFilterState(bool internalOpen, bool externalOpen);
+
 private:
     wxPanel* m_panel_idle_device_state;
     wxPanel* m_panel_idle_device_info;
@@ -242,6 +244,18 @@ private:
     Button* m_idle_filter_button;
 
     StartFiltering* m_panel_circula_filter; //空闲状态，过滤按钮
+
+    IconText *m_temp_ctrl_top{nullptr};
+    IconText *m_temp_ctrl_bottom{nullptr};
+    IconText *m_temp_ctrl_mid{nullptr};
+
+    Label *m_machine_type_data{nullptr};
+    Label *m_spray_nozzle_data{nullptr};
+    Label *m_print_size_data{nullptr};
+    Label *m_firmware_version_data{nullptr};
+    Label *m_serial_number_data{nullptr};
+    Label *m_private_material_data{nullptr};
+
 };
 
 #endif // !slic3r_GUI_TempInput_hpp_

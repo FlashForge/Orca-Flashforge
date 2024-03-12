@@ -674,7 +674,7 @@ void IconBottonText::create_panel(
     m_text_ctrl->SetFont(wxFont(wxFontInfo(textSize)));
     m_text_ctrl->SetForegroundColour(wxColour(51, 51, 51));
     m_text_ctrl->SetBackgroundColour(wxColour(255, 255, 255));
-    m_text_ctrl->SetMinSize(wxSize(FromDIP(40), -1));
+    m_text_ctrl->SetMinSize(wxSize(FromDIP(48), -1));
     //m_text_ctrl->Bind(wxEVT_TEXT, &IconBottonText::onTextChange, this);
     m_text_ctrl->Bind(wxEVT_KILL_FOCUS, &IconBottonText::onTextFocusOut, this);
 
@@ -778,10 +778,10 @@ void IconBottonText::onTextFocusOut(wxFocusEvent &event)
         }
     } else if (text.ToDouble(&doubleValue)) {
         if (doubleValue < m_min) {
-            wxString str_min = wxString::Format("%.2f", m_min);
+            wxString str_min = wxString::Format("%.3f", m_min);
             m_text_ctrl->ChangeValue(str_min);
         } else if (doubleValue > m_max) {
-            wxString str_max = wxString::Format("%.2f", m_max);
+            wxString str_max = wxString::Format("%.3f", m_max);
             m_text_ctrl->ChangeValue(str_max);
         }
     } else {
@@ -804,7 +804,7 @@ void IconBottonText::onDecBtnClicked(wxMouseEvent &event)
         m_text_ctrl->ChangeValue(str_cur);
     } else if (text.ToDouble(&doubleValue)) {
         double cur_value = (doubleValue - m_adjust_value) < m_min ? m_min : doubleValue - m_adjust_value;
-        wxString str_cur   = wxString::Format("%.2f", cur_value);
+        wxString str_cur   = wxString::Format("%.3f", cur_value);
         m_text_ctrl->ChangeValue(str_cur);
     }
     event.Skip(); 
@@ -821,7 +821,7 @@ void IconBottonText::onIncBtnClicked(wxMouseEvent &event)
         m_text_ctrl->ChangeValue(str_cur);
     } else if (text.ToDouble(&doubleValue)) {
         double   cur_value = (doubleValue + m_adjust_value) > m_max ? m_max : doubleValue + m_adjust_value;
-        wxString str_cur   = wxString::Format("%.2f", cur_value);
+        wxString str_cur   = wxString::Format("%.3f", cur_value);
         m_text_ctrl->ChangeValue(str_cur);
     }
     event.Skip();
@@ -902,6 +902,12 @@ void StartFiltering::create_panel(wxWindow* parent)
     parent->SetSizer(sizer);
 }
 
+void StartFiltering::setBtnState(bool internalOpen, bool externalOpen) 
+{ 
+    m_internal_circulate_switch->SetValue(internalOpen);
+    m_external_circulate_switch->SetValue(externalOpen);
+}
+
 void StartFiltering::onAirFilterToggled(wxCommandEvent &event) 
 {
     event.Skip();
@@ -950,42 +956,36 @@ void TempMixDevice::create_panel(wxWindow* parent,bool idle, wxString nozzleTemp
     auto m_panel_temperature = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     m_panel_temperature->SetBackgroundColour(*wxWHITE);
 
-    int temperature = 25;
-    wxString temperatureString = wxString::Format("%d", temperature);
-    wxString degreeSymbol = wxString::FromUTF8("\xE2\x84\x83");
-    temperatureString.Append(degreeSymbol);
-    IconText* tempCtrl_top = new IconText(m_panel_temperature,wxString("device_top_temperature"),20,temperatureString,20);
+    wxString temperatureString = "100";
+    temperatureString.Append(wxString::FromUTF8("\xE2\x84\x83"));
+    m_temp_ctrl_top = new IconText(m_panel_temperature, wxString("device_top_temperature"), 20, temperatureString, 18);
     //tempCtrl_top->SetMinSize((wxSize(FromDIP(108), -1)));
     //bSizer_temperature->Add(tempCtrl_top,0, wxALIGN_CENTER | wxALL | wxEXPAND, FromDIP(9));
-    bSizer_temperature->Add(tempCtrl_top, wxSizerFlags(1).Expand());
+    bSizer_temperature->Add(m_temp_ctrl_top, wxSizerFlags(1).Expand());
 
     auto m_panel_temperature_separotor0 = new wxPanel(m_panel_temperature, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(6), -1),wxTAB_TRAVERSAL);
     m_panel_temperature_separotor0->SetBackgroundColour(wxColour(240,240,240));
 
     bSizer_temperature->Add(m_panel_temperature_separotor0, 0, wxEXPAND | wxALL, 0);
 
-    int temperature1 = 80;
-    wxString temperatureString_1 = wxString::Format("%d", temperature1);
-    wxString degreeSymbol_1 = wxString::FromUTF8("\xE2\x84\x83");
-    temperatureString_1.Append(degreeSymbol_1);
-    IconText *tempCtrl_bottom = new IconText(m_panel_temperature, wxString("device_bottom_temperature"), 20, temperatureString_1, 20);
+    wxString temperatureString_1 = "100";
+    temperatureString_1.Append(wxString::FromUTF8("\xE2\x84\x83"));
+    m_temp_ctrl_bottom = new IconText(m_panel_temperature, wxString("device_bottom_temperature"), 20, temperatureString_1, 18);
     //tempCtrl_bottom->SetMinSize((wxSize(FromDIP(108), -1)));
     //bSizer_temperature->Add(tempCtrl_bottom,0, wxALIGN_CENTER | wxALL | wxEXPAND, FromDIP(9));
-    bSizer_temperature->Add(tempCtrl_bottom, wxSizerFlags(1).Expand());
+    bSizer_temperature->Add(m_temp_ctrl_bottom, wxSizerFlags(1).Expand());
 
     auto m_panel_temperature_separotor1 = new wxPanel(m_panel_temperature, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(6), -1),wxTAB_TRAVERSAL);
     m_panel_temperature_separotor1->SetBackgroundColour(wxColour(240,240,240));
 
     bSizer_temperature->Add(m_panel_temperature_separotor1, 0, wxEXPAND | wxALL, 0);
 
-    int temperature2 = 100;
-    wxString temperatureString_2 = wxString::Format("%d", temperature2);
-    wxString degreeSymbol_2 = wxString::FromUTF8("\xE2\x84\x83");
-    temperatureString_2.Append(degreeSymbol_2);
-    IconText *tempCtrl_mid = new IconText(m_panel_temperature, wxString("device_mid_temperature"), 20, temperatureString_2, 20);
+    wxString temperatureString_2 = "100"; 
+    temperatureString_2.Append(wxString::FromUTF8("\xE2\x84\x83"));
+    m_temp_ctrl_mid = new IconText(m_panel_temperature, wxString("device_mid_temperature"), 20, temperatureString_2, 18);
     //tempCtrl_mid->SetMinSize((wxSize(FromDIP(108), -1)));
     //bSizer_temperature->Add(tempCtrl_mid,0, wxALIGN_CENTER | wxALL | wxEXPAND, FromDIP(9));
-    bSizer_temperature->Add(tempCtrl_mid, wxSizerFlags(1).Expand());
+    bSizer_temperature->Add(m_temp_ctrl_mid, wxSizerFlags(1).Expand());
 
     m_panel_temperature->SetSizer(bSizer_temperature);
     m_panel_temperature->Layout();
@@ -1216,50 +1216,50 @@ void TempMixDevice::setupLayoutDeviceInfo(wxBoxSizer *deviceInfoSizer, wxPanel *
     m_panel_device_data->SetBackgroundColour(wxColour(255, 255, 255));
 
     wxBoxSizer *bSizer_device_data = new wxBoxSizer(wxVERTICAL);
-    auto machine_type_data = new Label(m_panel_device_data, ("Adventurer 5M"));
-    machine_type_data->Wrap(-1);
-    machine_type_data->SetFont(wxFont(wxFontInfo(16)));
-    machine_type_data->SetForegroundColour(wxColour(51, 51, 51));
-    machine_type_data->SetBackgroundColour(wxColour(255, 255, 255));
-    machine_type_data->SetMinSize(wxSize(FromDIP(120), -1));
+    m_machine_type_data = new Label(m_panel_device_data, ("Adventurer 5M"));
+    //m_machine_type_data->Wrap(-1);
+    m_machine_type_data->SetFont(wxFont(wxFontInfo(16)));
+    m_machine_type_data->SetForegroundColour(wxColour(51, 51, 51));
+    m_machine_type_data->SetBackgroundColour(wxColour(255, 255,255));
+    //m_machine_type_data->SetMinSize(wxSize(FromDIP(155), -1));
 
-    auto spray_nozzle_data = new Label(m_panel_device_data, ("0.4mm"));
-    spray_nozzle_data->SetFont(wxFont(wxFontInfo(16)));
-    spray_nozzle_data->SetForegroundColour(wxColour(51, 51, 51));
-    spray_nozzle_data->SetBackgroundColour(wxColour(255, 255, 255));
+    m_spray_nozzle_data = new Label(m_panel_device_data, ("0.4mm"));
+    m_spray_nozzle_data->SetFont(wxFont(wxFontInfo(16)));
+    m_spray_nozzle_data->SetForegroundColour(wxColour(51, 51, 51));
+    m_spray_nozzle_data->SetBackgroundColour(wxColour(255, 255, 255));
 
-    auto print_size_data = new Label(m_panel_device_data, ("220*220*220mm"));
-    print_size_data->SetFont(wxFont(wxFontInfo(16)));
-    print_size_data->SetForegroundColour(wxColour(51, 51, 51));
-    print_size_data->SetBackgroundColour(wxColour(255, 255, 255));
+    m_print_size_data = new Label(m_panel_device_data, ("220*220*220mm"));
+    m_print_size_data->SetFont(wxFont(wxFontInfo(16)));
+    m_print_size_data->SetForegroundColour(wxColour(51, 51, 51));
+    m_print_size_data->SetBackgroundColour(wxColour(255, 255, 255));
 
-    auto firmware_version_data = new Label(m_panel_device_data, ("2.1.4-2.1.6"));
-    firmware_version_data->SetFont(wxFont(wxFontInfo(16)));
-    firmware_version_data->SetForegroundColour(wxColour(51, 51, 51));
-    firmware_version_data->SetBackgroundColour(wxColour(255, 255, 255));
+    m_firmware_version_data = new Label(m_panel_device_data, ("2.1.4-2.1.6"));
+    m_firmware_version_data->SetFont(wxFont(wxFontInfo(16)));
+    m_firmware_version_data->SetForegroundColour(wxColour(51, 51, 51));
+    m_firmware_version_data->SetBackgroundColour(wxColour(255, 255, 255));
 
-    auto serial_number_data = new Label(m_panel_device_data, ("ABCDEFG"));
-    serial_number_data->SetFont(wxFont(wxFontInfo(16)));
-    serial_number_data->SetForegroundColour(wxColour(51, 51, 51));
-    serial_number_data->SetBackgroundColour(wxColour(255, 255, 255));
+    m_serial_number_data = new Label(m_panel_device_data, ("ABCDEFG"));
+    m_serial_number_data->SetFont(wxFont(wxFontInfo(16)));
+    m_serial_number_data->SetForegroundColour(wxColour(51, 51, 51));
+    m_serial_number_data->SetBackgroundColour(wxColour(255, 255, 255));
 
-    auto private_material_data = new Label(m_panel_device_data, ("1600.9 m"));
-    private_material_data->SetFont(wxFont(wxFontInfo(16)));
-    private_material_data->SetForegroundColour(wxColour(51, 51, 51));
-    private_material_data->SetBackgroundColour(wxColour(255, 255, 255));
+    m_private_material_data = new Label(m_panel_device_data, ("1600.9 m"));
+    m_private_material_data->SetFont(wxFont(wxFontInfo(16)));
+    m_private_material_data->SetForegroundColour(wxColour(51, 51, 51));
+    m_private_material_data->SetBackgroundColour(wxColour(255, 255, 255));
 
     bSizer_device_data->AddSpacer(FromDIP(12));
-    bSizer_device_data->Add(machine_type_data, 0, wxALL | wxEXPAND, 0);
+    bSizer_device_data->Add(m_machine_type_data, 0, wxALL | wxEXPAND, 0);
     bSizer_device_data->AddSpacer(FromDIP(18));
-    bSizer_device_data->Add(spray_nozzle_data, 0, wxALL | wxEXPAND, 0);
+    bSizer_device_data->Add(m_spray_nozzle_data, 0, wxALL | wxEXPAND, 0);
     bSizer_device_data->AddSpacer(FromDIP(18));
-    bSizer_device_data->Add(print_size_data, 0, wxALL | wxEXPAND, 0);
+    bSizer_device_data->Add(m_print_size_data, 0, wxALL | wxEXPAND, 0);
     bSizer_device_data->AddSpacer(FromDIP(18));
-    bSizer_device_data->Add(firmware_version_data, 0, wxALL | wxEXPAND, 0);
+    bSizer_device_data->Add(m_firmware_version_data, 0, wxALL | wxEXPAND, 0);
     bSizer_device_data->AddSpacer(FromDIP(18));
-    bSizer_device_data->Add(serial_number_data, 0, wxALL | wxEXPAND, 0);
+    bSizer_device_data->Add(m_serial_number_data, 0, wxALL | wxEXPAND, 0);
     bSizer_device_data->AddSpacer(FromDIP(18));
-    bSizer_device_data->Add(private_material_data, 0, wxALL | wxEXPAND, 0);
+    bSizer_device_data->Add(m_private_material_data, 0, wxALL | wxEXPAND, 0);
     bSizer_device_data->AddSpacer(FromDIP(20));
 
     m_panel_device_data->SetSizer(bSizer_device_data);
@@ -1307,4 +1307,40 @@ void TempMixDevice::connectEvent()
 void TempMixDevice::setDeviceInfoBtnIcon(const wxString &icon) 
 { 
     m_idle_device_info_button->SetIcon(icon);
+}
+
+void TempMixDevice::modifyTemp(wxString nozzleTemp, wxString platformTemp, wxString cavityTemp) 
+{
+    wxString degreeSymbol = wxString::FromUTF8("\xE2\x84\x83");
+    m_temp_ctrl_top->setText(nozzleTemp.Append(degreeSymbol));
+    m_temp_ctrl_bottom->setText(platformTemp.Append(degreeSymbol));
+    m_temp_ctrl_mid->setText(cavityTemp.Append(degreeSymbol));
+}
+
+void TempMixDevice::modifyDeviceInfo(wxString machineType, wxString sprayNozzle, wxString printSize, wxString version, wxString number, wxString material)
+{
+    m_machine_type_data->SetLabel(machineType);
+    m_spray_nozzle_data->SetLabel(sprayNozzle);
+    m_print_size_data->SetLabel(printSize);
+    m_firmware_version_data->SetLabel(version);
+    m_serial_number_data->SetLabel(number);
+    m_private_material_data->SetLabel(material);
+}
+
+void TempMixDevice::modifyDeviceLampState(bool bOpen) 
+{
+    if (bOpen) {
+        m_idle_lamp_control_button->SetIcon("device_lamp_control_press");
+        m_idle_lamp_control_button->Refresh();
+        m_idle_lamp_control_button->SetFlashForgeSelected(true);
+    } else {
+        m_idle_lamp_control_button->SetIcon("device_lamp_control");
+        m_idle_lamp_control_button->Refresh();
+        m_idle_lamp_control_button->SetFlashForgeSelected(false);
+    }
+}
+
+void TempMixDevice::modifyDeviceFilterState(bool internalOpen, bool externalOpen) 
+{
+    m_panel_circula_filter->setBtnState(internalOpen, externalOpen);
 }

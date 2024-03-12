@@ -20,6 +20,13 @@ const std::string OPEN  = "open";
 const std::string CANCEL ="cancel";
 const std::string PAUSE  = "pause";
 const std::string CONTINUE = "continue";
+
+const std::string P_READY = "ready"; 
+const std::string P_COMPLETED = "completed";
+const std::string P_ERROR     = "error";
+const std::string P_PAUSING  = "pausing";
+const std::string P_BUSY      = "busy";
+
 const wxString    TEMPERATURE = _L("Temperature");
 const wxString    TEMP_CANCEL  = _L("cancel");
 const wxString    TEMP_CONFIRM = _L("confirm");
@@ -365,9 +372,9 @@ void DeviceDetail::create_panel(wxWindow* parent)
         bSizer_first_row->Add(m_device_speed, 0, wxEXPAND | wxALL, 0);
         bSizer_first_row->AddSpacer(FromDIP(18));
 
-        m_device_z_axis = new IconBottonText(m_panel_first_row, wxString("device_z_axis"), 17, wxString("0.02"), 12,wxString("device_z_dec"), wxString("push_button_arrow_dec_normal"),false);
+        m_device_z_axis = new IconBottonText(m_panel_first_row, wxString("device_z_axis"), 17, wxString("0.002"), 12,wxString("device_z_dec"), wxString("push_button_arrow_dec_normal"),false);
         m_device_z_axis->setLimit(-5, 5);
-        m_device_z_axis->setAdjustValue(0.01);
+        m_device_z_axis->setAdjustValue(0.001);
         bSizer_first_row->Add(m_device_z_axis, 0, wxEXPAND | wxALL, 0);
         bSizer_first_row->AddStretchSpacer();
 
@@ -485,7 +492,48 @@ SingleDeviceState::SingleDeviceState(wxWindow* parent, wxWindowID id, const wxPo
 void SingleDeviceState::setCurId(int curId) 
 { 
     m_cur_id = curId; 
-    //根据ID值查询设备相关信息，在设备状态中显示
+    //query device data by id
+    const com_dev_data_t &data = MultiComMgr::inst()->devData(m_cur_id);
+    if (P_READY == data.devDetail->status){
+        // idle
+        m_machine_idle_panel->Show();
+        m_machine_ctrl_panel->Hide();
+        m_print_button->Enable(true);
+        m_cancel_button->Enable(true);
+        std::string idle_state = _L("idle").ToStdString();
+        setTipMessage(idle_state, "#00CD6D", "",false);
+    }else if(P_COMPLETED == data.devDetail->status) {
+        //compelete
+        //禁用继续打印和取消打印按钮，修改提示信息
+        m_machine_ctrl_panel->Show();
+        m_machine_idle_panel->Hide();
+        std::string compelete_state = _L("completed").ToStdString();
+        std::string compelete_info  = _L("Printing completed, please clean up the platform !").ToStdString();
+        setTipMessage(compelete_state, "#328DFB", compelete_info, true);
+    } else if (P_ERROR == data.devDetail->status) {
+        //error
+
+    } else if (P_BUSY == data.devDetail->status) {
+        //busy
+        std::string busy_state = _L("busy").ToStdString();
+        std::string busy_info  = _L("Printing cancelled, currently in cache command").ToStdString();
+        setTipMessage(busy_state, "#F9B61C", busy_info, true);
+    }else
+        {
+        //printing
+        m_machine_ctrl_panel->Show();
+        m_machine_idle_panel->Hide();
+        m_print_button->Enable(true);
+        m_cancel_button->Enable(true);
+        std::string print_state = _L("printing").ToStdString();
+        setTipMessage(print_state, "#4D54FF");
+    }
+    Layout();
+    //reInit data
+    m_last_speed               = 0.00;
+    m_last_z_axis_compensation = 0.00;
+    m_last_cooling_fan_speed   = 0.00;
+    m_last_chamber_fan_speed   = 0.00;
 }
 
 void SingleDeviceState::modifyVideoPlayerAddress(const std::string &urlAddress)
@@ -690,8 +738,8 @@ wxBoxSizer* SingleDeviceState::create_machine_control_page()
 //***
         bSizer_right->Add(m_machine_ctrl_panel,  0, wxEXPAND, 0);
         bSizer_right->Add(m_machine_idle_panel,  0, wxEXPAND, 0);
-        m_machine_idle_panel->Hide();
-        //m_machine_ctrl_panel->Hide();
+        //m_machine_idle_panel->Hide();
+        m_machine_ctrl_panel->Hide();
         return bSizer_right;
 }
 
@@ -1759,6 +1807,18 @@ void SingleDeviceState::onTargetTempModify(wxCommandEvent &event)
    }
 }
 
+void SingleDeviceState::setTipMessage(const std::string& title, const std::string& titleColor,const std::string& info,bool showInfo)
+{
+   m_staticText_device_tip->SetLabel(title); 
+   m_staticText_device_tip->SetForegroundColour(wxColour(titleColor));
+   m_staticText_device_info->SetLabel(info);
+   if (!showInfo) {
+        m_staticText_device_info->Hide();
+        m_clear_button->Hide();
+   }
+   Layout();
+}
+
 std::string SingleDeviceState::convertSecondsToHMS(int totalSeconds)
 {
    int hours   = totalSeconds / 3600;
@@ -1774,7 +1834,47 @@ std::string SingleDeviceState::convertSecondsToHMS(int totalSeconds)
 void SingleDeviceState::fillValue(const com_dev_data_t &data)
 {
    std::string state = data.devDetail->status; // 状态
-   // 如果是离线，则切换至离线页面
+   if (state == P_READY) {
+        m_machine_idle_panel->Show();
+        m_machine_ctrl_panel->Hide();
+        std::string idle_state = _L("idle").ToStdString();
+        setTipMessage(idle_state, "#00CD6D", "", false);
+   } else if (state == P_COMPLETED) {
+        m_machine_ctrl_panel->Show();
+        m_machine_idle_panel->Hide();
+        m_print_button->Enable(false);
+        m_cancel_button->Enable(false);
+        std::string compelete_state = _L("completed").ToStdString();
+        std::string compelete_info  = _L("Printing completed, please clean up the platform !").ToStdString();
+        setTipMessage(compelete_state, "#328DFB", compelete_info, true);
+   } else if (state == P_BUSY) {
+        std::string busy_state = _L("busy").ToStdString();
+        std::string busy_info  = _L("Printing cancelled, currently in cache command").ToStdString();
+        setTipMessage(busy_state, "#F9B61C", busy_info, true);
+   
+   }else if (state == PAUSE || state == P_PAUSING) {
+        m_machine_ctrl_panel->Show();
+        m_machine_idle_panel->Hide();
+        std::string print_state = _L("printing").ToStdString();
+        setTipMessage(print_state, "#4D54FF");
+
+        m_print_button->SetLabel(_L("continue print"));
+        m_print_button->SetIcon("device_continue_print");
+        m_print_button->Refresh();
+   } else{
+        m_machine_ctrl_panel->Show();
+        m_machine_idle_panel->Hide();
+        std::string print_state = _L("printing").ToStdString();
+        setTipMessage(print_state, "#4D54FF");
+
+        m_print_button->SetLabel(_L("pause print"));
+        m_print_button->SetIcon("device_pause_print");
+        m_print_button->Refresh();
+   }
+   if (m_camera_stream_url != data.devDetail->cameraStreamUrl) {
+        m_camera_stream_url = data.devDetail->cameraStreamUrl;
+        modifyVideoPlayerAddress(m_camera_stream_url);
+   }
 
    std::string printFileName = data.devDetail->printFileName; // 文件名
    m_staticText_file_name->SetLabel(printFileName);
@@ -1805,38 +1905,78 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
    double chamberTargetTemp = data.devDetail->chamberTargetTemp; // 腔体目标物温度
    m_tempCtrl_mid->SetTagTemp(chamberTargetTemp, true);
    m_tempCtrl_mid->Bind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);  
+
+   auto aRightTemp = static_cast<int>(rightTemp);
+   auto aPlatTemp  = static_cast<int>(platTemp);
+   auto aChamberTemp = static_cast<int>(chamberTemp);
+   wxString modify_nozzle_temp  = wxString::Format("%d", aRightTemp);
+   wxString modify_plat_temp    = wxString::Format("%d", aPlatTemp);
+   wxString modify_chamber_temp = wxString::Format("%d", aChamberTemp);
+
+   m_idle_tempMixDevice->modifyTemp(modify_nozzle_temp, modify_plat_temp, modify_chamber_temp);
    std::string lightStatus = data.devDetail->lightStatus; // 灯状态
    if (lightStatus.compare(CLOSE) == 0) {
         m_lamp_control_button->SetIcon("device_lamp_control");
         m_lamp_control_button->Refresh();
         m_lamp_control_button->SetFlashForgeSelected(false);
+        m_idle_tempMixDevice->modifyDeviceLampState(false);
    } else if (lightStatus.compare(OPEN) == 0) {
         m_lamp_control_button->SetIcon("device_lamp_control_press");
         m_lamp_control_button->Refresh();
         m_lamp_control_button->SetFlashForgeSelected(true);
+        m_idle_tempMixDevice->modifyDeviceLampState(true);
    }
    std::string internalFanStatus = data.devDetail->internalFanStatus; // 内循环状态
    bool        internal_open     = internalFanStatus.compare(OPEN) ? false: true;
    std::string externalFanStatus = data.devDetail->externalFanStatus; // 外循环状态
    bool        external_open     = externalFanStatus.compare(OPEN) ? false: true;
    m_busy_circula_filter->setAirFilterState(internal_open, external_open);
+   m_idle_tempMixDevice->modifyDeviceFilterState(internal_open, external_open);
    std::string rightFilamentType = data.devDetail->rightFilamentType; // 材料类型
    m_busy_device_detial->setMaterialName(rightFilamentType);
    double currentPrintSpeed = data.devDetail->currentPrintSpeed; // 初始打印速度
    m_busy_device_detial->setInitialSpeed(currentPrintSpeed);
-   double printSpeedAdjust = data.devDetail->printSpeedAdjust; // 速度
-   m_busy_device_detial->setSpeed(printSpeedAdjust);
+   double printSpeedAdjust = data.devDetail->printSpeedAdjust;// 速度
+   if (data.devDetail->printSpeedAdjust != m_last_speed) {
+        m_last_speed = data.devDetail->printSpeedAdjust;
+        m_busy_device_detial->setSpeed(printSpeedAdjust);
+   }
    double zAxisCompensation = data.devDetail->zAxisCompensation; // z轴坐标
-   m_busy_device_detial->setZAxis(zAxisCompensation);
+   if (data.devDetail->zAxisCompensation != m_last_z_axis_compensation) {
+        m_last_z_axis_compensation = data.devDetail->zAxisCompensation;
+        m_busy_device_detial->setZAxis(zAxisCompensation);
+   }
    int printLayer       = data.devDetail->printLayer;       // 当前层
    int targetPrintLayer = data.devDetail->targetPrintLayer; // 目标层数
    m_busy_device_detial->setLayer(printLayer, targetPrintLayer);
    double fillAmount = data.devDetail->fillAmount; // 填充率
    m_busy_device_detial->setFillRate(fillAmount);
    double coolingFanSpeed = data.devDetail->coolingFanSpeed; // 喷头风扇
-   m_busy_device_detial->setCoolingFanSpeed(coolingFanSpeed);
+   if (data.devDetail->coolingFanSpeed != m_last_cooling_fan_speed) {
+        m_last_cooling_fan_speed = data.devDetail->coolingFanSpeed;
+       m_busy_device_detial->setCoolingFanSpeed(coolingFanSpeed);
+   }
    double chamberFanSpeed = data.devDetail->chamberFanSpeed; // 冷却风扇（腔体风扇）
-   m_busy_device_detial->setChamberFanSpeed(chamberFanSpeed);
+   if (data.devDetail->chamberFanSpeed != m_last_chamber_fan_speed) {
+       m_last_chamber_fan_speed = data.devDetail->chamberFanSpeed;
+       m_busy_device_detial->setChamberFanSpeed(chamberFanSpeed);
+   } 
+
+   if (m_pid != data.devDetail->pid && data.devDetail->pid == 0x0024) {
+       m_pid = data.devDetail->pid;
+       m_idle_device_staticbitmap->SetBitmap(create_scaled_bitmap("adventurer_5m_pro", this, 112));
+
+   }
+
+   std::string machineType = data.devDetail->pid == 0x0024 ? "Adventurer 5M Pro" :(data.devDetail->pid == 0x0023 ? "Adventurer 5M" : "Unknow");
+   std::string nozzleModel = data.devDetail->nozzleModel;//喷嘴型号
+   std::string measure     = data.devDetail->measure;//打印尺寸
+   std::string firmwareVersion = data.devDetail->firmwareVersion;//固件版本
+   std::string serialNubmer = data.connectMode == 0 ? data.lanDevInfo.serialNumber : data.wanDevInfo.serialNumber; //序列号
+   double cumulativeFilament = data.devDetail->cumulativeFilament; //丝料统计
+   wxString strCumulativeFilament = wxString::Format("%.2f", cumulativeFilament);
+
+   m_idle_tempMixDevice->modifyDeviceInfo(machineType, nozzleModel, measure, firmwareVersion, serialNubmer, strCumulativeFilament);
 }
 
 void SingleDeviceState::OnScriptMessage(wxWebViewEvent &evt)

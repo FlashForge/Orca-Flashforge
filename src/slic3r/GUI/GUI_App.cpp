@@ -3561,6 +3561,14 @@ void GUI_App::ShowUserLogin(bool show)
             if (event.ret != ComErrno::COM_OK) {
                 //login out
                 handle_login_out();
+                if (app_config){
+                    app_config->set("access_token", "");
+                    app_config->set("refresh_token", "");
+                    app_config->set("expire_time", "");
+                    app_config->set("usr_name", "");
+                    app_config->set("usr_pic", "");
+                    app_config->set("usr_uid", "");
+                }
             }
         });
         m_login_dlg->ShowModal();

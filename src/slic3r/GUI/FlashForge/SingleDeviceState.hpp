@@ -125,6 +125,8 @@ public:
     void onComDevDetailUpdate(ComDevDetailUpdateEvent &event);
     void onTargetTempModify(wxCommandEvent &event);
 
+    void setTipMessage(const std::string &title = "", const std::string &titleColor = "", const std::string &info = "", bool showInfo = false);
+
 private:
     std::string convertSecondsToHMS(int totalSeconds);
     void  fillValue(const com_dev_data_t &data);
@@ -218,6 +220,12 @@ protected:
 
     TempMixDevice* m_idle_tempMixDevice;//空闲状态，温度设备控件
 //
+    double m_last_speed = 0.00;
+    double m_last_z_axis_compensation = 0.00;
+    double m_last_cooling_fan_speed   = 0.00;
+    double m_last_chamber_fan_speed   = 0.00;
+    std::string m_camera_stream_url;
+    int         m_pid = 0x0023;
 };
 
 
