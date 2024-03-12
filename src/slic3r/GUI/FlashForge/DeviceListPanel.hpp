@@ -22,13 +22,19 @@ namespace GUI {
 class DropDownButton : public wxPanel
 {
 public:
-    DropDownButton(wxWindow* parent = nullptr, const wxString& name = wxEmptyString, const wxBitmap& bitmap = wxNullBitmap);
+    DropDownButton(wxWindow* parent = nullptr, const wxString& text = wxEmptyString, const wxBitmap& bitmap = wxNullBitmap);
+    ~DropDownButton();
+
+    void setText(const wxString& text);
 
 private:
     wxPoint convertEventPoint(const wxMouseEvent& event);
+    void leaveWindow();
     bool isPointIn(const wxPoint& pnt);
     void onEnter(wxMouseEvent& event);
     void onLeave(wxMouseEvent& event);
+    void onMotion(wxMouseEvent& event);
+    void onMouseCaptureLost(wxMouseCaptureLostEvent& event);
 
 private:
     wxStaticText*   m_text;
@@ -46,7 +52,7 @@ public:
     public:
         FilterItem(wxWindow* parent, const wxString& text, bool top_corner_round = false,
             bool bottom_corner_round = false, bool can_checked = false);
-        ~FilterItem() {};
+        ~FilterItem();
 
         void setSelect(bool select);
         bool isSelect() const;
@@ -64,8 +70,11 @@ public:
         void onLeave(wxMouseEvent& event);
         void onMouseDown(wxMouseEvent& event);
         void onMouseUp(wxMouseEvent& event);
+        void onMotion(wxMouseEvent& event);
+        void onMouseCaptureLost(wxMouseCaptureLostEvent& event);
         bool isPointIn(const wxPoint& pnt);
         void sendEvent();
+        void leaveWindow();
 
     private:
         bool            m_hoverFlag {false};
@@ -100,6 +109,43 @@ private:
 class DeviceItemPanel : public wxPanel
 {
 public:
+    DeviceItemPanel(wxWindow *parent);
+    virtual ~DeviceItemPanel();
+
+    void blockMouseEvent(bool block);    
+    static wxString statusText(const std::string& status, wxColour& color);
+
+protected:
+    void leaveWindow();
+    void mouseDown(wxMouseEvent &event);
+    void mouseReleased(wxMouseEvent &event);
+    void onEnter(wxMouseEvent &event);
+    void onLeave(wxMouseEvent &event);
+    void onMotion(wxMouseEvent& event);
+    void onPaint(wxPaintEvent& event);
+    void onMouseCaptionLost(wxMouseCaptureLostEvent& event);
+
+private:
+    bool isPointIn(const wxPoint& pt);
+    void sendEvent();
+
+protected:
+    bool            m_hovered {false};
+    bool            m_pressed {false};
+    bool            m_blockFlag {false};    
+    wxBoxSizer*     m_main_sizer {nullptr};
+    wxColour        m_bg_color = wxColour("#ffffff");
+    wxColour        m_border_color = wxColour("#ffffff");
+    wxColour        m_border_hover_color = wxColour("#999999");
+    wxColour        m_border_press_color = wxColour("#328DFB");
+
+    static std::map<unsigned short, wxBitmap> m_machineBitmapMap;
+};
+
+
+class DeviceInfoItemPanel : public DeviceItemPanel
+{
+public:
     struct DeviceInfo {
         bool lanFlag {false};  // lan or not
         int conn_id {-1};
@@ -108,44 +154,39 @@ public:
         std::string placement;
         std::string status;
     };
-    DeviceItemPanel(wxWindow *parent, const DeviceInfo& info);
+
+    DeviceInfoItemPanel(wxWindow *parent, const DeviceInfo& info);
 
     void updateInfo(const DeviceInfo& info);
     const DeviceInfo& deviceInfo() const;
-    void blockMouseEvent(bool block);
-
-protected:
-    void mouseDown(wxMouseEvent &event);
-    void mouseReleased(wxMouseEvent &event);
-    void onEnter(wxMouseEvent &event);
-    void onLeave(wxMouseEvent &event);
-    void onPaint(wxPaintEvent& event);
 
 private:
-    void build();
-    void connectEvent();
-    bool isPointIn(const wxPoint& pt);
-    void sendEvent();
     void updateStatus();
-
     static wxBitmap machineBitmap(unsigned short pid);
 
 private:
-    bool            m_hovered {false};
-    bool            m_pressed {false};
-    bool            m_blockFlag {false};
     DeviceInfo      m_info;
     wxStaticText*   m_name_text {nullptr};
     wxStaticBitmap* m_icon {nullptr};
     wxStaticText*   m_placement_text {nullptr};
     wxStaticText*   m_status_text {nullptr};
-    wxBoxSizer*     m_main_sizer {nullptr};
-    wxColour        m_bg_color = wxColour("#ffffff");
-    wxColour        m_border_color = wxColour("#ffffff");
-    wxColour        m_border_hover_color = wxColour("#999999");
-    wxColour        m_border_press_color = wxColour("#328DFB");
+};
 
-    static std::map<unsigned short, wxBitmap> m_machineBitmapMap;
+
+class DeviceStaticItemPanel : public DeviceItemPanel
+{
+public:
+    DeviceStaticItemPanel(wxWindow* parent, std::string status, int count);
+    void setStatus(const std::string& status);
+    std::string getStatus() const { return m_status; }
+    void setCount(int count);
+    int getCount() const { return m_count; }
+
+private:
+    int             m_count {0};
+    std::string     m_status;
+    wxStaticText*   m_status_text {nullptr};
+    wxStaticText*   m_count_text {nullptr};
 };
 
 
@@ -169,26 +210,29 @@ public:
 
 public:
     DeviceListPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, 
-            const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString);
+            const wxSize& size = wxDefaultSize);
     ~DeviceListPanel();
 
     void msw_rescale();
 
 private:
     void build();
-    void initAllDeviceStatus(wxArrayString& names);
     void connectEvent();
-    void initLocalDevice(std::map<std::string, DeviceItemPanel::DeviceInfo>& deviceInfoMap);
+    void initLocalDevice(std::map<std::string, DeviceInfoItemPanel::DeviceInfo>& deviceInfoMap);
     void initDeviceList();
     void updateFilterMap();
     void updatePlacementMap();
     void updateStatusMap();
     void updateTypeMap();
+    void updateFilterTitle();
+    void updateStaticMap();
+    void updateSizer();
     void filterDeviceList();
+    void updateDeviceWindowSize();
 
     void onFilterButtonClicked(wxMouseEvent &event);
     void onNetworkTypeToggled(wxCommandEvent& event);
-    void on_static_mode_toggled(wxCommandEvent &event);
+    void onStaticModeToggled(wxCommandEvent &event);
     void onDeviceListUpdated(DeviceListUpdateEvent& event);
     void onComDevDetailUpdate(ComDevDetailUpdateEvent& event);
     void onPopupShow(wxShowEvent& event);
@@ -207,12 +251,14 @@ private:
     wxStaticBitmap* m_no_device_bitmap {nullptr};
     wxStaticText*   m_no_device_staticText {nullptr};
     wxBoxSizer     *m_no_device_sizer {nullptr};
-    wxScrolledWindow* m_device_window {nullptr};
+    wxScrolledWindow* m_device_scrolled_window {nullptr};
+    wxPanel*        m_device_panel {nullptr};
     wxGridSizer*    m_device_sizer {nullptr};
     
     FilterPopupType m_filter_popup_type {Filter_Popup_Type_None};
     FilterPopupWindow* m_filter_popup {nullptr};
-    std::map<std::string, DeviceItemPanel*> m_device_map;
+    std::map<std::string, DeviceInfoItemPanel*> m_device_map;
+    std::map<std::string, DeviceStaticItemPanel*> m_device_stat_map;
     FilterPopupWindow::FilterItem*          m_default_filter_item {nullptr};
     FilterItemMap       m_placement_item_map;
     FilterItemMap       m_status_item_map;

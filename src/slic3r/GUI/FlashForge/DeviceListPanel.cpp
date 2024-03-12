@@ -13,13 +13,14 @@
 namespace Slic3r {
 namespace GUI {
 
-DropDownButton::DropDownButton(wxWindow* parent/*=nullptr*/, const wxString& name/*=wxEmptyString*/, const wxBitmap& bitmap/*=wxNullBitmap*/)
+DropDownButton::DropDownButton(wxWindow* parent/*=nullptr*/, const wxString& text/*=wxEmptyString*/, const wxBitmap& bitmap/*=wxNullBitmap*/)
     : wxPanel(parent)
 {
+    SetMinSize(wxSize(FromDIP(80), FromDIP(24)));
     if (parent) {
         SetBackgroundColour(parent->GetBackgroundColour());
     }
-    m_text = new wxStaticText(this, wxID_ANY, name, wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT);
+    m_text = new wxStaticText(this, wxID_ANY, text, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     m_bitmap = new wxStaticBitmap(this, wxID_ANY, bitmap, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     if (!bitmap.IsNull()) {
         auto sz = bitmap.GetSize();
@@ -28,7 +29,6 @@ DropDownButton::DropDownButton(wxWindow* parent/*=nullptr*/, const wxString& nam
     }
 
     m_sizer = new wxBoxSizer(wxHORIZONTAL);
-    m_sizer->AddStretchSpacer(1);
     m_sizer->Add(m_text, 0, wxALIGN_CENTER_VERTICAL | wxTOP | wxBOTTOM, FromDIP(3));
     m_sizer->AddSpacer(FromDIP(12));
     m_sizer->Add(m_bitmap, 0, wxALIGN_CENTER_VERTICAL | wxTOP | wxBOTTOM, FromDIP(3));
@@ -42,8 +42,21 @@ DropDownButton::DropDownButton(wxWindow* parent/*=nullptr*/, const wxString& nam
 
     Bind(wxEVT_ENTER_WINDOW, &DropDownButton::onEnter, this);
 	Bind(wxEVT_LEAVE_WINDOW, &DropDownButton::onLeave, this);
+    Bind(wxEVT_MOTION, &DropDownButton::onMotion, this);
+    Bind(wxEVT_MOUSE_CAPTURE_LOST, &DropDownButton::onMouseCaptureLost, this);
     m_text->Bind(wxEVT_ENTER_WINDOW, &DropDownButton::onEnter, this);
     m_bitmap->Bind(wxEVT_ENTER_WINDOW, &DropDownButton::onEnter, this);
+}
+
+DropDownButton::~DropDownButton()
+{
+    leaveWindow();
+}
+
+void DropDownButton::setText(const wxString& text)
+{
+    m_text->SetLabel(text);
+    Layout();
 }
 
 wxPoint DropDownButton::convertEventPoint(const wxMouseEvent& event)
@@ -57,13 +70,22 @@ wxPoint DropDownButton::convertEventPoint(const wxMouseEvent& event)
     return pnt;
 }
 
+void DropDownButton::leaveWindow()
+{
+    if (HasCapture()) {
+        ReleaseMouse();
+        //BOOST_LOG_TRIVIAL(error) << "DropDownButton ReleaseMouse";
+        //flush_logs();
+    }
+}
+
 void DropDownButton::onEnter(wxMouseEvent& event)
 {
     if (isPointIn(convertEventPoint(event))) {
         if (!HasCapture()) {
-            //BOOST_LOG_TRIVIAL(error) << "DropDownButton::onEnter";
-            //flush_logs();
             CaptureMouse();
+            //BOOST_LOG_TRIVIAL(error) << "DropDownButton CaptureMouse";
+            //flush_logs();
         }
     }
     event.Skip();
@@ -71,13 +93,21 @@ void DropDownButton::onEnter(wxMouseEvent& event)
 
 void DropDownButton::onLeave(wxMouseEvent& event)
 {
-    if (!isPointIn(convertEventPoint(event))) {
-        if (HasCapture()) {
-            //BOOST_LOG_TRIVIAL(debug) << "DropDownButton::onLeave";
-            //flush_logs();
-            ReleaseMouse();
-        }
+    leaveWindow();
+    event.Skip();
+}
+
+void DropDownButton::onMotion(wxMouseEvent& event)
+{
+    if (!isPointIn(event.GetPosition())) {
+        leaveWindow();
     }
+    event.Skip();
+}
+
+void DropDownButton::onMouseCaptureLost(wxMouseCaptureLostEvent& event)
+{
+    leaveWindow();
     event.Skip();
 }
 
@@ -118,8 +148,15 @@ FilterPopupWindow::FilterItem::FilterItem(wxWindow* parent, const wxString& text
     Bind(wxEVT_LEAVE_WINDOW, &FilterItem::onLeave, this);
     Bind(wxEVT_LEFT_DOWN, &FilterItem::onMouseDown, this);
     Bind(wxEVT_LEFT_UP, &FilterItem::onMouseUp, this);
+    Bind(wxEVT_MOTION, &FilterItem::onMotion, this);
+    Bind(wxEVT_MOUSE_CAPTURE_LOST, &FilterItem::onMouseCaptureLost, this);
     m_text->Bind(wxEVT_ENTER_WINDOW, &FilterItem::onEnter, this);
     m_check_box->Bind(wxEVT_ENTER_WINDOW, &FilterItem::onEnter, this);
+}
+
+FilterPopupWindow::FilterItem::~FilterItem()
+{
+    leaveWindow();
 }
 
 void FilterPopupWindow::FilterItem::setSelect(bool select)
@@ -127,7 +164,7 @@ void FilterPopupWindow::FilterItem::setSelect(bool select)
     if (m_selectFlag != select) {
         m_selectFlag = select;
         Refresh();
-    }    
+    }
 }
 
 bool FilterPopupWindow::FilterItem::isSelect() const
@@ -225,7 +262,7 @@ void FilterPopupWindow::FilterItem::onEnter(wxMouseEvent& event)
     }
     if (isPointIn(pnt)) {
         if (!HasCapture()) {
-            //BOOST_LOG_TRIVIAL(error) << "FilterItem::onEnter";
+            //BOOST_LOG_TRIVIAL(error) << "FilterItem CaptureMouse";
             //flush_logs();
             CaptureMouse();
         }
@@ -237,14 +274,9 @@ void FilterPopupWindow::FilterItem::onEnter(wxMouseEvent& event)
 
 void FilterPopupWindow::FilterItem::onLeave(wxMouseEvent& event)
 {
-    if (HasCapture()) {
-        //BOOST_LOG_TRIVIAL(error) << "FilterItem::onLeave";
-        //flush_logs();
-        ReleaseMouse();
-    }
-    m_hoverFlag = false;
-    m_pressFlag = false;
-    Refresh();
+    //BOOST_LOG_TRIVIAL(error) << "FilterItem::onLeave";
+    //flush_logs();
+    leaveWindow();
     event.Skip();
 }
 
@@ -273,6 +305,32 @@ void FilterPopupWindow::FilterItem::onMouseUp(wxMouseEvent& event)
     event.Skip();
 }
 
+void FilterPopupWindow::FilterItem::onMotion(wxMouseEvent& event)
+{
+    if (!isPointIn(event.GetPosition())) {
+        leaveWindow();
+    }
+    event.Skip();
+}
+
+void FilterPopupWindow::FilterItem::onMouseCaptureLost(wxMouseCaptureLostEvent& event)
+{
+    leaveWindow();
+    event.Skip();
+}
+
+void FilterPopupWindow::FilterItem::leaveWindow()
+{
+    if (HasCapture()) {
+        ReleaseMouse();
+        //BOOST_LOG_TRIVIAL(error) << "FilterItem ReleaseMouse";
+        //flush_logs();
+    }
+    m_hoverFlag = false;
+    m_pressFlag = false;
+    Refresh();
+}
+
 void FilterPopupWindow::FilterItem::sendEvent()
 {
     wxCommandEvent event(EVT_FILTER_ITEM_CLICKED);
@@ -281,10 +339,9 @@ void FilterPopupWindow::FilterItem::sendEvent()
     wxPostEvent(this, event);
 }
 
-//void onMouseUp(wxMouseEvent& event);
 bool FilterPopupWindow::FilterItem::isPointIn(const wxPoint& pnt)
 {
-    return true;
+    return !(wxHT_WINDOW_OUTSIDE == HitTest(pnt));
 }
 
 
@@ -371,65 +428,33 @@ void FilterPopupWindow::onPaint(wxPaintEvent& event)
 
 
 std::map<unsigned short, wxBitmap> DeviceItemPanel::m_machineBitmapMap;
-DeviceItemPanel::DeviceItemPanel(wxWindow *parent, const DeviceInfo& info) 
+DeviceItemPanel::DeviceItemPanel(wxWindow *parent) 
     : wxPanel(parent)
-{ 
-    build();
-    connectEvent();
-    updateInfo(info);
-}
-
-void DeviceItemPanel::build()
 {
-    Freeze();
     SetSize(FromDIP(220), FromDIP(205));
     SetMinSize(wxSize(FromDIP(220), FromDIP(205)));
     SetMaxSize(wxSize(FromDIP(220), FromDIP(205)));
 
-    m_name_text = new wxStaticText(this, wxID_ANY, wxT("AD5M"));
-    m_name_text->SetBackgroundColour(m_bg_color);
-    m_icon = new wxStaticBitmap(this, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxSize(FromDIP(112), FromDIP(112)), wxALIGN_LEFT);
-    m_icon->SetMinSize(wxSize(FromDIP(112), FromDIP(112)));
-    m_icon->SetMaxSize(wxSize(FromDIP(112), FromDIP(112)));
-    m_icon->SetBackgroundColour(m_bg_color);
-    //m_icon->SetBitmap(create_scaled_bitmap("device_Ad5m", nullptr, FromDIP(112)));
-    m_placement_text = new wxStaticText(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    m_placement_text->SetBackgroundColour(m_bg_color);
-    m_status_text = new wxStaticText(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    m_status_text->SetBackgroundColour(m_bg_color);
-
     m_main_sizer = new wxBoxSizer(wxVERTICAL);
-    m_main_sizer->AddStretchSpacer(1);
-    m_main_sizer->Add(m_name_text, 0, wxEXPAND | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(10));
-    m_main_sizer->AddSpacer(FromDIP(3));
-    m_main_sizer->Add(m_icon, 0, wxALIGN_CENTER | wxLEFT | wxRIGHT, FromDIP(10));
-    m_main_sizer->AddSpacer(FromDIP(3));
-    m_main_sizer->Add(m_placement_text, 0, wxEXPAND | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(10));
-    m_main_sizer->AddSpacer(FromDIP(3));
-    m_main_sizer->Add(m_status_text, 0, wxEXPAND | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(10));
-    m_main_sizer->AddStretchSpacer(1);
-
     SetSizer(m_main_sizer);
     Layout();
-    Fit();
-    Thaw();
+
+    Bind(wxEVT_LEFT_DOWN, &DeviceItemPanel::mouseDown, this);
+    Bind(wxEVT_LEFT_UP, &DeviceItemPanel::mouseReleased, this);
+    Bind(wxEVT_ENTER_WINDOW, &DeviceItemPanel::onEnter, this);
+    Bind(wxEVT_LEAVE_WINDOW, &DeviceItemPanel::onLeave, this);
+    Bind(wxEVT_MOTION, &DeviceItemPanel::onMotion, this);
+    Bind(wxEVT_MOUSE_CAPTURE_LOST, &DeviceItemPanel::onMouseCaptionLost, this);
+    Bind(wxEVT_PAINT, &DeviceItemPanel::onPaint, this);
 }
 
-void DeviceItemPanel::connectEvent() 
+DeviceItemPanel::~DeviceItemPanel()
 {
-    blockMouseEvent(false);
-    //Bind(wxEVT_LEFT_DOWN, &DeviceItemPanel::mouseDown, this);
-    //Bind(wxEVT_LEFT_UP, &DeviceItemPanel::mouseReleased, this);
-    //Bind(wxEVT_ENTER_WINDOW, &DeviceItemPanel::onEnter, this);
-    //Bind(wxEVT_LEAVE_WINDOW, &DeviceItemPanel::onLeave, this);
-    //Bind(wxEVT_MOTION, &DeviceItemPanel::onMotion, this);
-    //Bind(wxEVT_MOUSE_CAPTURE_LOST, &DeviceItemPanel::onMouseCaptureLost, this);
-    Bind(wxEVT_PAINT, &DeviceItemPanel::onPaint, this);
+    leaveWindow();
 }
 
 void DeviceItemPanel::blockMouseEvent(bool block)
 {
-    m_blockFlag = block;
     if (block) {
         Unbind(wxEVT_LEFT_DOWN, &DeviceItemPanel::mouseDown, this);
         Unbind(wxEVT_LEFT_UP, &DeviceItemPanel::mouseReleased, this);
@@ -446,6 +471,18 @@ void DeviceItemPanel::blockMouseEvent(bool block)
 bool DeviceItemPanel::isPointIn(const wxPoint& pt)
 {
     return !(wxHT_WINDOW_OUTSIDE == HitTest(pt));
+}
+
+void DeviceItemPanel::leaveWindow()
+{
+    m_hovered = false;
+    m_pressed = false;
+    Refresh();
+    if (HasCapture()) {
+        ReleaseMouse();
+        //BOOST_LOG_TRIVIAL(error) << "DeviceItemPanel ReleaseMouse";
+        //flush_logs();
+    }
 }
 
 void DeviceItemPanel::mouseDown(wxMouseEvent& event)
@@ -473,9 +510,9 @@ void DeviceItemPanel::onEnter(wxMouseEvent& event)
         m_hovered = true;
         Refresh();
         if (!HasCapture()) {
-            //BOOST_LOG_TRIVIAL(error) << "DeviceItemPanel::onEnter";
-            //flush_logs();
             CaptureMouse();
+            //BOOST_LOG_TRIVIAL(error) << "DeviceItemPanel CaptureMouse";
+            //flush_logs();
         }
     }
     event.Skip();
@@ -483,16 +520,23 @@ void DeviceItemPanel::onEnter(wxMouseEvent& event)
 
 void DeviceItemPanel::onLeave(wxMouseEvent& event)
 {
+    //BOOST_LOG_TRIVIAL(error) << "DeviceItemPanel::onLeave";
+    //flush_logs();
+    leaveWindow();
+    event.Skip();
+}
+
+void DeviceItemPanel::onMotion(wxMouseEvent& event)
+{
     if (!isPointIn(event.GetPosition())) {
-        m_hovered = false;
-        m_pressed = false;
-        Refresh();
-        if (HasCapture()) {
-            //BOOST_LOG_TRIVIAL(error) << "DeviceIemPanel::onLeave";
-            //flush_logs();
-            ReleaseMouse();
-        }
+        leaveWindow();
     }
+    event.Skip();
+}
+
+void DeviceItemPanel::onMouseCaptionLost(wxMouseCaptureLostEvent& event)
+{
+    leaveWindow();
     event.Skip();
 }
 
@@ -522,7 +566,75 @@ void DeviceItemPanel::sendEvent()
     wxPostEvent(this, event);
 }
 
-void DeviceItemPanel::updateInfo(const DeviceInfo& info)
+wxString DeviceItemPanel::statusText(const std::string& status, wxColour& color)
+{
+    wxString st = _T("Idle");    
+    color = wxColour("#00CD6D");
+    if ("offline" == status) {
+        st = _L("Offline");
+        color = wxColour("#999999");
+    } else {
+        if ("printing" == status) {
+            st = _L("Printing");
+            color = wxColour("#4D54FF");
+        } else if ("pause" == status || "pausing" == status) {
+            st = _L("Paused");
+            color = wxColour("#982187");
+        } else if ("error" == status) {
+            st = _L("Error");
+            color = wxColour("#FD4A29");
+        } else if ("busy" == status || "calibrate_doing" == status || "heating" == status) {
+            st = _L("Busy");
+            color = wxColour("#F9B61C");
+        } else if ("completed" == status) {
+            st = _L("Completed");
+            color = wxColour("#328DFB");
+        } else if ("cancel" == status || "canceling" == status) {
+            st = _L("Cancel");
+            color = wxColour("#328DFB");
+        }
+        //} else if ("heating" == rawstatus) {
+        //    status = _L("Heating");
+        //    //color = wxColour("");
+        //}
+    }
+    return st;
+}
+
+
+DeviceInfoItemPanel::DeviceInfoItemPanel(wxWindow *parent, const DeviceInfo& info)
+    : DeviceItemPanel(parent)
+{
+    Freeze();
+    m_name_text = new wxStaticText(this, wxID_ANY, wxT("AD5M"));
+    m_name_text->SetBackgroundColour(m_bg_color);
+    m_icon = new wxStaticBitmap(this, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxSize(FromDIP(112), FromDIP(112)), wxALIGN_LEFT);
+    m_icon->SetMinSize(wxSize(FromDIP(112), FromDIP(112)));
+    m_icon->SetMaxSize(wxSize(FromDIP(112), FromDIP(112)));
+    m_icon->SetBackgroundColour(m_bg_color);
+    //m_icon->SetBitmap(create_scaled_bitmap("device_Ad5m", nullptr, FromDIP(112)));
+    m_placement_text = new wxStaticText(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_placement_text->SetBackgroundColour(m_bg_color);
+    m_status_text = new wxStaticText(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_status_text->SetBackgroundColour(m_bg_color);
+
+    m_main_sizer->AddStretchSpacer(1);
+    m_main_sizer->Add(m_name_text, 0, wxEXPAND | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(10));
+    m_main_sizer->AddSpacer(FromDIP(3));
+    m_main_sizer->Add(m_icon, 0, wxALIGN_CENTER | wxLEFT | wxRIGHT, FromDIP(10));
+    m_main_sizer->AddSpacer(FromDIP(3));
+    m_main_sizer->Add(m_placement_text, 0, wxEXPAND | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(10));
+    m_main_sizer->AddSpacer(FromDIP(3));
+    m_main_sizer->Add(m_status_text, 0, wxEXPAND | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(10));
+    m_main_sizer->AddStretchSpacer(1);
+
+    Layout();
+    Thaw();
+
+    updateInfo(info);
+}
+
+void DeviceInfoItemPanel::updateInfo(const DeviceInfo& info)
 {
     m_name_text->SetLabel(info.name);
     if (info.placement.empty()) {
@@ -538,12 +650,23 @@ void DeviceItemPanel::updateInfo(const DeviceInfo& info)
     Layout();
 }
 
-const DeviceItemPanel::DeviceInfo& DeviceItemPanel::deviceInfo() const
+const DeviceInfoItemPanel::DeviceInfo& DeviceInfoItemPanel::deviceInfo() const
 {
     return m_info;
 }
 
-wxBitmap DeviceItemPanel::machineBitmap(unsigned short pid)
+void DeviceInfoItemPanel::updateStatus()
+{
+    if (m_info.conn_id < 0) {
+        m_info.status = "offline";
+    }
+    wxColour color("#00CD6D");
+    wxString status = statusText(m_info.status, color);
+    m_status_text->SetLabel(status);
+    m_status_text->SetForegroundColour(color);
+}
+
+wxBitmap DeviceInfoItemPanel::machineBitmap(unsigned short pid)
 {
     wxBitmap bmp;
     auto iter = m_machineBitmapMap.find(pid);
@@ -559,47 +682,51 @@ wxBitmap DeviceItemPanel::machineBitmap(unsigned short pid)
     return bmp;
 }
 
-void DeviceItemPanel::updateStatus()
+
+DeviceStaticItemPanel::DeviceStaticItemPanel(wxWindow* parent, std::string status, int count)
+    : DeviceItemPanel(parent)
+    , m_count(count)
+    , m_status(status)
 {
-    wxString status = _T("Idle");    
-    wxColour color("#00CD6D");
-    if (m_info.conn_id < 0 || "offline" == m_info.status) {
-        status = _L("Offline");
-        color = wxColour("#999999");
-    } else {
-        wxString rawstatus = m_info.status;
-        if ("printing" == rawstatus) {
-            status = _L("Printing");
-            color = wxColour("#4D54FF");
-        } else if ("pause" == rawstatus || "pausing" == rawstatus) {
-            status = _L("Paused");
-            color = wxColour("#982187");
-        } else if ("error" == rawstatus) {
-            status = _L("Error");
-            color = wxColour("#FD4A29");
-        } else if ("busy" == rawstatus || "calibrate_doing" == rawstatus || "heating" == rawstatus) {
-            status = _L("Busy");
-            color = wxColour("#F9B61C");
-        } else if ("completed" == rawstatus) {
-            status = _L("Completed");
-            color = wxColour("#328DFB");
-        } else if ("cancel" == rawstatus || "canceling" == rawstatus) {
-            status = _L("Cancel");
-            color = wxColour("#328DFB");
-        }
-        //} else if ("heating" == rawstatus) {
-        //    status = _L("Heating");
-        //    //color = wxColour("");
-        //}
-    }
-    m_status_text->SetLabel(status);
+    Freeze();
+    wxColour color;
+    wxString wxstatus = statusText(m_status, color);
+    m_status_text = new wxStaticText(this, wxID_ANY, wxstatus, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
     m_status_text->SetForegroundColour(color);
+    m_status_text->SetBackgroundColour(wxColour("#ffffff"));
+    m_count_text = new wxStaticText(this, wxID_ANY, wxString::Format("%d", m_count), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
+    m_count_text->SetFont(::Label::Head_18);
+    m_count_text->SetBackgroundColour(wxColour("#ffffff"));
+
+    m_main_sizer->AddStretchSpacer(1);
+    m_main_sizer->Add(m_status_text, 0, wxEXPAND | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(10));
+    m_main_sizer->AddSpacer(FromDIP(40));
+    m_main_sizer->Add(m_count_text, 0, wxEXPAND | wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT, FromDIP(10));
+    m_main_sizer->AddSpacer(FromDIP(50));
+    m_main_sizer->AddStretchSpacer(1);
+    Layout();
+    Thaw();
+}
+
+void DeviceStaticItemPanel::setStatus(const std::string& status)
+{
+    wxColour color;
+    wxString wxstatus = statusText(m_status, color);
+    m_status_text->SetLabel(wxstatus);
+    m_status_text->SetBackgroundColour(color);
+    Layout();
+}
+void DeviceStaticItemPanel::setCount(int count)
+{
+    m_count = count;
+    m_count_text->SetLabel(wxString::Format("%d", m_count));
+    Layout();
 }
 
 
 DeviceListPanel::DeviceListPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, 
-        const wxSize& size, long style, const wxString& name)
-    : wxPanel(parent, id, pos, size, style, name)
+        const wxSize& size)
+    : wxPanel(parent, id, pos, size, wxTAB_TRAVERSAL)
 {
     this->SetBackgroundColour(0xEEEEEE);
 
@@ -620,16 +747,14 @@ void DeviceListPanel::msw_rescale()
 
 void DeviceListPanel::build()
 {
+    //SetScrollRate(5, 5);
     m_filter_popup = new FilterPopupWindow(this);
     m_default_filter_item = new FilterPopupWindow::FilterItem(m_filter_popup, _L("All"), true);
     m_default_filter_item->Bind(EVT_FILTER_ITEM_CLICKED, &DeviceListPanel::onFilterItemClicked, this);
     m_default_filter_item->Show(false);
     SetBackgroundColour(wxColour("#F0F0F0"));
-    m_placement_btn = new DropDownButton(this, _L("Position"), create_scaled_bitmap("device_dropdown", this, 8));
-    //m_listBox_position = new ListBoxPopup(this, names);
+    m_placement_btn = new DropDownButton(this, _L("All"), create_scaled_bitmap("device_dropdown", this, 8));
     m_status_btn  = new DropDownButton(this, _L("Status"), create_scaled_bitmap("device_dropdown", this, 8));
-    //initAllDeviceStatus(names);
-    //m_status = new ListBoxPopup(this, names);
     m_type_btn = new DropDownButton(this, _L("Machine Type"), create_scaled_bitmap("device_dropdown", this, 8));
     m_wlan_btn = new FFToggleButton(this, _L("Network"));
     m_wlan_btn->SetValue(true);
@@ -648,11 +773,11 @@ void DeviceListPanel::build()
     lan_line->SetBackgroundColour("#666666");
 
     wxBoxSizer* hTopSizer = new wxBoxSizer(wxHORIZONTAL);
-    hTopSizer->Add(m_placement_btn, 0, wxALIGN_CENTER_VERTICAL);
+    hTopSizer->Add(m_placement_btn, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_LEFT);
     hTopSizer->AddSpacer(FromDIP(50));
-    hTopSizer->Add(m_status_btn, 0, wxALIGN_CENTER_VERTICAL);
+    hTopSizer->Add(m_status_btn, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_LEFT);
     hTopSizer->AddSpacer(FromDIP(50));
-    hTopSizer->Add(m_type_btn, 0, wxALIGN_CENTER_VERTICAL);
+    hTopSizer->Add(m_type_btn, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_LEFT);
     hTopSizer->AddStretchSpacer(1);
     hTopSizer->Add(m_wlan_btn, 0, wxALIGN_CENTER_VERTICAL);
     hTopSizer->AddSpacer(FromDIP(10));
@@ -680,43 +805,40 @@ void DeviceListPanel::build()
     m_no_device_panel->Layout();
     m_simple_book->AddPage(m_no_device_panel, wxEmptyString, true);
 
-    m_device_window = new wxScrolledWindow(m_simple_book);
-    m_device_window->EnableScrolling(true, true);
-    m_device_window->SetScrollRate(0, 10);
+    m_device_scrolled_window = new wxScrolledWindow(m_simple_book, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHSCROLL | wxVSCROLL);
+    m_device_scrolled_window->SetScrollRate(5, 5);
+    m_device_panel = new wxPanel(m_device_scrolled_window);
+    wxBoxSizer* scroll_sizer = new wxBoxSizer(wxVERTICAL);
+    scroll_sizer->AddSpacer(FromDIP(30));
+    scroll_sizer->Add(m_device_panel, 1, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
+    scroll_sizer->AddSpacer(FromDIP(30));
+    m_device_scrolled_window->SetSizer(scroll_sizer);
+    //m_device_window->EnableScrolling(true, true);
+    //m_device_window->SetScrollRate(0, 10);
     wxBoxSizer* device_sizer = new wxBoxSizer(wxVERTICAL);
     //m_device_panel->SetBackgroundColour(wxColour("#F0F0F0"));
     m_device_sizer = new wxGridSizer(5);
-    m_device_sizer->SetHGap(FromDIP(40));
-    m_device_sizer->SetVGap(FromDIP(40));
+    m_device_sizer->SetHGap(FromDIP(30));
+    m_device_sizer->SetVGap(FromDIP(30));
     device_sizer->Add(m_device_sizer, 0, wxALIGN_LEFT | wxALIGN_TOP);
-    m_device_window->SetSizer(device_sizer);
-    m_simple_book->AddPage(m_device_window, wxEmptyString, false);
+    m_device_panel->SetSizer(device_sizer);
+    m_simple_book->AddPage(m_device_scrolled_window, wxEmptyString, false);
 
     wxPanel *hor_line = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 1));
     hor_line->SetBackgroundColour("#ffffff");
     wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
     sizer->AddSpacer(FromDIP(10));
-    sizer->Add(hTopSizer, 0, wxEXPAND | wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT, FromDIP(40));
+    sizer->Add(hTopSizer, 0, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(30));
     sizer->AddSpacer(FromDIP(10));
-    sizer->Add(hor_line, 0, wxALIGN_CENTER_HORIZONTAL | wxEXPAND | wxLEFT | wxRIGHT, FromDIP(40));
-    sizer->AddSpacer(FromDIP(40));
-    sizer->Add(m_simple_book, 1, wxEXPAND | wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT, FromDIP(40));
-    sizer->AddSpacer(FromDIP(40));
+    sizer->Add(hor_line, 0, wxALIGN_CENTER_HORIZONTAL | wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
+    //sizer->AddSpacer(FromDIP(30));
+    sizer->Add(m_simple_book, 1, wxEXPAND | wxALIGN_CENTER_HORIZONTAL);
+    //sizer->AddSpacer(FromDIP(30));
     //sizer->Add(m_machinePanel, 1, wxEXPAND);
 
     this->SetSizer(sizer);
     this->Layout();
     this->Fit();
-}
-
-void DeviceListPanel::initAllDeviceStatus(wxArrayString &names)
-{
-    names.Clear();
-    names.Add("All");
-    names.Add("Idle");
-    names.Add("Busy");
-    names.Add("Error");
-    names.Add("Printing");
 }
 
 void DeviceListPanel::connectEvent()
@@ -726,20 +848,20 @@ void DeviceListPanel::connectEvent()
     m_type_btn->Bind(wxEVT_LEFT_DOWN, &DeviceListPanel::onFilterButtonClicked, this);
     m_wlan_btn->Bind(wxEVT_TOGGLEBUTTON, &DeviceListPanel::onNetworkTypeToggled, this);
     m_lan_btn->Bind(wxEVT_TOGGLEBUTTON, &DeviceListPanel::onNetworkTypeToggled, this);
-    m_static_btn->Bind(wxEVT_TOGGLEBUTTON, &DeviceListPanel::on_static_mode_toggled, this);
+    m_static_btn->Bind(wxEVT_TOGGLEBUTTON, &DeviceListPanel::onStaticModeToggled, this);
     MultiComMgr::inst()->Bind(COM_DEV_DETAIL_UPDATE_EVENT, &DeviceListPanel::onComDevDetailUpdate, this);
     wxGetApp().getDeviceObjectOpr()->Bind(EVT_DEVICE_LIST_UPDATED, &DeviceListPanel::onDeviceListUpdated, this);
     m_filter_popup->Bind(wxEVT_SHOW, &DeviceListPanel::onPopupShow, this);
 }
 
-void DeviceListPanel::initLocalDevice(std::map<std::string, DeviceItemPanel::DeviceInfo>& deviceInfoMap)
+void DeviceListPanel::initLocalDevice(std::map<std::string, DeviceInfoItemPanel::DeviceInfo>& deviceInfoMap)
 {
     deviceInfoMap.clear();
     AppConfig *config = wxGetApp().app_config;
     if (config) {
         std::vector<MacInfoMap> macInfo;
         config->get_local_mahcines(macInfo);
-        DeviceItemPanel::DeviceInfo dev_info;
+        DeviceInfoItemPanel::DeviceInfo dev_info;
         dev_info.lanFlag = true;
         dev_info.status = "offline";
         for (auto& mac : macInfo) {
@@ -768,7 +890,7 @@ void DeviceListPanel::initLocalDevice(std::map<std::string, DeviceItemPanel::Dev
 
 void DeviceListPanel::initDeviceList()
 {
-    std::map<std::string, DeviceItemPanel::DeviceInfo> devList;
+    std::map<std::string, DeviceInfoItemPanel::DeviceInfo> devList;
     initLocalDevice(devList);
     if (devList.empty()) {
         m_simple_book->ChangeSelection(0);
@@ -778,28 +900,49 @@ void DeviceListPanel::initDeviceList()
     }
 
     std::vector<std::string> devKeyList;
-    for (auto it: devList) {
+    for (const auto& it: devList) {
         devKeyList.emplace_back(it.first);
     }
     std::sort(devKeyList.begin(), devKeyList.end(), [&devList](auto& a, auto&b) {
         return devList[a].name.compare(devList[b].name) < 0;
     });
     //m_device_map
-    for (auto iter : devKeyList) {
-        DeviceItemPanel* item = new DeviceItemPanel(m_device_window, devList[iter]);
+    for (const auto& iter : devKeyList) {
+        DeviceInfoItemPanel* item = new DeviceInfoItemPanel(m_device_panel, devList[iter]);
+        item->Show(false);
         m_device_map.emplace(std::make_pair(iter, item));
         //m_device_sizer->Add(item);
     }
+    // m_device_stat_map
+    std::map<std::string, int> statusMap;
+    for (const auto& dev : devList) {
+        auto iter = statusMap.find(dev.second.status);
+        if (iter != statusMap.end()) {
+            iter->second += 1;   
+        } else {
+            statusMap.emplace(std::make_pair(dev.second.status, 1));
+        }
+    }
+    for (const auto& iter : statusMap) {
+        auto item = new DeviceStaticItemPanel(m_device_panel, iter.first, iter.second);
+        item->Show(false);
+        m_device_stat_map.emplace(std::make_pair(iter.first, item));
+    }
+
     //m_device_window->Layout();
     //Layout();
     if (!m_device_map.empty()) {
         updateFilterMap();
     }
     filterDeviceList();
+    updateDeviceWindowSize();
 }
 
 void DeviceListPanel::filterDeviceList()
 {
+    if (m_static_btn->GetValue()) {
+        return;
+    }
     Freeze();
     m_device_sizer->Clear();
     for (const auto& iter : m_device_map) {
@@ -815,7 +958,7 @@ void DeviceListPanel::filterDeviceList()
             iter.second->Show(false);
         }
     }
-    m_device_window->Layout();
+    m_device_panel->Layout();
     Layout();
     Thaw();
 }
@@ -863,6 +1006,7 @@ void DeviceListPanel::updateStatusMap()
         backMap.emplace(std::make_pair(iter.first, iter.second));
     }
     m_status_item_map.clear();
+    wxColour color;
     for (auto& iter : m_device_map) {
         std::string status = iter.second->deviceInfo().status;
         auto it = backMap.find(status);
@@ -870,7 +1014,7 @@ void DeviceListPanel::updateStatusMap()
             m_status_item_map.emplace(std::make_pair(status, it->second));
             it->second = nullptr;
         } else if (m_status_item_map.find(status) == m_status_item_map.end()) {
-            auto item = new FilterPopupWindow::FilterItem(m_filter_popup, status);
+            auto item = new FilterPopupWindow::FilterItem(m_filter_popup, DeviceItemPanel::statusText(status, color));
             item->Bind(EVT_FILTER_ITEM_CLICKED, &DeviceListPanel::onFilterItemClicked, this);
             item->Show(false);
             m_status_item_map.emplace(std::make_pair(status, item));
@@ -919,6 +1063,95 @@ void DeviceListPanel::updateTypeMap()
     backMap.clear();
 }
 
+void DeviceListPanel::updateFilterTitle()   
+{
+    if (m_filter_placement_default) {
+        m_placement_btn->setText(_L("All"));
+    } else {
+        m_placement_btn->setText(m_filter_placement);
+    }
+    Layout();
+}
+
+void DeviceListPanel::updateStaticMap()
+{
+    std::map<std::string, int> statusMap;
+    for (const auto& dev : m_device_map) {
+        const auto& status = dev.second->deviceInfo().status;
+        auto iter = statusMap.find(status);
+        if (iter != statusMap.end()) {
+            iter->second += 1;   
+        } else {
+            statusMap.emplace(std::make_pair(status, 1));
+        }
+    }
+    for (auto& iter : m_device_stat_map) {
+        iter.second->setCount(0);
+    }
+    for (const auto& iter : statusMap) {
+        auto it = m_device_stat_map.find(iter.first);
+        if (it != m_device_stat_map.end()) {
+            it->second->setCount(iter.second);
+            m_device_stat_map.emplace(std::make_pair(iter.first, it->second));
+        } else {
+            auto item = new DeviceStaticItemPanel(m_device_panel, iter.first, iter.second);
+            item->Show(false);
+            m_device_stat_map.emplace(std::make_pair(iter.first, item));
+        }
+    }
+}
+
+void DeviceListPanel::updateSizer()
+{
+    if (m_static_btn->GetValue()) {
+        Freeze();
+        m_device_sizer->Clear();
+        for (const auto& iter : m_device_map) {
+            iter.second->Show(false);
+        }
+        for (const auto& iter : m_device_stat_map) {
+            iter.second->Show(true);
+            m_device_sizer->Add(iter.second);
+        }
+        m_device_panel->Layout();
+        Layout();
+        Thaw();
+    } else {
+        for (const auto& iter : m_device_stat_map) {
+            iter.second->Show(false);
+        }
+        filterDeviceList();
+    }
+}
+
+void DeviceListPanel::updateDeviceWindowSize()
+{
+    int count = 0;
+    if (m_static_btn->GetValue()) {
+         for (const auto& iter : m_device_stat_map) {
+            if (iter.second->getCount() > 0) {
+                count++;
+            }
+         }
+    } else {
+        count = (int)m_device_map.size();
+    }
+    //m_device_window->SetMinSize(wxSize(FromDIP(5*220+4*40), ))
+    int width = 5 * 220 + 4 * 30;
+    int hcnt = count / 5;
+    if (hcnt * 5 < count) {
+        hcnt += 1;
+    }
+    if (hcnt == 0) {
+        hcnt = 1;
+    }
+    int height = hcnt * 205 + (hcnt - 1) * 30;
+    m_device_panel->SetMinSize(wxSize(FromDIP(width), FromDIP(height)));
+    //m_simple_book->SetMinSize(wxSize(FromDIP(width), FromDIP(height)));
+    Layout();
+    Fit();
+}
+
 void DeviceListPanel::onPopupShow(wxShowEvent& event)
 {
     bool show = event.IsShown();
@@ -961,6 +1194,7 @@ void DeviceListPanel::onFilterItemClicked(wxCommandEvent& event)
         }
     }
     filterDeviceList();
+    updateFilterTitle();
 }
 
 void DeviceListPanel::onFilterButtonClicked(wxMouseEvent &event)
@@ -1018,13 +1252,12 @@ void DeviceListPanel::onFilterButtonClicked(wxMouseEvent &event)
 void DeviceListPanel::onNetworkTypeToggled(wxCommandEvent& event)
 {
     filterDeviceList();
+    event.Skip();
 }
 
-void DeviceListPanel::on_static_mode_toggled(wxCommandEvent &event)
+void DeviceListPanel::onStaticModeToggled(wxCommandEvent &event)
 {
-    //m_simple_book->SetSelection(1);
-    //m_simple_book->Layout();
-    //Layout();
+    updateSizer();
     event.Skip();
 }
 
@@ -1035,7 +1268,7 @@ void DeviceListPanel::onDeviceListUpdated(DeviceListUpdateEvent& event)
     bool valid = false;
     const com_dev_data_t &data = MultiComMgr::inst()->devData(conn_id, &valid);
     if (valid) {
-        DeviceItemPanel::DeviceInfo dev_info;
+        DeviceInfoItemPanel::DeviceInfo dev_info;
         dev_info.conn_id = conn_id;
         dev_info.lanFlag = (COM_CONNECT_LAN == data.connectMode);
         dev_info.name = data.devDetail->name;
@@ -1044,46 +1277,55 @@ void DeviceListPanel::onDeviceListUpdated(DeviceListUpdateEvent& event)
         dev_info.status = data.devDetail->status;
         if (dev_info.status.empty()) dev_info.status = "offline";
 
-        //
-        auto iter = m_device_map.find(dev_id);
-        if (iter == m_device_map.end()) {
-            DeviceItemPanel* item = new DeviceItemPanel(m_device_window, dev_info);
-            m_device_map.emplace(std::make_pair(dev_id, item));
-            m_device_sizer->Add(item);
-            m_device_window->Layout();
-            Layout();
+        DeviceInfoItemPanel* info_item = new DeviceInfoItemPanel(m_device_panel, dev_info);
+        auto info_iter = m_device_map.find(dev_id);
+        if (info_iter == m_device_map.end()) {
+            m_device_map.emplace(std::make_pair(dev_id, info_item));
         } else {
-            //if (data.devDetail->status)
+            info_iter->second->updateInfo(dev_info);
         }
     } else {
-        auto iter = m_device_map.find(dev_id);
-        if (iter != m_device_map.end()) {
-            m_device_sizer->Detach(iter->second);
-            iter->second->Destroy();
-            m_device_map.erase(iter);            
-            m_device_window->Layout();
-            Layout();
+        if (!m_static_btn->GetValue()) {
+            auto iter = m_device_map.find(dev_id);
+            if (iter != m_device_map.end()) {
+                iter->second->Destroy();
+                m_device_map.erase(iter);
+            }
         }
     }
     updateFilterMap();
+    updateStaticMap();
+    updateDeviceWindowSize();
+    updateSizer();
     event.Skip();
 }
 
 void DeviceListPanel::onComDevDetailUpdate(ComDevDetailUpdateEvent& event)
 {
-    auto com_id = event.id;
+    auto conn_id = event.id;
     bool valid = false;
-    auto data = MultiComMgr::inst()->devData(com_id, &valid);
+    const auto& data = MultiComMgr::inst()->devData(conn_id, &valid);
     if (valid) {
+        bool status_changed = false;
         std::string dev_id = (data.connectMode == COM_CONNECT_LAN) ? data.lanDevInfo.serialNumber : data.wanDevInfo.serialNumber;
         auto iter = m_device_map.find(dev_id);
         if (iter != m_device_map.end()) {
             auto dev_info = iter->second->deviceInfo();
+            dev_info.conn_id = conn_id;
             dev_info.name = data.devDetail->name;
             dev_info.pid = data.devDetail->pid;
             dev_info.placement = data.devDetail->location;
-            dev_info.status = data.devDetail->status;
+            if (dev_info.status != data.devDetail->status) {
+                dev_info.status = data.devDetail->status;
+                status_changed = true;
+            }
             iter->second->updateInfo(dev_info);
+        }
+        if (status_changed) {
+            updateStaticMap();
+            if (m_static_btn->GetValue()) {
+                updateSizer();
+            }
         }
     }
     event.Skip();
