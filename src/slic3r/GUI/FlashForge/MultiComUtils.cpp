@@ -6,7 +6,7 @@
 
 namespace Slic3r { namespace GUI {
 
-wxDEFINE_EVENT(COM_ASYNC_CALL_EVENT, ComAsyncCallEvent);
+wxDEFINE_EVENT(COM_ASYNC_CALL_FINISH_EVENT, ComAsyncCallFinishEvent);
 
 ComErrno MultiComUtils::getLanDevList(std::vector<fnet_lan_dev_info> &devInfos)
 {
@@ -141,12 +141,29 @@ ComErrno MultiComUtils::getUserProfile(const std::string &accessToken, com_user_
     fnet_user_profile_t *fnetProfile;
     int fnetRet = intfc->getUserProfile(accessToken.c_str(), &fnetProfile, ComTimeoutWan);
     if (fnetRet != FNET_OK) {
-        return MultiComUtils::fnetRet2ComErrno(fnetRet);
+        return fnetRet2ComErrno(fnetRet);
     }
     fnet::FreeInDestructor freeProfile(fnetProfile, intfc->freeUserProfile);
     userProfile.uid = fnetProfile->uid;
     userProfile.nickname = fnetProfile->nickname;
     userProfile.headImgUrl = fnetProfile->headImgUrl;
+    return COM_OK;
+}
+
+ComErrno MultiComUtils::downloadFile(const std::string &url, std::vector<char> &bytes)
+{
+    fnet::FlashNetworkIntfc *intfc = MultiComMgr::inst()->networkIntfc();
+    if (intfc == nullptr) {
+        return COM_UNINITIALIZED;
+    }
+    fnet_file_data_t *fileData;
+    int fnetRet = intfc->downloadFile(url.c_str(), &fileData, nullptr, nullptr, ComTimeoutWan);
+    if (fnetRet != FNET_OK) {
+        return fnetRet2ComErrno(fnetRet);
+    }
+    fnet::FreeInDestructor freeFileData(fileData, intfc->freeFileData);
+    bytes.resize(fileData->size);
+    memcpy(bytes.data(), fileData->data, fileData->size);
     return COM_OK;
 }
 
@@ -179,8 +196,8 @@ void MultiComUtils::asyncCall(wxEvtHandler *evtHandler, const std::function<ComE
     thread = new boost::thread([evtHandler, func, &waitEvent, &thread]() {
         boost::thread *myThread = thread;
         waitEvent.set(true);
-        ComAsyncCallEvent *event = new ComAsyncCallEvent;
-        event->SetEventType(COM_ASYNC_CALL_EVENT);
+        ComAsyncCallFinishEvent *event = new ComAsyncCallFinishEvent;
+        event->SetEventType(COM_ASYNC_CALL_FINISH_EVENT);
         event->ret = func();
         evtHandler->QueueEvent(event);
         evtHandler->CallAfter([myThread]() {

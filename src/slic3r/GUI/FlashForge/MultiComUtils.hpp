@@ -9,10 +9,10 @@
 
 namespace Slic3r { namespace GUI {
 
-struct ComAsyncCallEvent : public wxCommandEvent {
+struct ComAsyncCallFinishEvent : public wxCommandEvent {
     ComErrno ret;
 };
-wxDECLARE_EVENT(COM_ASYNC_CALL_EVENT, ComAsyncCallEvent);
+wxDECLARE_EVENT(COM_ASYNC_CALL_FINISH_EVENT, ComAsyncCallFinishEvent);
 
 class MultiComUtils
 {
@@ -36,6 +36,8 @@ public:
     static ComErrno signOut(const std::string &accessToken);
 
     static ComErrno getUserProfile(const std::string &accessToken, com_user_profile_t &userProfile);
+
+    static ComErrno downloadFile(const std::string &url, std::vector<char> &bytes);
 
     static ComErrno fnetRet2ComErrno(int networkRet);
 
