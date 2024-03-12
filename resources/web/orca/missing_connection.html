@@ -32,6 +32,7 @@
   video {
     width: 100vw;
     height: 100vh;
+    object-fit: fill;
   }
   .container {
     position: relative;
@@ -139,6 +140,7 @@
                   hls.attachMedia(video)
                   if (!streamPaused) {
                     setTimeout(function() {
+                        video.src = ''
                         video.style.backgroundImage = "url('hei.svg')"
                         video.style.backgroundSize = "cover"
                         video.style.backgroundRepeat = "no-repeat"
@@ -157,6 +159,7 @@
                     zanting.style.display = 'none'
                     video.src = lang
                     setTimeout(function() {
+                      video.src = ''
                       video.style.backgroundImage = "url('hei.svg')"
                       video.style.backgroundSize = "cover"
                       video.style.backgroundRepeat = "no-repeat"
@@ -170,6 +173,8 @@
                 } 
               },10)
             } else {
+              video.pause()
+              // video.src = ''
               video.style.backgroundImage = "url('hei.svg')"
               video.style.backgroundSize = "cover"
               video.style.backgroundRepeat = "no-repeat"

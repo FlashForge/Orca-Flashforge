@@ -104,7 +104,7 @@ public:
 
     void setCurId(int curId);
     void modifyVideoPlayerAddress(const std::string &urlAddress);
-
+    void reInitData();
 
     wxBoxSizer *create_monitoring_page();
     wxBoxSizer* create_machine_control_title();
@@ -130,6 +130,8 @@ public:
 private:
     std::string convertSecondsToHMS(int totalSeconds);
     void  fillValue(const com_dev_data_t &data);
+
+    std::string truncateString(const std::string &s, size_t length);
 
 protected:
 //data
@@ -226,6 +228,11 @@ protected:
     double m_last_chamber_fan_speed   = 0.00;
     std::string m_camera_stream_url;
     int         m_pid = 0x0023;
+
+    std::string      m_file_pic_url;
+    wxPanel         *m_panel_control_material{nullptr};
+
+    std::string     m_cur_dev_state;
 };
 
 
