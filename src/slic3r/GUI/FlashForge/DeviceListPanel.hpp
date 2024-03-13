@@ -50,21 +50,15 @@ public:
     class FilterItem : public wxPanel
     {
     public:
-        FilterItem(wxWindow* parent, const wxString& text, bool top_corner_round = false,
-            bool bottom_corner_round = false, bool can_checked = false);
-        ~FilterItem();
+        FilterItem(wxWindow* parent, const wxString& text, bool top_corner_round = false, bool bottom_corner_round = false);
+        virtual ~FilterItem();
 
         void setSelect(bool select);
         bool isSelect() const;
-        void setChecked(bool check);
-        bool isChecked() const;
-        wxString getText() const;
-        void setText(const wxString& text);
         void setTopCornerRound(bool round);
         void setBottomCornerRound(bool round);
-        bool Show(bool show = true) override;
 
-    private:
+    protected:
         void onPaint(wxPaintEvent& event);
         void onEnter(wxMouseEvent& event);
         void onLeave(wxMouseEvent& event);
@@ -73,18 +67,55 @@ public:
         void onMotion(wxMouseEvent& event);
         void onMouseCaptureLost(wxMouseCaptureLostEvent& event);
         bool isPointIn(const wxPoint& pnt);
-        void sendEvent();
         void leaveWindow();
+        void sendEvent(const wxString& str_data, int int_data);
+        virtual wxPoint convertEventPoint(wxMouseEvent& event);
+        virtual void updateChildrenBackground(const wxColour& color);
+        virtual void mouseDownEvent() {};
+        virtual void mouseUpEvent();
 
-    private:
+    protected:
         bool            m_hoverFlag {false};
         bool            m_selectFlag {false};
         bool            m_pressFlag {false};
         bool            m_topCornerRound {false};
         bool            m_bottomCornerRound {false};
-        bool            m_can_check {false};
-        FFCheckBox*     m_check_box {nullptr};
+        wxBoxSizer*     m_main_sizer {nullptr};
         wxStaticText*   m_text {nullptr};
+    };
+
+    class StatusItem final : public FilterItem
+    {
+    public:
+        StatusItem(wxWindow* parent, const std::string& status, bool top_corner_round = false, bool bottom_corner_round = false);
+
+        const std::string& getStatus() const { return m_status; }
+        void setStatus(const std::string& status);
+
+    protected:
+        void mouseUpEvent() override;
+
+    private:
+        std::string     m_status;
+    };
+
+    class DeviceTypeItem final : public FilterItem
+    {
+    public:
+        DeviceTypeItem(wxWindow* parent, unsigned short pid, bool checked = false, bool top_corner_round = false, bool bottom_corner_round = false);
+
+        bool isChecked() const;
+        void setChecked(bool checked);
+
+    protected:
+        wxPoint convertEventPoint(wxMouseEvent& event) override;
+        void updateChildrenBackground(const wxColour& color) override;
+        void mouseUpEvent() override {};
+        void mouseDownEvent() override;
+
+    private:
+        unsigned short  m_pid;
+        FFCheckBox*     m_check_box { nullptr };
     };
 
 public:
@@ -195,7 +226,9 @@ struct StringCompareFunc {
         return lhs < rhs;
     }
 };
-typedef std::map<std::string, FilterPopupWindow::FilterItem*, StringCompareFunc> FilterItemMap;
+typedef std::map<std::string, FilterPopupWindow::FilterItem*, StringCompareFunc> PlacementItemMap;
+typedef std::map<std::string, FilterPopupWindow::StatusItem*, StringCompareFunc> StatusItemMap;
+typedef std::map<unsigned short, FilterPopupWindow::DeviceTypeItem*> DeviceTypeItemMap;
 
 class DeviceListUpdateEvent;
 class DeviceListPanel : public wxPanel
@@ -259,15 +292,15 @@ private:
     FilterPopupWindow* m_filter_popup {nullptr};
     std::map<std::string, DeviceInfoItemPanel*> m_device_map;
     std::map<std::string, DeviceStaticItemPanel*> m_device_stat_map;
-    FilterPopupWindow::FilterItem*          m_default_filter_item {nullptr};
-    FilterItemMap       m_placement_item_map;
-    FilterItemMap       m_status_item_map;
-    FilterItemMap       m_type_item_map;
+    FilterPopupWindow::FilterItem*  m_default_filter_item {nullptr};
+    PlacementItemMap    m_placement_item_map;
+    StatusItemMap       m_status_item_map;
+    DeviceTypeItemMap   m_type_item_map;
     bool                m_filter_placement_default {true};
     std::string         m_filter_placement;
     bool                m_filter_status_default {true};
     std::string         m_filter_status;
-    std::set<std::string> m_filter_types;
+    std::set<unsigned short> m_filter_types;
 };
 
 } // GUI

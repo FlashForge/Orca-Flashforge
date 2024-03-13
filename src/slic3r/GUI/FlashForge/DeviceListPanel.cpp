@@ -118,31 +118,26 @@ bool DropDownButton::isPointIn(const wxPoint& pnt)
 
 
 wxDEFINE_EVENT(EVT_FILTER_ITEM_CLICKED, wxCommandEvent);
-FilterPopupWindow::FilterItem::FilterItem(wxWindow* parent, const wxString& text, bool top_corner_round/*=false*/,
-    bool bottom_corner_round/*=false*/, bool can_checked/*=false*/)
+FilterPopupWindow::FilterItem::FilterItem(wxWindow* parent, const wxString& text, bool top_corner_round/*=false*/, bool bottom_corner_round/*=false*/)
     : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxNO_BORDER)
     , m_topCornerRound(top_corner_round)
     , m_bottomCornerRound(bottom_corner_round)
-    , m_can_check(can_checked)
 {
     //SetBackgroundColour(wxColour("#eeeeee"));
     SetMinSize(wxSize(FromDIP(80), FromDIP(30)));
     SetMaxSize(wxSize(-1, FromDIP(30)));
     SetSize(wxSize(-1, FromDIP(30)));
-    m_check_box = new FFCheckBox(this);
-    m_check_box->Show(can_checked);
-    m_check_box->SetValue(false);
+
+    m_main_sizer = new wxBoxSizer(wxHORIZONTAL);
+    SetSizer(m_main_sizer);
+
     m_text = new wxStaticText(this, wxID_ANY, text);
-    wxBoxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
-    sizer->AddSpacer(FromDIP(15));
-    if (can_checked) {
-        sizer->Add(m_check_box, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT | wxTOP | wxBOTTOM, FromDIP(5));
-    }
-    sizer->Add(m_text, 1, wxALIGN_CENTER_VERTICAL | wxTOP | wxBOTTOM, FromDIP(5));
-    sizer->AddSpacer(FromDIP(15));
-    SetSizer(sizer);
+    m_main_sizer->AddSpacer(FromDIP(15));
+    m_main_sizer->Add(m_text, 1, wxALIGN_CENTER_VERTICAL | wxTOP | wxBOTTOM, FromDIP(5));
+    m_main_sizer->AddSpacer(FromDIP(15));
     Layout();
     Fit();
+
     Bind(wxEVT_PAINT, &FilterItem::onPaint, this);
     Bind(wxEVT_ENTER_WINDOW, &FilterItem::onEnter, this);
     Bind(wxEVT_LEAVE_WINDOW, &FilterItem::onLeave, this);
@@ -151,7 +146,6 @@ FilterPopupWindow::FilterItem::FilterItem(wxWindow* parent, const wxString& text
     Bind(wxEVT_MOTION, &FilterItem::onMotion, this);
     Bind(wxEVT_MOUSE_CAPTURE_LOST, &FilterItem::onMouseCaptureLost, this);
     m_text->Bind(wxEVT_ENTER_WINDOW, &FilterItem::onEnter, this);
-    m_check_box->Bind(wxEVT_ENTER_WINDOW, &FilterItem::onEnter, this);
 }
 
 FilterPopupWindow::FilterItem::~FilterItem()
@@ -172,28 +166,6 @@ bool FilterPopupWindow::FilterItem::isSelect() const
     return m_selectFlag;
 }
 
-void FilterPopupWindow::FilterItem::setChecked(bool check)
-{
-    if (m_check_box->GetValue() != check) {
-        m_check_box->SetValue(check);
-        Refresh();
-    }
-}
-bool FilterPopupWindow::FilterItem::isChecked() const
-{
-    return m_check_box->GetValue();
-}
-
-wxString FilterPopupWindow::FilterItem::getText() const
-{
-    return m_text->GetLabel();
-}
-
-void FilterPopupWindow::FilterItem::setText(const wxString& text)
-{
-    m_text->SetLabel(text);
-}
-
 void FilterPopupWindow::FilterItem::setTopCornerRound(bool round)
 {
     if (m_topCornerRound != round) {
@@ -201,22 +173,13 @@ void FilterPopupWindow::FilterItem::setTopCornerRound(bool round)
         Refresh();
     }
 }
-        
+
 void FilterPopupWindow::FilterItem::setBottomCornerRound(bool round)
 {
     if (m_bottomCornerRound != round) {
         m_bottomCornerRound = round;
         Refresh();
     }
-}
-
-bool FilterPopupWindow::FilterItem::Show(bool show/*=true*/)
-{
-    if (m_can_check) {
-        m_check_box->Show(show);
-    }
-    m_text->Show(show);
-    return wxPanel::Show(show);
 }
 
 void FilterPopupWindow::FilterItem::onPaint(wxPaintEvent& event)
@@ -248,19 +211,28 @@ void FilterPopupWindow::FilterItem::onPaint(wxPaintEvent& event)
         dc.DrawRoundedRectangle(0, 0, sz.x, sz.y, 6);
         dc.DrawRectangle(0, 0, sz.x, 6);
     }
-    m_text->SetBackgroundColour(color);
-    m_check_box->SetBackgroundColour(color);
+    updateChildrenBackground(color);
+    //m_text->SetBackgroundColour(color);
+    //m_check_box->SetBackgroundColour(color);
 }
 
-void FilterPopupWindow::FilterItem::onEnter(wxMouseEvent& event)
+void FilterPopupWindow::FilterItem::updateChildrenBackground(const wxColour& color)
+{
+    m_text->SetBackgroundColour(color);
+}
+
+wxPoint FilterPopupWindow::FilterItem::convertEventPoint(wxMouseEvent& event)
 {
     wxPoint pnt = event.GetPosition();
     if (event.GetId() == m_text->GetId()) {
         pnt += m_text->GetPosition();
-    } else if (event.GetId() == m_check_box->GetId()) {
-        pnt += m_check_box->GetPosition();
     }
-    if (isPointIn(pnt)) {
+    return pnt;
+}
+
+void FilterPopupWindow::FilterItem::onEnter(wxMouseEvent& event)
+{
+    if (isPointIn(convertEventPoint(event))) {
         if (!HasCapture()) {
             //BOOST_LOG_TRIVIAL(error) << "FilterItem CaptureMouse";
             //flush_logs();
@@ -283,10 +255,7 @@ void FilterPopupWindow::FilterItem::onLeave(wxMouseEvent& event)
 void FilterPopupWindow::FilterItem::onMouseDown(wxMouseEvent& event)
 {
     if (isPointIn(event.GetPosition())) {
-        if (m_can_check) {
-            m_check_box->SetValue(!m_check_box->GetValue());
-            sendEvent();
-        }
+        mouseDownEvent();
         m_pressFlag = true;
         Refresh();
     }
@@ -297,9 +266,7 @@ void FilterPopupWindow::FilterItem::onMouseUp(wxMouseEvent& event)
 {
     if (isPointIn(event.GetPosition())) {
         m_pressFlag = false;
-        if (!m_can_check) {
-            sendEvent();
-        }
+        mouseUpEvent();
         Refresh();
     }
     event.Skip();
@@ -331,17 +298,94 @@ void FilterPopupWindow::FilterItem::leaveWindow()
     Refresh();
 }
 
-void FilterPopupWindow::FilterItem::sendEvent()
+void FilterPopupWindow::FilterItem::sendEvent(const wxString& str_data, int int_data)
 {
     wxCommandEvent event(EVT_FILTER_ITEM_CLICKED);
     event.SetEventObject(this);
-    event.SetString(m_text->GetLabel());
+    event.SetString(str_data);
+    event.SetInt(int_data);
     wxPostEvent(this, event);
 }
 
 bool FilterPopupWindow::FilterItem::isPointIn(const wxPoint& pnt)
 {
     return !(wxHT_WINDOW_OUTSIDE == HitTest(pnt));
+}
+
+void FilterPopupWindow::FilterItem::mouseUpEvent()
+{
+    sendEvent(m_text->GetLabel(), 0);
+}
+
+
+FilterPopupWindow::StatusItem::StatusItem(wxWindow* parent, const std::string& status,
+    bool top_corner_round/* = false*/, bool bottom_corner_round/* = false*/)
+    : FilterItem(parent, wxEmptyString, top_corner_round, bottom_corner_round)
+    , m_status(status)
+{
+    setStatus(m_status);
+}
+
+
+void FilterPopupWindow::StatusItem::mouseUpEvent()
+{
+    sendEvent(m_status, 0);
+}
+
+void FilterPopupWindow::StatusItem::setStatus(const std::string& status)
+{
+    wxColour color;
+    m_text->SetLabel(DeviceItemPanel::statusText(m_status, color));
+    Layout();
+}
+
+
+FilterPopupWindow::DeviceTypeItem::DeviceTypeItem(wxWindow* parent, unsigned short pid,
+    bool checked/* = false*/, bool top_corner_round/* = false*/, bool bottom_corner_round/* = false*/)
+    : FilterItem(parent, wxEmptyString, top_corner_round, bottom_corner_round)
+    , m_pid(pid)
+{
+    m_main_sizer->Clear();
+    m_check_box = new FFCheckBox(this);
+    m_check_box->SetValue(checked);
+    m_text->SetLabel(FFUtils::getPrinterName(m_pid));
+    m_main_sizer->AddSpacer(FromDIP(15));
+    m_main_sizer->Add(m_check_box, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT | wxTOP | wxBOTTOM, FromDIP(5));
+    m_main_sizer->Add(m_text, 1, wxALIGN_CENTER_VERTICAL | wxTOP | wxBOTTOM, FromDIP(5));
+    m_main_sizer->AddSpacer(FromDIP(15));
+    Layout();
+    Fit();
+    m_check_box->Bind(wxEVT_ENTER_WINDOW, &DeviceTypeItem::onEnter, this);
+}
+
+bool FilterPopupWindow::DeviceTypeItem::isChecked() const
+{
+    return m_check_box->GetValue();
+}
+
+void FilterPopupWindow::DeviceTypeItem::setChecked(bool checked)
+{
+    m_check_box->SetValue(checked);
+}
+
+wxPoint FilterPopupWindow::DeviceTypeItem::convertEventPoint(wxMouseEvent& event)
+{
+    if (event.GetId() == m_check_box->GetId()) {
+        return event.GetPosition() + m_check_box->GetPosition();
+    } 
+    return FilterItem::convertEventPoint(event);
+}
+
+void FilterPopupWindow::DeviceTypeItem::updateChildrenBackground(const wxColour& color)
+{
+    m_check_box->SetBackgroundColour(color);
+    FilterItem::updateChildrenBackground(color);
+}
+
+void FilterPopupWindow::DeviceTypeItem::mouseDownEvent()
+{
+    m_check_box->SetValue(!m_check_box->GetValue());
+    sendEvent("", m_pid);
 }
 
 
@@ -947,10 +991,10 @@ void DeviceListPanel::filterDeviceList()
     m_device_sizer->Clear();
     for (const auto& iter : m_device_map) {
         const auto& dev_info = iter.second->deviceInfo();
-        std::string type_str = FFUtils::getPrinterName(dev_info.pid);
+        //std::string type_str = FFUtils::getPrinterName(dev_info.pid);
         if ((m_filter_placement_default || dev_info.placement == m_filter_placement)
             && (m_filter_status_default || dev_info.status == m_filter_status)
-            && (m_filter_types.find(type_str) != m_filter_types.end())
+            && (m_filter_types.find(dev_info.pid) != m_filter_types.end())
             && ((m_wlan_btn->GetValue() && !dev_info.lanFlag) || (m_lan_btn->GetValue() && dev_info.lanFlag))) {
             iter.second->Show(true);
             m_device_sizer->Add(iter.second);
@@ -972,7 +1016,7 @@ void DeviceListPanel::updateFilterMap()
 
 void DeviceListPanel::updatePlacementMap()
 {
-    FilterItemMap backMap;
+    PlacementItemMap backMap;
     for (const auto& iter : m_placement_item_map) {
         backMap.emplace(std::make_pair(iter.first, iter.second));
     }
@@ -1001,12 +1045,11 @@ void DeviceListPanel::updatePlacementMap()
 
 void DeviceListPanel::updateStatusMap()
 {
-    FilterItemMap backMap;
+    StatusItemMap backMap;
     for (const auto& iter : m_status_item_map) {
         backMap.emplace(std::make_pair(iter.first, iter.second));
     }
     m_status_item_map.clear();
-    wxColour color;
     for (auto& iter : m_device_map) {
         std::string status = iter.second->deviceInfo().status;
         auto it = backMap.find(status);
@@ -1014,7 +1057,7 @@ void DeviceListPanel::updateStatusMap()
             m_status_item_map.emplace(std::make_pair(status, it->second));
             it->second = nullptr;
         } else if (m_status_item_map.find(status) == m_status_item_map.end()) {
-            auto item = new FilterPopupWindow::FilterItem(m_filter_popup, DeviceItemPanel::statusText(status, color));
+            auto item = new FilterPopupWindow::StatusItem(m_filter_popup, status);
             item->Bind(EVT_FILTER_ITEM_CLICKED, &DeviceListPanel::onFilterItemClicked, this);
             item->Show(false);
             m_status_item_map.emplace(std::make_pair(status, item));
@@ -1031,7 +1074,7 @@ void DeviceListPanel::updateStatusMap()
 
 void DeviceListPanel::updateTypeMap()
 {
-    FilterItemMap backMap;
+    DeviceTypeItemMap backMap;
     for (const auto& iter : m_type_item_map) {
         backMap.emplace(std::make_pair(iter.first, iter.second));
     }
@@ -1039,19 +1082,19 @@ void DeviceListPanel::updateTypeMap()
     m_filter_types.clear();
     for (auto& iter : m_device_map) {
         auto pid = iter.second->deviceInfo().pid;
-        auto type_str = FFUtils::getPrinterName(pid);
-        auto it = backMap.find(type_str);
+        //auto type_str = FFUtils::getPrinterName(pid);
+        auto it = backMap.find(pid);
         if (it != backMap.end()) {
-            m_type_item_map.emplace(std::make_pair(type_str, it->second));
+            m_type_item_map.emplace(std::make_pair(pid, it->second));
             it->second = nullptr;
-        } else if (m_type_item_map.find(type_str) == m_type_item_map.end()) {
-            auto item = new FilterPopupWindow::FilterItem(m_filter_popup, type_str, false, false, true);
+        } else if (m_type_item_map.find(pid) == m_type_item_map.end()) {
+            auto item = new FilterPopupWindow::DeviceTypeItem(m_filter_popup, pid, false, false, false);
             item->Bind(EVT_FILTER_ITEM_CLICKED, &DeviceListPanel::onFilterItemClicked, this);
-            bool show = item->Show(false);
-            m_type_item_map.emplace(std::make_pair(type_str, item));
+            item->Show(false);
+            m_type_item_map.emplace(std::make_pair(pid, item));
         }
-        if (m_filter_types.find(type_str) == m_filter_types.end()) {
-            m_filter_types.emplace(type_str);
+        if (m_filter_types.find(pid) == m_filter_types.end()) {
+            m_filter_types.emplace(pid);
         }
     }
     for (auto& iter : backMap) {
@@ -1185,10 +1228,10 @@ void DeviceListPanel::onFilterItemClicked(wxCommandEvent& event)
         }
         m_filter_popup->Dismiss();
     } else if (Filter_Popup_Type_Device_Type == m_filter_popup_type) {
-        auto type_str = event.GetString().ToStdString();
-        auto iter = m_filter_types.find(type_str);
+        unsigned short pid = (unsigned short)event.GetInt();
+        auto iter = m_filter_types.find(pid);
         if (iter == m_filter_types.end()) {
-            m_filter_types.emplace(type_str);
+            m_filter_types.emplace(pid);
         } else {
             m_filter_types.erase(iter);
         }
@@ -1293,6 +1336,8 @@ void DeviceListPanel::onDeviceListUpdated(DeviceListUpdateEvent& event)
             }
         }
     }
+    m_filter_placement_default = true;
+    m_filter_status_default = true;
     updateFilterMap();
     updateStaticMap();
     updateDeviceWindowSize();

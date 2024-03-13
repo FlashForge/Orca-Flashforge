@@ -233,7 +233,8 @@ bool MultiSend::export_temp_file()
                 image.SetAlpha((int) c, (int) r, px[3]);
             }
         }
-        image = image.Rescale(256, 256);
+        //image.SaveFile("D:/bbb.png");
+        //image.Rescale(256, 256);
         if (image.SaveFile(wxString::FromUTF8(m_thumb_path))) {
             BOOST_LOG_TRIVIAL(info) << "export_temp_file: save thumb (" << m_thumb_path << ") success";
         } else {
@@ -1388,6 +1389,7 @@ void SendToPrinterDialog::set_default()
             }
         }
         image  = image.Rescale(FromDIP(108), FromDIP(117));
+        //image.SaveFile("D:/aaa.png");
         m_thumbnailPanel->set_thumbnail(image);
     }
     
