@@ -299,13 +299,15 @@ void MultiComMgr::onDevDetailUpdate(const ComDevDetailUpdateEvent &event)
     fnet_dev_detail_t *&devDetail = m_datMap.at(event.id).devDetail;
     m_networkIntfc->freeDevDetail(devDetail);
     devDetail = event.devDetail;
-    QueueEvent(event.Clone());
+    if (m_readyIdSet.find(event.id) != m_readyIdSet.end()) {
+        QueueEvent(event.Clone());
+    }
     updateWanDevInfo(event.id, devDetail->name, devDetail->status, devDetail->location);
 }
 
 void MultiComMgr::onWanConnReadData(const WanConnReadDataEvent &event)
 {
-    auto procDevDetailUpdateEvent = [this](const fnet_conn_read_data_t &readData) {
+    auto procDevDetailUpdate = [this](const fnet_conn_read_data_t &readData) {
         auto it = m_devIdMap.find(readData.devId);
         if (it != m_devIdMap.end()) {
             ComDevDetailUpdateEvent devDetailUpdateEvent(COM_DEV_DETAIL_UPDATE_EVENT,
@@ -313,11 +315,13 @@ void MultiComMgr::onWanConnReadData(const WanConnReadDataEvent &event)
             onDevDetailUpdate(devDetailUpdateEvent);
         }
     };
-    auto procDevOfflineEvent = [this](const fnet_conn_read_data_t &readData) {
+    auto procDevOffline = [this](const fnet_conn_read_data_t &readData) {
         auto it = m_devIdMap.find(readData.devId);
         if (it != m_devIdMap.end()) {
             m_datMap.at(it->second).wanDevInfo.status = "offline";
-            QueueEvent(new ComWanDevInfoUpdateEvent(COM_WAN_DEV_INFO_UPDATE_EVENT, it->second));
+            if (m_readyIdSet.find(it->second) != m_readyIdSet.end()) {
+                QueueEvent(new ComWanDevInfoUpdateEvent(COM_WAN_DEV_INFO_UPDATE_EVENT, it->second));
+            }
         }
     };
     switch (event.readData.type) {
@@ -326,10 +330,10 @@ void MultiComMgr::onWanConnReadData(const WanConnReadDataEvent &event)
         m_userDataUpdateThd->setUpdateWanDev();
         break;
     case FNET_CONN_READ_DEVICE_DETAIL:
-        procDevDetailUpdateEvent(event.readData);
+        procDevDetailUpdate(event.readData);
         break;
     case FNET_CONN_READ_DEVICE_OFFLINE:
-        procDevOfflineEvent(event.readData);
+        procDevOffline(event.readData);
         break;
     }
     m_networkIntfc->freeString(event.readData.devId);
@@ -375,7 +379,9 @@ void MultiComMgr::updateWanDevInfo(com_id_t id, const std::string &name, const s
     devData.wanDevInfo.name = name;
     devData.wanDevInfo.status = status;
     devData.wanDevInfo.location = location;
-    QueueEvent(new ComWanDevInfoUpdateEvent(COM_WAN_DEV_INFO_UPDATE_EVENT, id));
+    if (m_readyIdSet.find(id) != m_readyIdSet.end()) {
+        QueueEvent(new ComWanDevInfoUpdateEvent(COM_WAN_DEV_INFO_UPDATE_EVENT, id));
+    }
 }
 
 }} // namespace Slic3r::GUI
