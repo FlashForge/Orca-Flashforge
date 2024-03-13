@@ -123,6 +123,10 @@ AddMachinePanel::~AddMachinePanel() {
     m_select_machine.Bind(EVT_FINISHED_UPDATE_MACHINE_LIST, [this](wxCommandEvent& e) {
         m_side_tools->start_interval();
     });
+    m_device_list_panel->Bind(EVT_DEVICE_ITEM_SELECTED, [this](wxCommandEvent &event) {
+        event.Skip();
+        m_status_info_panel_page->setCurId(event.GetInt());
+    });
 }
 
 MonitorPanel::~MonitorPanel()

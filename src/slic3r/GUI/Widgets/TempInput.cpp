@@ -840,6 +840,14 @@ StartFiltering::StartFiltering(wxWindow* parent)
     create_panel(this);
 }
 
+void StartFiltering::setCurId(int curId)
+{
+    if (curId < 0) {
+        return;
+    }
+    m_cur_id = curId;
+}
+
 void StartFiltering::create_panel(wxWindow* parent)
 {
     wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
@@ -940,7 +948,9 @@ void StartFiltering::onAirFilterToggled(wxCommandEvent &event)
     }
     Slic3r::GUI::ComAirFilterCtrl *filterCtrl = new Slic3r::GUI::ComAirFilterCtrl(inter_state, exter_state);
     // 测试，临时将id写死
-    Slic3r::GUI::MultiComMgr::inst()->putCommand(0, filterCtrl);
+    if (m_cur_id >= 0) {
+        Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, filterCtrl);
+    }
 }
 
 TempMixDevice::TempMixDevice(wxWindow* parent,bool idle, wxString nozzleTemp, wxString platformTemp, wxString cavityTemp,const wxPoint &pos,const wxSize & size,long style)
@@ -976,6 +986,15 @@ void TempMixDevice::setState(int state)
         m_idle_lamp_control_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onLampBtnClicked, this);
         m_idle_filter_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onFilterBtnClicked, this);
     }
+}
+
+void TempMixDevice::setCurId(int curId)
+{
+    if (curId < 0) {
+        return;
+    }
+    m_cur_id = curId;
+    m_panel_circula_filter->setCurId(curId);
 }
 
 
@@ -1324,7 +1343,9 @@ void TempMixDevice::onLampBtnClicked(wxMouseEvent &event)
         // 关灯
         Slic3r::GUI::ComLightCtrl *lightctrl = new Slic3r::GUI::ComLightCtrl(CLOSE);
         // 测试，临时将id写死
-        Slic3r::GUI::MultiComMgr::inst()->putCommand(0, lightctrl);
+        if (m_cur_id >= 0) {
+            Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, lightctrl);
+        }
         m_idle_lamp_control_button->SetIcon("device_lamp_control");
         m_idle_lamp_control_button->Refresh();
         m_idle_lamp_control_button->SetFlashForgeSelected(false);
@@ -1332,7 +1353,9 @@ void TempMixDevice::onLampBtnClicked(wxMouseEvent &event)
         // 开灯
         Slic3r::GUI::ComLightCtrl *lightctrl = new Slic3r::GUI::ComLightCtrl(OPEN);
         // 测试，临时将id写死
-        Slic3r::GUI::MultiComMgr::inst()->putCommand(0, lightctrl);
+        if (m_cur_id >= 0) {
+            Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, lightctrl);
+        }
         m_idle_lamp_control_button->SetIcon("device_lamp_control_press");
         m_idle_lamp_control_button->Refresh();
         m_idle_lamp_control_button->SetFlashForgeSelected(true);

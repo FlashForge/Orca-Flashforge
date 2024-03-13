@@ -182,6 +182,14 @@ void StartFilter::setAirFilterState(bool internalOpen, bool externalOpen)
     m_external_circulate_switch->SetValue(externalOpen);
 }
 
+void StartFilter::setCurId(int curId) 
+{
+    if (curId < 0) {
+        return;
+    }
+    m_cur_id = curId; 
+}
+
 void StartFilter::onAirFilterToggled(wxCommandEvent &event)
 {
     event.Skip();
@@ -208,7 +216,9 @@ void StartFilter::onAirFilterToggled(wxCommandEvent &event)
     }
     ComAirFilterCtrl *filterCtrl = new ComAirFilterCtrl(inter_state, exter_state);
     // 测试，临时将id写死
-    //Slic3r::GUI::MultiComMgr::inst()->putCommand(0, filterCtrl);
+    if (m_cur_id >= 0) {
+        Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, filterCtrl);
+    }
 }
 
 ModifyTemp::ModifyTemp(wxWindow *parent) 
@@ -307,6 +317,14 @@ DeviceDetail::DeviceDetail(wxWindow* parent)
 //         ;
 // }
 
+void DeviceDetail::setCurId(int curId) 
+{ 
+    if (curId < 0) {
+        return;
+    }
+    m_cur_id = curId;
+}
+
 void DeviceDetail::create_panel(wxWindow* parent)
 {
         wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
@@ -336,7 +354,10 @@ void DeviceDetail::create_panel(wxWindow* parent)
                 m_device_cooling_fan->getTextValue().ToDouble(&cooling_fan);
             }
             ComPrintCtrl *printCtrl = new ComPrintCtrl(z_axis, speed, cooling_fan, nozzle_fan);
-            //Slic3r::GUI::MultiComMgr::inst()->putCommand(0, printCtrl);
+            //测试，临时将id写死
+            if (m_cur_id >= 0) {
+                Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, printCtrl);
+            }
         });
 
         bSizer_confirm_row->AddStretchSpacer();
@@ -502,9 +523,12 @@ void SingleDeviceState::setCurId(int curId)
     if (curId < 0) {
         return;
     }
-    m_cur_id = curId; 
-    
-    //open video
+    m_cur_id = curId;
+    m_busy_device_detial->setCurId(curId);
+    m_busy_circula_filter->setCurId(curId);
+    m_idle_tempMixDevice->setCurId(curId);
+
+    // open video
     ComCameraStreamCtrl *cameraStreamCtrl = new ComCameraStreamCtrl(OPENSTREAM);
     Slic3r::GUI::MultiComMgr::inst()->putCommand(curId, cameraStreamCtrl);
 
@@ -606,7 +630,7 @@ wxBoxSizer* SingleDeviceState::create_monitoring_page()
         m_panel_top_title = new wxPanel(this, wxID_ANY,wxDefaultPosition, wxSize(-1, FromDIP(22)), wxTAB_TRAVERSAL);
         m_panel_top_title->SetBackgroundColour(wxColour(240,240,240));
         //显示设备名称
-        m_staticText_device_name = new Label(m_panel_top_title, ("six-AD5M"));
+        m_staticText_device_name = new Label(m_panel_top_title, ("      "));
         m_staticText_device_name->Wrap(-1);
         m_staticText_device_name->SetFont(wxFont(wxFontInfo(16)));
         m_staticText_device_name->SetForegroundColour(wxColour(51,51,51));
@@ -615,7 +639,7 @@ wxBoxSizer* SingleDeviceState::create_monitoring_page()
         bSizer_title_label->AddStretchSpacer();
 
         //显示设备所在货架
-        m_staticText_device_position = new Label(m_panel_top_title, ("shelf2"));
+        m_staticText_device_position = new Label(m_panel_top_title, ("      "));
         m_staticText_device_position->Wrap(-1);
         m_staticText_device_position->SetFont(wxFont(wxFontInfo(16)));
         m_staticText_device_position->SetForegroundColour(wxColour(51,51,51));
@@ -1077,19 +1101,17 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
             e.Skip();
             if (!m_print_button_pressed_down) {
                 std::string printState = PAUSE;
-                double time = Slic3r::GUI::MultiComMgr::inst()->devData(0).devDetail->printProgress;
-                double      total_time = Slic3r::GUI::MultiComMgr::inst()->devData(0).devDetail->estimatedTime;
-                std::string jobId = Slic3r::GUI::MultiComMgr::inst()->devData(0).devDetail->jobId;
+                std::string jobId      = Slic3r::GUI::MultiComMgr::inst()->devData(m_cur_id).devDetail->jobId;
                 ComJobCtrl *jobCtrl    = new ComJobCtrl(jobId, printState);
-                //Slic3r::GUI::MultiComMgr::inst()->putCommand(0, jobCtrl);
+                Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, jobCtrl);
                 m_print_button->SetLabel(_L("continue print"));
                 m_print_button->SetIcon("device_continue_print");
                 m_print_button->Refresh();
             } else {
                 std::string printState = CONTINUE;
-                std::string jobId = Slic3r::GUI::MultiComMgr::inst()->devData(0).devDetail->jobId;
+                std::string jobId      = Slic3r::GUI::MultiComMgr::inst()->devData(m_cur_id).devDetail->jobId;
                 ComJobCtrl *jobCtrl = new ComJobCtrl(jobId, printState);
-                //Slic3r::GUI::MultiComMgr::inst()->putCommand(0, jobCtrl);
+                Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, jobCtrl);
                 m_print_button->SetLabel(_L("pause print"));
                 m_print_button->SetIcon("device_pause_print");
                 m_print_button->Refresh();
@@ -1119,12 +1141,12 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
             e.Skip();
             //取消打印指令
             std::string printState = CANCEL;
-#if 0
-            std::string jobId = Slic3r::GUI::MultiComMgr::inst()->devData(0).devDetail->jobId;
+
+            std::string jobId   = Slic3r::GUI::MultiComMgr::inst()->devData(m_cur_id).devDetail->jobId;
             ComJobCtrl *jobCtrl = new ComJobCtrl(jobId, printState);
             // 测试，临时将id写死
-            Slic3r::GUI::MultiComMgr::inst()->putCommand(0, jobCtrl);
-#endif
+            Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, jobCtrl);
+
             m_machine_ctrl_panel->Hide();
             m_machine_idle_panel->Show();
             Layout();
@@ -1698,6 +1720,7 @@ void SingleDeviceState::connectEvent()
    MultiComMgr::inst()->Bind(COM_DEV_DETAIL_UPDATE_EVENT, &SingleDeviceState::onComDevDetailUpdate, this);
    //连接断开
    MultiComMgr::inst()->Bind(COM_CONNECTION_EXIT_EVENT, &SingleDeviceState::onConnectExit, this);
+
 #if 0
 //local file list
    m_staticText_file_list->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e){
@@ -1755,7 +1778,7 @@ void SingleDeviceState::connectEvent()
            // 关灯
            ComLightCtrl *lightctrl = new ComLightCtrl(CLOSE);
            // 测试，临时将id写死
-           //Slic3r::GUI::MultiComMgr::inst()->putCommand(0, lightctrl);
+           Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, lightctrl);
            m_lamp_control_button->SetIcon("device_lamp_control");
            m_lamp_control_button->Refresh();
            m_lamp_control_button->SetFlashForgeSelected(false);
@@ -1763,7 +1786,7 @@ void SingleDeviceState::connectEvent()
            //开灯
            ComLightCtrl *lightctrl = new ComLightCtrl(OPEN);
            // 测试，临时将id写死
-           //Slic3r::GUI::MultiComMgr::inst()->putCommand(0, lightctrl);
+           Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, lightctrl);
            m_lamp_control_button->SetIcon("device_lamp_control_press");
            m_lamp_control_button->Refresh();
            m_lamp_control_button->SetFlashForgeSelected(true);
@@ -1919,6 +1942,10 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
             setTipMessage(busy_state, "#F9B61C", busy_info, true);
             m_idle_tempMixDevice->setState(1);
             m_staticText_idle->SetLabel(_L("The Current Device has no Printing Projects"));
+        } else if (state == P_ERROR) {
+            std::string error_state = _L("error").ToStdString();
+            std::string error_info  = data.devDetail->errorCode;
+            setTipMessage(error_state, "#FB4747", error_info, true);
         } else if (state == PAUSE || state == P_PAUSING) {
             m_machine_ctrl_panel->Show();
             m_machine_idle_panel->Hide();
@@ -1953,15 +1980,25 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
         m_staticText_count_time->SetLabel(convertSecondsToHMS(estimatedTime));
    }
 
-   if (m_camera_stream_url != data.devDetail->cameraStreamUrl) {
+   std::string stram_url = data.devDetail->cameraStreamUrl;
+   if (!stram_url.empty() && m_camera_stream_url != data.devDetail->cameraStreamUrl) {
        //通知设备开流
         ComCameraStreamCtrl *cameraStreamCtrl_0 = new ComCameraStreamCtrl(OPENSTREAM);
         // 测试，临时将id写死
-        Slic3r::GUI::MultiComMgr::inst()->putCommand(0, cameraStreamCtrl_0);
+        Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, cameraStreamCtrl_0);
 
         m_camera_stream_url = data.devDetail->cameraStreamUrl;
         modifyVideoPlayerAddress(m_camera_stream_url);
    }
+   std::string device_name = data.devDetail->name;  //设备名
+   if (m_cur_dev_name != device_name && !device_name.empty()) {
+        m_staticText_device_name->SetLabel(device_name);
+   }
+
+   std::string device_location = data.devDetail->location;//位置
+   if (m_cur_dev_location != device_location && !device_location.empty()) {
+        m_staticText_device_position->SetLabel(device_location);
+   } 
 
    std::string printFileName = data.devDetail->printFileName; // 文件名
    if (m_cur_print_file_name != printFileName && !printFileName.empty()) {
@@ -2118,7 +2155,7 @@ void SingleDeviceState::OnScriptMessage(wxWebViewEvent &evt)
             // 外网视频继续播放
             ComCameraStreamCtrl *cameraStreamCtrl = new ComCameraStreamCtrl(OPEN);
             // 测试，临时将id写死
-            //Slic3r::GUI::MultiComMgr::inst()->putCommand(0, cameraStreamCtrl);
+            Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, cameraStreamCtrl);
        }
    }
 }

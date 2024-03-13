@@ -45,6 +45,7 @@ public:
     ~StartFilter();
     void create_panel(wxWindow* parent);
     void setAirFilterState(bool internalOpen,bool externalOpen);
+    void setCurId(int curId);
 
 private:
     void onAirFilterToggled(wxCommandEvent &event);
@@ -52,6 +53,7 @@ private:
 private:
     SwitchButton* m_internal_circulate_switch;//内循环过滤
     SwitchButton* m_external_circulate_switch;//外循环过滤
+    int  m_cur_id = -1;
 };
 
 class ModifyTemp : public wxPanel
@@ -72,6 +74,7 @@ class DeviceDetail : public wxPanel
 public:
     DeviceDetail(wxWindow* parent);
     //~DeviceDetail();
+    void setCurId(int curId);
     void create_panel(wxWindow* parent);
     //void initData();
     void setMaterialName(wxString materialName);
@@ -92,6 +95,8 @@ private:
     IconBottonText *m_device_z_axis{nullptr};
     IconBottonText *m_device_nozzle_fan{nullptr};
     IconBottonText *m_device_cooling_fan{nullptr};
+
+    int m_cur_id = -1;
 
 };
 
@@ -139,7 +144,7 @@ private:
 protected:
 //data
 
-    int m_cur_id = 0;
+    int m_cur_id = -1;
 
 //UI
     wxPanel*  m_panel_monitoring_title;
@@ -238,6 +243,8 @@ protected:
 
     std::string     m_cur_dev_state;
     std::string     m_cur_print_file_name;
+    std::string     m_cur_dev_name;
+    std::string     m_cur_dev_location;
 };
 
 

@@ -203,6 +203,7 @@ class StartFiltering : public wxPanel
 public:
     StartFiltering(wxWindow* parent);
     ~StartFiltering(){};
+    void setCurId(int curId);
     void create_panel(wxWindow* parent);
     void setBtnState(bool internalOpen, bool externalOpen);
 
@@ -212,6 +213,8 @@ private:
 private:
     SwitchButton* m_internal_circulate_switch;//内循环过滤
     SwitchButton* m_external_circulate_switch;//外循环过滤
+
+    int m_cur_id;
 };
 
 class TempMixDevice :public wxPanel
@@ -224,6 +227,7 @@ public:
     ~TempMixDevice(){};
 
     void setState(int state);
+    void setCurId(int curId);
 
     void create_panel(wxWindow* parent,bool idle, wxString nozzleTemp,wxString platformTemp,wxString cavityTemp);
 
@@ -262,6 +266,8 @@ private:
     Label *m_firmware_version_data{nullptr};
     Label *m_serial_number_data{nullptr};
     Label *m_private_material_data{nullptr};
+
+    int m_cur_id = -1;
 
 };
 
