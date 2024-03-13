@@ -104,7 +104,9 @@ public:
 
     void setCurId(int curId);
     void modifyVideoPlayerAddress(const std::string &urlAddress);
+    void reInit();
     void reInitData();
+    void reInitUI();
 
     wxBoxSizer *create_monitoring_page();
     wxBoxSizer* create_machine_control_title();
@@ -123,6 +125,7 @@ public:
     void on_navigated(wxWebViewEvent &event);
     void onConnectWanDevInfoUpdate(ComWanDevInfoUpdateEvent &event);
     void onComDevDetailUpdate(ComDevDetailUpdateEvent &event);
+    void onConnectExit(ComConnectionExitEvent &event);
     void onTargetTempModify(wxCommandEvent &event);
 
     void setTipMessage(const std::string &title = "", const std::string &titleColor = "", const std::string &info = "", bool showInfo = false);
@@ -234,6 +237,7 @@ protected:
     wxPanel         *m_panel_control_material{nullptr};
 
     std::string     m_cur_dev_state;
+    std::string     m_cur_print_file_name;
 };
 
 

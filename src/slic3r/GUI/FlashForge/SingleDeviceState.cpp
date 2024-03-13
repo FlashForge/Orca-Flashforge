@@ -455,7 +455,7 @@ void DeviceDetail::setSpeed(double speed)
 
 void DeviceDetail::setZAxis(double value) 
 {
-    auto aValue = wxString::Format("%.2f", value);
+    auto aValue = wxString::Format("%.3f", value);
     m_device_z_axis->setText(aValue);
 }
 
@@ -494,11 +494,14 @@ SingleDeviceState::SingleDeviceState(wxWindow* parent, wxWindowID id, const wxPo
         this->SetBackgroundColour(wxColour(240,240,240));
         setupLayout();
         connectEvent();
-        reInitData();
+        reInit();
 }
 
 void SingleDeviceState::setCurId(int curId) 
 { 
+    if (curId < 0) {
+        return;
+    }
     m_cur_id = curId; 
     
     //open video
@@ -564,12 +567,34 @@ void SingleDeviceState::modifyVideoPlayerAddress(const std::string &urlAddress)
    }
 }
 
+void SingleDeviceState::reInit() 
+{
+   reInitData();
+   reInitUI();
+}
+
 void SingleDeviceState::reInitData() 
 { 
    m_last_speed               = 0.00;
    m_last_z_axis_compensation = 0.00;
    m_last_cooling_fan_speed   = 0.00;
    m_last_chamber_fan_speed   = 0.00;
+   m_camera_stream_url.clear();
+   m_file_pic_url.clear();
+   m_cur_dev_state.clear();
+   m_cur_print_file_name.clear();
+}
+
+void SingleDeviceState::reInitUI() 
+{
+   m_staticText_device_tip->SetLabel(_L("Offline"));
+   m_staticText_device_tip->SetForegroundColour(wxColour("#999999"));
+   m_staticText_device_info->Hide();
+   m_clear_button->Hide();
+   m_staticText_idle->SetLabel(_L("Device offline"));
+   m_idle_tempMixDevice->modifyTemp("/", "/", "/");
+   m_idle_tempMixDevice->setState(0);
+   Layout();
 }
 
 wxBoxSizer* SingleDeviceState::create_monitoring_page()
@@ -652,7 +677,7 @@ wxBoxSizer* SingleDeviceState::create_monitoring_page()
         sizer->Add(m_panel_monitoring_title, 0, wxEXPAND | wxALL, 0);
 
         //播放控件
-        m_camera_play_url = wxString::Format("file://%s/web/orca/missing_connection.html?lang=http://115.231.29.45:1370/ffspace/SNMMOC98989898.m3u8", from_u8(resources_dir()));
+        m_camera_play_url = wxString::Format("file://%s/web/orca/missing_connection.html?lang=http://192.168.4.64:8080/?action=stream", from_u8(resources_dir()));
 //#if 0
         //m_camera_play_url = wxString::Format("file://%s/web/orca/missing_connection.html?lang=http://115.231.29.48:1370/ffspace/SNMMOC98989898.m3u8",from_u8(resources_dir()));
         //m_camera_play_url =wxString::Format("file://%s/web/homepage/index.html",from_u8(resources_dir()));
@@ -705,7 +730,7 @@ wxBoxSizer* SingleDeviceState::create_machine_control_title()
             e.Skip();
             m_staticText_device_info->Hide();
             m_clear_button->Hide();
-            m_staticText_file_name->SetLabel("555666777888999");
+            m_staticText_file_name->SetLabel("333555666777888999");
             Layout();
         });
 
@@ -903,7 +928,7 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         m_staticText_file_head->SetForegroundColour(wxColour(51, 51, 51));
 
         //显示文件名称
-        m_staticText_file_name = new Label(m_panel_control_file_name, "123456");
+        m_staticText_file_name = new Label(m_panel_control_file_name, "123456123456123456");
         m_staticText_file_name->Wrap(-1);
         m_staticText_file_name->SetFont(wxFont(wxFontInfo(16)));
         m_staticText_file_name->SetForegroundColour(wxColour(51, 51, 51));
@@ -1671,8 +1696,8 @@ void SingleDeviceState::connectEvent()
    MultiComMgr::inst()->Bind(COM_WAN_DEV_INFO_UPDATE_EVENT, &SingleDeviceState::onConnectWanDevInfoUpdate, this);
    //局域网数据更新
    MultiComMgr::inst()->Bind(COM_DEV_DETAIL_UPDATE_EVENT, &SingleDeviceState::onComDevDetailUpdate, this);
-
-
+   //连接断开
+   MultiComMgr::inst()->Bind(COM_CONNECTION_EXIT_EVENT, &SingleDeviceState::onConnectExit, this);
 #if 0
 //local file list
    m_staticText_file_list->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e){
@@ -1799,6 +1824,18 @@ void SingleDeviceState::onComDevDetailUpdate(ComDevDetailUpdateEvent &event)
    }
 }
 
+void SingleDeviceState::onConnectExit(ComConnectionExitEvent &event) 
+{ 
+    event.Skip(); 
+    if (event.id == m_cur_id) {
+        //离线
+        m_cur_id = -1;
+        m_machine_idle_panel->Show();
+        m_machine_ctrl_panel->Hide();
+        reInit();
+    }
+}
+
 void SingleDeviceState::onTargetTempModify(wxCommandEvent &event) 
 {
    event.Skip();
@@ -1861,6 +1898,8 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
             m_machine_ctrl_panel->Hide();
             std::string idle_state = _L("idle").ToStdString();
             setTipMessage(idle_state, "#00CD6D", "", false);
+            m_idle_tempMixDevice->setState(1);
+            m_staticText_idle->SetLabel(_L("The Current Device has no Printing Projects"));
         } else if (state == P_COMPLETED) {
             m_machine_ctrl_panel->Show();
             m_machine_idle_panel->Hide();
@@ -1869,20 +1908,30 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
             std::string compelete_state = _L("completed").ToStdString();
             std::string compelete_info  = _L("Print completed,clean platform!").ToStdString();
             setTipMessage(compelete_state, "#328DFB", compelete_info, true);
+
+            m_staticText_time_label->SetLabel(_L("Total Time"));
+
+            double totalTime = data.devDetail->printDuration; // 本次打印耗时
+            m_staticText_count_time->SetLabel(convertSecondsToHMS(totalTime));
         } else if (state == P_BUSY) {
             std::string busy_state = _L("busy").ToStdString();
             std::string busy_info  = _L("Print cancelled,in cache command").ToStdString();
             setTipMessage(busy_state, "#F9B61C", busy_info, true);
-
+            m_idle_tempMixDevice->setState(1);
+            m_staticText_idle->SetLabel(_L("The Current Device has no Printing Projects"));
         } else if (state == PAUSE || state == P_PAUSING) {
             m_machine_ctrl_panel->Show();
             m_machine_idle_panel->Hide();
-            std::string print_state = _L("printing").ToStdString();
-            setTipMessage(print_state, "#4D54FF");
+            std::string print_state = _L("pause").ToStdString();
+            setTipMessage(print_state, "#982187");
 
             m_print_button->SetLabel(_L("continue print"));
             m_print_button->SetIcon("device_continue_print");
             m_print_button->Refresh();
+
+            m_staticText_time_label->SetLabel(_L("Remaining Time"));
+            double estimatedTime = data.devDetail->estimatedTime; // 剩余时间
+            m_staticText_count_time->SetLabel(convertSecondsToHMS(estimatedTime));
         } else {
             m_machine_ctrl_panel->Show();
             m_machine_idle_panel->Hide();
@@ -1892,7 +1941,16 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
             m_print_button->SetLabel(_L("pause print"));
             m_print_button->SetIcon("device_pause_print");
             m_print_button->Refresh();
+
+            m_staticText_time_label->SetLabel(_L("Remaining Time"));
+            double estimatedTime = data.devDetail->estimatedTime; // 剩余时间
+            m_staticText_count_time->SetLabel(convertSecondsToHMS(estimatedTime));
         }
+        Layout();
+   }
+   if (state.compare("printing") == 0) {
+        double estimatedTime = data.devDetail->estimatedTime; // 剩余时间
+        m_staticText_count_time->SetLabel(convertSecondsToHMS(estimatedTime));
    }
 
    if (m_camera_stream_url != data.devDetail->cameraStreamUrl) {
@@ -1906,9 +1964,14 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
    }
 
    std::string printFileName = data.devDetail->printFileName; // 文件名
-   std::string truncatedString = truncateString(printFileName, TEXT_LENGTH);
-   m_staticText_file_name->SetLabel(truncatedString);
-   m_staticText_file_name->SetToolTip(printFileName);
+   if (m_cur_print_file_name != printFileName && !printFileName.empty()) {
+        std::string truncatedString = truncateString(printFileName, TEXT_LENGTH);
+        m_staticText_file_name->SetLabel(truncatedString);
+        m_staticText_file_name->SetToolTip(printFileName);
+        m_staticText_file_name->Show();
+        m_staticText_file_name->Layout();
+        Layout();
+   }
 
    std::string file_pic_path = data.devDetail->printFileThumbUrl;// 图片地址
    if (m_file_pic_url != file_pic_path && !file_pic_path.empty()) {
@@ -1932,9 +1995,6 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
         });     
    }
    //m_material_staticbitmap->SetBitmap(create_scaled_bitmap(filePic, this, 60));
-
-   double estimatedTime = data.devDetail->estimatedTime; // 剩余时间
-   m_staticText_count_time->SetLabel(convertSecondsToHMS(estimatedTime));
 
    double printProgress = data.devDetail->printProgress; // 打印进度
    m_progress_bar->SetProgress(printProgress * 100);
