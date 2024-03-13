@@ -335,7 +335,7 @@ void FilterPopupWindow::StatusItem::mouseUpEvent()
 void FilterPopupWindow::StatusItem::setStatus(const std::string& status)
 {
     wxColour color;
-    m_text->SetLabel(DeviceItemPanel::statusText(m_status, color));
+    m_text->SetLabel(FFUtils::convertStatus(m_status, color));
     Layout();
 }
 
@@ -471,6 +471,7 @@ void FilterPopupWindow::onPaint(wxPaintEvent& event)
 }
 
 
+wxDEFINE_EVENT(EVT_DEVICE_ITEM_SELECTED, wxCommandEvent);
 std::map<unsigned short, wxBitmap> DeviceItemPanel::m_machineBitmapMap;
 DeviceItemPanel::DeviceItemPanel(wxWindow *parent) 
     : wxPanel(parent)
@@ -603,51 +604,10 @@ void DeviceItemPanel::onPaint(wxPaintEvent& event)
     event.Skip();
 }
 
-void DeviceItemPanel::sendEvent()
-{
-    wxCommandEvent event(wxEVT_COMMAND_BUTTON_CLICKED, GetId());
-    event.SetEventObject(this);
-    wxPostEvent(this, event);
-}
 
-wxString DeviceItemPanel::statusText(const std::string& status, wxColour& color)
-{
-    wxString st = _T("Idle");    
-    color = wxColour("#00CD6D");
-    if ("offline" == status) {
-        st = _L("Offline");
-        color = wxColour("#999999");
-    } else {
-        if ("printing" == status) {
-            st = _L("Printing");
-            color = wxColour("#4D54FF");
-        } else if ("pause" == status || "pausing" == status) {
-            st = _L("Paused");
-            color = wxColour("#982187");
-        } else if ("error" == status) {
-            st = _L("Error");
-            color = wxColour("#FD4A29");
-        } else if ("busy" == status || "calibrate_doing" == status || "heating" == status) {
-            st = _L("Busy");
-            color = wxColour("#F9B61C");
-        } else if ("completed" == status) {
-            st = _L("Completed");
-            color = wxColour("#328DFB");
-        } else if ("cancel" == status || "canceling" == status) {
-            st = _L("Cancel");
-            color = wxColour("#328DFB");
-        }
-        //} else if ("heating" == rawstatus) {
-        //    status = _L("Heating");
-        //    //color = wxColour("");
-        //}
-    }
-    return st;
-}
-
-
-DeviceInfoItemPanel::DeviceInfoItemPanel(wxWindow *parent, const DeviceInfo& info)
+DeviceInfoItemPanel::DeviceInfoItemPanel(wxWindow *parent, const DeviceInfo& info, wxWindow* event_handle/*=nullptr*/)
     : DeviceItemPanel(parent)
+    , m_event_handle(event_handle)
 {
     Freeze();
     m_name_text = new wxStaticText(this, wxID_ANY, wxT("AD5M"));
@@ -699,13 +659,23 @@ const DeviceInfoItemPanel::DeviceInfo& DeviceInfoItemPanel::deviceInfo() const
     return m_info;
 }
 
+void DeviceInfoItemPanel::sendEvent()
+{
+    if (m_info.conn_id >= 0 && m_event_handle) {
+        wxCommandEvent event(EVT_DEVICE_ITEM_SELECTED, GetId());
+        event.SetEventObject(m_event_handle);
+        event.SetInt(m_info.conn_id);
+        wxPostEvent(m_event_handle, event);
+    }
+}
+
 void DeviceInfoItemPanel::updateStatus()
 {
     if (m_info.conn_id < 0) {
         m_info.status = "offline";
     }
     wxColour color("#00CD6D");
-    wxString status = statusText(m_info.status, color);
+    wxString status = FFUtils::convertStatus(m_info.status, color);
     m_status_text->SetLabel(status);
     m_status_text->SetForegroundColour(color);
 }
@@ -734,7 +704,7 @@ DeviceStaticItemPanel::DeviceStaticItemPanel(wxWindow* parent, std::string statu
 {
     Freeze();
     wxColour color;
-    wxString wxstatus = statusText(m_status, color);
+    wxString wxstatus = FFUtils::convertStatus(m_status, color);
     m_status_text = new wxStaticText(this, wxID_ANY, wxstatus, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
     m_status_text->SetForegroundColour(color);
     m_status_text->SetBackgroundColour(wxColour("#ffffff"));
@@ -755,7 +725,7 @@ DeviceStaticItemPanel::DeviceStaticItemPanel(wxWindow* parent, std::string statu
 void DeviceStaticItemPanel::setStatus(const std::string& status)
 {
     wxColour color;
-    wxString wxstatus = statusText(m_status, color);
+    wxString wxstatus = FFUtils::convertStatus(m_status, color);
     m_status_text->SetLabel(wxstatus);
     m_status_text->SetBackgroundColour(color);
     Layout();
@@ -894,6 +864,7 @@ void DeviceListPanel::connectEvent()
     m_lan_btn->Bind(wxEVT_TOGGLEBUTTON, &DeviceListPanel::onNetworkTypeToggled, this);
     m_static_btn->Bind(wxEVT_TOGGLEBUTTON, &DeviceListPanel::onStaticModeToggled, this);
     MultiComMgr::inst()->Bind(COM_DEV_DETAIL_UPDATE_EVENT, &DeviceListPanel::onComDevDetailUpdate, this);
+    MultiComMgr::inst()->Bind(COM_WAN_DEV_INFO_UPDATE_EVENT, &DeviceListPanel::onComWanDeviceInfoUpdate, this);
     wxGetApp().getDeviceObjectOpr()->Bind(EVT_DEVICE_LIST_UPDATED, &DeviceListPanel::onDeviceListUpdated, this);
     m_filter_popup->Bind(wxEVT_SHOW, &DeviceListPanel::onPopupShow, this);
 }
@@ -939,9 +910,8 @@ void DeviceListPanel::initDeviceList()
     if (devList.empty()) {
         m_simple_book->ChangeSelection(0);
         return;
-    } else {
-        m_simple_book->ChangeSelection(1);
     }
+    m_simple_book->ChangeSelection(1);
 
     std::vector<std::string> devKeyList;
     for (const auto& it: devList) {
@@ -952,7 +922,7 @@ void DeviceListPanel::initDeviceList()
     });
     //m_device_map
     for (const auto& iter : devKeyList) {
-        DeviceInfoItemPanel* item = new DeviceInfoItemPanel(m_device_panel, devList[iter]);
+        DeviceInfoItemPanel* item = new DeviceInfoItemPanel(m_device_panel, devList[iter], this);
         item->Show(false);
         m_device_map.emplace(std::make_pair(iter, item));
         //m_device_sizer->Add(item);
@@ -1144,8 +1114,11 @@ void DeviceListPanel::updateStaticMap()
     }
 }
 
-void DeviceListPanel::updateSizer()
+void DeviceListPanel::updateDeviceSizer()
 {
+    if (m_simple_book->GetSelection() == 0) {
+        return;
+    }
     if (m_static_btn->GetValue()) {
         Freeze();
         m_device_sizer->Clear();
@@ -1300,7 +1273,7 @@ void DeviceListPanel::onNetworkTypeToggled(wxCommandEvent& event)
 
 void DeviceListPanel::onStaticModeToggled(wxCommandEvent &event)
 {
-    updateSizer();
+    updateDeviceSizer();
     event.Skip();
 }
 
@@ -1320,9 +1293,9 @@ void DeviceListPanel::onDeviceListUpdated(DeviceListUpdateEvent& event)
         dev_info.status = data.devDetail->status;
         if (dev_info.status.empty()) dev_info.status = "offline";
 
-        DeviceInfoItemPanel* info_item = new DeviceInfoItemPanel(m_device_panel, dev_info);
         auto info_iter = m_device_map.find(dev_id);
         if (info_iter == m_device_map.end()) {
+            DeviceInfoItemPanel* info_item = new DeviceInfoItemPanel(m_device_panel, dev_info, this);
             m_device_map.emplace(std::make_pair(dev_id, info_item));
         } else {
             info_iter->second->updateInfo(dev_info);
@@ -1338,11 +1311,34 @@ void DeviceListPanel::onDeviceListUpdated(DeviceListUpdateEvent& event)
     }
     m_filter_placement_default = true;
     m_filter_status_default = true;
+    m_simple_book->ChangeSelection(m_device_map.empty() ? 0 : 1);
     updateFilterMap();
     updateStaticMap();
     updateDeviceWindowSize();
-    updateSizer();
+    updateDeviceSizer();
     event.Skip();
+}
+
+void DeviceListPanel::updateDeviceInfo(const std::string& dev_id, const DeviceInfoItemPanel::DeviceInfo& info)
+{
+    bool status_changed = false;
+    auto iter = m_device_map.find(dev_id);
+    if (iter != m_device_map.end()) {
+        const auto& dev_info = iter->second->deviceInfo();
+        if (dev_info.status != info.status) {
+            status_changed = true;
+        }
+        if (status_changed || dev_info.conn_id != info.conn_id || dev_info.lanFlag != info.lanFlag
+            || dev_info.name != info.name || dev_info.pid != info.pid || dev_info.placement != info.placement) {
+            iter->second->updateInfo(info);
+        }
+    }
+    if (status_changed) {
+        updateStaticMap();
+        if (m_static_btn->GetValue()) {
+            updateDeviceSizer();
+        }
+    }
 }
 
 void DeviceListPanel::onComDevDetailUpdate(ComDevDetailUpdateEvent& event)
@@ -1350,28 +1346,38 @@ void DeviceListPanel::onComDevDetailUpdate(ComDevDetailUpdateEvent& event)
     auto conn_id = event.id;
     bool valid = false;
     const auto& data = MultiComMgr::inst()->devData(conn_id, &valid);
-    if (valid) {
-        bool status_changed = false;
-        std::string dev_id = (data.connectMode == COM_CONNECT_LAN) ? data.lanDevInfo.serialNumber : data.wanDevInfo.serialNumber;
-        auto iter = m_device_map.find(dev_id);
-        if (iter != m_device_map.end()) {
-            auto dev_info = iter->second->deviceInfo();
-            dev_info.conn_id = conn_id;
-            dev_info.name = data.devDetail->name;
-            dev_info.pid = data.devDetail->pid;
-            dev_info.placement = data.devDetail->location;
-            if (dev_info.status != data.devDetail->status) {
-                dev_info.status = data.devDetail->status;
-                status_changed = true;
-            }
-            iter->second->updateInfo(dev_info);
-        }
-        if (status_changed) {
-            updateStaticMap();
-            if (m_static_btn->GetValue()) {
-                updateSizer();
-            }
-        }
+    if (COM_CONNECT_LAN == data.connectMode && valid) {
+        std::string dev_id = data.lanDevInfo.serialNumber;
+        DeviceInfoItemPanel::DeviceInfo info;
+        info.lanFlag = true;
+        info.conn_id = conn_id;
+        info.name = data.devDetail->name;        
+        info.pid = data.devDetail->pid;
+        info.placement = data.devDetail->location;
+        info.status = data.devDetail->status;
+        updateDeviceInfo(dev_id, info);
+    }
+    event.Skip();
+}
+
+void DeviceListPanel::onComWanDeviceInfoUpdate(ComWanDevInfoUpdateEvent& event)
+{
+    auto conn_id = event.id;
+    bool valid = false;
+    const auto& data = MultiComMgr::inst()->devData(conn_id, &valid);
+    if (COM_CONNECT_WAN == data.connectMode && valid) {
+        std::string dev_id = data.wanDevInfo.serialNumber;
+        DeviceInfoItemPanel::DeviceInfo info;
+        info.lanFlag = false;
+        info.conn_id = conn_id;
+        info.name = data.wanDevInfo.name;        
+        info.pid = data.devDetail->pid;
+        info.placement = data.wanDevInfo.location;
+        info.status = data.wanDevInfo.status;
+
+        updateDeviceInfo(dev_id, info);
+        //BOOST_LOG_TRIVIAL(error) << "onComWanDeviceInfoUpdate: " << info.status;
+        //flush_logs();
     }
     event.Skip();
 }

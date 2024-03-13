@@ -17,7 +17,6 @@ class FFCheckBox;
 namespace Slic3r {
 namespace GUI {
 
-#define LISTBOX_HEIGHT 40
 
 class DropDownButton : public wxPanel
 {
@@ -143,8 +142,7 @@ public:
     DeviceItemPanel(wxWindow *parent);
     virtual ~DeviceItemPanel();
 
-    void blockMouseEvent(bool block);    
-    static wxString statusText(const std::string& status, wxColour& color);
+    void blockMouseEvent(bool block);
 
 protected:
     void leaveWindow();
@@ -158,7 +156,7 @@ protected:
 
 private:
     bool isPointIn(const wxPoint& pt);
-    void sendEvent();
+    virtual void sendEvent() {};
 
 protected:
     bool            m_hovered {false};
@@ -186,12 +184,13 @@ public:
         std::string status;
     };
 
-    DeviceInfoItemPanel(wxWindow *parent, const DeviceInfo& info);
+    DeviceInfoItemPanel(wxWindow *parent, const DeviceInfo& info, wxWindow* event_handle = nullptr);
 
     void updateInfo(const DeviceInfo& info);
     const DeviceInfo& deviceInfo() const;
 
 private:
+    void sendEvent() override;
     void updateStatus();
     static wxBitmap machineBitmap(unsigned short pid);
 
@@ -201,7 +200,9 @@ private:
     wxStaticBitmap* m_icon {nullptr};
     wxStaticText*   m_placement_text {nullptr};
     wxStaticText*   m_status_text {nullptr};
+    wxWindow*       m_event_handle {nullptr};
 };
+wxDECLARE_EVENT(EVT_DEVICE_ITEM_SELECTED, wxCommandEvent);
 
 
 class DeviceStaticItemPanel : public DeviceItemPanel
@@ -259,15 +260,17 @@ private:
     void updateTypeMap();
     void updateFilterTitle();
     void updateStaticMap();
-    void updateSizer();
+    void updateDeviceSizer();
     void filterDeviceList();
     void updateDeviceWindowSize();
+    void updateDeviceInfo(const std::string& dev_id, const DeviceInfoItemPanel::DeviceInfo& info);
 
     void onFilterButtonClicked(wxMouseEvent &event);
     void onNetworkTypeToggled(wxCommandEvent& event);
     void onStaticModeToggled(wxCommandEvent &event);
     void onDeviceListUpdated(DeviceListUpdateEvent& event);
     void onComDevDetailUpdate(ComDevDetailUpdateEvent& event);
+    void onComWanDeviceInfoUpdate(ComWanDevInfoUpdateEvent& event);
     void onPopupShow(wxShowEvent& event);
     void onFilterItemClicked(wxCommandEvent& event);
 

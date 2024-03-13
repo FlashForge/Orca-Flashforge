@@ -1,4 +1,5 @@
 #include "FFUtils.hpp"
+#include "slic3r/GUI/I18N.hpp"
 
 namespace Slic3r::GUI
 {
@@ -40,6 +41,42 @@ unsigned short FFUtils::getPrinterPID(const std::string& type)
 		pid == 0x0024;
 	}
 	return pid;
+}
+
+wxString FFUtils::convertStatus(const std::string& status, wxColour& color)
+{
+	wxString st = _L("Idle");
+    color = wxColour("#00CD6D");
+    if ("offline" == status) {
+        st = _L("Offline");
+        color = wxColour("#999999");
+    } else {
+        if ("printing" == status || "canceling" == status) {
+            st = _L("Printing");
+            color = wxColour("#4D54FF");
+        } else if ("pause" == status || "pausing" == status) {
+            st = _L("Paused");
+            color = wxColour("#982187");
+        } else if ("error" == status) {
+            st = _L("Error");
+            color = wxColour("#FD4A29");
+        } else if ("busy" == status || "calibrate_doing" == status || "heating" == status) {
+            st = _L("Busy");
+            color = wxColour("#F9B61C");
+        } else if ("completed" == status || "cancel" == status) {
+            st = _L("Completed");
+            color = wxColour("#328DFB");
+        }
+        //} else if ("cancel" == status || "canceling" == status) {
+        //    st = _L("Cancel");
+        //    color = wxColour("#328DFB");
+        //}
+        //} else if ("heating" == rawstatus) {
+        //    status = _L("Heating");
+        //    //color = wxColour("");
+        //}
+    }
+    return st;
 }
 
 } // end namespace

@@ -9,11 +9,13 @@ namespace Slic3r::GUI
 class FFUtils
 {
 public:
-	static  wxString getBitmapFileName(unsigned short pid);
+	static wxString getBitmapFileName(unsigned short pid);
 
 	static std::string getPrinterName(unsigned short pid);
 
 	static unsigned short getPrinterPID(const std::string& type);
+
+	static wxString convertStatus(const std::string& status, wxColour& color);
 };
 
 }
