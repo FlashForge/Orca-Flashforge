@@ -649,7 +649,13 @@ void IconText::setText(wxString text)
     Refresh();
 }
 
-void IconText::setTextColor(wxColour colour)
+void IconText::setTextForegroundColour(wxColour colour) 
+{
+    m_text_ctrl->SetForegroundColour(colour);
+    Refresh();
+}
+
+void IconText::setTextBackgroundColor(wxColour colour)
 {
     m_text_ctrl->SetBackgroundColour(colour);
     Refresh();
@@ -945,6 +951,34 @@ TempMixDevice::TempMixDevice(wxWindow* parent,bool idle, wxString nozzleTemp, wx
     connectEvent();
 }
 
+void TempMixDevice::setState(int state)
+{ 
+    if (0 == state) {   //offline
+        //图标、解绑
+        m_idle_device_info_button->SetIcon("device_file_offline");
+        m_idle_lamp_control_button->SetIcon("device_lamp_offline");
+        m_idle_filter_button->SetIcon("device_filter_offline");
+        m_idle_device_info_button->Unbind(wxEVT_LEFT_DOWN, &TempMixDevice::onDevInfoBtnClicked, this);
+        m_idle_lamp_control_button->Unbind(wxEVT_LEFT_DOWN, &TempMixDevice::onLampBtnClicked, this);
+        m_idle_filter_button->Unbind(wxEVT_LEFT_DOWN, &TempMixDevice::onFilterBtnClicked, this);
+    } else if(1 == state){  //idle
+        m_idle_device_info_button->SetIcon("device_idle_file_info");
+        m_idle_lamp_control_button->SetIcon("device_lamp_control");
+        m_idle_filter_button->SetIcon("device_filter");
+        m_idle_device_info_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onDevInfoBtnClicked, this);
+        m_idle_lamp_control_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onLampBtnClicked, this);
+        m_idle_filter_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onFilterBtnClicked, this);
+    } else if (2 == state) {   // normal
+        m_idle_device_info_button->SetIcon("device_file_info");
+        m_idle_lamp_control_button->SetIcon("device_lamp_control");
+        m_idle_filter_button->SetIcon("device_filter");
+        m_idle_device_info_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onDevInfoBtnClicked, this);
+        m_idle_lamp_control_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onLampBtnClicked, this);
+        m_idle_filter_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onFilterBtnClicked, this);
+    }
+}
+
+
 void TempMixDevice::create_panel(wxWindow* parent,bool idle, wxString nozzleTemp,wxString platformTemp,wxString cavityTemp)
 {
     //新建垂直布局
@@ -1028,10 +1062,14 @@ void TempMixDevice::create_panel(wxWindow* parent,bool idle, wxString nozzleTemp
     deviceInfoSizer->Fit(m_panel_idle_device_info);
 //***添加循环过滤信息布局
     m_panel_circula_filter = new StartFiltering(parent);
+    //添加空白页面
+    auto blank_page = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(300)), wxTAB_TRAVERSAL);
+    blank_page->SetBackgroundColour(wxColor("#F0F0F0"));
 
     idleSizer->Add(m_panel_idle_device_info, 0, wxALL | wxEXPAND , 0);
     idleSizer->Add(m_panel_circula_filter, 0, wxALL | wxEXPAND, 0);
-    //m_panel_idle_device_info->Hide();
+    idleSizer->Add(blank_page, 0, wxALL | wxEXPAND, 0);
+    m_panel_idle_device_info->Hide();
     m_panel_circula_filter->Hide();
 
     parent->SetSizer(idleSizer);
@@ -1051,8 +1089,8 @@ void TempMixDevice::setupLayoutIdleDeviceState(wxBoxSizer *deviceStateSizer, wxP
     m_idle_device_info_button = new Button(m_panel_control_lamp, wxString(""), file_pic, 0, FromDIP(18));
     m_idle_device_info_button->SetFont(wxFont(wxFontInfo(16)));
     m_idle_device_info_button->SetBorderWidth(0);
-//    m_idle_device_info_button->SetBackgroundColor(wxColour(255, 255, 255));
-    m_idle_device_info_button->SetBackgroundColor(wxColour(217, 234, 255));
+    m_idle_device_info_button->SetBackgroundColor(wxColour(255, 255, 255));
+//    m_idle_device_info_button->SetBackgroundColor(wxColour(217, 234, 255));
     m_idle_device_info_button->SetBorderColor(wxColour(255, 255, 255));
     // m_idle_device_info_button->SetTextColor(wxColour(51,51,51));
     m_idle_device_info_button->SetMinSize((wxSize(FromDIP(108), FromDIP(29))));
@@ -1070,25 +1108,7 @@ void TempMixDevice::setupLayoutIdleDeviceState(wxBoxSizer *deviceStateSizer, wxP
     // m_idle_lamp_control_button->SetTextColor(wxColour(51,51,51));
     m_idle_lamp_control_button->SetMinSize((wxSize(FromDIP(108), FromDIP(29))));
     m_idle_lamp_control_button->SetCornerRadius(0);
-    m_idle_lamp_control_button->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e) {
-        if (m_idle_lamp_control_button->GetFlashForgeSelected()) {
-            // 关灯
-            Slic3r::GUI::ComLightCtrl *lightctrl = new Slic3r::GUI::ComLightCtrl(CLOSE);
-            // 测试，临时将id写死
-            Slic3r::GUI::MultiComMgr::inst()->putCommand(0, lightctrl);
-            m_idle_lamp_control_button->SetIcon("device_lamp_control");
-            m_idle_lamp_control_button->Refresh();
-            m_idle_lamp_control_button->SetFlashForgeSelected(false);
-        } else {
-            // 开灯
-            Slic3r::GUI::ComLightCtrl *lightctrl = new Slic3r::GUI::ComLightCtrl(OPEN);
-            // 测试，临时将id写死
-            Slic3r::GUI::MultiComMgr::inst()->putCommand(0, lightctrl);
-            m_idle_lamp_control_button->SetIcon("device_lamp_control_press");
-            m_idle_lamp_control_button->Refresh();
-            m_idle_lamp_control_button->SetFlashForgeSelected(true);
-        }
-    });
+
     //bSizer_control_lamp->Add(m_idle_lamp_control_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
     bSizer_control_lamp->Add(m_idle_lamp_control_button, wxSizerFlags(1).Expand());
     bSizer_control_lamp->AddSpacer(FromDIP(6));
@@ -1274,34 +1294,65 @@ void TempMixDevice::setupLayoutDeviceInfo(wxBoxSizer *deviceInfoSizer, wxPanel *
 void TempMixDevice::connectEvent()
 {
     //idle button slot
-    m_idle_device_info_button->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e) {
-        if(m_panel_idle_device_info){
-             m_panel_idle_device_info->Show();
-            m_idle_device_info_button->SetBackgroundColor(wxColour(217, 234, 255));
-        }
-        if(m_panel_circula_filter){
-          m_panel_circula_filter->Hide();
-        }
-        if (m_idle_filter_button) {
-          m_idle_filter_button->SetBackgroundColor(wxColour(255, 255, 255));
-        }
-        Layout();
-    });
+    m_idle_device_info_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onDevInfoBtnClicked, this);
+    m_idle_lamp_control_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onLampBtnClicked, this);
+    m_idle_filter_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onFilterBtnClicked, this);
+}
 
-    m_idle_filter_button->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e) {
-        if(m_panel_circula_filter){
-            m_panel_circula_filter->Show();
-            m_idle_filter_button->SetBackgroundColor(wxColour(217, 234, 255));
-        }
-        if(m_panel_idle_device_info){
-          m_panel_idle_device_info->Hide();
-        }
-        if (m_idle_device_info_button) {
-          m_idle_device_info_button->SetBackgroundColor(wxColour(255, 255, 255));
-        }
-        Layout();
-    });  
+void TempMixDevice::onDevInfoBtnClicked(wxMouseEvent &event)
+{
+    event.Skip();
+    if (m_panel_idle_device_info) {
+        m_panel_idle_device_info->Show();
+        m_idle_device_info_button->SetBackgroundColor(wxColour(217, 234, 255));
+        m_panel_idle_device_info->Layout();
+        m_panel_idle_device_info->Refresh();
+    }
+    if (m_panel_circula_filter) {
+        m_panel_circula_filter->Hide();
+    }
+    if (m_idle_filter_button) {
+        m_idle_filter_button->SetBackgroundColor(wxColour(255, 255, 255));
+    }
+    Layout();
+}
 
+void TempMixDevice::onLampBtnClicked(wxMouseEvent &event) 
+{
+    event.Skip();
+    if (m_idle_lamp_control_button->GetFlashForgeSelected()) {
+        // 关灯
+        Slic3r::GUI::ComLightCtrl *lightctrl = new Slic3r::GUI::ComLightCtrl(CLOSE);
+        // 测试，临时将id写死
+        Slic3r::GUI::MultiComMgr::inst()->putCommand(0, lightctrl);
+        m_idle_lamp_control_button->SetIcon("device_lamp_control");
+        m_idle_lamp_control_button->Refresh();
+        m_idle_lamp_control_button->SetFlashForgeSelected(false);
+    } else {
+        // 开灯
+        Slic3r::GUI::ComLightCtrl *lightctrl = new Slic3r::GUI::ComLightCtrl(OPEN);
+        // 测试，临时将id写死
+        Slic3r::GUI::MultiComMgr::inst()->putCommand(0, lightctrl);
+        m_idle_lamp_control_button->SetIcon("device_lamp_control_press");
+        m_idle_lamp_control_button->Refresh();
+        m_idle_lamp_control_button->SetFlashForgeSelected(true);
+    }
+}
+
+void TempMixDevice::onFilterBtnClicked(wxMouseEvent &event) 
+{
+    event.Skip();
+    if (m_panel_circula_filter) {
+        m_panel_circula_filter->Show();
+        m_idle_filter_button->SetBackgroundColor(wxColour(217, 234, 255));
+    }
+    if (m_panel_idle_device_info) {
+        m_panel_idle_device_info->Hide();
+    }
+    if (m_idle_device_info_button) {
+        m_idle_device_info_button->SetBackgroundColor(wxColour(255, 255, 255));
+    }
+    Layout();
 }
 
 void TempMixDevice::setDeviceInfoBtnIcon(const wxString &icon) 
@@ -1311,10 +1362,22 @@ void TempMixDevice::setDeviceInfoBtnIcon(const wxString &icon)
 
 void TempMixDevice::modifyTemp(wxString nozzleTemp, wxString platformTemp, wxString cavityTemp) 
 {
-    wxString degreeSymbol = wxString::FromUTF8("\xE2\x84\x83");
-    m_temp_ctrl_top->setText(nozzleTemp.Append(degreeSymbol));
-    m_temp_ctrl_bottom->setText(platformTemp.Append(degreeSymbol));
-    m_temp_ctrl_mid->setText(cavityTemp.Append(degreeSymbol));
+    if (nozzleTemp.compare("/") == 0 && platformTemp.compare("/") == 0 && cavityTemp.compare("/") == 0) {
+        m_temp_ctrl_top->setTextForegroundColour(wxColor("#999999"));
+        m_temp_ctrl_bottom->setTextForegroundColour(wxColor("#999999"));
+        m_temp_ctrl_mid->setTextForegroundColour(wxColor("#999999"));
+        m_temp_ctrl_top->setText(nozzleTemp);
+        m_temp_ctrl_bottom->setText(platformTemp);
+        m_temp_ctrl_mid->setText(cavityTemp);
+    } else {
+        m_temp_ctrl_top->setTextForegroundColour(wxColor("#328DFB"));
+        m_temp_ctrl_bottom->setTextForegroundColour(wxColor("#328DFB"));
+        m_temp_ctrl_mid->setTextForegroundColour(wxColor("#328DFB"));
+        wxString degreeSymbol = wxString::FromUTF8("\xE2\x84\x83");
+        m_temp_ctrl_top->setText(nozzleTemp.Append(degreeSymbol));
+        m_temp_ctrl_bottom->setText(platformTemp.Append(degreeSymbol));
+        m_temp_ctrl_mid->setText(cavityTemp.Append(degreeSymbol));
+    }
 }
 
 void TempMixDevice::modifyDeviceInfo(wxString machineType, wxString sprayNozzle, wxString printSize, wxString version, wxString number, wxString material)

@@ -152,7 +152,8 @@ public:
     ~IconText(){};
     void create_panel(wxWindow* parent,wxString icon,int iconSize,wxString text,int textSize);
     void setText(wxString text);
-    void setTextColor(wxColour colour);
+    void setTextForegroundColour(wxColour colour);
+    void setTextBackgroundColor(wxColour colour);
 private:
     wxBitmap    m_icon;
     wxStaticBitmap*  m_icon_staticbitmap{nullptr};
@@ -221,12 +222,18 @@ public:
                  const wxSize & size = wxDefaultSize,
                  long style = wxTAB_TRAVERSAL);
     ~TempMixDevice(){};
+
+    void setState(int state);
+
     void create_panel(wxWindow* parent,bool idle, wxString nozzleTemp,wxString platformTemp,wxString cavityTemp);
 
     void setupLayoutIdleDeviceState(wxBoxSizer *deviceStateSizer, wxPanel *parent,bool idle);
     void setupLayoutDeviceInfo(wxBoxSizer *deviceStateSizer, wxPanel *parent);
 
     void connectEvent();
+    void onDevInfoBtnClicked(wxMouseEvent &event);
+    void onLampBtnClicked(wxMouseEvent &event);
+    void onFilterBtnClicked(wxMouseEvent &event);
 
     void setDeviceInfoBtnIcon(const wxString &icon);
 
