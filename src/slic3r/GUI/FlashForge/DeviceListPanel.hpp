@@ -274,6 +274,34 @@ private:
     void onPopupShow(wxShowEvent& event);
     void onFilterItemClicked(wxCommandEvent& event);
 
+private:
+    struct DeviceKey {
+        int priority {0};
+        std::string dev_id;   // serial number
+        std::string dev_name; // sort key
+
+        DeviceKey(const std::string& devID) : dev_id(devID) {}
+        DeviceKey(int _priority, const std::string& devID, const std::string& devName)
+            : priority(_priority), dev_id(devID), dev_name(devName) {}
+        bool operator < (const DeviceKey& other) const {
+            return dev_id < other.dev_id;
+        }
+    };
+    
+    struct DeviceKeySortFunc {
+        bool operator()(const DeviceKey& lhs, const DeviceKey& rhs) const {
+            if (lhs.priority != rhs.priority) {
+                return lhs.priority > rhs.priority;
+            }
+            return lhs.dev_name < rhs.dev_name;
+        }
+    };
+
+    typedef std::map<DeviceKey, DeviceInfoItemPanel*> DeviceItemMap;
+    typedef std::set<DeviceKey, DeviceKeySortFunc> DeviceKeySet;
+    int generateNewPriorityId();
+    void updatePriorityId();
+
 private: 
     DropDownButton* m_placement_btn {nullptr};
     DropDownButton *m_status_btn {nullptr};
@@ -293,7 +321,8 @@ private:
     
     FilterPopupType m_filter_popup_type {Filter_Popup_Type_None};
     FilterPopupWindow* m_filter_popup {nullptr};
-    std::map<std::string, DeviceInfoItemPanel*> m_device_map;
+
+    DeviceItemMap       m_device_map;
     std::map<std::string, DeviceStaticItemPanel*> m_device_stat_map;
     FilterPopupWindow::FilterItem*  m_default_filter_item {nullptr};
     PlacementItemMap    m_placement_item_map;
@@ -304,6 +333,8 @@ private:
     bool                m_filter_status_default {true};
     std::string         m_filter_status;
     std::set<unsigned short> m_filter_types;
+
+    static int m_last_priority_id;
 };
 
 } // GUI

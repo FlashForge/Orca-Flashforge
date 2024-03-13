@@ -738,6 +738,7 @@ void DeviceStaticItemPanel::setCount(int count)
 }
 
 
+int DeviceListPanel::m_last_priority_id = 0;
 DeviceListPanel::DeviceListPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, 
         const wxSize& size)
     : wxPanel(parent, id, pos, size, wxTAB_TRAVERSAL)
@@ -922,11 +923,13 @@ void DeviceListPanel::initDeviceList()
     });
     //m_device_map
     for (const auto& iter : devKeyList) {
+        DeviceKey key(m_last_priority_id, iter, devList[iter].name);
         DeviceInfoItemPanel* item = new DeviceInfoItemPanel(m_device_panel, devList[iter], this);
         item->Show(false);
-        m_device_map.emplace(std::make_pair(iter, item));
+        m_device_map.emplace(std::make_pair(key, item));
         //m_device_sizer->Add(item);
     }
+    //std::sort(m_device_map.begin(), m_device_map.end(), deviceKeySortFunc);
     // m_device_stat_map
     std::map<std::string, int> statusMap;
     for (const auto& dev : devList) {
@@ -958,18 +961,28 @@ void DeviceListPanel::filterDeviceList()
         return;
     }
     Freeze();
-    m_device_sizer->Clear();
+
+    DeviceKeySet device_key_set;
     for (const auto& iter : m_device_map) {
-        const auto& dev_info = iter.second->deviceInfo();
+        device_key_set.emplace(iter.first);
+    }
+
+    m_device_sizer->Clear();
+    for (const auto& key : device_key_set) {
+        const auto& iter = m_device_map.find(key);
+        if (iter == m_device_map.end()) {
+            continue;
+        }
+        const auto& dev_info = iter->second->deviceInfo();
         //std::string type_str = FFUtils::getPrinterName(dev_info.pid);
         if ((m_filter_placement_default || dev_info.placement == m_filter_placement)
             && (m_filter_status_default || dev_info.status == m_filter_status)
             && (m_filter_types.find(dev_info.pid) != m_filter_types.end())
             && ((m_wlan_btn->GetValue() && !dev_info.lanFlag) || (m_lan_btn->GetValue() && dev_info.lanFlag))) {
-            iter.second->Show(true);
-            m_device_sizer->Add(iter.second);
+            iter->second->Show(true);
+            m_device_sizer->Add(iter->second);
         } else {
-            iter.second->Show(false);
+            iter->second->Show(false);
         }
     }
     m_device_panel->Layout();
@@ -1295,20 +1308,21 @@ void DeviceListPanel::onDeviceListUpdated(DeviceListUpdateEvent& event)
 
         auto info_iter = m_device_map.find(dev_id);
         if (info_iter == m_device_map.end()) {
+            DeviceKey key(generateNewPriorityId(), dev_id, dev_info.name);
             DeviceInfoItemPanel* info_item = new DeviceInfoItemPanel(m_device_panel, dev_info, this);
-            m_device_map.emplace(std::make_pair(dev_id, info_item));
+            m_device_map.emplace(std::make_pair(key, info_item));
         } else {
             info_iter->second->updateInfo(dev_info);
         }
     } else {
-        if (!m_static_btn->GetValue()) {
-            auto iter = m_device_map.find(dev_id);
-            if (iter != m_device_map.end()) {
-                iter->second->Destroy();
-                m_device_map.erase(iter);
-            }
+        auto iter = m_device_map.find(dev_id);
+        if (iter != m_device_map.end()) {
+            iter->second->Destroy();
+            m_device_map.erase(iter);
         }
+        updatePriorityId();
     }
+    //std::sort(m_device_map.begin(), m_device_map.end(), deviceKeySortFunc);
     m_filter_placement_default = true;
     m_filter_status_default = true;
     m_simple_book->ChangeSelection(m_device_map.empty() ? 0 : 1);
@@ -1365,7 +1379,7 @@ void DeviceListPanel::onComWanDeviceInfoUpdate(ComWanDevInfoUpdateEvent& event)
     auto conn_id = event.id;
     bool valid = false;
     const auto& data = MultiComMgr::inst()->devData(conn_id, &valid);
-    if (COM_CONNECT_WAN == data.connectMode && valid) {
+    if (COM_CONNECT_WAN == data.connectMode && valid && data.devDetail) {
         std::string dev_id = data.wanDevInfo.serialNumber;
         DeviceInfoItemPanel::DeviceInfo info;
         info.lanFlag = false;
@@ -1380,6 +1394,22 @@ void DeviceListPanel::onComWanDeviceInfoUpdate(ComWanDevInfoUpdateEvent& event)
         //flush_logs();
     }
     event.Skip();
+}
+
+int DeviceListPanel::generateNewPriorityId()
+{
+    return ++m_last_priority_id;
+}
+
+void DeviceListPanel::updatePriorityId()
+{
+    int max = 0;
+    for (const auto& iter : m_device_map) {
+        if (iter.first.priority > max) {
+            max = iter.first.priority;
+        }
+    }
+    m_last_priority_id = max;
 }
 
 } // GUI
