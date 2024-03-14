@@ -201,6 +201,8 @@ typedef struct fnet_dev_detail {
     double estimatedTime;       // second
     double estimatedRightLen;   // mm
     double estimatedLeftLen;    // mm
+    double estimatedRightWeight;// mm
+    double estimatedLeftWeight; // mm
     double coolingFanSpeed;     // percent
     double chamberFanSpeed;     // percent
     char *internalFanStatus;    // "open", "close"

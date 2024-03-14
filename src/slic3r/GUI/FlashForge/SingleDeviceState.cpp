@@ -2046,7 +2046,7 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
             }
         });
         MultiComUtils::asyncCall(this, [&]() { 
-            return MultiComUtils::downloadFile(m_file_pic_url, m_pic_data); 
+            return MultiComUtils::downloadFile(m_file_pic_url, m_pic_data, 5000); 
         });     
    }
    //m_material_staticbitmap->SetBitmap(create_scaled_bitmap(filePic, this, 60));
