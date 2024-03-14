@@ -150,14 +150,14 @@ ComErrno MultiComUtils::getUserProfile(const std::string &accessToken, com_user_
     return COM_OK;
 }
 
-ComErrno MultiComUtils::downloadFile(const std::string &url, std::vector<char> &bytes)
+ComErrno MultiComUtils::downloadFile(const std::string &url, std::vector<char> &bytes, int msTimeout)
 {
     fnet::FlashNetworkIntfc *intfc = MultiComMgr::inst()->networkIntfc();
     if (intfc == nullptr) {
         return COM_UNINITIALIZED;
     }
     fnet_file_data_t *fileData;
-    int fnetRet = intfc->downloadFile(url.c_str(), &fileData, nullptr, nullptr, ComTimeoutWan);
+    int fnetRet = intfc->downloadFile(url.c_str(), &fileData, nullptr, nullptr, msTimeout);
     if (fnetRet != FNET_OK) {
         return fnetRet2ComErrno(fnetRet);
     }
