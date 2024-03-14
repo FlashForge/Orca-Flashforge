@@ -971,6 +971,14 @@ void TempMixDevice::setState(int state)
         m_idle_device_info_button->Unbind(wxEVT_LEFT_DOWN, &TempMixDevice::onDevInfoBtnClicked, this);
         m_idle_lamp_control_button->Unbind(wxEVT_LEFT_DOWN, &TempMixDevice::onLampBtnClicked, this);
         m_idle_filter_button->Unbind(wxEVT_LEFT_DOWN, &TempMixDevice::onFilterBtnClicked, this);
+        m_panel_idle_device_info->Hide();
+        m_panel_circula_filter->Hide();
+        m_idle_device_info_button->Enable(false);
+        m_idle_lamp_control_button->Enable(false);
+        m_idle_filter_button->Enable(false);
+        m_idle_device_info_button->SetBackgroundColor(wxColour(255, 255, 255));
+        m_idle_filter_button->SetBackgroundColor(wxColour(255, 255, 255));
+        Layout();
     } else if(1 == state){  //idle
         m_idle_device_info_button->SetIcon("device_idle_file_info");
         m_idle_lamp_control_button->SetIcon("device_lamp_control");
@@ -978,6 +986,9 @@ void TempMixDevice::setState(int state)
         m_idle_device_info_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onDevInfoBtnClicked, this);
         m_idle_lamp_control_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onLampBtnClicked, this);
         m_idle_filter_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onFilterBtnClicked, this);
+        m_idle_device_info_button->Enable(true);
+        m_idle_lamp_control_button->Enable(true);
+        m_idle_filter_button->Enable(true);
     } else if (2 == state) {   // normal
         m_idle_device_info_button->SetIcon("device_file_info");
         m_idle_lamp_control_button->SetIcon("device_lamp_control");
@@ -985,6 +996,9 @@ void TempMixDevice::setState(int state)
         m_idle_device_info_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onDevInfoBtnClicked, this);
         m_idle_lamp_control_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onLampBtnClicked, this);
         m_idle_filter_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onFilterBtnClicked, this);
+        m_idle_device_info_button->Enable(true);
+        m_idle_lamp_control_button->Enable(true);
+        m_idle_filter_button->Enable(true);
     }
 }
 

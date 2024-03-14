@@ -8,6 +8,7 @@
 #include <nlohmann/json.hpp>
 #include "slic3r/GUI/GUI.hpp"
 #include "slic3r/GUI/GUI_App.hpp"
+#include "slic3r/GUI/Plater.hpp"
 
 using namespace std::literals;
 using json   = nlohmann::json;
@@ -1009,7 +1010,7 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         //***添加右侧材料
         static Slic3r::GUI::BitmapCache cache;
         m_material_weight_pic = create_scaled_bitmap("device_material_weight", this, 16);
-        m_material_pic = create_scaled_bitmap("monitor_item_prediction", this, 60);
+        m_material_pic = create_scaled_bitmap("monitor_item_prediction_0", this, 60);
         
         m_material_weight_staticbitmap = new wxStaticBitmap(m_panel_control_material, wxID_ANY,m_material_weight_pic);
 //        m_material_weight_staticbitmap->SetMinSize(wxSize(8,8));
@@ -1883,6 +1884,12 @@ void SingleDeviceState::onDevStateChanged(std::string devState, const com_dev_da
     if (m_cur_dev_state != state) {
         m_cur_dev_state = state;
         m_file_pic_url.clear();
+        m_material_staticbitmap->SetBitmap(create_scaled_bitmap("monitor_item_prediction_0", this, 60));
+        //auto aprint_stats = wxGetApp().plater_->get_partplate_list().get_current_fff_print().print_statistics();
+        //char weight[64];
+        //::sprintf(weight, "  %.2f g", aprint_stats.total_weight);
+        //m_material_weight_label->SetLabel(weight);
+
         if (state == P_READY) {
             m_machine_idle_panel->Show();
             m_machine_ctrl_panel->Hide();
