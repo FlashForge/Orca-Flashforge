@@ -112,7 +112,7 @@ MachineObjectPanel::MachineObjectPanel(wxWindow *parent, wxWindowID id, const wx
     m_info = nullptr;
     m_devInfo = nullptr;
 
-    SetBackgroundColour(StateColor::darkModeColorFor(*wxWHITE));
+    SetBackgroundColour(wxColour("#fafafa") /*StateColor::darkModeColorFor(*wxWHITE)*/);
 
     m_unbind_img        = ScalableBitmap(this, "unbind", 18);
     m_edit_name_img     = ScalableBitmap(this, "edit_button", 18);
@@ -414,12 +414,12 @@ SelectMachinePopup::SelectMachinePopup(wxWindow *parent)
 
     Freeze();
     wxBoxSizer *m_sizer_main = new wxBoxSizer(wxVERTICAL);
-    SetBackgroundColour(SELECT_MACHINE_GREY400);
+    //SetBackgroundColour(*wxRED/*SELECT_MACHINE_GREY400*/);
 
 
 
     m_scrolledWindow = new wxScrolledWindow(this, wxID_ANY, wxDefaultPosition, SELECT_MACHINE_LIST_SIZE, wxHSCROLL | wxVSCROLL);
-    m_scrolledWindow->SetBackgroundColour(*wxWHITE);
+    m_scrolledWindow->SetBackgroundColour(/**wxWHITE*/ wxColour("#fafafa"));
     m_scrolledWindow->SetMinSize(SELECT_MACHINE_LIST_SIZE);
     m_scrolledWindow->SetScrollRate(0, 5);
     auto m_sizxer_scrolledWindow = new wxBoxSizer(wxVERTICAL);
@@ -450,7 +450,7 @@ SelectMachinePopup::SelectMachinePopup(wxWindow *parent)
     m_sizxer_scrolledWindow->Add(m_sizer_other_devices, 0, wxEXPAND, 0);
 
 
-    m_sizer_main->Add(m_scrolledWindow, 0, wxALL | wxEXPAND, FromDIP(2));
+    m_sizer_main->Add(m_scrolledWindow, 0, wxALL | wxEXPAND, FromDIP(0));
 
     SetSizer(m_sizer_main);
     Layout();
@@ -555,7 +555,7 @@ bool SelectMachinePopup::Show(bool show) {
 wxWindow *SelectMachinePopup::create_title_panel(wxString text)
 {
     auto panel_title = new wxWindow(m_scrolledWindow, wxID_ANY, wxDefaultPosition, SELECT_MACHINE_ITEM_SIZE, wxTAB_TRAVERSAL);
-    panel_title->SetBackgroundColour(*wxWHITE);
+    panel_title->SetBackgroundColour(/**wxWHITE*/ wxColour("#fafafa"));
 
     wxBoxSizer *sizer_title = new wxBoxSizer(wxHORIZONTAL);
 
@@ -726,7 +726,7 @@ void SelectMachinePopup::update_other_devices()
             }
         });
 
-        op->Bind(EVT_BIND_MACHINE, [this, deviceObj](wxCommandEvent &e) {
+        op->Bind(EVT_BIND_MACHINE, [this, deviceObj](wxCommandEvent &e) {            
             BindMachineDialog dlg;
             dlg.update_device_info(deviceObj);
             int dlg_result = wxID_CANCEL;

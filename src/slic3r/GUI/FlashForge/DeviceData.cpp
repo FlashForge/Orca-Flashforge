@@ -362,6 +362,13 @@ void DeviceObjectOpr::get_user_machine(std::map<std::string, DeviceObject*>& mac
     macList.insert(m_user_devices.begin(), m_user_devices.end());
 }
 
+bool DeviceObjectOpr::my_machine_empty()
+{
+    if (m_user_devices.empty() && m_local_devices.empty())
+        return true;
+    return false;
+}
+
 bool DeviceObjectOpr::set_selected_machine(const string &dev_id)
 {
     BOOST_LOG_TRIVIAL(info) << "set_selected_machine=" << dev_id;

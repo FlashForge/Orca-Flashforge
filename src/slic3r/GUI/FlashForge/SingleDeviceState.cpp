@@ -221,6 +221,7 @@ void StartFilter::onAirFilterToggled(wxCommandEvent &event)
     }
 }
 
+wxDEFINE_EVENT(EVT_MODIFY_TEMP_CLICKED, wxCommandEvent);
 ModifyTemp::ModifyTemp(wxWindow *parent) 
     : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL)
 {
@@ -265,6 +266,11 @@ void ModifyTemp::create_panel(wxWindow *parent)
     m_cancel_btn->SetFontColor(wxColour(255, 255, 255));
     m_cancel_btn->SetBorderColor(wxColour(75, 75, 75));
     m_cancel_btn->SetBGColor(wxColour(75, 75, 75));
+    m_cancel_btn->Bind(wxEVT_LEFT_DOWN, [this, operate_panel](wxMouseEvent &event) {
+        event.Skip();
+        Hide();
+        Layout();
+    });
 
     bSizer_operate_hor->AddStretchSpacer();
     bSizer_operate_hor->Add(m_cancel_btn, 0, wxALIGN_CENTER, 0);
@@ -283,6 +289,12 @@ void ModifyTemp::create_panel(wxWindow *parent)
     m_confirm_btn->SetFontColor(wxColour(255, 255, 255));
     m_confirm_btn->SetBorderColor(wxColour(50, 141, 251));
     m_confirm_btn->SetBGColor(wxColour(50, 141, 251));
+    m_confirm_btn->Bind(wxEVT_LEFT_DOWN, [this, operate_panel](wxMouseEvent &event) {
+        event.Skip();
+        wxCommandEvent ev(EVT_MODIFY_TEMP_CLICKED, GetId());
+        ev.SetEventObject(this);
+        wxPostEvent(this, ev);
+    });
 
     bSizer_operate_hor->Add(m_confirm_btn, 0, wxALIGN_CENTER, 0);
     bSizer_operate_hor->AddStretchSpacer();
@@ -534,42 +546,8 @@ void SingleDeviceState::setCurId(int curId)
 
     //query device data by id
     const com_dev_data_t &data = MultiComMgr::inst()->devData(m_cur_id);
-    if (P_READY == data.devDetail->status){
-        // idle
-        m_machine_idle_panel->Show();
-        m_machine_ctrl_panel->Hide();
-        m_print_button->Enable(true);
-        m_cancel_button->Enable(true);
-        std::string idle_state = _L("idle").ToStdString();
-        setTipMessage(idle_state, "#00CD6D", "",false);
-    }else if(P_COMPLETED == data.devDetail->status) {
-        //compelete
-        //禁用继续打印和取消打印按钮，修改提示信息
-        m_machine_ctrl_panel->Show();
-        m_machine_idle_panel->Hide();
-        std::string compelete_state = _L("completed").ToStdString();
-        std::string compelete_info  = _L("Printing completed, please clean up the platform !").ToStdString();
-        setTipMessage(compelete_state, "#328DFB", compelete_info, true);
-    } else if (P_ERROR == data.devDetail->status) {
-        //error
-
-    } else if (P_BUSY == data.devDetail->status) {
-        //busy
-        std::string busy_state = _L("busy").ToStdString();
-        std::string busy_info  = _L("Printing cancelled, currently in cache command").ToStdString();
-        setTipMessage(busy_state, "#F9B61C", busy_info, true);
-    }else
-        {
-        //printing
-        m_machine_ctrl_panel->Show();
-        m_machine_idle_panel->Hide();
-        m_print_button->Enable(true);
-        m_cancel_button->Enable(true);
-        std::string print_state = _L("printing").ToStdString();
-        setTipMessage(print_state, "#4D54FF");
-    }
+    onDevStateChanged(data.devDetail->status, data);
     Layout();
-    //reInit data
     reInitData();
 }
 
@@ -707,7 +685,7 @@ wxBoxSizer* SingleDeviceState::create_monitoring_page()
         //m_camera_play_url =wxString::Format("file://%s/web/homepage/index.html",from_u8(resources_dir()));
 //#endif
         m_browser = WebView::CreateWebView(this,m_camera_play_url);
-        wxEvtHandler::Bind(wxEVT_WEBVIEW_SCRIPT_MESSAGE_RECEIVED, &SingleDeviceState::OnScriptMessage, this);
+        wxEvtHandler::Bind(wxEVT_WEBVIEW_SCRIPT_MESSAGE_RECEIVED, &SingleDeviceState::onScriptMessage, this);
         m_browser->Bind(wxEVT_WEBVIEW_NAVIGATED, &SingleDeviceState::on_navigated, this);
         if(m_browser == nullptr){
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format("load web view of SingleDeviceState url failed");
@@ -1321,6 +1299,7 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         m_busy_circula_filter->Hide();
 //添加温度修改确认页面
         m_busy_temp_brn = new ModifyTemp(parent);
+        m_busy_temp_brn->Bind(EVT_MODIFY_TEMP_CLICKED, &SingleDeviceState::onModifyTempClicked,this);
         busySizer->Add(m_busy_temp_brn, 0, wxALL | wxEXPAND, 0);
         m_busy_temp_brn->Hide();
 }
@@ -1884,6 +1863,103 @@ void SingleDeviceState::onTargetTempModify(wxCommandEvent &event)
    }
 }
 
+void SingleDeviceState::onModifyTempClicked(wxCommandEvent &event) 
+{
+    event.Skip();
+    m_busy_temp_brn->Hide();
+    double top_temp;
+    double bottom_temp;
+    double mid_temp; 
+    m_tempCtrl_top->GetTagTemp().ToDouble(&top_temp);
+    m_tempCtrl_bottom->GetTagTemp().ToDouble(&bottom_temp);
+    m_tempCtrl_mid->GetTagTemp().ToDouble(&mid_temp);
+    ComTempCtrl* tempCtrl = new ComTempCtrl(bottom_temp, top_temp, 0, mid_temp);
+    Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, tempCtrl);
+}
+
+void SingleDeviceState::onDevStateChanged(std::string devState, const com_dev_data_t &data)
+{
+    std::string state = data.devDetail->status; // 状态
+    if (m_cur_dev_state != state) {
+        m_cur_dev_state = state;
+        m_file_pic_url.clear();
+        if (state == P_READY) {
+            m_machine_idle_panel->Show();
+            m_machine_ctrl_panel->Hide();
+            std::string idle_state = _L("idle").ToStdString();
+            setTipMessage(idle_state, "#00CD6D", "", false);
+            m_idle_tempMixDevice->setState(1);
+            m_staticText_idle->SetLabel(_L("The Current Device has no Printing Projects"));
+        } else if (state == P_COMPLETED) {
+            m_machine_ctrl_panel->Show();
+            m_machine_idle_panel->Hide();
+            m_print_button->SetTextColor(wxColor("#999999"));
+            m_cancel_button->SetTextColor(wxColor("#999999"));
+            m_print_button->Enable(false);
+            m_cancel_button->Enable(false);
+            m_print_button->SetIcon("device_pause_print_disable");
+            m_cancel_button->SetIcon("device_cancel_print_disable");
+            std::string compelete_state = _L("completed").ToStdString();
+            std::string compelete_info  = _L("Print completed,clean platform!").ToStdString();
+            setTipMessage(compelete_state, "#328DFB", compelete_info, true);
+
+            m_staticText_time_label->SetLabel(_L("Total Time"));
+
+            double totalTime = data.devDetail->printDuration; // 本次打印耗时
+            m_staticText_count_time->SetLabel(convertSecondsToHMS(totalTime));
+        } else if (state == P_BUSY) {
+            std::string busy_state = _L("busy").ToStdString();
+            std::string busy_info  = _L("Print cancelled,in cache command").ToStdString();
+            setTipMessage(busy_state, "#F9B61C", busy_info, true);
+            m_idle_tempMixDevice->setState(1);
+            m_staticText_idle->SetLabel(_L("The Current Device has no Printing Projects"));
+        } else if (state == P_ERROR) {
+            std::string error_state = _L("error").ToStdString();
+            std::string error_info  = data.devDetail->errorCode;
+            setTipMessage(error_state, "#FB4747", error_info, true);
+        } else if (state == PAUSE || state == P_PAUSING) {
+            m_machine_ctrl_panel->Show();
+            m_machine_idle_panel->Hide();
+            std::string print_state = _L("pause").ToStdString();
+            setTipMessage(print_state, "#982187");
+
+            m_print_button->Enable(true);
+            m_cancel_button->Enable(true);
+            m_print_button->SetIcon("device_pause_print");
+            m_cancel_button->SetIcon("device_cancel_print");
+            m_print_button->SetTextColor(wxColour(51, 51, 51));
+            m_cancel_button->SetTextColor(wxColour(51, 51, 51));
+            m_print_button->SetLabel(_L("continue print"));
+            m_print_button->SetIcon("device_continue_print");
+            m_print_button->Refresh();
+
+            m_staticText_time_label->SetLabel(_L("Remaining Time"));
+            double estimatedTime = data.devDetail->estimatedTime; // 剩余时间
+            m_staticText_count_time->SetLabel(convertSecondsToHMS(estimatedTime));
+        } else {
+            m_machine_ctrl_panel->Show();
+            m_machine_idle_panel->Hide();
+            std::string print_state = _L("printing").ToStdString();
+            setTipMessage(print_state, "#4D54FF");
+
+            m_print_button->Enable(true);
+            m_cancel_button->Enable(true);
+            m_print_button->SetIcon("device_pause_print");
+            m_cancel_button->SetIcon("device_cancel_print");
+            m_print_button->SetTextColor(wxColour(51, 51, 51));
+            m_cancel_button->SetTextColor(wxColour(51, 51, 51));
+            m_print_button->SetLabel(_L("pause print"));
+            m_print_button->SetIcon("device_pause_print");
+            m_print_button->Refresh();
+
+            m_staticText_time_label->SetLabel(_L("Remaining Time"));
+            double estimatedTime = data.devDetail->estimatedTime; // 剩余时间
+            m_staticText_count_time->SetLabel(convertSecondsToHMS(estimatedTime));
+        }
+        Layout();
+    }
+}
+
 void SingleDeviceState::setTipMessage(const std::string& title, const std::string& titleColor,const std::string& info,bool showInfo)
 {
    m_staticText_device_tip->SetLabel(title); 
@@ -1914,67 +1990,7 @@ std::string SingleDeviceState::convertSecondsToHMS(int totalSeconds)
 void SingleDeviceState::fillValue(const com_dev_data_t &data)
 {
    std::string state = data.devDetail->status; // 状态
-   if (m_cur_dev_state != state) {
-        m_cur_dev_state = state;
-        if (state == P_READY) {
-            m_machine_idle_panel->Show();
-            m_machine_ctrl_panel->Hide();
-            std::string idle_state = _L("idle").ToStdString();
-            setTipMessage(idle_state, "#00CD6D", "", false);
-            m_idle_tempMixDevice->setState(1);
-            m_staticText_idle->SetLabel(_L("The Current Device has no Printing Projects"));
-        } else if (state == P_COMPLETED) {
-            m_machine_ctrl_panel->Show();
-            m_machine_idle_panel->Hide();
-            m_print_button->Enable(false);
-            m_cancel_button->Enable(false);
-            std::string compelete_state = _L("completed").ToStdString();
-            std::string compelete_info  = _L("Print completed,clean platform!").ToStdString();
-            setTipMessage(compelete_state, "#328DFB", compelete_info, true);
-
-            m_staticText_time_label->SetLabel(_L("Total Time"));
-
-            double totalTime = data.devDetail->printDuration; // 本次打印耗时
-            m_staticText_count_time->SetLabel(convertSecondsToHMS(totalTime));
-        } else if (state == P_BUSY) {
-            std::string busy_state = _L("busy").ToStdString();
-            std::string busy_info  = _L("Print cancelled,in cache command").ToStdString();
-            setTipMessage(busy_state, "#F9B61C", busy_info, true);
-            m_idle_tempMixDevice->setState(1);
-            m_staticText_idle->SetLabel(_L("The Current Device has no Printing Projects"));
-        } else if (state == P_ERROR) {
-            std::string error_state = _L("error").ToStdString();
-            std::string error_info  = data.devDetail->errorCode;
-            setTipMessage(error_state, "#FB4747", error_info, true);
-        } else if (state == PAUSE || state == P_PAUSING) {
-            m_machine_ctrl_panel->Show();
-            m_machine_idle_panel->Hide();
-            std::string print_state = _L("pause").ToStdString();
-            setTipMessage(print_state, "#982187");
-
-            m_print_button->SetLabel(_L("continue print"));
-            m_print_button->SetIcon("device_continue_print");
-            m_print_button->Refresh();
-
-            m_staticText_time_label->SetLabel(_L("Remaining Time"));
-            double estimatedTime = data.devDetail->estimatedTime; // 剩余时间
-            m_staticText_count_time->SetLabel(convertSecondsToHMS(estimatedTime));
-        } else {
-            m_machine_ctrl_panel->Show();
-            m_machine_idle_panel->Hide();
-            std::string print_state = _L("printing").ToStdString();
-            setTipMessage(print_state, "#4D54FF");
-
-            m_print_button->SetLabel(_L("pause print"));
-            m_print_button->SetIcon("device_pause_print");
-            m_print_button->Refresh();
-
-            m_staticText_time_label->SetLabel(_L("Remaining Time"));
-            double estimatedTime = data.devDetail->estimatedTime; // 剩余时间
-            m_staticText_count_time->SetLabel(convertSecondsToHMS(estimatedTime));
-        }
-        Layout();
-   }
+   onDevStateChanged(state, data);
    if (state.compare("printing") == 0) {
         double estimatedTime = data.devDetail->estimatedTime; // 剩余时间
         m_staticText_count_time->SetLabel(convertSecondsToHMS(estimatedTime));
@@ -2025,6 +2041,8 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
                     wxBitmap bitmap(image,-1);
                     m_material_staticbitmap->SetBitmap(bitmap);
                 }
+            } else {
+                m_file_pic_url.clear();
             }
         });
         MultiComUtils::asyncCall(this, [&]() { 
@@ -2137,7 +2155,7 @@ std::string SingleDeviceState::truncateString(const std::string &s, size_t lengt
    }
 }
 
-void SingleDeviceState::OnScriptMessage(wxWebViewEvent &evt)
+void SingleDeviceState::onScriptMessage(wxWebViewEvent &evt)
 {
    wxString          strInput = evt.GetString();
    std::string       cmd      = evt.GetString().ToUTF8().data();

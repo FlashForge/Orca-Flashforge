@@ -171,6 +171,7 @@ public:
     void get_scan_machine(std::map<std::string, DeviceObject*>& macList);
     void get_local_machine(std::map<std::string, DeviceObject *>& macList);
     void get_user_machine(std::map<std::string, DeviceObject*>& macList);
+    bool my_machine_empty();
 
     /* return machine has access code and user machine if login*/
     void get_my_machine_list(map<string, DeviceObject *> &devList);
@@ -185,6 +186,7 @@ public:
     ComErrno unbind_wan_machine(DeviceObject *obj);
 
     string find_dev_from_id(id_connect_mode& mode, int connectId);
+    
 
 private:
     DeviceObject *get_scan_device(const string &dev_id);
