@@ -1131,6 +1131,9 @@ void DeviceListPanel::updateStaticMap()
             m_device_stat_map.emplace(std::make_pair(iter.first, item));
         }
     }
+    for (auto& iter : m_device_stat_map) {
+        iter.second->Show(iter.second->getCount() > 0);
+    }
 }
 
 void DeviceListPanel::updateDeviceSizer()
@@ -1145,8 +1148,10 @@ void DeviceListPanel::updateDeviceSizer()
             iter.second->Show(false);
         }
         for (const auto& iter : m_device_stat_map) {
-            m_device_sizer->Add(iter.second);
-            iter.second->Show(true);
+            if (iter.second->getCount() > 0) {
+                m_device_sizer->Add(iter.second);
+                iter.second->Show(true);
+            }
         }
         m_device_panel->Layout();
         Layout();
@@ -1346,10 +1351,10 @@ void DeviceListPanel::onDeviceListUpdated(DeviceListUpdateEvent& event)
         m_filter_status_default = true;
         m_simple_book->ChangeSelection(m_device_map.empty() ? 0 : 1);
         updateFilterMap();
-        updateStaticMap();
         updateDeviceWindowSize();
         updateDeviceSizer();
     }
+    updateStaticMap();
     event.Skip();
 }
 
