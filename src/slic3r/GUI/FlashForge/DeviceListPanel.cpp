@@ -1131,9 +1131,9 @@ void DeviceListPanel::updateStaticMap()
             m_device_stat_map.emplace(std::make_pair(iter.first, item));
         }
     }
-    for (auto& iter : m_device_stat_map) {
-        iter.second->Show(iter.second->getCount() > 0);
-    }
+    //for (auto& iter : m_device_stat_map) {
+    //    iter.second->Show(iter.second->getCount() > 0);
+    //}
 }
 
 void DeviceListPanel::updateDeviceSizer()
