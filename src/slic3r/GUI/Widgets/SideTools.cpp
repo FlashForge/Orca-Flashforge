@@ -165,7 +165,7 @@ void SideToolsPanel::doRender(wxDC &dc)
                 no_printer_str = temp_str + L("...");
             }
             dc.DrawText(no_printer_str, wxPoint(left, (size.y - sizet.y) / 2));
-        }        
+        }
 
         left = size.x - FromDIP(18) - m_wifi_none_img.GetBmpSize().x;
         dc.DrawBitmap(m_none_add_img.bmp(), left, (size.y - m_none_add_img.GetBmpSize().y) / 2);
@@ -394,9 +394,10 @@ SideTools::SideTools(wxWindow *parent, wxWindowID id, const wxPoint &pos, const 
     m_st_txt_error_desc->SetLabel("");
 
     wxBoxSizer* m_main_sizer = new wxBoxSizer(wxVERTICAL);
+    m_main_sizer->Add(m_side_tools, 1, wxEXPAND, 0);
     m_main_sizer->Add(m_connection_info, 0, wxEXPAND, 0);
     m_main_sizer->Add(m_side_error_panel, 0, wxEXPAND, 0);
-    m_main_sizer->Add(m_side_tools, 1, wxEXPAND, 0);
+    
     SetSizer(m_main_sizer);
     Layout();
     Fit();
@@ -541,7 +542,7 @@ void SideTools::show_status(int status)
     }
     else if ((status & (int)MonitorStatus::MONITOR_CONNECTED_FAILED) != 0) {
         m_hyperlink->Hide();
-        m_connection_info->SetLabel(_L("Connected Failed."));
+        m_connection_info->SetLabel(_L("Unable to connect to printer"));
         m_connection_info->SetBackgroundColor(0xF6CBC6);
         m_connection_info->SetBorderColor(0xF6CBC6);
         m_connection_info->SetTextColor(0xEA3522);
