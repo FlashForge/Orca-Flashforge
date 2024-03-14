@@ -1338,7 +1338,7 @@ void TempMixDevice::onDevInfoBtnClicked(wxMouseEvent &event)
 
 void TempMixDevice::onLampBtnClicked(wxMouseEvent &event) 
 {
-    event.Skip();
+    //event.Skip();
     if (m_idle_lamp_control_button->GetFlashForgeSelected()) {
         // 关灯
         Slic3r::GUI::ComLightCtrl *lightctrl = new Slic3r::GUI::ComLightCtrl(CLOSE);

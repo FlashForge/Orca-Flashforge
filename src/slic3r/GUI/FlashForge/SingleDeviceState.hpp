@@ -55,7 +55,7 @@ private:
     SwitchButton* m_external_circulate_switch;//外循环过滤
     int  m_cur_id = -1;
 };
-
+wxDECLARE_EVENT(EVT_MODIFY_TEMP_CLICKED, wxCommandEvent);
 class ModifyTemp : public wxPanel
 {
 public:
@@ -126,12 +126,14 @@ public:
     void msw_rescale();
     void connectEvent(); 
 
-    void OnScriptMessage(wxWebViewEvent &evt);
+    void onScriptMessage(wxWebViewEvent &evt);
     void on_navigated(wxWebViewEvent &event);
     void onConnectWanDevInfoUpdate(ComWanDevInfoUpdateEvent &event);
     void onComDevDetailUpdate(ComDevDetailUpdateEvent &event);
     void onConnectExit(ComConnectionExitEvent &event);
     void onTargetTempModify(wxCommandEvent &event);
+    void onModifyTempClicked(wxCommandEvent &event);
+    void onDevStateChanged(std::string devState, const com_dev_data_t &data);
 
     void setTipMessage(const std::string &title = "", const std::string &titleColor = "", const std::string &info = "", bool showInfo = false);
 
