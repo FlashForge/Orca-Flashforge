@@ -16,18 +16,21 @@ namespace GUI {
 DropDownButton::DropDownButton(wxWindow* parent/*=nullptr*/, const wxString& text/*=wxEmptyString*/, const wxBitmap& bitmap/*=wxNullBitmap*/)
     : wxPanel(parent)
 {
-    SetMinSize(wxSize(FromDIP(80), FromDIP(24)));
+    //SetMinSize(wxSize(FromDIP(80), FromDIP(24)));
     if (parent) {
         SetBackgroundColour(parent->GetBackgroundColour());
     }
     m_text = new wxStaticText(this, wxID_ANY, text, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    //m_text->FitInside();
+    m_text->Fit();
     m_bitmap = new wxStaticBitmap(this, wxID_ANY, bitmap, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     if (!bitmap.IsNull()) {
         auto sz = bitmap.GetSize();
         m_bitmap->SetSize(bitmap.GetSize());
         m_bitmap->SetMinSize(bitmap.GetSize());
     }
-
+    int width = m_text->GetSize().x + FromDIP(12) + m_bitmap->GetSize().x;
+    SetMinSize(wxSize(width, FromDIP(24)));
     m_sizer = new wxBoxSizer(wxHORIZONTAL);
     m_sizer->Add(m_text, 0, wxALIGN_CENTER_VERTICAL | wxTOP | wxBOTTOM, FromDIP(3));
     m_sizer->AddSpacer(FromDIP(12));
@@ -641,11 +644,11 @@ DeviceInfoItemPanel::DeviceInfoItemPanel(wxWindow *parent, const DeviceInfo& inf
 void DeviceInfoItemPanel::updateInfo(const DeviceInfo& info)
 {
     m_name_text->SetLabel(info.name);
-    if (info.placement.empty()) {
-        m_placement_text->SetLabel(_L("Default"));
-    } else {
-        m_placement_text->SetLabel(info.placement);
-    }
+    //if (info.placement.empty()) {
+    //    m_placement_text->SetLabel(_L("Default"));
+    //} else {
+    m_placement_text->SetLabel(info.placement);
+    //}
     if (info.pid != m_info.pid) {
         m_icon->SetBitmap(machineBitmap(info.pid));
     }
@@ -961,7 +964,9 @@ void DeviceListPanel::filterDeviceList()
         return;
     }
     Freeze();
-
+    for (const auto& iter : m_device_stat_map) {
+        iter.second->Show(false);
+    }
     DeviceKeySet device_key_set;
     for (const auto& iter : m_device_map) {
         device_key_set.emplace(iter.first);
@@ -979,14 +984,15 @@ void DeviceListPanel::filterDeviceList()
             && (m_filter_status_default || dev_info.status == m_filter_status)
             && (m_filter_types.find(dev_info.pid) != m_filter_types.end())
             && ((m_wlan_btn->GetValue() && !dev_info.lanFlag) || (m_lan_btn->GetValue() && dev_info.lanFlag))) {
-            iter->second->Show(true);
             m_device_sizer->Add(iter->second);
+            iter->second->Show(true);
         } else {
             iter->second->Show(false);
         }
     }
     m_device_panel->Layout();
     Layout();
+    //Fit();
     Thaw();
 }
 
@@ -1139,16 +1145,14 @@ void DeviceListPanel::updateDeviceSizer()
             iter.second->Show(false);
         }
         for (const auto& iter : m_device_stat_map) {
-            iter.second->Show(true);
             m_device_sizer->Add(iter.second);
+            iter.second->Show(true);
         }
         m_device_panel->Layout();
         Layout();
+        //Fit();
         Thaw();
     } else {
-        for (const auto& iter : m_device_stat_map) {
-            iter.second->Show(false);
-        }
         filterDeviceList();
     }
 }
@@ -1178,7 +1182,7 @@ void DeviceListPanel::updateDeviceWindowSize()
     m_device_panel->SetMinSize(wxSize(FromDIP(width), FromDIP(height)));
     //m_simple_book->SetMinSize(wxSize(FromDIP(width), FromDIP(height)));
     Layout();
-    Fit();
+    //Fit();
 }
 
 void DeviceListPanel::onPopupShow(wxShowEvent& event)
@@ -1293,44 +1297,87 @@ void DeviceListPanel::onStaticModeToggled(wxCommandEvent &event)
 void DeviceListPanel::onDeviceListUpdated(DeviceListUpdateEvent& event)
 {
     std::string dev_id = event.GetDeviceId();
+    DeviceListUpdateEvent::UpdateType op = event.GetOperator();
     int conn_id = event.GetConnectionId();
-    bool valid = false;
-    const com_dev_data_t &data = MultiComMgr::inst()->devData(conn_id, &valid);
-    if (valid) {
+    bool refresh_flag = true;
+    if (DeviceListUpdateEvent::UpdateType::UpdateType_Add == op) {
         DeviceInfoItemPanel::DeviceInfo dev_info;
-        dev_info.conn_id = conn_id;
-        dev_info.lanFlag = (COM_CONNECT_LAN == data.connectMode);
-        dev_info.name = data.devDetail->name;
-        dev_info.pid = data.devDetail->pid;
-        dev_info.placement = data.devDetail->location;
-        dev_info.status = data.devDetail->status;
-        if (dev_info.status.empty()) dev_info.status = "offline";
-
-        auto info_iter = m_device_map.find(dev_id);
-        if (info_iter == m_device_map.end()) {
-            DeviceKey key(generateNewPriorityId(), dev_id, dev_info.name);
-            DeviceInfoItemPanel* info_item = new DeviceInfoItemPanel(m_device_panel, dev_info, this);
-            m_device_map.emplace(std::make_pair(key, info_item));
-        } else {
-            info_iter->second->updateInfo(dev_info);
+        if (getDeviceInfo(dev_info, conn_id)) {
+            auto info_iter = m_device_map.find(dev_id);
+            if (info_iter == m_device_map.end()) {
+                DeviceKey key(generateNewPriorityId(), dev_id, dev_info.name);
+                DeviceInfoItemPanel* info_item = new DeviceInfoItemPanel(m_device_panel, dev_info, this);
+                m_device_map.emplace(std::make_pair(key, info_item));
+            } else {
+                info_iter->second->updateInfo(dev_info);
+                refresh_flag = false;
+            }
         }
-    } else {
+    } else if (DeviceListUpdateEvent::UpdateType::UpdateType_Remove == op) {
         auto iter = m_device_map.find(dev_id);
         if (iter != m_device_map.end()) {
             iter->second->Destroy();
             m_device_map.erase(iter);
         }
         updatePriorityId();
+    } else if (DeviceListUpdateEvent::UpdateType::UpdateType_Update == op) {
+        DeviceInfoItemPanel::DeviceInfo dev_info;
+        auto info_iter = m_device_map.find(dev_id);
+        if (getDeviceInfo(dev_info, conn_id)) {
+            if (info_iter == m_device_map.end()) {
+                DeviceKey key(generateNewPriorityId(), dev_id, dev_info.name);
+                DeviceInfoItemPanel* info_item = new DeviceInfoItemPanel(m_device_panel, dev_info, this);
+                m_device_map.emplace(std::make_pair(key, info_item));
+            } else {
+                info_iter->second->updateInfo(dev_info);
+                refresh_flag = false;
+            }
+        } else if (info_iter != m_device_map.end()) {
+            dev_info = info_iter->second->deviceInfo();
+            dev_info.conn_id = -1;
+            dev_info.status = "offline";
+            info_iter->second->updateInfo(dev_info);
+            refresh_flag = false;
+        }
     }
     //std::sort(m_device_map.begin(), m_device_map.end(), deviceKeySortFunc);
-    m_filter_placement_default = true;
-    m_filter_status_default = true;
-    m_simple_book->ChangeSelection(m_device_map.empty() ? 0 : 1);
-    updateFilterMap();
-    updateStaticMap();
-    updateDeviceWindowSize();
-    updateDeviceSizer();
+    if (refresh_flag) {
+        m_filter_placement_default = true;
+        m_filter_status_default = true;
+        m_simple_book->ChangeSelection(m_device_map.empty() ? 0 : 1);
+        updateFilterMap();
+        updateStaticMap();
+        updateDeviceWindowSize();
+        updateDeviceSizer();
+    }
     event.Skip();
+}
+
+bool DeviceListPanel::getDeviceInfo(DeviceInfoItemPanel::DeviceInfo& info, int conn_id)
+{
+    bool valid = false;
+    const auto& data = MultiComMgr::inst()->devData(conn_id, &valid);
+    if (valid) {
+        if (COM_CONNECT_LAN == data.connectMode) {
+            std::string dev_id = data.lanDevInfo.serialNumber;
+            info.lanFlag = true;
+            info.conn_id = conn_id;
+            info.name = data.lanDevInfo.name;        
+            info.pid = data.lanDevInfo.pid;
+            info.placement = data.devDetail->location;
+            info.status = data.devDetail->status;
+        } else if (COM_CONNECT_WAN == data.connectMode && valid && data.devDetail) {
+            std::string dev_id = data.wanDevInfo.serialNumber;
+            info.lanFlag = false;
+            info.conn_id = conn_id;
+            info.name = data.wanDevInfo.name;        
+            info.pid = data.devDetail->pid;
+            info.placement = data.wanDevInfo.location;
+            info.status = data.wanDevInfo.status;
+        }
+        if (info.status.empty()) info.status = "offline";
+    }
+    return valid;
 }
 
 void DeviceListPanel::updateDeviceInfo(const std::string& dev_id, const DeviceInfoItemPanel::DeviceInfo& info)
@@ -1365,7 +1412,7 @@ void DeviceListPanel::onComDevDetailUpdate(ComDevDetailUpdateEvent& event)
         DeviceInfoItemPanel::DeviceInfo info;
         info.lanFlag = true;
         info.conn_id = conn_id;
-        info.name = data.devDetail->name;        
+        info.name = data.devDetail->name;
         info.pid = data.devDetail->pid;
         info.placement = data.devDetail->location;
         info.status = data.devDetail->status;
@@ -1384,11 +1431,10 @@ void DeviceListPanel::onComWanDeviceInfoUpdate(ComWanDevInfoUpdateEvent& event)
         DeviceInfoItemPanel::DeviceInfo info;
         info.lanFlag = false;
         info.conn_id = conn_id;
-        info.name = data.wanDevInfo.name;        
+        info.name = data.wanDevInfo.name;
         info.pid = data.devDetail->pid;
         info.placement = data.wanDevInfo.location;
         info.status = data.wanDevInfo.status;
-
         updateDeviceInfo(dev_id, info);
         //BOOST_LOG_TRIVIAL(error) << "onComWanDeviceInfoUpdate: " << info.status;
         //flush_logs();

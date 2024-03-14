@@ -263,6 +263,7 @@ private:
     void updateDeviceSizer();
     void filterDeviceList();
     void updateDeviceWindowSize();
+    bool getDeviceInfo(DeviceInfoItemPanel::DeviceInfo& info, int conn_id);
     void updateDeviceInfo(const std::string& dev_id, const DeviceInfoItemPanel::DeviceInfo& info);
 
     void onFilterButtonClicked(wxMouseEvent &event);
