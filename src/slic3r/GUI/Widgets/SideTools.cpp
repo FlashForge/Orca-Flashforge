@@ -126,7 +126,7 @@ void SideToolsPanel::render(wxDC &dc)
 
 void SideToolsPanel::doRender(wxDC &dc)
 {
-    auto   left = FromDIP(15);
+    auto   left = FromDIP(20);
     wxSize size = GetSize();
     
     //if (m_none_printer) {
@@ -142,33 +142,32 @@ void SideToolsPanel::doRender(wxDC &dc)
 
         dc.DrawBitmap(m_none_printing_img.bmp(), left, (size.y - m_none_printing_img.GetBmpSize().y) / 2);
 
-        left += (m_none_printing_img.GetBmpSize().x + FromDIP(15));
+        left += (m_none_printing_img.GetBmpSize().x + FromDIP(10));
         dc.SetFont(::Label::Body_14);
         dc.SetBackgroundMode(wxTRANSPARENT);
-        dc.SetTextForeground(*wxWHITE);
+        dc.SetTextForeground(*wxBLACK);
+        DeviceObjectOpr *devOpr          = wxGetApp().getDeviceObjectOpr();
+        if (devOpr->my_machine_empty()) {
+            wxString no_printer_str  = _L("No printer");
+            auto     sizet           = dc.GetTextExtent(no_printer_str);
+            auto     left_add_bitmap = size.x - FromDIP(18) - m_wifi_none_img.GetBmpSize().x - m_none_add_img.GetBmpSize().x;
+            auto     size_width      = left_add_bitmap - left;
 
-        /*wxString no_printer_str = _L("No printer");
-        auto sizet = dc.GetTextExtent(no_printer_str);
-        auto left_add_bitmap = size.x - FromDIP(30) - m_wifi_none_img.GetBmpSize().x - m_none_add_img.GetBmpSize().x;
-        auto size_width = left_add_bitmap - left;
-
-        if (sizet.x > size_width) {
-            wxString temp_str = wxEmptyString;
-            for (auto i = 0; i < no_printer_str.Len(); i++) {
-                if (dc.GetTextExtent(L("...") + temp_str).x < size_width) {
-                    temp_str += no_printer_str[i];
+            if (sizet.x > size_width) {
+                wxString temp_str = wxEmptyString;
+                for (auto i = 0; i < no_printer_str.Len(); i++) {
+                    if (dc.GetTextExtent(L("...") + temp_str).x < size_width) {
+                        temp_str += no_printer_str[i];
+                    } else {
+                        break;
+                    }
                 }
-                else {
-                    break;
-                }
+                no_printer_str = temp_str + L("...");
             }
+            dc.DrawText(no_printer_str, wxPoint(left, (size.y - sizet.y) / 2));
+        }        
 
-            no_printer_str = temp_str + L("...");
-        }*/
-
-        //dc.DrawText(no_printer_str, wxPoint(left, (size.y - sizet.y) / 2));
-
-        left = size.x - FromDIP(30) - m_wifi_none_img.GetBmpSize().x;
+        left = size.x - FromDIP(18) - m_wifi_none_img.GetBmpSize().x;
         dc.DrawBitmap(m_none_add_img.bmp(), left, (size.y - m_none_add_img.GetBmpSize().y) / 2);
     } else {
         dc.DrawBitmap(m_printing_img.bmp(), left, (size.y - m_printing_img.GetBmpSize().y) / 2);
@@ -218,7 +217,7 @@ void SideToolsPanel::on_mouse_left_down(wxMouseEvent &evt)
 {
     m_click = true;
     wxSize        bmpsize = m_none_add_img.GetBmpSize();    
-    auto          left   = GetSize().x - m_none_add_img.GetBmpSize().x - FromDIP(36);
+    auto          left   = GetSize().x - m_none_add_img.GetBmpSize().x - FromDIP(24);
     auto          right  = left + m_none_add_img.GetBmpSize().x + FromDIP(6);
     auto          top    = (GetSize().y - m_none_add_img.GetBmpSize().y) / 2 - FromDIP(6);
     auto          bottom = (GetSize().y - m_none_add_img.GetBmpSize().y) / 2 + m_none_add_img.GetBmpSize().y + FromDIP(6);

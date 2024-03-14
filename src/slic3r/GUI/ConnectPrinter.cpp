@@ -63,7 +63,7 @@ ConnectPrinterDialog::ConnectPrinterDialog(wxWindow *parent, wxWindowID id, cons
 
     sizer_top->Add(0, FromDIP(35));
 
-    m_staticText_hints = new wxStaticText(this, wxID_ANY, _L("You can find it in \"Settings > Network > Connection code\"\non the printer; To facilitate device identification, \nyou can change the device name on the device page."), wxDefaultPosition, wxDefaultSize, 0);
+    m_staticText_hints = new wxStaticText(this, wxID_ANY, _L("You can find it in \"Settings > Network > Network Mode\"\non the printer; To facilitate device identification, \nyou can change the device name on the device page."), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText_hints->SetFont(Label::Body_15);
     m_staticText_hints->SetForegroundColour(wxColour(50, 58, 61));
     m_staticText_hints->Wrap(-1);

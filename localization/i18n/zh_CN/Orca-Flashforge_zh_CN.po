@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Slic3rPE\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-03-12 16:12+0800\n"
-"PO-Revision-Date: 2024-03-12 16:19+0800\n"
+"POT-Creation-Date: 2024-03-14 13:24+0800\n"
+"PO-Revision-Date: 2024-03-14 13:24+0800\n"
 "Last-Translator: SoftFever <softfeverever@gmail.com>\n"
 "Language-Team: \n"
 "Language: zh_CN\n"
@@ -1449,6 +1449,14 @@ msgstr "删除自定义G-code"
 
 msgid "Delete Filament Change"
 msgstr "删除耗材丝更换"
+
+msgid "No printer"
+msgstr "无打印机"
+
+#, fuzzy
+#| msgid "Load..."
+msgid "..."
+msgstr "加载..."
 
 msgid "Failed to connect to the server"
 msgstr "无法连接服务器"
@@ -3101,11 +3109,11 @@ msgid "Please input the printer access code:"
 msgstr "请输入打印机访问码："
 
 msgid ""
-"You can find it in \"Settings > Network > Connection code\"\n"
+"You can find it in \"Settings > Network > Network Mode\"\n"
 "on the printer; To facilitate device identification, \n"
 "you can change the device name on the device page."
 msgstr ""
-"你可以在打印机“设置->网络->连接模式\"\\查看；\n"
+"您可以在打印机“设置->网络->网络模式\"查看；\n"
 "为方便识别设备，可在设备界面端修改设备名称；"
 
 msgid "The access code is wrong, please input again."
@@ -5226,10 +5234,8 @@ msgstr "在线"
 msgid "Are you sure to unbind this device?"
 msgstr "确认移除设备吗？"
 
-#, fuzzy
-#| msgid "Resolution"
 msgid "Question"
-msgstr "分辨率"
+msgstr "询问"
 
 msgid "Log out successful."
 msgstr "登出成功。"
@@ -5438,10 +5444,8 @@ msgstr "修改打印机名称"
 msgid "MultiSend:send_to_printer, is busy"
 msgstr ""
 
-#, fuzzy
-#| msgid "Log in printer"
 msgid "no valid printer"
-msgstr "登录打印机"
+msgstr "不存在有效打印机"
 
 msgid "send prepare fail"
 msgstr "发送准备失败"
@@ -11254,10 +11258,8 @@ msgstr ""
 msgid "Email Address Error"
 msgstr ""
 
-#, fuzzy
-#| msgid "Remove connector from selection"
 msgid "Server connection exception"
-msgstr "取消选择连接件"
+msgstr "服务器连接异常"
 
 msgid "Verify code is incorrect"
 msgstr "验证码错误"
@@ -11277,15 +11279,8 @@ msgstr "注册"
 msgid "Forget Password"
 msgstr "忘记密码"
 
-#, fuzzy
-#| msgid "Verify code is incorrect"
 msgid "Password is incorrect"
-msgstr "验证码错误"
-
-#, fuzzy
-#| msgid "Pause"
-msgid "Paused"
-msgstr "暂停"
+msgstr "密码错误"
 
 msgid "Machine Type"
 msgstr "设备型号"
@@ -11550,6 +11545,9 @@ msgid ""
 "temperature. More info about this in the Wiki."
 msgstr ""
 
+#~ msgid "Paused"
+#~ msgstr "暂停"
+
 #~ msgid "Would you like to unbind the printer from this account?"
 #~ msgstr "你想将这台设备与此账户解绑吗?"
 
@@ -11676,9 +11674,6 @@ msgstr ""
 #~ msgid ""
 #~ "Network Plug-in is not detected. Network related features are unavailable."
 #~ msgstr "未检测到网络插件。网络相关功能不可用。"
-
-#~ msgid "No printer"
-#~ msgstr "无打印机"
 
 #~ msgid "Update"
 #~ msgstr "固件更新"

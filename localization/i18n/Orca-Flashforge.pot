@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-03-12 16:12+0800\n"
+"POT-Creation-Date: 2024-03-14 13:24+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1441,6 +1441,12 @@ msgid "Delete Custom G-code"
 msgstr ""
 
 msgid "Delete Filament Change"
+msgstr ""
+
+msgid "No printer"
+msgstr ""
+
+msgid "..."
 msgstr ""
 
 msgid "Failed to connect to the server"
@@ -3010,7 +3016,7 @@ msgid "Please input the printer access code:"
 msgstr ""
 
 msgid ""
-"You can find it in \"Settings > Network > Connection code\"\n"
+"You can find it in \"Settings > Network > Network Mode\"\n"
 "on the printer; To facilitate device identification, \n"
 "you can change the device name on the device page."
 msgstr ""
@@ -10786,9 +10792,6 @@ msgid "Forget Password"
 msgstr ""
 
 msgid "Password is incorrect"
-msgstr ""
-
-msgid "Paused"
 msgstr ""
 
 msgid "Machine Type"
