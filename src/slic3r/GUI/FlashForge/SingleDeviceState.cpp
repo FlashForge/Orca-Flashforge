@@ -121,8 +121,8 @@ void StartFilter::create_panel(wxWindow* parent)
         m_staticText_filtering->SetFont(wxFont(wxFontInfo(16)));
         m_staticText_filtering->SetForegroundColour(wxColour(51,51,51));
 
-        bSizer_filtering_title->Add(m_staticText_filtering, 0, wxLEFT, FromDIP(17));
-        bSizer_filtering_title->Add(0, 0, 1, wxEXPAND, 0);
+        bSizer_filtering_title->Add(m_staticText_filtering, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(17));
+        bSizer_filtering_title->Add(0, 1, wxEXPAND, 0);
         m_panel_filtering_title->SetSizer(bSizer_filtering_title);
         m_panel_filtering_title->Layout();
         bSizer_filtering_title->Fit(m_panel_filtering_title);
