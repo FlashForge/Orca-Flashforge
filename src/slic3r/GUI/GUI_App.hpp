@@ -303,6 +303,8 @@ private:
     HttpServer       m_http_server;
     bool             m_show_gcode_window{true};
     boost::thread    m_check_network_thread;
+    bool             m_restart_app{false};
+    bool             m_login_success{false};
   public:
       //try again when subscription fails
     void            on_start_subscribe_again(std::string dev_id);

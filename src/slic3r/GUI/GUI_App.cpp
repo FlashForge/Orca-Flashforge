@@ -3404,6 +3404,7 @@ void GUI_App::recreate_GUI(const wxString& msg_name)
     update_http_extra_header();
 
     mainframe->shutdown();
+    m_restart_app = true;
 
     ProgressDialog dlg(msg_name, msg_name, 100, nullptr, wxPD_AUTO_HIDE);
     dlg.Pulse();
@@ -3942,6 +3943,13 @@ std::string GUI_App::handle_web_request(std::string cmd)
                             //未过期，自动登录
                             //校验token是否有效
                             ComErrno login_result = MultiComUtils::checkToken(access_token);
+                            //语言切换且切换前已经登录，直接显示登录成功
+                            if (m_restart_app && m_login_success) {
+                                handle_login_result(usr_pic, usr_name);
+                                LoginDialog::SetToken(access_token, refresh_token);
+                                LoginDialog::SetUsrInfo(com_user_profile_t{usr_uid, usr_name, usr_pic});
+                                return;
+                            }
                             ComErrno add_dev_result = Slic3r::GUI::MultiComMgr::inst()->addWanDev(access_token);
                             if (login_result == ComErrno::COM_OK && add_dev_result == COM_OK) {
                                 handle_login_result(usr_pic,usr_name);
@@ -4140,6 +4148,7 @@ std::string GUI_App::handle_web_request(std::string cmd)
 
 void GUI_App::handle_login_result(std::string url, std::string name)
 {
+    m_login_success = true;
     LoginDialog::SetUsrLogin(true);
     // 原始的JSON字符串
     std::string jsonStr = R"({"command": "studio_userlogin","data": {"avatar": "default.jpg","name": "ShanZhu"},"sequence_id": "10001"})";
@@ -4164,6 +4173,7 @@ void GUI_App::handle_login_result(std::string url, std::string name)
 
 void GUI_App::handle_login_out()
 {
+    m_login_success = false;
     LoginDialog::SetUsrLogin(false);
     // 原始的JSON字符串
     std::string jsonStr = R"({"command":"studio_useroffline","sequence_id":"10001"})";
