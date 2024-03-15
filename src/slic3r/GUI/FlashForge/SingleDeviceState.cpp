@@ -1018,7 +1018,7 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         //m_material_staticbitmap->SetMinSize(wxSize(47,50));
 
         m_material_weight_label = new Label(m_panel_control_material,("234g"));
-        m_material_weight_label->SetMaxSize(wxSize(FromDIP(38),-1));
+        //m_material_weight_label->SetMaxSize(wxSize(FromDIP(38),-1));
         
         wxBoxSizer *hbox = new wxBoxSizer(wxHORIZONTAL);
         hbox->SetMinSize(wxSize(60,-1));
@@ -1885,10 +1885,11 @@ void SingleDeviceState::onDevStateChanged(std::string devState, const com_dev_da
         m_cur_dev_state = state;
         m_file_pic_url.clear();
         m_material_staticbitmap->SetBitmap(create_scaled_bitmap("monitor_item_prediction_0", this, 60));
-        //auto aprint_stats = wxGetApp().plater_->get_partplate_list().get_current_fff_print().print_statistics();
-        //char weight[64];
-        //::sprintf(weight, "  %.2f g", aprint_stats.total_weight);
-        //m_material_weight_label->SetLabel(weight);
+
+        double total_weight = data.devDetail->estimatedRightWeight; //材料重量
+        char   weight[64];
+        ::sprintf(weight, "  %.2f g", total_weight);
+        m_material_weight_label->SetLabel(weight);
 
         if (state == P_READY) {
             m_machine_idle_panel->Show();
