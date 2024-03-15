@@ -125,6 +125,7 @@ AddMachinePanel::~AddMachinePanel() {
     });
     m_device_list_panel->Bind(EVT_DEVICE_ITEM_SELECTED, [this](wxCommandEvent &event) {
         event.Skip();
+        m_tabpanel->SetSelection(1);
         m_status_info_panel_page->setCurId(event.GetInt());
     });
 }
