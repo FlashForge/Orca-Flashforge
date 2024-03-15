@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-03-14 13:24+0800\n"
+"POT-Creation-Date: 2024-03-15 10:57+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1476,7 +1476,7 @@ msgstr ""
 msgid "Connecting..."
 msgstr ""
 
-msgid "Connected Failed."
+msgid "Unable to connect to printer"
 msgstr ""
 
 msgid "?"
@@ -10801,6 +10801,120 @@ msgid "LAN"
 msgstr ""
 
 msgid "Login out"
+msgstr ""
+
+msgid "cancel"
+msgstr ""
+
+msgid "confirm"
+msgstr ""
+
+msgid "Material Station"
+msgstr ""
+
+msgid "Unconnected"
+msgstr ""
+
+msgid "Start Filtering"
+msgstr ""
+
+msgid "Internal Circulate"
+msgstr ""
+
+msgid "External Circulate"
+msgstr ""
+
+msgid "Device offline"
+msgstr ""
+
+msgid "clear"
+msgstr ""
+
+msgid "Info and Control"
+msgstr ""
+
+msgid "file: "
+msgstr ""
+
+msgid "Remaining Time"
+msgstr ""
+
+msgid "pause print"
+msgstr ""
+
+msgid "continue print"
+msgstr ""
+
+msgid "cancel print"
+msgstr ""
+
+msgid "The Current Device has no Printing Projects"
+msgstr ""
+
+msgid "Local File List"
+msgstr ""
+
+msgid "Spray Nozzle"
+msgstr ""
+
+msgid "Print Size"
+msgstr ""
+
+msgid "Firmware Version"
+msgstr ""
+
+msgid "Serial Number"
+msgstr ""
+
+msgid "Private Material Statistics"
+msgstr ""
+
+msgid "Adventurer 5M"
+msgstr ""
+
+msgid "0.4mm"
+msgstr ""
+
+msgid "220*220*220mm"
+msgstr ""
+
+msgid "2.1.4-2.1.6"
+msgstr ""
+
+msgid "ABCDEFG"
+msgstr ""
+
+msgid "1600.9 m"
+msgstr ""
+
+msgid "idle"
+msgstr ""
+
+msgid "completed"
+msgstr ""
+
+msgid "Print completed,clean platform!"
+msgstr ""
+
+msgid "Total Time"
+msgstr ""
+
+msgid "busy"
+msgstr ""
+
+msgid "Print cancelled,in cache command"
+msgstr ""
+
+msgid "pause"
+msgstr ""
+
+msgid "printing"
+msgstr ""
+
+msgid "The maximum temperature cannot exceed"
+msgstr ""
+
+msgid "The minmum temperature should not be less than "
 msgstr ""
 
 #: resources/data/hints.ini: [hint:3D Scene Operations]

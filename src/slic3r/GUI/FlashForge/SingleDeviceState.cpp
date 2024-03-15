@@ -720,7 +720,7 @@ wxBoxSizer* SingleDeviceState::create_machine_control_title()
         bSizer_h_title->AddSpacer(FromDIP(6));
 
         //显示清除按钮
-        m_clear_button = new Button(m_panel_top_right_info, wxString("clear"), "", 0, FromDIP(18));
+        m_clear_button = new Button(m_panel_top_right_info, _L("clear"), "", 0, FromDIP(18));
         m_clear_button->SetPureText(true);
         m_clear_button->SetFont(wxFont(wxFontInfo(16)));
         m_clear_button->SetBorderWidth(1);
@@ -1107,7 +1107,7 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         bSizer_control_print->Add(m_panel_separotor_print, 0, wxEXPAND | wxALL, 0);
 
         //显示取消打印按钮
-        m_cancel_button = new Button(m_panel_control_print, wxString("cancel print"), "device_cancel_print", 0, FromDIP(18));
+        m_cancel_button = new Button(m_panel_control_print, _L("cancel print"), "device_cancel_print", 0, FromDIP(18));
         m_cancel_button->SetFlashForge(true);
         m_cancel_button->SetFont(wxFont(wxFontInfo(16)));
         m_cancel_button->SetBorderWidth(0);

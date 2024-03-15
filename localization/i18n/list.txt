@@ -149,3 +149,5 @@ src/slic3r/Utils/CalibUtils.cpp
 src/slic3r/GUI/FlashForge/LoginDialog.cpp
 src/slic3r/GUI/FlashForge/DeviceListPanel.cpp
 src/slic3r/GUI/FlashForge/ReLoginDialog.cpp
+src/slic3r/GUI/FlashForge/SingleDeviceState.cpp
+src/slic3r/GUI/Widgets/TempInput.cpp

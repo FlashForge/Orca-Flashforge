@@ -857,7 +857,7 @@ void StartFiltering::create_panel(wxWindow* parent)
     m_panel_filtering_title->SetBackgroundColour(wxColour(248,248,248));
 
     //过滤标题
-    auto m_staticText_filtering = new wxStaticText(m_panel_filtering_title, wxID_ANY ,("Start Filtering"));
+    auto m_staticText_filtering = new wxStaticText(m_panel_filtering_title, wxID_ANY ,_L("Start Filtering"));
     m_staticText_filtering->Wrap(-1);
     m_staticText_filtering->SetFont(wxFont(wxFontInfo(16)));
     m_staticText_filtering->SetForegroundColour(wxColour(51,51,51));
@@ -871,7 +871,7 @@ void StartFiltering::create_panel(wxWindow* parent)
     //内循环过滤
     wxBoxSizer *bSizer_internal_circulate_hor = new wxBoxSizer(wxHORIZONTAL);
     wxPanel*    internal_circulate_panel      = new wxPanel(parent, wxID_ANY, wxDefaultPosition,wxDefaultSize, wxTAB_TRAVERSAL);
-    auto m_staticText_internal_circulate = new wxStaticText(internal_circulate_panel, wxID_ANY, ("Internal Circulate"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
+    auto m_staticText_internal_circulate = new wxStaticText(internal_circulate_panel, wxID_ANY, _L("Internal Circulate"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
     m_staticText_internal_circulate->Wrap(-1);
     m_staticText_internal_circulate->SetFont(wxFont(wxFontInfo(16)));
     m_internal_circulate_switch = new SwitchButton(internal_circulate_panel);
@@ -890,7 +890,7 @@ void StartFiltering::create_panel(wxWindow* parent)
     //外循环过滤
     wxBoxSizer *bSizer_external_circulate_hor = new wxBoxSizer(wxHORIZONTAL);
     wxPanel*    external_circulate_panel      = new wxPanel(parent, wxID_ANY, wxDefaultPosition,wxDefaultSize, wxTAB_TRAVERSAL);
-    auto m_staticText_external_circulate = new wxStaticText(external_circulate_panel, wxID_ANY, ("External Circulate"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
+    auto m_staticText_external_circulate = new wxStaticText(external_circulate_panel, wxID_ANY, _L("External Circulate"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
     m_staticText_external_circulate->Wrap(-1);
     m_staticText_external_circulate->SetFont(wxFont(wxFontInfo(16)));
     m_external_circulate_switch = new SwitchButton(external_circulate_panel);
