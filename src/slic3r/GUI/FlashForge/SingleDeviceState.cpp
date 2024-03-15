@@ -2008,9 +2008,9 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
    std::string stram_url = data.devDetail->cameraStreamUrl;
    if (!stram_url.empty() && m_camera_stream_url != data.devDetail->cameraStreamUrl) {
        //通知设备开流
-        ComCameraStreamCtrl *cameraStreamCtrl_0 = new ComCameraStreamCtrl(OPENSTREAM);
+        ComCameraStreamCtrl *cameraStreamCtrl = new ComCameraStreamCtrl(OPEN);
         // 测试，临时将id写死
-        Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, cameraStreamCtrl_0);
+        Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, cameraStreamCtrl);
 
         m_camera_stream_url = data.devDetail->cameraStreamUrl;
         modifyVideoPlayerAddress(m_camera_stream_url);  
