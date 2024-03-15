@@ -89,6 +89,15 @@ void PasswordCtrl::SetRadius(int r)
     Refresh();
 }
 
+wxString PasswordCtrl::GetValue() 
+{
+    if (m_encrypt) {
+        return m_text_ctrl->GetValue();
+    } else {
+        return m_plain_text_ctrl->GetValue();
+    }
+}
+
 void PasswordCtrl::RefreshEyePicPosition()
 {
     if(!m_encrypt){

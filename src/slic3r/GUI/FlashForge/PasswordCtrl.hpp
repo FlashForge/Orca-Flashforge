@@ -18,7 +18,7 @@ public:
     virtual ~PasswordCtrl();
 
     void SetRadius(int r);
-    wxString GetValue() {return m_text_ctrl->GetValue();}
+    wxString GetValue(); 
     void RefreshEyePicPosition();
 
 private:
