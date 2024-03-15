@@ -2038,7 +2038,7 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
    if (m_file_pic_url != file_pic_path && !file_pic_path.empty()) {
         m_file_pic_url = file_pic_path; 
         Bind(COM_ASYNC_CALL_FINISH_EVENT, [&](ComAsyncCallFinishEvent &event) {
-            event.Skip();
+            //event.Skip();
             if (event.ret == COM_OK) {
                 if (!m_pic_data.empty()) {
                     //translate pic data from vector to wxImage object
