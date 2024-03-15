@@ -626,8 +626,8 @@ void IconText::create_panel(wxWindow* parent,wxString icon,int iconSize,wxString
     icon_static->SetBackgroundColour(*wxWHITE);
 
     m_text_ctrl = new Label(m_panel_page, text);
-    m_text_ctrl->Wrap(-1);
-    m_text_ctrl->SetFont(wxFont(wxFontInfo(textSize)));
+    //m_text_ctrl->Wrap(-1);
+    //m_text_ctrl->SetFont(wxFont(wxFontInfo(textSize)));
     m_text_ctrl->SetForegroundColour(wxColour(50, 141, 251));
     m_text_ctrl->SetBackgroundColour(*wxWHITE);
     //m_text_ctrl->SetMinSize(wxSize(FromDIP(70), -1));
@@ -677,7 +677,7 @@ void IconBottonText::create_panel(
     m_icon = create_scaled_bitmap(icon.ToStdString(), parent, iconSize);
 
     m_text_ctrl = new wxTextCtrl(m_panel_page, wxID_ANY, text, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
-    m_text_ctrl->SetFont(wxFont(wxFontInfo(textSize)));
+    //m_text_ctrl->SetFont(wxFont(wxFontInfo(textSize)));
     m_text_ctrl->SetForegroundColour(wxColour(51, 51, 51));
     m_text_ctrl->SetBackgroundColour(wxColour(255, 255, 255));
     m_text_ctrl->SetMinSize(wxSize(FromDIP(48), -1));
@@ -859,7 +859,7 @@ void StartFiltering::create_panel(wxWindow* parent)
     //过滤标题
     auto m_staticText_filtering = new wxStaticText(m_panel_filtering_title, wxID_ANY ,_L("Start Filtering"));
     m_staticText_filtering->Wrap(-1);
-    m_staticText_filtering->SetFont(wxFont(wxFontInfo(16)));
+    //m_staticText_filtering->SetFont(wxFont(wxFontInfo(16)));
     m_staticText_filtering->SetForegroundColour(wxColour(51,51,51));
 
     bSizer_filtering_title->Add(m_staticText_filtering, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(17));
@@ -873,7 +873,7 @@ void StartFiltering::create_panel(wxWindow* parent)
     wxPanel*    internal_circulate_panel      = new wxPanel(parent, wxID_ANY, wxDefaultPosition,wxDefaultSize, wxTAB_TRAVERSAL);
     auto m_staticText_internal_circulate = new wxStaticText(internal_circulate_panel, wxID_ANY, _L("Internal Circulate"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
     m_staticText_internal_circulate->Wrap(-1);
-    m_staticText_internal_circulate->SetFont(wxFont(wxFontInfo(16)));
+    //m_staticText_internal_circulate->SetFont(wxFont(wxFontInfo(16)));
     m_internal_circulate_switch = new SwitchButton(internal_circulate_panel);
     m_internal_circulate_switch->SetBackgroundColour(*wxWHITE);
 
@@ -892,7 +892,7 @@ void StartFiltering::create_panel(wxWindow* parent)
     wxPanel*    external_circulate_panel      = new wxPanel(parent, wxID_ANY, wxDefaultPosition,wxDefaultSize, wxTAB_TRAVERSAL);
     auto m_staticText_external_circulate = new wxStaticText(external_circulate_panel, wxID_ANY, _L("External Circulate"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
     m_staticText_external_circulate->Wrap(-1);
-    m_staticText_external_circulate->SetFont(wxFont(wxFontInfo(16)));
+    //m_staticText_external_circulate->SetFont(wxFont(wxFontInfo(16)));
     m_external_circulate_switch = new SwitchButton(external_circulate_panel);
     m_external_circulate_switch->SetBackgroundColour(*wxWHITE);
     m_external_circulate_switch->Bind(wxEVT_TOGGLEBUTTON, &StartFiltering::onAirFilterToggled, this);
@@ -1120,7 +1120,7 @@ void TempMixDevice::setupLayoutIdleDeviceState(wxBoxSizer *deviceStateSizer, wxP
     // 显示文件信息按钮
     wxString file_pic = idle ? "device_idle_file_info" :"device_file_info";
     m_idle_device_info_button = new Button(m_panel_control_lamp, wxString(""), file_pic, 0, FromDIP(18));
-    m_idle_device_info_button->SetFont(wxFont(wxFontInfo(16)));
+    //m_idle_device_info_button->SetFont(wxFont(wxFontInfo(16)));
     m_idle_device_info_button->SetBorderWidth(0);
     m_idle_device_info_button->SetBackgroundColor(wxColour(255, 255, 255));
 //    m_idle_device_info_button->SetBackgroundColor(wxColour(217, 234, 255));
@@ -1134,7 +1134,7 @@ void TempMixDevice::setupLayoutIdleDeviceState(wxBoxSizer *deviceStateSizer, wxP
 
     // 显示灯控制按钮
     m_idle_lamp_control_button = new Button(m_panel_control_lamp, wxString(""), "device_lamp_control", 0, FromDIP(18));
-    m_idle_lamp_control_button->SetFont(wxFont(wxFontInfo(16)));
+    //m_idle_lamp_control_button->SetFont(wxFont(wxFontInfo(16)));
     m_idle_lamp_control_button->SetBorderWidth(0);
     m_idle_lamp_control_button->SetBackgroundColor(wxColour(255, 255, 255));
     m_idle_lamp_control_button->SetBorderColor(wxColour(255, 255, 255));
@@ -1148,7 +1148,7 @@ void TempMixDevice::setupLayoutIdleDeviceState(wxBoxSizer *deviceStateSizer, wxP
 
     // 显示过滤按钮
     m_idle_filter_button = new Button(m_panel_control_lamp, wxString(""), "device_filter", 0, FromDIP(18));
-    m_idle_filter_button->SetFont(wxFont(wxFontInfo(16)));
+    //m_idle_filter_button->SetFont(wxFont(wxFontInfo(16)));
     m_idle_filter_button->SetBorderWidth(0);
     m_idle_filter_button->SetBackgroundColor(wxColour(255, 255, 255));
     m_idle_filter_button->SetBorderColor(wxColour(255, 255, 255));
@@ -1209,33 +1209,33 @@ void TempMixDevice::setupLayoutDeviceInfo(wxBoxSizer *deviceInfoSizer, wxPanel *
     wxBoxSizer *bSizer_device_name = new wxBoxSizer(wxVERTICAL);
     auto machine_type = new Label(m_panel_device_info, _L("Machine Type"));
     machine_type->Wrap(-1);
-    machine_type->SetFont(wxFont(wxFontInfo(16)));
+    //machine_type->SetFont(wxFont(wxFontInfo(16)));
     machine_type->SetForegroundColour(wxColour(153, 153, 153));
     machine_type->SetBackgroundColour(wxColour(255, 255, 255));
     machine_type->SetMinSize(wxSize(FromDIP(120), -1));
 
     auto spray_nozzle = new Label(m_panel_device_info, _L("Spray Nozzle"));
-    spray_nozzle->SetFont(wxFont(wxFontInfo(16)));
+    //spray_nozzle->SetFont(wxFont(wxFontInfo(16)));
     spray_nozzle->SetForegroundColour(wxColour(153, 153, 153));
     spray_nozzle->SetBackgroundColour(wxColour(255, 255, 255));
 
     auto print_size = new Label(m_panel_device_info, _L("Print Size"));
-    print_size->SetFont(wxFont(wxFontInfo(16)));
+    //print_size->SetFont(wxFont(wxFontInfo(16)));
     print_size->SetForegroundColour(wxColour(153, 153, 153));
     print_size->SetBackgroundColour(wxColour(255, 255, 255));
 
     auto firmware_version = new Label(m_panel_device_info, _L("Firmware Version"));
-    firmware_version->SetFont(wxFont(wxFontInfo(16)));
+    //firmware_version->SetFont(wxFont(wxFontInfo(16)));
     firmware_version->SetForegroundColour(wxColour(153, 153, 153));
     firmware_version->SetBackgroundColour(wxColour(255, 255, 255));
 
     auto serial_number = new Label(m_panel_device_info, _L("Serial Number"));
-    serial_number->SetFont(wxFont(wxFontInfo(16)));
+    //serial_number->SetFont(wxFont(wxFontInfo(16)));
     serial_number->SetForegroundColour(wxColour(153, 153, 153));
     serial_number->SetBackgroundColour(wxColour(255, 255, 255));
 
     auto private_material = new Label(m_panel_device_info, _L("Private Material Statistics"));
-    private_material->SetFont(wxFont(wxFontInfo(16)));
+    //private_material->SetFont(wxFont(wxFontInfo(16)));
     private_material->SetForegroundColour(wxColour(153, 153, 153));
     private_material->SetBackgroundColour(wxColour(255, 255, 255));
 
@@ -1271,33 +1271,33 @@ void TempMixDevice::setupLayoutDeviceInfo(wxBoxSizer *deviceInfoSizer, wxPanel *
     wxBoxSizer *bSizer_device_data = new wxBoxSizer(wxVERTICAL);
     m_machine_type_data = new Label(m_panel_device_data, ("Adventurer 5M"));
     //m_machine_type_data->Wrap(-1);
-    m_machine_type_data->SetFont(wxFont(wxFontInfo(16)));
+    //m_machine_type_data->SetFont(wxFont(wxFontInfo(16)));
     m_machine_type_data->SetForegroundColour(wxColour(51, 51, 51));
     m_machine_type_data->SetBackgroundColour(wxColour(255, 255,255));
     //m_machine_type_data->SetMinSize(wxSize(FromDIP(155), -1));
 
     m_spray_nozzle_data = new Label(m_panel_device_data, ("0.4mm"));
-    m_spray_nozzle_data->SetFont(wxFont(wxFontInfo(16)));
+    //m_spray_nozzle_data->SetFont(wxFont(wxFontInfo(16)));
     m_spray_nozzle_data->SetForegroundColour(wxColour(51, 51, 51));
     m_spray_nozzle_data->SetBackgroundColour(wxColour(255, 255, 255));
 
     m_print_size_data = new Label(m_panel_device_data, ("220*220*220mm"));
-    m_print_size_data->SetFont(wxFont(wxFontInfo(16)));
+    //m_print_size_data->SetFont(wxFont(wxFontInfo(16)));
     m_print_size_data->SetForegroundColour(wxColour(51, 51, 51));
     m_print_size_data->SetBackgroundColour(wxColour(255, 255, 255));
 
     m_firmware_version_data = new Label(m_panel_device_data, ("2.1.4-2.1.6"));
-    m_firmware_version_data->SetFont(wxFont(wxFontInfo(16)));
+    //m_firmware_version_data->SetFont(wxFont(wxFontInfo(16)));
     m_firmware_version_data->SetForegroundColour(wxColour(51, 51, 51));
     m_firmware_version_data->SetBackgroundColour(wxColour(255, 255, 255));
 
     m_serial_number_data = new Label(m_panel_device_data, ("ABCDEFG"));
-    m_serial_number_data->SetFont(wxFont(wxFontInfo(16)));
+    //m_serial_number_data->SetFont(wxFont(wxFontInfo(16)));
     m_serial_number_data->SetForegroundColour(wxColour(51, 51, 51));
     m_serial_number_data->SetBackgroundColour(wxColour(255, 255, 255));
 
     m_private_material_data = new Label(m_panel_device_data, ("1600.9 m"));
-    m_private_material_data->SetFont(wxFont(wxFontInfo(16)));
+    //m_private_material_data->SetFont(wxFont(wxFontInfo(16)));
     m_private_material_data->SetForegroundColour(wxColour(51, 51, 51));
     m_private_material_data->SetBackgroundColour(wxColour(255, 255, 255));
 
