@@ -174,6 +174,11 @@ string DeviceObject::get_dev_name()
     return m_dev_name;
 }
 
+void DeviceObject::set_dev_name(const string& name)
+{ 
+    m_dev_name = name; 
+}
+
 string DeviceObject::get_dev_id()
 {
     return m_dev_id;
@@ -303,9 +308,13 @@ void DeviceObjectOpr::update_scan_machine()
         if (it != m_local_devices.end()) {
             devObj->set_user_access_code(it->second->get_user_access_code(), false);
             auto info    = devObj->get_lan_dev_info();
+            string name          = info->name;
             auto lanInfo = new fnet_lan_dev_info(*info);
-            lanInfo->connectMode = 0;
+            lanInfo->connectMode = 0;            
             it->second->set_lan_dev_info(lanInfo);
+            if (name != it->second->get_dev_name()) {
+                it->second->set_dev_name(name);
+            }
         } else {
             it = m_user_devices.find(dev_id);
             if (it != m_user_devices.end()) {
@@ -855,8 +864,16 @@ void DeviceObjectOpr::onConnectWanDevInfoUpdate(ComWanDevInfoUpdateEvent &event)
         auto it = m_user_devices.find(data.wanDevInfo.serialNumber);
         if (it != m_user_devices.end()) {
             bool state = it->second->is_online();
+            bool update = false;
             it->second->set_online_state(data.wanDevInfo.status != "offline");
-            if (state != it->second->is_online()) {
+            if (it->second->get_dev_name() != data.wanDevInfo.name) {
+                it->second->set_dev_name(data.wanDevInfo.name);
+                update = true;
+            }
+            if (state != it->second->is_online()) {                
+                update = true;
+            }
+            if (update) {
                 sendDeviceListUpdateEvent(data.wanDevInfo.serialNumber, -1);
             }
         }

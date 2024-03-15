@@ -80,6 +80,7 @@ public:
     fnet_lan_dev_info *get_lan_dev_info();
     void               set_lan_dev_info(fnet_lan_dev_info * info);
     string      get_dev_name();
+    void        set_dev_name(const string& name);
     string      get_dev_id();  // serialNumber
     unsigned short     get_dev_pid();
     string      get_wan_dev_id();
