@@ -29,6 +29,7 @@ public:
 private:
     wxPoint convertEventPoint(const wxMouseEvent& event);
     void leaveWindow();
+    void updateMinSize();
     bool isPointIn(const wxPoint& pnt);
     void onEnter(wxMouseEvent& event);
     void onLeave(wxMouseEvent& event);
@@ -253,6 +254,7 @@ private:
     void build();
     void connectEvent();
     void initLocalDevice(std::map<std::string, DeviceInfoItemPanel::DeviceInfo>& deviceInfoMap);
+    void initWlanDevice(std::map<std::string, DeviceInfoItemPanel::DeviceInfo>& deviceInfoMap);
     void initDeviceList();
     void updateFilterMap();
     void updatePlacementMap();

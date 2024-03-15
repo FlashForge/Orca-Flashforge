@@ -29,14 +29,13 @@ DropDownButton::DropDownButton(wxWindow* parent/*=nullptr*/, const wxString& tex
         m_bitmap->SetSize(bitmap.GetSize());
         m_bitmap->SetMinSize(bitmap.GetSize());
     }
-    int width = m_text->GetSize().x + FromDIP(12) + m_bitmap->GetSize().x;
-    SetMinSize(wxSize(width, FromDIP(24)));
     m_sizer = new wxBoxSizer(wxHORIZONTAL);
     m_sizer->Add(m_text, 0, wxALIGN_CENTER_VERTICAL | wxTOP | wxBOTTOM, FromDIP(3));
     m_sizer->AddSpacer(FromDIP(12));
     m_sizer->Add(m_bitmap, 0, wxALIGN_CENTER_VERTICAL | wxTOP | wxBOTTOM, FromDIP(3));
     m_sizer->AddStretchSpacer(1);
 
+    updateMinSize();
     SetSizer(m_sizer);
     Layout();
     Fit();
@@ -59,7 +58,7 @@ DropDownButton::~DropDownButton()
 void DropDownButton::setText(const wxString& text)
 {
     m_text->SetLabel(text);
-    Layout();
+    updateMinSize();
 }
 
 wxPoint DropDownButton::convertEventPoint(const wxMouseEvent& event)
@@ -80,6 +79,14 @@ void DropDownButton::leaveWindow()
         //BOOST_LOG_TRIVIAL(error) << "DropDownButton ReleaseMouse";
         //flush_logs();
     }
+}
+
+void DropDownButton::updateMinSize()
+{
+    int width = m_text->GetSize().x + FromDIP(12) + m_bitmap->GetSize().x;
+    SetMinSize(wxSize(width, FromDIP(24)));
+    Layout();
+    Fit();
 }
 
 void DropDownButton::onEnter(wxMouseEvent& event)
@@ -907,10 +914,31 @@ void DeviceListPanel::initLocalDevice(std::map<std::string, DeviceInfoItemPanel:
     }
 }
 
+void DeviceListPanel::initWlanDevice(std::map<std::string, DeviceInfoItemPanel::DeviceInfo>& deviceInfoMap)
+{
+    com_id_list_t idList = MultiComMgr::inst()->getReadyDevList();
+    for (const auto& id : idList) {
+        DeviceInfoItemPanel::DeviceInfo dev_info;
+        if (getDeviceInfo(dev_info, id)) {
+            bool valid = false;
+            const auto& data = MultiComMgr::inst()->devData(id, &valid);
+            std::string dev_id = (COM_CONNECT_LAN == data.connectMode) ? data.lanDevInfo.serialNumber : data.wanDevInfo.serialNumber;
+            auto iter = deviceInfoMap.find(dev_id);
+            if (iter == deviceInfoMap.end()) {
+                deviceInfoMap.emplace(std::make_pair(dev_id, dev_info));
+            } else {
+                iter->second = dev_info;
+            }
+        }
+    }
+}
+
 void DeviceListPanel::initDeviceList()
 {
     std::map<std::string, DeviceInfoItemPanel::DeviceInfo> devList;
     initLocalDevice(devList);
+    initWlanDevice(devList);  
+
     if (devList.empty()) {
         m_simple_book->ChangeSelection(0);
         return;
