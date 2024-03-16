@@ -1107,13 +1107,24 @@ void SendToPrinterDialog::update_user_machine_list()
         for (auto id : idList) {
             auto data = MultiComMgr::inst()->devData(id, &valid);
             if (valid) {
-                if (COM_CONNECT_WAN == data.connectMode || COM_CONNECT_LAN == data.connectMode) {
-                    MachineItem::MachineData mdata;
-                    mdata.flag = data.connectMode;
+                std::string dev_id;                
+                MachineItem::MachineData mdata;
+                mdata.comId = id;
+                mdata.flag = data.connectMode;
+                if (COM_CONNECT_LAN == data.connectMode) {
+                    dev_id = data.lanDevInfo.serialNumber;
+                    mdata.pid = data.lanDevInfo.pid;
+                    mdata.name = wxString::FromUTF8(data.lanDevInfo.name);
+                } else if (COM_CONNECT_WAN == data.connectMode) {
+                    dev_id = data.wanDevInfo.serialNumber;
                     mdata.pid = data.devDetail->pid;
-                    mdata.name = wxString::FromUTF8((COM_CONNECT_WAN == data.connectMode) ? data.wanDevInfo.name : data.lanDevInfo.name);
-                    mdata.comId = id;
-                    m_machineListMap.emplace(mdata.comId, mdata);
+                    mdata.name = wxString::FromUTF8(data.wanDevInfo.name);
+                }
+                auto iter = m_machineListMap.find(dev_id);
+                if (iter == m_machineListMap.end()) {
+                    m_machineListMap.emplace(dev_id, mdata);    
+                } else if (COM_CONNECT_LAN == data.connectMode) {
+                    iter->second = mdata;
                 }
             } else {
                 BOOST_LOG_TRIVIAL(warning) << "com_id (" << id << "): get com data error";
@@ -1768,9 +1779,23 @@ void SendToPrinterDialog::on_multi_send_completed(wxCommandEvent& event)
         wxStringList successList, failList;
         for (auto& iter : send_result) {
             wxString name;
-            auto res = m_machineListMap.find(iter.first);
-            if (res != m_machineListMap.end()) {
-                name = res->second.name;
+            bool valid = false;
+            auto data = MultiComMgr::inst()->devData(iter.first, &valid);
+            if (valid) {
+                std::string dev_id = (COM_CONNECT_LAN == data.connectMode) ? data.lanDevInfo.serialNumber : data.wanDevInfo.serialNumber;
+                auto res = m_machineListMap.find(dev_id);
+                if (res != m_machineListMap.end()) {
+                    name = res->second.name;
+                } else {
+                    name = wxString::FromUTF8((COM_CONNECT_LAN == data.connectMode) ? data.lanDevInfo.name : data.wanDevInfo.name);
+                }
+            } else {
+                for (const auto& it : m_machineListMap) {
+                    if (it.second.comId == iter.first) {
+                        name = it.second.name;
+                        break;
+                    }
+                }
             }
             (iter.second == MultiSend::Result_Ok) ? successList.Add(name) : failList.Add(name);
         }

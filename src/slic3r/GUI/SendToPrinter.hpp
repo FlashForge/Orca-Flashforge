@@ -254,7 +254,7 @@ private:
     wxStaticText*                       m_progressLbl {nullptr};
     FFButton*                           m_progressCancelBtn {nullptr};
 
-    std::map<com_id_t, MachineItem::MachineData> m_machineListMap;
+    std::map<std::string, MachineItem::MachineData> m_machineListMap;
     std::vector<MachineItem*>           m_machineItemList;
     std::shared_ptr<MultiSend>          m_multiSend;
 
