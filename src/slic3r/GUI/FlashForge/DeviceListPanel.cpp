@@ -1470,7 +1470,7 @@ void DeviceListPanel::onComWanDeviceInfoUpdate(ComWanDevInfoUpdateEvent& event)
         info.placement = data.wanDevInfo.location;
         info.status = data.wanDevInfo.status;
         updateDeviceInfo(dev_id, info);
-        BOOST_LOG_TRIVIAL(error) << "onComWanDeviceInfoUpdate: " << info.status;
+        BOOST_LOG_TRIVIAL(error) << "onComWanDeviceInfoUpdate: " << data.wanDevInfo.name << ", " << info.status;
         flush_logs();
     }
     event.Skip();
