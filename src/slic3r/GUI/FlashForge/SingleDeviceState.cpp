@@ -409,13 +409,13 @@ void DeviceDetail::create_panel(wxWindow* parent)
 
         m_device_speed = new IconBottonText(m_panel_first_row, wxString("device_speed"), 17, wxString("90"), 12);
         m_device_speed->setLimit(10, 150);
-        m_device_speed->setAdjustValue(1);
+        m_device_speed->setAdjustValue(10);
         bSizer_first_row->Add(m_device_speed, 0, wxEXPAND | wxALL, 0);
         bSizer_first_row->AddSpacer(FromDIP(18));
 
-        m_device_z_axis = new IconBottonText(m_panel_first_row, wxString("device_z_axis"), 17, wxString("0.002"), 12,wxString("device_z_dec"), wxString("push_button_arrow_dec_normal"),false);
+        m_device_z_axis = new IconBottonText(m_panel_first_row, wxString("device_z_axis"), 17, wxString("0.002"), 12,wxString("device_z_dec"), wxString("push_button_arrow_dec_normal"));
         m_device_z_axis->setLimit(-5, 5);
-        m_device_z_axis->setAdjustValue(0.001);
+        m_device_z_axis->setAdjustValue(0.025);
         bSizer_first_row->Add(m_device_z_axis, 0, wxEXPAND | wxALL, 0);
         bSizer_first_row->AddStretchSpacer();
 
@@ -440,13 +440,13 @@ void DeviceDetail::create_panel(wxWindow* parent)
 
         m_device_nozzle_fan = new IconBottonText(m_panel_second_row, wxString("device_nozzle_fan"), 17, wxString("50"), 12);
         m_device_nozzle_fan->setLimit(0, 100);
-        m_device_nozzle_fan->setAdjustValue(1);
+        m_device_nozzle_fan->setAdjustValue(10);
         bSizer_second_row->Add(m_device_nozzle_fan, 0, wxEXPAND | wxALL, 0);
         bSizer_second_row->AddSpacer(FromDIP(18));
 
         m_device_cooling_fan = new IconBottonText(m_panel_second_row, wxString("device_cooling_fan"), 17, wxString("100"), 12);
         m_device_cooling_fan->setLimit(0, 100);
-        m_device_cooling_fan->setAdjustValue(1);
+        m_device_cooling_fan->setAdjustValue(10);
         bSizer_second_row->Add(m_device_cooling_fan, 0, wxEXPAND | wxALL, 0);
         bSizer_second_row->AddStretchSpacer();
 
