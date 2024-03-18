@@ -58,7 +58,8 @@ public:
     decltype(&fnet_freeString) freeString;
 
 public:
-    FlashNetworkIntfc(const char *libraryPath, const char *logFileDir, int expireHours);
+    FlashNetworkIntfc(const char *libraryPath, const char *logFileDir, int expireHours,
+        fnet_log_level_t logLevel);
 
     ~FlashNetworkIntfc();
 

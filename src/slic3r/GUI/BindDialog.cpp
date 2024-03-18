@@ -479,7 +479,7 @@ void BindMachineDialog::on_show(wxShowEvent &event)
         if (LoginDialog::IsUsrLogin()) {
             auto user_info = LoginDialog::GetUsrInfo();
             BOOST_LOG_TRIVIAL(error) << "Get user info: nickname (" << user_info.nickname << "), headImgUrl (" << user_info.headImgUrl << ")";
-            m_user_name->SetLabelText(user_info.nickname);
+            m_user_name->SetLabelText(wxString::FromUTF8(user_info.nickname));
             if (!user_info.headImgUrl.empty()) {
                 m_web_request = wxWebSession::GetDefault().CreateRequest(this, user_info.headImgUrl);
                 if (!m_web_request.IsOk()) {
@@ -743,7 +743,7 @@ void UnBindMachineDialog::on_show(wxShowEvent &event)
         if (LoginDialog::IsUsrLogin()) {
             auto user_info = LoginDialog::GetUsrInfo();
             BOOST_LOG_TRIVIAL(error) << "Get user info: nickname (" << user_info.nickname << "), headImgUrl (" << user_info.headImgUrl << ")";
-            m_user_name->SetLabelText(user_info.nickname);
+            m_user_name->SetLabelText(wxString::FromUTF8(user_info.nickname));
             if (!user_info.headImgUrl.empty()) {
                 m_web_request = wxWebSession::GetDefault().CreateRequest(this, user_info.headImgUrl);
                 if (!m_web_request.IsOk()) {

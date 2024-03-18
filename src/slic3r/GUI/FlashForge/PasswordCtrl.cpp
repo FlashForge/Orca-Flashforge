@@ -37,6 +37,7 @@ PasswordCtrl::PasswordCtrl(wxWindow* parent, wxWindowID id/* = wxID_ANY*/, const
     body_sizer->Fit(m_panel_page);
 
     m_plain_text_ctrl = new wxTextCtrl(m_panel_page, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER | wxTE_LEFT | wxBORDER_NONE);
+    m_plain_text_ctrl->SetHint(_L("Password"));
     m_plain_text_ctrl->Hide();
 
     Bind(wxEVT_PAINT, &PasswordCtrl::OnPaint, this);

@@ -10794,6 +10794,9 @@ msgstr ""
 msgid "Password is incorrect"
 msgstr ""
 
+msgid "Code"
+msgstr ""
+
 msgid "Machine Type"
 msgstr ""
 

@@ -57,6 +57,11 @@
         <video id="video" autoplay></video>
 
         <div id="url-studio" style="display: none;"></div>
+
+        <!-- <div id="url-studio"></div>
+
+        <div id="url-stro"></div> -->
+
         <!-- 控制按钮 -->
         <!-- <button id="toggleButton">暂停</button> -->
         <!-- <h1 class="trans">Printer Connection</h1>
@@ -64,128 +69,73 @@
         <img src="setup_connection.gif" alt="Printer connection setup demonstration" style="max-width: 100%; height: auto; display: block;"/> -->
     </div>
     <script>
-    //    var TestData={"command": "studio_rtsp","rtsp_address": "http://10.33.23.139:8080/?action=stream"};
-       var rtsp_address = window.location.search
-       var urlParams = new URLSearchParams(rtsp_address);
-       var lang = urlParams.get('lang');
-       var videoStreamImg = document.getElementById("videoStream");
-       videoStreamImg.src = 'hei.svg';
-       videoStreamImg.style.backgroundImage = 'url("hei.svg")'
+      // var rtsp_address = window.location.search
+      // var urlParams = new URLSearchParams(rtsp_address)
+      // var lang = urlParams.get('lang')
+      let videoStreamImg = document.getElementById("videoStream")
+      videoStreamImg.src = 'hei.svg';
+      videoStreamImg.style.backgroundImage = 'url("hei.svg")'
+      // let zanting = document.getElementById("zanting")
+      let video = document.getElementById("video")
+      video.style.display = "none"
 
+      let imgs = document.querySelectorAll('img')
+      let zting = document.querySelector('#zanting')
 
-       let streamPaused = false;
+      let streamPaused = false
 
-       videoStreamImg.addEventListener('click', function() {
-           if (!streamPaused) {
-            if (lang) {
-              videoStreamImg.src = '';
-              videoStreamImg.style.backgroundImage = 'url("")'
-              var zanting = document.getElementById("zanting")
-              zanting.style.display = 'none'
-              videoStreamImg.src = lang;
-              streamPaused = true;
-              setTimeout(function() {
-                  videoStreamImg.src = 'hei.svg';
-                  zanting.style.display = 'block'
-                  videoStreamImg.style.backgroundImage = 'url("hei.svg")'
-                  streamPaused = false;
-              }, 600000); // 10分钟后暂停，10分钟 = 600000毫秒
-            } else {
-              videoStreamImg.src = 'hei.svg';
-              streamPaused = false;
-              alert('无法获取视频流路径')
-            }
-           } else {
-             videoStreamImg.src = 'hei.svg';
-             var zanting = document.getElementById("zanting")
-             zanting.style.display = 'block'
-             videoStreamImg.style.backgroundImage = 'url("hei.svg")'
-             streamPaused = false;
-           }
-       });
+      const targetNode = document.getElementById('url-studio')
 
-       var video = document.getElementById("video");
-       video.style.display = "none"
+      const observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+              if (mutation.type === 'childList') {
+                  var element = document.getElementById('url-studio')
+                  var content = element.innerHTML
 
-
-      //  function SendWXMessage ( strMsg ) {
-      //    window.postMessage(strMsg, '*')
-      //  }
-
-       if (lang) {
-        if (lang.endsWith(".m3u8")) {
-          // console.log('.m3u8')
-          video.style.display = "block"
-          videoStreamImg.style.display = "none"
-          video.style.backgroundImage = "url('hei.svg')"
-          video.style.backgroundSize = "cover"
-          video.style.backgroundRepeat = "no-repeat"
-          video.style.backgroundPosition = "center"
-          video.addEventListener('click', function() {
-            if (!streamPaused) {
-              OnGetUrl()
-              setTimeout(function() {
-                var element = document.getElementById('url-studio');
-                var content = element.innerHTML;
-                lang = content
-                if (Hls.isSupported()) {
-                  var video = document.getElementById('video')
-                  video.style.backgroundImage = "none"
-                  var zanting = document.getElementById("zanting")
-                  zanting.style.display = 'none'
-                  var hls = new Hls()
-                  // 绑定视频流地址
-                  hls.loadSource(lang)
-                  // 绑定 video 容器
-                  hls.attachMedia(video)
-                  if (!streamPaused) {
-                    setTimeout(function() {
-                        video.src = ''
-                        video.style.backgroundImage = "url('hei.svg')"
-                        video.style.backgroundSize = "cover"
-                        video.style.backgroundRepeat = "no-repeat"
-                        video.style.backgroundPosition = "center"
-                        var zanting = document.getElementById("zanting")
-                        zanting.style.display = 'block'
-                        streamPaused = false;
-                    }, 600000); // 10分钟后暂停，10分钟 = 600000毫秒
-                    streamPaused = true;
-                  }
-                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                  if (!streamPaused) {
-                    // 对于原生支持 HLS 的平台（如 Safari），直接播放
-                    video.style.backgroundImage = "none"
+                  if (content.endsWith("action=stream")) {
+                    if (video.style.display === 'none') {
+                      videoStreamImg.src = 'hei.svg'
+                      var zanting = document.getElementById("zanting")
+                      zanting.style.display = 'block'
+                      videoStreamImg.style.backgroundImage = 'url("hei.svg")'
+                    } else {
+                      video.style.display = 'none'
+                      videoStreamImg.style.display = 'block'
+                      videoStreamImg.src = 'hei.svg'
+                      var zanting = document.getElementById("zanting")
+                      zanting.style.display = 'block'
+                      videoStreamImg.style.backgroundImage = 'url("hei.svg")'
+                    }
+                  } else if (content.endsWith(".m3u8")) {
+                    videoStreamImg.style.display = "none"
+                    video.src = ''
+	                  video.style.backgroundImage = "url('hei.svg')"
+	                  video.style.backgroundSize = "cover"
+	                  video.style.backgroundRepeat = "no-repeat"
+	                  video.style.backgroundPosition = "center"
                     var zanting = document.getElementById("zanting")
-                    zanting.style.display = 'none'
-                    video.src = lang
-                    setTimeout(function() {
+                    zanting.style.display = 'block'
+                  } else if (content === '设备离线了') {
+                    if (video.style.display === "block") {
                       video.src = ''
                       video.style.backgroundImage = "url('hei.svg')"
                       video.style.backgroundSize = "cover"
                       video.style.backgroundRepeat = "no-repeat"
                       video.style.backgroundPosition = "center"
+                    } else {
+                      videoStreamImg.src = 'hei.svg'
                       var zanting = document.getElementById("zanting")
                       zanting.style.display = 'block'
-                      streamPaused = false;
-                    }, 600000); // 10分钟后暂停，10分钟 = 600000毫秒
-                    streamPaused = true;
+                      videoStreamImg.style.backgroundImage = 'url("hei.svg")'
+                    }
                   }
-                } 
-              },10)
-            } else {
-              video.pause()
-              // video.src = ''
-              video.style.backgroundImage = "url('hei.svg')"
-              video.style.backgroundSize = "cover"
-              video.style.backgroundRepeat = "no-repeat"
-              video.style.backgroundPosition = "center"
-              var zanting = document.getElementById("zanting")
-              zanting.style.display = 'block'
-              streamPaused = false;
-            }
+              }
           })
-        }
-       }
+      })
+
+      const config = { attributes: true, childList: true, subtree: true }
+
+      observer.observe(targetNode, config)
        
 
        // 适配设置

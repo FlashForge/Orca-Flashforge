@@ -121,9 +121,17 @@ LoginDialog::LoginDialog()
             BOOST_LOG_TRIVIAL(warning) << boost::format("MultiComUtils::getClientToken Failed!");
         }
     }
-    //m_login_button_timer.Bind(wxEVT_TIMER, &LoginDialog::onLoginBtnTimer, this);
-    //m_login_button_timer.Start(200);
+    m_login_button_timer.Bind(wxEVT_TIMER, &LoginDialog::onLoginBtnTimer, this);
+    
     this->SetMinSize(wxSize(FromDIP(330), FromDIP(439)));
+    Bind(wxEVT_SHOW, [this](wxShowEvent &event) {
+        event.Skip();
+        m_login_button_timer.Start(200);
+    });
+    Bind(wxEVT_CLOSE_WINDOW, [this](wxCloseEvent &event) {
+        event.Skip();
+        m_login_button_timer.Stop();
+    });
 }
 
 LoginDialog::~LoginDialog() 
@@ -272,6 +280,7 @@ void LoginDialog::initOverseaWidget()
     m_page_body_page2_panel = new wxPanel(this, wxID_ANY);
     wxBoxSizer* page2Sizer = new wxBoxSizer(wxVERTICAL);
     setupLayoutPage2(page2Sizer,m_page_body_page2_panel);
+    m_username_ctrl_page2->SetTextHint(2);
     page2Sizer->AddSpacer(FromDIP(63));
 
     m_page_body_page2_panel->SetSizer(page2Sizer);
@@ -338,7 +347,7 @@ void LoginDialog::createSwitchTitle()
 
     m_switch_title_1_panel = new wxPanel(this, wxID_ANY);
 
-    m_switch_title_1 = new wxStaticText(m_switch_title_1_panel, wxID_ANY, _L("Verify Code Login/ Register"));
+    m_switch_title_1 = new wxStaticText(m_switch_title_1_panel, wxID_ANY, _L("Phone Verify Code Login/ Register"));
     m_switch_title_1->SetForegroundColour(wxColour(51,51,51));
     m_switch_title_1->SetFont(font_title);
 
@@ -408,6 +417,7 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     usr_name_space2->SetMinSize(wxSize(FromDIP(80), -1));
 
     m_username_ctrl_page1 = new UserNameCtrl(panel,wxID_ANY,_L("Phone Number / email"));
+    m_username_ctrl_page1->SetTextHint(0);
     m_username_ctrl_page1->SetRadius(10);
     m_username_ctrl_page1->Bind(wxEVT_TEXT, &LoginDialog::onUsrNameOrPasswordChangedPage1, this);
 
@@ -567,7 +577,7 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     m_page1_checkBox->Bind(wxEVT_TOGGLEBUTTON, &LoginDialog::onAgreeCheckBoxChangedPage1, this);
 
     m_protocol_page1 = new  wxStaticText(m_panel_checkbox_page1, wxID_ANY,_L("Read and Agree to Accept"));
-    m_protocol_page1->SetFont((wxFont(wxFontInfo(14))));
+    //m_protocol_page1->SetFont((wxFont(wxFontInfo(14))));
 
     m_service_link_page1 = new wxStaticText(m_panel_checkbox_page1, wxID_ANY,  _L("《Term of Sevrvice》"));
     m_service_link_page1->SetForegroundColour(wxColour(50,141,251));
@@ -633,6 +643,7 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     usr_name_space2->SetMinSize(wxSize(FromDIP(80), -1));
 
     m_username_ctrl_page2 = new UserNameCtrl(parent,wxID_ANY,_L("Phone Number / email"));
+    m_username_ctrl_page2->SetTextHint(1);
     m_username_ctrl_page2->Bind(wxEVT_TEXT, &LoginDialog::onUsrNameOrPasswordChangedPage2, this);
 
     //adjust layout
@@ -664,7 +675,7 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     register_link->SetForegroundColour(wxColour(50,141,251));
     register_link->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
         event.Skip();
-        wxString url = "http://dev.auth.flashforge.shop/en/signUp";
+        wxString url = "https://auth.flashforge.com/en/signUp?channel=Orca";
         wxLaunchDefaultBrowser(url);
     });
 
@@ -672,7 +683,14 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     forget_password_link->SetForegroundColour(wxColour(50,141,251));
     forget_password_link->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
         event.Skip();
-        wxString url = "http://dev.auth.flashforge.shop/en/resetPassword";
+        wxString url = "https://auth.flashforge.com/en/resetPassword?channel=Orca";
+        AppConfig *app_config = wxGetApp().app_config;
+        if (app_config) {
+            std::string language = app_config->get("language");
+            if (language.compare("zh_CN") == 0) {
+                url = "https://auth.flashforge.com/zh/resetPassword?channel=Orca";
+            }
+        }
         wxLaunchDefaultBrowser(url);
     });
 
@@ -752,7 +770,7 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     m_page2_checkBox->Bind(wxEVT_TOGGLEBUTTON, &LoginDialog::onAgreeCheckBoxChangedPage2, this);
 
     m_protocol_page2 = new  wxStaticText(m_panel_checkbox_page2, wxID_ANY,_L("Read and Agree to Accept"));
-    m_protocol_page2->SetFont((wxFont(wxFontInfo(14))));
+    //m_protocol_page2->SetFont((wxFont(wxFontInfo(14))));
 /*
     m_protocol_page2 = new  wxStaticText(m_panel_checkbox_page2, wxID_ANY,_L("Read "));
     m_protocol_page2->SetFont((wxFont(wxFontInfo(14))));
@@ -961,6 +979,8 @@ void LoginDialog::onPage4Login(wxMouseEvent& event)
         page1ShowErrorLabel(_L("Verify code is incorrect"));
     } else if (login_result == ComErrno::COM_ERROR) {
         page1ShowErrorLabel(_L("Server connection exception"));
+    } else if (login_result == ComErrno::COM_UNREGISTER_USER) {
+        page1ShowErrorLabel(_L("User not registered"));
     }
     event.Skip();
 }
@@ -1076,6 +1096,8 @@ void LoginDialog::onPage3Login(wxMouseEvent& event)
         page2ShowErrorLabel(_L("Password is incorrect"));
     } else if (login_result == ComErrno::COM_ERROR) {
         page2ShowErrorLabel(_L("Server connection exception"));
+    } else if (login_result == ComErrno::COM_UNREGISTER_USER) {
+        page2ShowErrorLabel(_L("User not registered"));
     }
 }
 
@@ -1141,13 +1163,13 @@ void LoginDialog::onLoginBtnTimer(wxTimerEvent &event)
         if (m_login_button_page1) {
             m_login_button_page1->Show();
             m_login_button_page1->Refresh();
-            Layout();
+            //Layout();
         }
     } else if (m_page_body_page2_panel->IsShown()) {
         if (m_login_button_page2) {
             m_login_button_page2->Show();
             m_login_button_page2->Refresh();
-            Layout();
+            //Layout();
         }
         
     }

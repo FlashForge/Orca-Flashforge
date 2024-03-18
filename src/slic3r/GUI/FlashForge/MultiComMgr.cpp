@@ -18,7 +18,8 @@ bool MultiComMgr::initalize(const std::string &newtworkDllPath, const std::strin
     if (networkIntfc() != nullptr) {
         return false;
     }
-    m_networkIntfc.reset(new fnet::FlashNetworkIntfc(newtworkDllPath.c_str(), logFileDir.c_str(), 72));
+    m_networkIntfc.reset(new fnet::FlashNetworkIntfc(
+        newtworkDllPath.c_str(), logFileDir.c_str(), 72, FNET_LOG_LEVEL_INFO));
     if (!m_networkIntfc->isOk()) {
         m_networkIntfc.reset(nullptr);
         return false;
@@ -328,6 +329,9 @@ void MultiComMgr::onWanConnReadData(const WanConnReadDataEvent &event)
     case FNET_CONN_READ_SYNC_BIND_DEVICE:
     case FNET_CONN_READ_SYNC_UNBIND_DEVICE:
         m_userDataUpdateThd->setUpdateWanDev();
+        break;
+    case FNET_CONN_READ_UNREGISTER_USER:
+        onWanDevMaintian(ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, COM_UNREGISTER_USER));
         break;
     case FNET_CONN_READ_DEVICE_DETAIL:
         procDevDetailUpdate(event.readData);

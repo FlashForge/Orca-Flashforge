@@ -11284,6 +11284,9 @@ msgstr "忘记密码"
 msgid "Password is incorrect"
 msgstr "密码错误"
 
+msgid "Code"
+msgstr "验证码"
+
 msgid "Machine Type"
 msgstr "设备型号"
 
@@ -11775,9 +11778,6 @@ msgstr ""
 
 #~ msgid "Failed to log out."
 #~ msgstr "登出失败。"
-
-#~ msgid "Code"
-#~ msgstr "验证码"
 
 #~ msgid "Account or Password Input Error"
 #~ msgstr "账号或密码输入错误"
