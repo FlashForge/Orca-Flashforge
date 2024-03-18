@@ -1165,6 +1165,10 @@ void LoginDialog::onLoginBtnTimer(wxTimerEvent &event)
             m_login_button_page1->Refresh();
             //Layout();
         }
+        if (m_get_code_button) {
+            m_get_code_button->Show();
+            m_get_code_button->Refresh();
+        }
     } else if (m_page_body_page2_panel->IsShown()) {
         if (m_login_button_page2) {
             m_login_button_page2->Show();

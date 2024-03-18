@@ -10755,7 +10755,7 @@ msgstr ""
 msgid "Get Code"
 msgstr ""
 
-msgid "Verify Code Login/ Register"
+msgid "Phone Verify Code Login/ Register"
 msgstr ""
 
 msgid "Password Login"
@@ -10791,10 +10791,19 @@ msgstr ""
 msgid "Forget Password"
 msgstr ""
 
+msgid "User not registered"
+msgstr ""
+
 msgid "Password is incorrect"
 msgstr ""
 
 msgid "Code"
+msgstr ""
+
+msgid "Phone Number"
+msgstr ""
+
+msgid "Email"
 msgstr ""
 
 msgid "Machine Type"
