@@ -89,6 +89,7 @@ private:
 
     inline void startTimer(){ m_timer.Start(2000);}
     void OnTimer(wxTimerEvent& event);
+    void onLoginBtnTimer(wxTimerEvent &event);
 
 private:
     com_clinet_token_data_t m_client_SMS_token;
@@ -143,6 +144,7 @@ private:
     static bool  m_first_call_client_token;
 
     wxTimer m_timer;
+    wxTimer m_login_button_timer;
 
     UserNameCtrl* m_username_ctrl_page1 {nullptr};
     VerifyCodeCtrl* m_verifycode_ctrl_page1 {nullptr};

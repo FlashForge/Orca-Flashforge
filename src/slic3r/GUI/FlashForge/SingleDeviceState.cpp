@@ -399,7 +399,7 @@ void DeviceDetail::create_panel(wxWindow* parent)
 
         wxBoxSizer *bSizer_first_row = new wxBoxSizer(wxVERTICAL);
         auto m_panel_first_row = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, -1), wxTAB_TRAVERSAL);
-        m_device_material = new IconText(m_panel_first_row, wxString("device_material"), 15, wxString("PLA-123456789012345678901234567890"), 12);
+        m_device_material = new IconText(m_panel_first_row, wxString("device_material"), 15, wxString("PLA-12345678901234567890"), 12);
         bSizer_first_row->Add(m_device_material, 0, wxEXPAND | wxALL, 0);
         bSizer_first_row->AddSpacer(FromDIP(18));
 
