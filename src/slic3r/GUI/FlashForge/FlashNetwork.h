@@ -30,6 +30,11 @@ typedef void (*fnet_conn_reconnect_callback_t)(void *data);
 
 #pragma pack(push, 4)
 
+typedef enum fnet_log_level {
+    FNET_LOG_LEVEL_ERROR,
+    FNET_LOG_LEVEL_INFO,
+} fnet_log_level_t;
+
 typedef enum fnet_conn_write_data_type {
     FNET_CONN_WRITE_SUB_DEVICE_ACTION,  // data, nullptr
     FNET_CONN_WRITE_SUB_APP_SYNC,       // data, fnet_user_id_t
@@ -244,7 +249,7 @@ typedef struct fnet_conn_read_data {
 extern "C" {
 #endif
 
-FNET_API int fnet_initlize(const char *logFileDir, int expireHours);
+FNET_API int fnet_initlize(const char *logFileDir, int expireHours, fnet_log_level_t logLevel);
 
 FNET_API void fnet_uninitlize();
 
