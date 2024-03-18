@@ -121,7 +121,8 @@ LoginDialog::LoginDialog()
             BOOST_LOG_TRIVIAL(warning) << boost::format("MultiComUtils::getClientToken Failed!");
         }
     }
-
+    //m_login_button_timer.Bind(wxEVT_TIMER, &LoginDialog::onLoginBtnTimer, this);
+    //m_login_button_timer.Start(200);
     this->SetMinSize(wxSize(FromDIP(330), FromDIP(439)));
 }
 
@@ -1103,19 +1104,53 @@ void LoginDialog::page2ShowErrorLabel(const wxString& labelInfo)
 void LoginDialog::OnTimer(wxTimerEvent& event)
 {
     event.Skip();
-    if(m_error_label_panel->IsShown()){
-        m_error_label_panel->Show(false);
+    if (m_error_label_panel) {
+        if (m_error_label_panel->IsShown()) {
+            m_error_label_panel->Show(false);
+        }
     }
-    if(m_error_label_page2_panel->IsShown()){
-        m_error_label_page2_panel->Show(false);
+
+    if (m_error_label_page2_panel) {
+        if (m_error_label_page2_panel->IsShown()) {
+            m_error_label_page2_panel->Show(false);
+        }
     }
-    if(m_error_label->IsShown()){
-        m_error_label->Show(false);
+
+    if (m_error_label) {
+        if (m_error_label->IsShown()) {
+            m_error_label->Show(false);
+        }
     }
-    if(m_error_label_page2->IsShown()){
-        m_error_label_page2->Show(false);
+
+    if (m_error_label_page2) {
+        if (m_error_label_page2->IsShown()) {
+            m_error_label_page2->Show(false);
+        }
     }
+
     m_timer.Stop();
+}
+
+void LoginDialog::onLoginBtnTimer(wxTimerEvent &event) 
+{
+    event.Skip();
+    if (m_page_body_page1_panel == NULL || m_page_body_page2_panel == NULL) {
+        return;
+    }
+    if (m_page_body_page1_panel->IsShown()) {
+        if (m_login_button_page1) {
+            m_login_button_page1->Show();
+            m_login_button_page1->Refresh();
+            Layout();
+        }
+    } else if (m_page_body_page2_panel->IsShown()) {
+        if (m_login_button_page2) {
+            m_login_button_page2->Show();
+            m_login_button_page2->Refresh();
+            Layout();
+        }
+        
+    }
 }
 
 

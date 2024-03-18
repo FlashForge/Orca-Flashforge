@@ -366,7 +366,7 @@ void DeviceDetail::create_panel(wxWindow* parent)
             if (m_device_cooling_fan) {
                 m_device_cooling_fan->getTextValue().ToDouble(&cooling_fan);
             }
-            ComPrintCtrl *printCtrl = new ComPrintCtrl(z_axis, speed, cooling_fan, nozzle_fan);
+            ComPrintCtrl *printCtrl = new ComPrintCtrl(z_axis, speed, nozzle_fan,cooling_fan);
             //测试，临时将id写死
             if (m_cur_id >= 0) {
                 Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, printCtrl);
@@ -399,7 +399,7 @@ void DeviceDetail::create_panel(wxWindow* parent)
 
         wxBoxSizer *bSizer_first_row = new wxBoxSizer(wxVERTICAL);
         auto m_panel_first_row = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, -1), wxTAB_TRAVERSAL);
-        m_device_material = new IconText(m_panel_first_row, wxString("device_material"), 15, wxString("PLA-123456789012345678901234567890"), 12);
+        m_device_material = new IconText(m_panel_first_row, wxString("device_material"), 15, wxString("PLA-12345678901234567890"), 12);
         bSizer_first_row->Add(m_device_material, 0, wxEXPAND | wxALL, 0);
         bSizer_first_row->AddSpacer(FromDIP(18));
 
@@ -2008,9 +2008,9 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
    std::string stram_url = data.devDetail->cameraStreamUrl;
    if (!stram_url.empty() && m_camera_stream_url != data.devDetail->cameraStreamUrl) {
        //通知设备开流
-        ComCameraStreamCtrl *cameraStreamCtrl_0 = new ComCameraStreamCtrl(OPENSTREAM);
+        ComCameraStreamCtrl *cameraStreamCtrl = new ComCameraStreamCtrl(OPEN);
         // 测试，临时将id写死
-        Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, cameraStreamCtrl_0);
+        Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, cameraStreamCtrl);
 
         m_camera_stream_url = data.devDetail->cameraStreamUrl;
         modifyVideoPlayerAddress(m_camera_stream_url);  

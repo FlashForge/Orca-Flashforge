@@ -650,11 +650,11 @@ DeviceInfoItemPanel::DeviceInfoItemPanel(wxWindow *parent, const DeviceInfo& inf
 
 void DeviceInfoItemPanel::updateInfo(const DeviceInfo& info)
 {
-    m_name_text->SetLabel(info.name);
+    m_name_text->SetLabel(wxString::FromUTF8(info.name));
     //if (info.placement.empty()) {
     //    m_placement_text->SetLabel(_L("Default"));
     //} else {
-    m_placement_text->SetLabel(info.placement);
+    m_placement_text->SetLabel(wxString::FromUTF8(info.placement));
     //}
     if (info.pid != m_info.pid) {
         m_icon->SetBitmap(machineBitmap(info.pid));
@@ -1367,6 +1367,7 @@ void DeviceListPanel::onDeviceListUpdated(DeviceListUpdateEvent& event)
             }
         } else if (info_iter != m_device_map.end()) {
             dev_info = info_iter->second->deviceInfo();
+            dev_info.lanFlag = true;   // LAN
             dev_info.conn_id = -1;
             dev_info.status = "offline";
             info_iter->second->updateInfo(dev_info);
@@ -1469,8 +1470,8 @@ void DeviceListPanel::onComWanDeviceInfoUpdate(ComWanDevInfoUpdateEvent& event)
         info.placement = data.wanDevInfo.location;
         info.status = data.wanDevInfo.status;
         updateDeviceInfo(dev_id, info);
-        //BOOST_LOG_TRIVIAL(error) << "onComWanDeviceInfoUpdate: " << info.status;
-        //flush_logs();
+        BOOST_LOG_TRIVIAL(error) << "onComWanDeviceInfoUpdate: " << data.wanDevInfo.name << ", " << info.status;
+        flush_logs();
     }
     event.Skip();
 }

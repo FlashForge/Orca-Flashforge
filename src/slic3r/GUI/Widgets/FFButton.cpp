@@ -23,10 +23,10 @@ FFButton::FFButton(wxWindow* parent, wxWindowID id/*= wxID_ANY*/, const wxString
 	, m_bgPressColor("#ffffff")
 	, m_bgDisableColor("#dddddd")
 {
-	Bind(wxEVT_ENTER_WINDOW, [this](wxMouseEvent& e) { m_hoverFlag = true; Update(); e.Skip(); });
-	Bind(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent& e) { m_hoverFlag = false; m_pressFlag = false; Update(); e.Skip(); });
+	Bind(wxEVT_ENTER_WINDOW, [this](wxMouseEvent& e) { m_hoverFlag = true; Refresh(); e.Skip(); });
+	Bind(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent& e) { m_hoverFlag = false; m_pressFlag = false; Refresh(); e.Skip(); });
 	Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e) { m_pressFlag = true; Refresh(); e.Skip(); });
-	Bind(wxEVT_LEFT_UP, [this](wxMouseEvent& e) { m_pressFlag = false; Update(); e.Skip(); });
+	Bind(wxEVT_LEFT_UP, [this](wxMouseEvent& e) { m_pressFlag = false; Refresh(); e.Skip(); });
 	Bind(wxEVT_PAINT, &FFButton::OnPaint, this);
 	updateState();
 }

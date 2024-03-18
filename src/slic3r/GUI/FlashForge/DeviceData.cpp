@@ -817,6 +817,8 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
             mode.mode = COM_CONNECT_WAN;
             m_wan_dev_connect_map.emplace(make_pair(macSN, mode));
             sendDeviceListUpdateEvent(macSN, connectId);
+            BOOST_LOG_TRIVIAL(info) << "Add new wan dev: " << wanInfo.name;
+            flush_logs();
         }
     } else {
         string serialNum = data.lanDevInfo.serialNumber;
@@ -841,6 +843,8 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
                 config->save_bind_machine_to_config(devObj->get_dev_id(), devObj->get_dev_name(), data.devDetail->location, devObj->get_dev_pid());
             }
             sendDeviceListUpdateEvent(serialNum, connectId);
+            BOOST_LOG_TRIVIAL(info) << "Add new lan dev: " << data.lanDevInfo.name;
+            flush_logs();
         } else {
             userObj = it->second;
         }
@@ -868,9 +872,13 @@ void DeviceObjectOpr::onConnectWanDevInfoUpdate(ComWanDevInfoUpdateEvent &event)
             it->second->set_online_state(data.wanDevInfo.status != "offline");
             if (it->second->get_dev_name() != data.wanDevInfo.name) {
                 it->second->set_dev_name(data.wanDevInfo.name);
+                BOOST_LOG_TRIVIAL(info) << it->second->get_dev_name() << "  update dev name";
+                flush_logs();
                 update = true;
             }
-            if (state != it->second->is_online()) {                
+            if (state != it->second->is_online()) {      
+                BOOST_LOG_TRIVIAL(info) << it->second->get_dev_name()<<"  update online state";
+                flush_logs();
                 update = true;
             }
             if (update) {
