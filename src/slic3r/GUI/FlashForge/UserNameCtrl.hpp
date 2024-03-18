@@ -19,6 +19,7 @@ public:
 
     void SetRadius(int r);
     wxString GetValue() {return m_text_ctrl->GetValue();}
+    void  SetTextHint(int value);
 
 private:
     void OnPaint(wxPaintEvent& event);

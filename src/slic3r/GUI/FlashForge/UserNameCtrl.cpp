@@ -17,7 +17,7 @@ UserNameCtrl::UserNameCtrl(wxWindow* parent, wxWindowID id/* = wxID_ANY*/, const
     m_panel_page = new wxPanel(this, wxID_ANY, wxDefaultPosition,wxSize(FromDIP(270), FromDIP(20)),wxBORDER_NONE);
 
     m_text_ctrl = new wxTextCtrl(m_panel_page, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_LEFT | wxBORDER_NONE);
-    m_text_ctrl->SetHint(_L("Phone Number / email"));
+    m_text_ctrl->SetHint(_L("Phone Number"));
     m_text_ctrl->SetMinSize(wxSize(FromDIP(200),FromDIP(20)));
     m_icon = create_scaled_bitmap("login-usr", this, 18);
 
@@ -72,6 +72,17 @@ void UserNameCtrl::SetRadius(int r)
 { 
     m_radius = r;
     Refresh();
+}
+
+void UserNameCtrl::SetTextHint(int value) 
+{
+    if (0 == value) {
+        m_text_ctrl->SetHint(_L("Phone Number")); 
+    } else if (1 == value) {
+        m_text_ctrl->SetHint(_L("Phone Number / email")); 
+    } else if (2 == value) {
+        m_text_ctrl->SetHint(_L("Email")); 
+    }  
 }
 
 }

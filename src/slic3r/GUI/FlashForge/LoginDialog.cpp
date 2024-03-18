@@ -280,6 +280,7 @@ void LoginDialog::initOverseaWidget()
     m_page_body_page2_panel = new wxPanel(this, wxID_ANY);
     wxBoxSizer* page2Sizer = new wxBoxSizer(wxVERTICAL);
     setupLayoutPage2(page2Sizer,m_page_body_page2_panel);
+    m_username_ctrl_page2->SetTextHint(2);
     page2Sizer->AddSpacer(FromDIP(63));
 
     m_page_body_page2_panel->SetSizer(page2Sizer);
@@ -346,7 +347,7 @@ void LoginDialog::createSwitchTitle()
 
     m_switch_title_1_panel = new wxPanel(this, wxID_ANY);
 
-    m_switch_title_1 = new wxStaticText(m_switch_title_1_panel, wxID_ANY, _L("Verify Code Login/ Register"));
+    m_switch_title_1 = new wxStaticText(m_switch_title_1_panel, wxID_ANY, _L("Phone Verify Code Login/ Register"));
     m_switch_title_1->SetForegroundColour(wxColour(51,51,51));
     m_switch_title_1->SetFont(font_title);
 
@@ -416,6 +417,7 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     usr_name_space2->SetMinSize(wxSize(FromDIP(80), -1));
 
     m_username_ctrl_page1 = new UserNameCtrl(panel,wxID_ANY,_L("Phone Number / email"));
+    m_username_ctrl_page1->SetTextHint(0);
     m_username_ctrl_page1->SetRadius(10);
     m_username_ctrl_page1->Bind(wxEVT_TEXT, &LoginDialog::onUsrNameOrPasswordChangedPage1, this);
 
@@ -641,6 +643,7 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     usr_name_space2->SetMinSize(wxSize(FromDIP(80), -1));
 
     m_username_ctrl_page2 = new UserNameCtrl(parent,wxID_ANY,_L("Phone Number / email"));
+    m_username_ctrl_page2->SetTextHint(1);
     m_username_ctrl_page2->Bind(wxEVT_TEXT, &LoginDialog::onUsrNameOrPasswordChangedPage2, this);
 
     //adjust layout
@@ -672,7 +675,7 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     register_link->SetForegroundColour(wxColour(50,141,251));
     register_link->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
         event.Skip();
-        wxString url = "http://dev.auth.flashforge.shop/en/signUp";
+        wxString url = "https://auth.flashforge.com/en/signUp?channel=Orca";
         wxLaunchDefaultBrowser(url);
     });
 
@@ -680,7 +683,14 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     forget_password_link->SetForegroundColour(wxColour(50,141,251));
     forget_password_link->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
         event.Skip();
-        wxString url = "http://dev.auth.flashforge.shop/en/resetPassword";
+        wxString url = "https://auth.flashforge.com/en/resetPassword?channel=Orca";
+        AppConfig *app_config = wxGetApp().app_config;
+        if (app_config) {
+            std::string language = app_config->get("language");
+            if (language.compare("zh_CN") == 0) {
+                url = "https://auth.flashforge.com/zh/resetPassword?channel=Orca";
+            }
+        }
         wxLaunchDefaultBrowser(url);
     });
 
