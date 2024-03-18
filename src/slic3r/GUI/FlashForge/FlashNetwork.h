@@ -46,6 +46,7 @@ typedef enum fnet_conn_write_data_type {
 typedef enum fnet_conn_read_data_type {
     FNET_CONN_READ_SYNC_BIND_DEVICE,    // data, nullptr
     FNET_CONN_READ_SYNC_UNBIND_DEVICE,  // data, nullptr
+    FNET_CONN_READ_UNREGISTER_USER,     // data, nullptr
     FNET_CONN_READ_DEVICE_DETAIL,       // data, fnet_dev_detail_t
     FNET_CONN_READ_DEVICE_OFFLINE,      // data, nullptr
 } fnet_conn_read_data_type_t;

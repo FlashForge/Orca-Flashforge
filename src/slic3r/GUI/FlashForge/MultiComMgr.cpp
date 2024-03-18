@@ -329,6 +329,9 @@ void MultiComMgr::onWanConnReadData(const WanConnReadDataEvent &event)
     case FNET_CONN_READ_SYNC_UNBIND_DEVICE:
         m_userDataUpdateThd->setUpdateWanDev();
         break;
+    case FNET_CONN_READ_UNREGISTER_USER:
+        onWanDevMaintian(ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, COM_UNREGISTER_USER));
+        break;
     case FNET_CONN_READ_DEVICE_DETAIL:
         procDevDetailUpdate(event.readData);
         break;
