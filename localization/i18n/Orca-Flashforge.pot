@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-03-15 10:57+0800\n"
+"POT-Creation-Date: 2024-03-18 11:13+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -10792,6 +10792,9 @@ msgid "Forget Password"
 msgstr ""
 
 msgid "Password is incorrect"
+msgstr ""
+
+msgid "Code"
 msgstr ""
 
 msgid "Machine Type"
