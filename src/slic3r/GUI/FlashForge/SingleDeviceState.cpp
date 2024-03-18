@@ -366,7 +366,7 @@ void DeviceDetail::create_panel(wxWindow* parent)
             if (m_device_cooling_fan) {
                 m_device_cooling_fan->getTextValue().ToDouble(&cooling_fan);
             }
-            ComPrintCtrl *printCtrl = new ComPrintCtrl(z_axis, speed, cooling_fan, nozzle_fan);
+            ComPrintCtrl *printCtrl = new ComPrintCtrl(z_axis, speed, nozzle_fan,cooling_fan);
             //测试，临时将id写死
             if (m_cur_id >= 0) {
                 Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, printCtrl);
