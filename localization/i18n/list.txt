@@ -151,3 +151,4 @@ src/slic3r/GUI/FlashForge/DeviceListPanel.cpp
 src/slic3r/GUI/FlashForge/ReLoginDialog.cpp
 src/slic3r/GUI/FlashForge/SingleDeviceState.cpp
 src/slic3r/GUI/Widgets/TempInput.cpp
+src/slic3r/GUI/FFUtils.cpp

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-03-15 10:57+0800\n"
+"POT-Creation-Date: 2024-03-18 15:15+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -10915,6 +10915,9 @@ msgid "The maximum temperature cannot exceed"
 msgstr ""
 
 msgid "The minmum temperature should not be less than "
+msgstr ""
+
+msgid "Paused"
 msgstr ""
 
 #: resources/data/hints.ini: [hint:3D Scene Operations]

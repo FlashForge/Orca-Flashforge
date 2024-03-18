@@ -831,7 +831,7 @@ void DeviceListPanel::build()
     m_simple_book->AddPage(m_no_device_panel, wxEmptyString, true);
 
     m_device_scrolled_window = new wxScrolledWindow(m_simple_book, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHSCROLL | wxVSCROLL);
-    m_device_scrolled_window->SetScrollRate(5, 5);
+    m_device_scrolled_window->SetScrollRate(10, 10);
     m_device_panel = new wxPanel(m_device_scrolled_window);
     wxBoxSizer* scroll_sizer = new wxBoxSizer(wxVERTICAL);
     scroll_sizer->AddSpacer(FromDIP(30));
@@ -1017,7 +1017,8 @@ void DeviceListPanel::filterDeviceList()
         } else {
             iter->second->Show(false);
         }
-    }
+    }    
+    updateDeviceWindowSize();
     m_device_panel->Layout();
     Layout();
     //Fit();
@@ -1181,6 +1182,7 @@ void DeviceListPanel::updateDeviceSizer()
                 iter.second->Show(true);
             }
         }
+        updateDeviceWindowSize();
         m_device_panel->Layout();
         Layout();
         //Fit();
@@ -1188,22 +1190,14 @@ void DeviceListPanel::updateDeviceSizer()
     } else {
         filterDeviceList();
     }
+    Refresh();
 }
 
 void DeviceListPanel::updateDeviceWindowSize()
 {
     int count = 0;
-    if (m_static_btn->GetValue()) {
-         for (const auto& iter : m_device_stat_map) {
-            if (iter.second->getCount() > 0) {
-                count++;
-            }
-         }
-    } else {
-        count = (int)m_device_map.size();
-    }
-    //m_device_window->SetMinSize(wxSize(FromDIP(5*220+4*40), ))
-    int width = 5 * 220 + 4 * 30;
+    count = m_device_sizer->GetItemCount();
+    int width = FromDIP(5 * 220 + 4 * 30);
     int hcnt = count / 5;
     if (hcnt * 5 < count) {
         hcnt += 1;
@@ -1211,10 +1205,24 @@ void DeviceListPanel::updateDeviceWindowSize()
     if (hcnt == 0) {
         hcnt = 1;
     }
-    int height = hcnt * 205 + (hcnt - 1) * 30;
-    m_device_panel->SetMinSize(wxSize(FromDIP(width), FromDIP(height)));
-    //m_simple_book->SetMinSize(wxSize(FromDIP(width), FromDIP(height)));
-    Layout();
+    int height = FromDIP(hcnt * 205 + (hcnt - 1) * 30);
+    
+    auto last_min = m_device_panel->GetMinSize();
+    if (last_min.x != width || last_min.y != height) {
+        int space = FromDIP(30);
+        m_device_panel->SetMinSize(wxSize(width, height));
+        auto sz = m_device_scrolled_window->GetSize();
+        sz.x -= 2 * space;
+        sz.y -= 2 * space;        
+        if (width <= sz.x && height <= sz.x) {
+            m_device_panel->SetSize(sz);
+        } else {
+            m_device_panel->SetSize(width, height);
+        }
+        m_device_scrolled_window->SetVirtualSize(wxSize(width+2*space, height+2*space));
+        m_device_panel->Layout();
+    }    
+    //Layout();
     //Fit();
 }
 
@@ -1380,7 +1388,7 @@ void DeviceListPanel::onDeviceListUpdated(DeviceListUpdateEvent& event)
         m_filter_status_default = true;
         m_simple_book->ChangeSelection(m_device_map.empty() ? 0 : 1);
         updateFilterMap();
-        updateDeviceWindowSize();
+        //updateDeviceWindowSize();
         updateDeviceSizer();
     }
     updateStaticMap();
@@ -1441,6 +1449,7 @@ void DeviceListPanel::onComDevDetailUpdate(ComDevDetailUpdateEvent& event)
     auto conn_id = event.id;
     bool valid = false;
     const auto& data = MultiComMgr::inst()->devData(conn_id, &valid);
+    BOOST_LOG_TRIVIAL(error) << "onComDevDetailUpdate: " << data.connectMode << ", " << valid ? "valid" : "invalid";
     if (COM_CONNECT_LAN == data.connectMode && valid) {
         std::string dev_id = data.lanDevInfo.serialNumber;
         DeviceInfoItemPanel::DeviceInfo info;
@@ -1451,7 +1460,9 @@ void DeviceListPanel::onComDevDetailUpdate(ComDevDetailUpdateEvent& event)
         info.placement = data.devDetail->location;
         info.status = data.devDetail->status;
         updateDeviceInfo(dev_id, info);
+        BOOST_LOG_TRIVIAL(error) << "onComDevDetailUpdate: " << info.name << ", " << info.placement << ", " << info.status;
     }
+    flush_logs();
     event.Skip();
 }
 
@@ -1460,6 +1471,7 @@ void DeviceListPanel::onComWanDeviceInfoUpdate(ComWanDevInfoUpdateEvent& event)
     auto conn_id = event.id;
     bool valid = false;
     const auto& data = MultiComMgr::inst()->devData(conn_id, &valid);
+    BOOST_LOG_TRIVIAL(error) << "onComWanDeviceInfoUpdate: " << data.connectMode << ", " << valid ? "valid" : "invalid";
     if (COM_CONNECT_WAN == data.connectMode && valid && data.devDetail) {
         std::string dev_id = data.wanDevInfo.serialNumber;
         DeviceInfoItemPanel::DeviceInfo info;
@@ -1470,9 +1482,9 @@ void DeviceListPanel::onComWanDeviceInfoUpdate(ComWanDevInfoUpdateEvent& event)
         info.placement = data.wanDevInfo.location;
         info.status = data.wanDevInfo.status;
         updateDeviceInfo(dev_id, info);
-        BOOST_LOG_TRIVIAL(error) << "onComWanDeviceInfoUpdate: " << data.wanDevInfo.name << ", " << info.status;
-        flush_logs();
+        BOOST_LOG_TRIVIAL(error) << "onComDevDetailUpdate: " << info.name << ", " << info.placement << ", " << info.status;
     }
+    flush_logs();
     event.Skip();
 }
 

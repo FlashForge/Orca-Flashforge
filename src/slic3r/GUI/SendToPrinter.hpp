@@ -73,9 +73,11 @@ public:
     void cancel();
     
     bool get_multi_send_result(std::map<com_id_t, Result>& result);
+    void reset();
 
 private:
     bool prepare();
+    void bind_com_event(bool bind);
     void remove_temp_path();
     bool export_temp_file();
     void cancel_export_job();
@@ -121,7 +123,6 @@ public:
 
 private:
     wxBoxSizer* createItem(bool success, const wxString& name);
-    void onSize(wxSizeEvent& event);
 };
 
 
@@ -236,8 +237,9 @@ private:
     wxBoxSizer*                         m_machineSizer {nullptr};
     FFCheckBox*                         m_selectAll {nullptr};
     wxStaticText*                       m_selectAllLbl {nullptr};
-    wxScrolledWindow*                   m_machineListWindow {nullptr};
+    wxPanel*                            m_machineListPanel {nullptr};
     wxGridSizer*                        m_machineListSizer {nullptr};
+    wxScrolledWindow*                   m_machineListWindow {nullptr};
     wxPanel*                            m_machineLine {nullptr};
     wxPanel*                            m_noMachinePanel {nullptr};
     wxStaticBitmap*                     m_noMachineBitmap {nullptr};

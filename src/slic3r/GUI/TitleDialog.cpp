@@ -132,7 +132,7 @@ TitleDialog::TitleDialog(wxWindow* parent, const wxString& title, int borderRadi
     Layout();
 
     Bind(wxEVT_PAINT, &TitleDialog::OnPaint, this);
-    CallAfter([this](){ Bind(wxEVT_SIZE, &TitleDialog::OnSize, this); });
+    Bind(wxEVT_SIZE, &TitleDialog::OnSize, this);
 }
 
 void TitleDialog::SetTitleBackgroundColor(const wxColour& color)
@@ -157,7 +157,7 @@ void TitleDialog::OnPaint(wxPaintEvent& event)
 void TitleDialog::OnSize(wxSizeEvent& event)
 {
     wxGraphicsPath path = wxGraphicsRenderer::GetDefaultRenderer()->CreatePath();
-    wxSize size = event.GetSize();
+    wxSize size = GetSize();
     path.AddRoundedRectangle(0, 0, size.x, size.y, m_borderRadius);
     SetShape(path);
 }
