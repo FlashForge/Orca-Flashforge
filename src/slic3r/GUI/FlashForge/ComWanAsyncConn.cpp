@@ -43,6 +43,16 @@ void ComWanAsyncConn::freeConn()
     m_networkIntfc->freeConnection(m_conn);
 }
 
+void ComWanAsyncConn::postSyncSlicerLogin(const std::string &uid)
+{
+    if (m_thread == nullptr) {
+        return;
+    }
+    fnet_user_id_t fnetUserId = {uid.c_str()};
+    fnet_conn_write_data_t writeData = {FNET_CONN_WRITE_SYNC_SLICER_LOGIN, &fnetUserId, {nullptr, 0}};
+    m_networkIntfc->connectionPost(m_conn, &writeData);
+}
+
 void ComWanAsyncConn::postSyncBindDev(const std::string &uid, const std::string &devId)
 {
     if (m_thread == nullptr) {
@@ -65,13 +75,13 @@ void ComWanAsyncConn::postSyncUnbindDev(const std::string &uid,const std::string
     m_networkIntfc->connectionPost(m_conn, &writeData);
 }
 
-void ComWanAsyncConn::postSubscribeApp(const std::string &uid)
+void ComWanAsyncConn::postSubscribeAppSlicer(const std::string &uid)
 {
     if (m_thread == nullptr) {
         return;
     }
     fnet_user_id_t fnetUserId = {uid.c_str()};
-    fnet_conn_write_data_t writeData  = {FNET_CONN_WRITE_SUB_APP_SYNC, &fnetUserId, {nullptr, 0}};
+    fnet_conn_write_data_t writeData  = {FNET_CONN_WRITE_SUB_APP_SLICER_SYNC, &fnetUserId, {nullptr, 0}};
     m_networkIntfc->connectionPost(m_conn, &writeData);
 }
 

@@ -88,7 +88,8 @@ ComErrno MultiComMgr::addWanDev(const std::string &accessToken)
     m_wanAsyncConn->Bind(COM_WAN_DEV_MAINTAIN_EVENT, &MultiComMgr::onWanDevMaintian, this);
     m_wanAsyncConn->Bind(WAN_CONN_READ_DATA_EVENT, &MultiComMgr::onWanConnReadData, this);
     m_wanAsyncConn->Bind(WAN_CONN_RECONNECT_EVENT, &MultiComMgr::onWanConnReconnect, this);
-    m_wanAsyncConn->postSubscribeApp(userProfile.uid);
+    m_wanAsyncConn->postSubscribeAppSlicer(userProfile.uid);
+    m_wanAsyncConn->postSyncSlicerLogin(userProfile.uid);
     m_userDataUpdateThd->setUidToken(userProfile.uid, accessToken);
     m_userDataUpdateThd->setUpdateWanDev();
     QueueEvent(new ComGetUserProfileEvent(COM_GET_USER_PROFILE_EVENT, userProfile, COM_OK));
@@ -326,6 +327,9 @@ void MultiComMgr::onWanConnReadData(const WanConnReadDataEvent &event)
         }
     };
     switch (event.readData.type) {
+    case FNET_CONN_READ_SYNC_SLICER_LOGIN:
+        onWanDevMaintian(ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, COM_REPEAT_LOGIN));
+        break;
     case FNET_CONN_READ_SYNC_BIND_DEVICE:
     case FNET_CONN_READ_SYNC_UNBIND_DEVICE:
         m_userDataUpdateThd->setUpdateWanDev();
@@ -352,7 +356,7 @@ void MultiComMgr::onWanConnReconnect(const wxCommandEvent &)
     for (auto &item : m_devIdMap) {
         devIds.push_back(item.first);
     }
-    m_wanAsyncConn->postSubscribeApp(m_uid);
+    m_wanAsyncConn->postSubscribeAppSlicer(m_uid);
     m_wanAsyncConn->postSubscribeDev(devIds);
     m_userDataUpdateThd->setUpdateWanDev();
 }

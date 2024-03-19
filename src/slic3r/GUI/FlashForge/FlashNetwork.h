@@ -37,7 +37,8 @@ typedef enum fnet_log_level {
 
 typedef enum fnet_conn_write_data_type {
     FNET_CONN_WRITE_SUB_DEVICE_ACTION,  // data, nullptr
-    FNET_CONN_WRITE_SUB_APP_SYNC,       // data, fnet_user_id_t
+    FNET_CONN_WRITE_SUB_APP_SLICER_SYNC,// data, fnet_user_id_t
+    FNET_CONN_WRITE_SYNC_SLICER_LOGIN,  // data, fnet_user_id_t
     FNET_CONN_WRITE_SYNC_BIND_DEVICE,   // data, fnet_user_id_t
     FNET_CONN_WRITE_SYNC_UNBIND_DEVICE, // data, fnet_user_id_t
     FNET_CONN_WRITE_TEMP_CTRL,          // data, fnet_temp_ctrl_t
@@ -49,6 +50,7 @@ typedef enum fnet_conn_write_data_type {
 } fnet_conn_write_data_type_t;
 
 typedef enum fnet_conn_read_data_type {
+    FNET_CONN_READ_SYNC_SLICER_LOGIN,   // data, nullptr
     FNET_CONN_READ_SYNC_BIND_DEVICE,    // data, nullptr
     FNET_CONN_READ_SYNC_UNBIND_DEVICE,  // data, nullptr
     FNET_CONN_READ_UNREGISTER_USER,     // data, nullptr
