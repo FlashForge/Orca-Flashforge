@@ -73,6 +73,8 @@ private:
 
     void onDevDetailUpdate(const ComDevDetailUpdateEvent &event);
 
+    void onCommandFailed(const CommandFailedEvent &event);
+
     void onWanConnReadData(const WanConnReadDataEvent &event);
 
     void onWanConnReconnect(const wxCommandEvent &);

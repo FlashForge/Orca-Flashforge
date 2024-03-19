@@ -224,6 +224,7 @@ void MultiComMgr::initConnection(const com_ptr_t &comPtr, const com_dev_data_t &
     comPtr->Bind(COM_CONNECTION_READY_EVENT, &MultiComMgr::onConnectionReady, this);
     comPtr->Bind(COM_CONNECTION_EXIT_EVENT, &MultiComMgr::onConnectionExit, this);
     comPtr->Bind(COM_DEV_DETAIL_UPDATE_EVENT, &MultiComMgr::onDevDetailUpdate, this);
+    comPtr->Bind(COMMAND_FAILED_EVENT, &MultiComMgr::onCommandFailed, this);
     comPtr->connect();
 }
 
@@ -314,6 +315,15 @@ void MultiComMgr::onDevDetailUpdate(const ComDevDetailUpdateEvent &event)
         QueueEvent(event.Clone());
     }
     updateWanDevInfo(event.id, devDetail->name, devDetail->status, devDetail->location);
+}
+
+void MultiComMgr::onCommandFailed(const CommandFailedEvent &event)
+{
+    if (event.fatalError) {
+        onWanDevMaintian(ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, event.ret));
+    } else {
+        m_userDataUpdateThd->setUpdateWanDev();
+    }
 }
 
 void MultiComMgr::onWanConnReadData(const WanConnReadDataEvent &event)

@@ -4,6 +4,8 @@
 
 namespace Slic3r { namespace GUI {
 
+wxDEFINE_EVENT(COMMAND_FAILED_EVENT, CommandFailedEvent);
+
 ComConnection::ComConnection(com_id_t id, const std::string &checkCode,
     const fnet_lan_dev_info_t &devInfo, fnet::FlashNetworkIntfc *networkIntfc)
     : m_id(id)
@@ -104,11 +106,14 @@ ComErrno ComConnection::commandLoop()
                 ret = frontCommand->exec(m_networkIntfc, m_uid, m_accessToken, m_deviceId);
             }
             processCommand(frontCommand.get(), ret);
-            if (m_connectMode == COM_CONNECT_LAN) {
-                if (ret == COM_OK || ret == COM_DEVICE_IS_BUSY) {
-                    errorCnt = 0;
-                } else if (ret == COM_VERIFY_LAN_DEV_FAILED || ++errorCnt > 5) {
+            if (ret == COM_OK || ret == COM_DEVICE_IS_BUSY) {
+                errorCnt = 0;
+            } else if (ret == COM_VERIFY_LAN_DEV_FAILED || ret != COM_ABORTED_BY_USER && ++errorCnt > 5) {
+                if (m_connectMode == COM_CONNECT_LAN) {
                     return ret;
+                } else {
+                    QueueEvent(new CommandFailedEvent(COMMAND_FAILED_EVENT, ret, false));
+                    errorCnt = 0;
                 }
             }
             m_commandQue.pop(frontCommand->commandId());
@@ -143,6 +148,9 @@ ComErrno ComConnection::initialize(fnet_dev_detail_t **detail)
                 int sleepTimes[] = {1, 3, 5};
                 boost::this_thread::sleep_for(boost::chrono::seconds(sleepTimes[i < 3 ? i : 2]));
             }
+        }
+        if (ret != COM_OK) {
+            QueueEvent(new CommandFailedEvent(COMMAND_FAILED_EVENT, ret, false));
         }
     }
     *detail = getDevDetail.devDetail();
