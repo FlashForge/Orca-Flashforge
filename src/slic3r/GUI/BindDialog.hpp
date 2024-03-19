@@ -29,7 +29,6 @@
 #include "BBLStatusBar.hpp"
 #include "BBLStatusBarBind.hpp"
 #include "TitleDialog.hpp"
-#include "Widgets/FFButton.hpp"
 #include "Widgets/FFCheckBox.hpp"
 
 #define BIND_DIALOG_GREY200 wxColour(248, 248, 248)
@@ -38,6 +37,8 @@
 #define BIND_DIALOG_BUTTON_SIZE wxSize(FromDIP(68), FromDIP(24))
 #define BIND_DIALOG_BUTTON_PANEL_SIZE wxSize(FromDIP(450), FromDIP(30))
 
+
+class FFButton;
 namespace Slic3r { namespace GUI {
 
 struct MemoryStruct

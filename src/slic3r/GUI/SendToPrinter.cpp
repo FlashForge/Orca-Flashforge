@@ -516,11 +516,14 @@ void MachineItem::SetDefaultColor(const wxColor& color)
     
 void MachineItem::build()
 {
+    SetMinSize(wxSize(FromDIP(46), -1));
+    SetMaxSize(wxSize(FromDIP(46), -1));
+    SetSize(wxSize(FromDIP(46), -1));
     m_checkBox = new FFCheckBox(this, wxID_ANY);
     m_checkBox->SetValue(false);
 
     m_iconPanel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-    //m_iconPanel->SetBackgroundColour("#333333");
+    //SetBackgroundColour("#ffff00");
 
     m_iconSizer = new wxBoxSizer(wxVERTICAL);
     m_thumbnailPanel = new ThumbnailPanel(m_iconPanel);
@@ -556,6 +559,7 @@ void MachineItem::build()
     
     SetSizer(m_mainSizer);
     Layout();
+    Fit();
 }
 
 void MachineItem::initBitmap()
@@ -791,19 +795,19 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/)
     //m_machineListWindow->SetBackgroundColour(wxColour("#FF0000"));
     m_machineListWindow->EnableScrolling(false, true);
     m_machineListWindow->SetScrollRate(0, 10);
-    m_machineListWindow->SetSize(-1, 236);
-    m_machineListWindow->SetMinSize(wxSize(-1, 236));
-    m_machineListWindow->SetMaxSize(wxSize(-1, 236));
-    m_machineListWindow->SetVirtualSize(-1, 236);
+    //m_machineListWindow->SetSize(-1, 236);
+    //m_machineListWindow->SetMinSize(wxSize(-1, 236));
+    //m_machineListWindow->SetMaxSize(wxSize(-1, 236));
+    //m_machineListWindow->SetVirtualSize(-1, 236);
 
     m_machineListPanel = new wxPanel(m_machineListWindow, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxNO_BORDER);
     m_machineListSizer = new wxGridSizer(2);
-    m_machineListSizer->SetHGap(FromDIP(50));
+    m_machineListSizer->SetHGap(FromDIP(30));
     m_machineListSizer->SetVGap(FromDIP(10));
     m_machineListPanel->SetSizer(m_machineListSizer);
 
     auto window_sizer = new wxBoxSizer(wxVERTICAL);
-    window_sizer->Add(m_machineListPanel, 0, wxLEFT | wxRIGHT, FromDIP(10));
+    window_sizer->Add(m_machineListPanel, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(10));
     m_machineListWindow->SetSizer(window_sizer);
    
     m_machineSizer = new wxBoxSizer(wxVERTICAL);
@@ -813,7 +817,6 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/)
     m_machineSizer->Add(m_machineListWindow, 1, wxEXPAND);
     m_machineSizer->AddSpacer(FromDIP(10));
     m_machinePanel->SetSizer(m_machineSizer);
-    m_machineSizer->AddSpacer(FromDIP(10));
     m_machinePanel->Show(false);
     //m_machineSizer->Fit(m_machinePanel);
     m_machineBook->AddPage(m_machinePanel, wxEmptyString, true);
@@ -1237,15 +1240,22 @@ void SendToPrinterDialog::update_user_printer()
             mitem->SetChecked(false);
             m_machineItemList.emplace_back(mitem);
         }
-        int vh = rows * FromDIP(46) + (rows + 1) * FromDIP(10);
+        int vh = rows * FromDIP(46) + (rows - 1) * FromDIP(10);
         rows = (rows > 4) ? 4 : rows;
-        int height = rows * FromDIP(46) + (rows + 1) * FromDIP(10);
+        int height = rows * FromDIP(46) + (rows -1) * FromDIP(10);
         m_machineListPanel->SetSize(-1, height);
-        m_machineListPanel->SetMinSize(wxSize(-1, height));
-        m_machineListPanel->SetMaxSize(wxSize(-1, height));
+        //m_machineListPanel->SetMinSize(wxSize(-1, height));
+        //m_machineListPanel->SetMaxSize(wxSize(-1, height));
+        m_machineListPanel->SetSize(wxSize(-1, vh));
+        m_machineListWindow->SetMinSize(wxSize(-1, height));
+        m_machineListWindow->SetMaxSize(wxSize(-1, height));
+        m_machineListWindow->SetSize(wxSize(-1, height));
         m_machineListWindow->SetVirtualSize(-1, vh);
         m_machineListPanel->Layout();
-        m_machineListPanel->Fit();
+        m_machinePanel->Layout();
+        //m_machinePanel->Fit();
+        //m_machineListWindow->Fit();
+        //m_machineListPanel->Fit();
         index = 0;
     } else {
         m_machineListWindow->SetSize(-1, 1);
@@ -1264,12 +1274,12 @@ void SendToPrinterDialog::update_user_printer()
         panel->Layout();
         panel->Fit();
         auto sz = panel->GetBestSize();
-        m_machineBook->SetSize(-1, sz.GetHeight());
         m_machineBook->SetMaxSize(wxSize(-1, sz.GetHeight()));
+        m_machineBook->SetSize(-1, sz.GetHeight());
         m_machineBook->Layout();
         m_machineBook->Fit();
     }
-    //m_machineBook->Layout();
+    m_machineBook->Layout();
     //m_sendPanel->Layout();
     //m_sendBook->Layout();
     //updateVisible();
@@ -1836,6 +1846,8 @@ void SendToPrinterDialog::on_multi_send_completed(wxCommandEvent& event)
                 EndDialog(wxID_OK);
                 wxGetApp().mainframe->select_tab(size_t(MainFrame::tpMonitor));
             }
+        } else {
+            m_sendBook->SetSelection(0);
         }
     }
     Layout();

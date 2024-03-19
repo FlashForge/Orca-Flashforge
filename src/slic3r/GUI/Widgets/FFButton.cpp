@@ -22,11 +22,11 @@ FFButton::FFButton(wxWindow* parent, wxWindowID id/*= wxID_ANY*/, const wxString
 	, m_bgHoverColor("#ffffff")
 	, m_bgPressColor("#ffffff")
 	, m_bgDisableColor("#dddddd")
-	, m_text(label) 
 {
 	if (parent) {
 		SetBackgroundColour(parent->GetBackgroundColour());	
 	}
+	SetLabel(label);
 	Bind(wxEVT_ENTER_WINDOW, [this](wxMouseEvent& e) { m_hoverFlag = true; Refresh(); e.Skip(); });
 	Bind(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent& e) { m_hoverFlag = false; m_pressFlag = false; Refresh(); e.Skip(); });
 	Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e) { m_pressFlag = true; Refresh(); e.Skip(); });
@@ -35,31 +35,48 @@ FFButton::FFButton(wxWindow* parent, wxWindowID id/*= wxID_ANY*/, const wxString
 	Bind(wxEVT_ERASE_BACKGROUND, [=](auto& e) {
 		e.Skip();
 	});
-	updateState();
+	Fit();
+	//updateState();
+}
+
+bool FFButton::Enable(bool enable/* = true*/)
+{
+	bool ret = wxWindow::Enable(enable);
+	if (ret) {
+		Refresh();
+	}
+	return ret;
+}
+
+void FFButton::SetLabel(const wxString & label)
+{
+	wxWindow::SetLabel(label);
+	Refresh();
 }
 
 void FFButton::SetFontColor(const wxColour& color)
 {
 	m_fontColor = color;
-	updateState();
+	Update();
+	//updateState();
 }
 
 void FFButton::SetFontHoverColor(const wxColour& color)
 {
 	m_fontHoverColor = color;
-	updateState();
+	Update();
 }
 
 void FFButton::SetFontPressColor(const wxColour& color)
 {
 	m_fontPressColor = color;
-	updateState();
+	Update();
 }
 
 void FFButton::SetFontDisableColor(const wxColour& color)
 {
 	m_fontDisableColor = color;
-	updateState();
+	Update();
 }
 
 void FFButton::SetFontUniformColor(const wxColour& color)
@@ -68,7 +85,7 @@ void FFButton::SetFontUniformColor(const wxColour& color)
 	m_fontHoverColor = color;
 	m_fontPressColor = color;
 	m_fontDisableColor = color;
-	updateState();
+	Update();
 }
 
 void FFButton::SetBorderColor(const wxColour& color)
@@ -147,7 +164,8 @@ void FFButton::OnPaint(wxPaintEvent& event)
 #else
     render(dc);
 #endif
-	if (!m_text.IsEmpty()) {
+	wxString text = GetLabel();
+	if (!text.IsEmpty()) {
 		if (!IsEnabled()) {
 			dc.SetTextForeground(m_fontDisableColor);
 		} else if (m_pressFlag) {
@@ -159,9 +177,9 @@ void FFButton::OnPaint(wxPaintEvent& event)
 		}
 		// For Text: Just align-center
 		dc.SetFont(GetFont());
-		auto textSize = dc.GetMultiLineTextExtent(m_text);
+		auto textSize = dc.GetMultiLineTextExtent(text);
 		auto pt = wxPoint((size.x - textSize.x) / 2, (size.y - textSize.y) / 2);
-		dc.DrawText(m_text, pt);
+		dc.DrawText(text, pt);
 	}
 	event.Skip();
 }
