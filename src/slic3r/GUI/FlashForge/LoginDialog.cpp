@@ -124,14 +124,14 @@ LoginDialog::LoginDialog()
     m_login_button_timer.Bind(wxEVT_TIMER, &LoginDialog::onLoginBtnTimer, this);
     
     this->SetMinSize(wxSize(FromDIP(330), FromDIP(439)));
-    Bind(wxEVT_SHOW, [this](wxShowEvent &event) {
-        event.Skip();
-        m_login_button_timer.Start(200);
-    });
-    Bind(wxEVT_CLOSE_WINDOW, [this](wxCloseEvent &event) {
-        event.Skip();
-        m_login_button_timer.Stop();
-    });
+    //Bind(wxEVT_SHOW, [this](wxShowEvent &event) {
+    //    event.Skip();
+    //    m_login_button_timer.Start(200);
+    //});
+    //Bind(wxEVT_CLOSE_WINDOW, [this](wxCloseEvent &event) {
+    //    event.Skip();
+    //    m_login_button_timer.Stop();
+    //});
 }
 
 LoginDialog::~LoginDialog() 
@@ -677,7 +677,7 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     register_link->SetForegroundColour(wxColour(50,141,251));
     register_link->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
         event.Skip();
-        wxString url = "https://auth.flashforge.com/en/signUp?channel=Orca";
+        wxString url = "http://dev.auth.flashforge.shop/en/signUp?channel=Orca";
         wxLaunchDefaultBrowser(url);
     });
 
@@ -685,12 +685,12 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     forget_password_link->SetForegroundColour(wxColour(50,141,251));
     forget_password_link->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
         event.Skip();
-        wxString url = "https://auth.flashforge.com/en/resetPassword?channel=Orca";
+        wxString url = "http://dev.auth.flashforge.shop/en/resetPassword?channel=Orca";
         AppConfig *app_config = wxGetApp().app_config;
         if (app_config) {
             std::string language = app_config->get("language");
             if (language.compare("zh_CN") == 0) {
-                url = "https://auth.flashforge.com/zh/resetPassword?channel=Orca";
+                url = "http://dev.auth.flashforge.shop/zh/resetPassword?channel=Orca";
             }
         }
         wxLaunchDefaultBrowser(url);
