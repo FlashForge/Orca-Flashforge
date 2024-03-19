@@ -77,7 +77,6 @@
 #include "slic3r/Config/Snapshot.hpp"
 #include "slic3r/GUI/FlashForge/LoginDialog.hpp"
 #include "slic3r/GUI/FlashForge/ReLoginDialog.hpp"
-#include "slic3r/GUI/FlashForge/MultiComEvent.hpp"
 #include "slic3r/GUI/FlashForge/MultiComMgr.hpp"
 #include "slic3r/GUI/FlashForge/DeviceData.hpp"
 #include "Preferences.hpp"
@@ -3544,34 +3543,7 @@ void GUI_App::ShowUserLogin(bool show)
                 delete m_login_dlg;
                 m_login_dlg = new LoginDialog();
             }
-        Slic3r::GUI::MultiComMgr::inst()->Bind(COM_GET_USER_PROFILE_EVENT, [this](ComGetUserProfileEvent &event){
-            if(event.ret == ComErrno::COM_OK){
-                LoginDialog::SetUsrInfo(com_user_profile_t{event.userProfile.uid, event.userProfile.nickname, event.userProfile.headImgUrl});
-                if(app_config){
-                    app_config->set("usr_uid", event.userProfile.uid);
-                    app_config->set("usr_pic",event.userProfile.headImgUrl);
-                    app_config->set("usr_name",event.userProfile.nickname);
-                    //BOOST_LOG_TRIVIAL(info) << "login success," << " pic is : " << event.userProfile.headImgUrl << " name is: "<< event.userProfile.nickname;
-                    handle_login_result(event.userProfile.headImgUrl,event.userProfile.nickname);
-                    app_config->save();
-                }
-            }
-            event.Skip();
-        });  
-        Slic3r::GUI::MultiComMgr::inst()->Bind(COM_WAN_DEV_MAINTAIN_EVENT, [this](ComWanDevMaintainEvent &event) {
-            if (event.ret != ComErrno::COM_OK) {
-                //login out
-                handle_login_out();
-                if (app_config){
-                    app_config->set("access_token", "");
-                    app_config->set("refresh_token", "");
-                    app_config->set("expire_time", "");
-                    app_config->set("usr_name", "");
-                    app_config->set("usr_pic", "");
-                    app_config->set("usr_uid", "");
-                }
-            }
-        });
+        on_connect_event();
         m_login_dlg->ShowModal();
         }catch(std::exception &e){
             ;
@@ -3952,6 +3924,7 @@ std::string GUI_App::handle_web_request(std::string cmd)
                             }
                             ComErrno add_dev_result = Slic3r::GUI::MultiComMgr::inst()->addWanDev(access_token);
                             if (login_result == ComErrno::COM_OK && add_dev_result == COM_OK) {
+                                on_connect_event();
                                 handle_login_result(usr_pic,usr_name);
                                 LoginDialog::SetToken(access_token,refresh_token);
                                 LoginDialog::SetUsrInfo(com_user_profile_t{usr_uid,usr_name, usr_pic});
@@ -3961,6 +3934,7 @@ std::string GUI_App::handle_web_request(std::string cmd)
                                 com_token_data_t token_data{std::stoi(expire_time),access_token,refresh_token};
                                 ComErrno relogin_refresh_token = MultiComUtils::refreshToken(refresh_token,token_data);
                                 if(relogin_refresh_token == ComErrno::COM_OK){
+                                    on_connect_event();
                                     handle_login_result(usr_pic,usr_name);
                                     LoginDialog::SetToken(token_data.accessToken,token_data.refreshToken);
                                     LoginDialog::SetUsrInfo(com_user_profile_t{usr_uid,usr_name, usr_pic});
@@ -4318,6 +4292,46 @@ void GUI_App::enable_user_preset_folder(bool enable)
         BOOST_LOG_TRIVIAL(info) << "preset_folder: set to empty";
         app_config->set("preset_folder", "");
         GUI::wxGetApp().preset_bundle->update_user_presets_directory(DEFAULT_USER_FOLDER_NAME);
+    }
+}
+
+void GUI_App::on_connect_event() 
+{
+    Slic3r::GUI::MultiComMgr::inst()->Unbind(COM_GET_USER_PROFILE_EVENT, &GUI_App::get_usr_profile, this);
+    Slic3r::GUI::MultiComMgr::inst()->Unbind(COM_WAN_DEV_MAINTAIN_EVENT, &GUI_App::wan_dev_maintain, this);
+    Slic3r::GUI::MultiComMgr::inst()->Bind(COM_GET_USER_PROFILE_EVENT, &GUI_App::get_usr_profile,this);
+    Slic3r::GUI::MultiComMgr::inst()->Bind(COM_WAN_DEV_MAINTAIN_EVENT, &GUI_App::wan_dev_maintain,this);
+}
+
+void GUI_App::get_usr_profile(ComGetUserProfileEvent &event) 
+{
+    event.Skip();
+    if (event.ret == ComErrno::COM_OK) {
+        LoginDialog::SetUsrInfo(com_user_profile_t{event.userProfile.uid, event.userProfile.nickname, event.userProfile.headImgUrl});
+        if (app_config) {
+            app_config->set("usr_uid", event.userProfile.uid);
+            app_config->set("usr_pic", event.userProfile.headImgUrl);
+            app_config->set("usr_name", event.userProfile.nickname);
+            handle_login_result(event.userProfile.headImgUrl, event.userProfile.nickname);
+            app_config->save();
+        }
+    }
+}
+
+void GUI_App::wan_dev_maintain(ComWanDevMaintainEvent &event) 
+{
+    event.Skip();
+    if (event.ret != ComErrno::COM_OK) {
+        // login out
+        handle_login_out();
+        if (app_config) {
+            app_config->set("access_token", "");
+            app_config->set("refresh_token", "");
+            app_config->set("expire_time", "");
+            app_config->set("usr_name", "");
+            app_config->set("usr_pic", "");
+            app_config->set("usr_uid", "");
+        }
     }
 }
 

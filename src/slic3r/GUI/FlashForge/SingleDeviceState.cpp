@@ -1928,6 +1928,8 @@ void SingleDeviceState::onDevStateChanged(std::string devState, const com_dev_da
             double totalTime = data.devDetail->printDuration; // 本次打印耗时
             m_staticText_count_time->SetLabel(convertSecondsToHMS(totalTime));
         } else if (state == P_BUSY) {
+            m_machine_idle_panel->Show();
+            m_machine_ctrl_panel->Hide();
             std::string busy_state = _L("busy").ToStdString();
             std::string busy_info  = _L("Print cancelled,in cache command").ToStdString();
             setTipMessage(busy_state, "#F9B61C", busy_info, true);
@@ -2028,7 +2030,7 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
    }
    std::string device_name = data.devDetail->name;  //设备名
    if (m_cur_dev_name != device_name && !device_name.empty()) {
-        m_staticText_device_name->SetLabel(device_name);
+        m_staticText_device_name->SetLabel(wxString::FromUTF8(device_name));
    }
 
    std::string device_location = data.devDetail->location;//位置
