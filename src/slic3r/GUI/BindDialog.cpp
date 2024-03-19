@@ -419,7 +419,8 @@ void BindMachineDialog::on_bind_printer(wxCommandEvent &event)
     m_bind_btn->Enable(false);
     m_result_code = 0;
     if (!m_device_info) {
-        BOOST_LOG_TRIVIAL(error) << "device_info is null"; 
+        BOOST_LOG_TRIVIAL(error) << "device_info is null";
+        m_bind_btn->Enable(true);
         return;
     }
 
@@ -428,7 +429,8 @@ void BindMachineDialog::on_bind_printer(wxCommandEvent &event)
     std::string dev_name = m_device_info->get_dev_name();
 
     if (dev_id.empty() || dev_pid == 0) {
-        BOOST_LOG_TRIVIAL(error) << "dev_id is empty or dev_pid is 0";  
+        BOOST_LOG_TRIVIAL(error) << "dev_id is empty or dev_pid is 0";
+        m_bind_btn->Enable(true);
         return;
     }
    
