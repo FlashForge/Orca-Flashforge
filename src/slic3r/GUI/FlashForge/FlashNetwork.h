@@ -51,6 +51,7 @@ typedef enum fnet_conn_write_data_type {
 
 typedef enum fnet_conn_read_data_type {
     FNET_CONN_READ_SYNC_SLICER_LOGIN,   // data, nullptr
+    FNET_CONN_READ_SYNC_USER_PROFILE,   // data, nullptr
     FNET_CONN_READ_SYNC_BIND_DEVICE,    // data, nullptr
     FNET_CONN_READ_SYNC_UNBIND_DEVICE,  // data, nullptr
     FNET_CONN_READ_UNREGISTER_USER,     // data, nullptr

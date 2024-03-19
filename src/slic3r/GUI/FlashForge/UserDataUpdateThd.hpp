@@ -34,16 +34,22 @@ public:
 
     void setUpdateWanDev();
 
+    void setUpdateUserProfile();
+
 private:
     void run();
 
     void updateWanDev(const std::string &uid, const std::string &accessToken);
+
+    void updateUserProfile(const std::string &accessToken);
 
 private:
     std::string              m_uid;
     std::string              m_accessToken;
     boost::mutex             m_uidTokenMutex;
     WaitEvent                m_loopWaitEvent;
+    std::atomic_bool         m_updateWanDev;
+    std::atomic_bool         m_updateUserProfile;
     std::atomic_bool         m_exitThread;
     boost::thread            m_thread;
     fnet::FlashNetworkIntfc *m_networkIntfc;

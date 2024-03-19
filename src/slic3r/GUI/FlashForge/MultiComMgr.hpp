@@ -64,6 +64,8 @@ private:
     void onWanDevMaintian(const ComWanDevMaintainEvent &event);
 
     void onGetWanDev(const GetWanDevEvent &event);
+    
+    void onUpdateUserProfile(const ComGetUserProfileEvent &event);
 
     void onConnectionReady(const ComConnectionReadyEvent &event);
 

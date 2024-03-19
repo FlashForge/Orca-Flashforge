@@ -88,11 +88,12 @@ ComErrno MultiComMgr::addWanDev(const std::string &accessToken)
     m_wanAsyncConn->Bind(COM_WAN_DEV_MAINTAIN_EVENT, &MultiComMgr::onWanDevMaintian, this);
     m_wanAsyncConn->Bind(WAN_CONN_READ_DATA_EVENT, &MultiComMgr::onWanConnReadData, this);
     m_wanAsyncConn->Bind(WAN_CONN_RECONNECT_EVENT, &MultiComMgr::onWanConnReconnect, this);
+    m_userDataUpdateThd->Bind(COM_GET_USER_PROFILE_EVENT, &MultiComMgr::onUpdateUserProfile, this);
     m_wanAsyncConn->postSubscribeAppSlicer(userProfile.uid);
     m_wanAsyncConn->postSyncSlicerLogin(userProfile.uid);
     m_userDataUpdateThd->setUidToken(userProfile.uid, accessToken);
     m_userDataUpdateThd->setUpdateWanDev();
-    QueueEvent(new ComGetUserProfileEvent(COM_GET_USER_PROFILE_EVENT, userProfile, COM_OK));
+    onUpdateUserProfile(ComGetUserProfileEvent(COM_GET_USER_PROFILE_EVENT, userProfile, COM_OK));
     return ret;
 }
 
@@ -272,6 +273,14 @@ void MultiComMgr::onGetWanDev(const GetWanDevEvent &event)
     m_wanAsyncConn->postSubscribeDev(addDevIds);
 }
 
+void MultiComMgr::onUpdateUserProfile(const ComGetUserProfileEvent &event)
+{
+    if (event.ret != COM_OK) {
+        return;
+    }
+    QueueEvent(event.Clone());
+}
+
 void MultiComMgr::onConnectionReady(const ComConnectionReadyEvent &event)
 {
     fnet_dev_detail_t *&devDetail = m_datMap.at(event.id).devDetail;
@@ -329,6 +338,9 @@ void MultiComMgr::onWanConnReadData(const WanConnReadDataEvent &event)
     switch (event.readData.type) {
     case FNET_CONN_READ_SYNC_SLICER_LOGIN:
         onWanDevMaintian(ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, COM_REPEAT_LOGIN));
+        break;
+    case FNET_CONN_READ_SYNC_USER_PROFILE:
+        m_userDataUpdateThd->setUpdateUserProfile();
         break;
     case FNET_CONN_READ_SYNC_BIND_DEVICE:
     case FNET_CONN_READ_SYNC_UNBIND_DEVICE:

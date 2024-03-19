@@ -132,7 +132,7 @@ ComErrno ComConnection::initialize(fnet_dev_detail_t **detail)
     if (m_connectMode == COM_CONNECT_LAN) {
         ret = getDevDetail.exec(m_networkIntfc, m_ip, m_port, m_serialNumber, m_checkCode);
     } else {
-        int tryCnt = 3;
+        int tryCnt = 5;
         for (int i = 0; i < tryCnt; ++i) {
             ret = getDevDetail.exec(m_networkIntfc, m_uid, m_accessToken, m_deviceId);
             if (ret == COM_OK || ret == COM_UNAUTHORIZED || m_exitThread) {
