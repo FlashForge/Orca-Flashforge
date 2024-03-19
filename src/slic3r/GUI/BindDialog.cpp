@@ -395,6 +395,7 @@ void BindMachineDialog::on_bind_fail(wxCommandEvent &event)
     m_result_text->SetForegroundColour(wxColor("#EA3522"));
     m_result_sizer->Layout();
     m_simplebook->SetSelection(1);
+    m_bind_btn->Enable(true);
     Layout();
     Fit();
 }
@@ -414,6 +415,8 @@ void BindMachineDialog::on_bind_success(wxCommandEvent &event)
 
 void BindMachineDialog::on_bind_printer(wxCommandEvent &event)
 {
+    event.Skip();
+    m_bind_btn->Enable(false);
     m_result_code = 0;
     if (!m_device_info) {
         BOOST_LOG_TRIVIAL(error) << "device_info is null"; 
