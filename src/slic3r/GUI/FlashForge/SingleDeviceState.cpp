@@ -1928,6 +1928,8 @@ void SingleDeviceState::onDevStateChanged(std::string devState, const com_dev_da
             double totalTime = data.devDetail->printDuration; // 本次打印耗时
             m_staticText_count_time->SetLabel(convertSecondsToHMS(totalTime));
         } else if (state == P_BUSY) {
+            m_machine_idle_panel->Show();
+            m_machine_ctrl_panel->Hide();
             std::string busy_state = _L("busy").ToStdString();
             std::string busy_info  = _L("Print cancelled,in cache command").ToStdString();
             setTipMessage(busy_state, "#F9B61C", busy_info, true);
