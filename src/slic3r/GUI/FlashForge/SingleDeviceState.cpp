@@ -2028,7 +2028,7 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
    }
    std::string device_name = data.devDetail->name;  //设备名
    if (m_cur_dev_name != device_name && !device_name.empty()) {
-        m_staticText_device_name->SetLabel(device_name);
+        m_staticText_device_name->SetLabel(wxString::FromUTF8(device_name));
    }
 
    std::string device_location = data.devDetail->location;//位置
