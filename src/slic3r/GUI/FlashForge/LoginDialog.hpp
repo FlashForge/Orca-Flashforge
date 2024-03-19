@@ -79,17 +79,14 @@ private:
     void onUsrNameOrPasswordChangedPage2(wxCommandEvent& event);
     void onAgreeCheckBoxChangedPage2(wxCommandEvent& event);
 
-    void onPage1Login(wxCommandEvent& event);
-    void onPage2Login(wxCommandEvent& event);
-    void onPage3Login(wxMouseEvent& event);
-    void onPage4Login(wxMouseEvent& event);
+    void onPage1Login(wxMouseEvent& event);
+    void onPage2Login(wxMouseEvent &event);
 
     void page1ShowErrorLabel(const wxString& labelInfo);
     void page2ShowErrorLabel(const wxString& labelInfo);
 
     inline void startTimer(){ m_timer.Start(2000);}
     void OnTimer(wxTimerEvent& event);
-    void onLoginBtnTimer(wxTimerEvent &event);
 
 private:
     com_clinet_token_data_t m_client_SMS_token;
@@ -144,7 +141,6 @@ private:
     static bool  m_first_call_client_token;
 
     wxTimer m_timer;
-    wxTimer m_login_button_timer;
 
     UserNameCtrl* m_username_ctrl_page1 {nullptr};
     VerifyCodeCtrl* m_verifycode_ctrl_page1 {nullptr};
@@ -152,6 +148,7 @@ private:
     PasswordCtrl* m_password_ctrl_page2 {nullptr};
 
     static std::string m_usr_name;
+    std::string        m_cur_language;
 
 };
 } // namespace GUI

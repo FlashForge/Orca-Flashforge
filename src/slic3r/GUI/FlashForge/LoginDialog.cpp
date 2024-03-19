@@ -27,6 +27,8 @@ namespace GUI {
     com_user_profile_t LoginDialog::m_usr_info = {};
     std::string  LoginDialog::m_usr_name = "";
     bool LoginDialog::m_first_call_client_token = true;
+    std::string  serverLanguageEn = "en";
+    std::string  serverLanguageZh = "zh";
 
     CountdownButton::CountdownButton(wxWindow* parent, wxString text, wxString icon /*= ""*/, long style /*= 0*/, int iconSize /*= 0*/, wxWindowID btn_id /*= wxID_ANY*/)
         : FFButton(parent,wxID_ANY,text,10)
@@ -67,42 +69,7 @@ namespace GUI {
         return m_press;
     }
 
-    //增加正则过滤
-    // 邮箱正则表达式
-    const std::regex emailRegex(R"(\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\b)");
-
-    // 手机号码正则表达式
-    const std::regex phoneRegex(R"(\b1[3456789]\d{9}\b)");
-
-    // 邮箱和手机号码过滤器
-    class EmailPhoneValidator : public wxTextValidator
-    {
-    public:
-        EmailPhoneValidator() : wxTextValidator(wxFILTER_INCLUDE_CHAR_LIST) {
-            std::regex emailRegex(R"(\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b)");
-            std::regex phoneRegex(R"(\b1[3456789]\d{9}\b)");
-
-            m_regexps.push_back(emailRegex);
-            m_regexps.push_back(phoneRegex);
-        }
-
-        wxString IsValid(const wxString& value) const override
-        {
-            for (const auto& regex : m_regexps)
-            {
-                if (std::regex_match(value.ToStdString(), regex))
-                {
-                    return value;
-                }
-            }
-            return wxEmptyString;
-        }
-    private:
-        std::vector<std::regex> m_regexps;
-    };
-
-LoginDialog::LoginDialog()
-    :TitleDialog(static_cast<wxWindow *>(wxGetApp().mainframe),_L("Login"),6)
+LoginDialog::LoginDialog() : TitleDialog(static_cast<wxWindow *>(wxGetApp().mainframe), _L("Login"), 6), m_cur_language("en")
 {
     SetFont(wxGetApp().normal_font());
 	SetBackgroundColour(*wxWHITE);
@@ -121,17 +88,9 @@ LoginDialog::LoginDialog()
             BOOST_LOG_TRIVIAL(warning) << boost::format("MultiComUtils::getClientToken Failed!");
         }
     }
-    m_login_button_timer.Bind(wxEVT_TIMER, &LoginDialog::onLoginBtnTimer, this);
+    m_cur_language = app_config->get("language");
     
     this->SetMinSize(wxSize(FromDIP(330), FromDIP(439)));
-    //Bind(wxEVT_SHOW, [this](wxShowEvent &event) {
-    //    event.Skip();
-    //    m_login_button_timer.Start(200);
-    //});
-    //Bind(wxEVT_CLOSE_WINDOW, [this](wxCloseEvent &event) {
-    //    event.Skip();
-    //    m_login_button_timer.Stop();
-    //});
 }
 
 LoginDialog::~LoginDialog() 
@@ -562,7 +521,7 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     m_login_button_page1->SetFontColor(wxColour(255, 255, 255));
     m_login_button_page1->SetBorderColor(wxColour(50,141,251));
     m_login_button_page1->SetBGColor(wxColour(50,141,251));
-    m_login_button_page1->Bind(wxEVT_LEFT_UP,&LoginDialog::onPage4Login, this);
+    m_login_button_page1->Bind(wxEVT_LEFT_UP,&LoginDialog::onPage1Login, this);
     m_login_button_page1->Disable();
     m_login_button_page1->SetMinSize(wxSize(FromDIP(77),FromDIP(33)));
 
@@ -586,12 +545,8 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     m_service_link_page1->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
         event.Skip();
         wxString url = "http://dev.auth.flashforge.shop/en/userAgreement";
-        AppConfig *app_config = wxGetApp().app_config;
-        if(app_config){
-            std::string language = app_config->get("language");
-            if(language.compare("zh_CN") == 0){
-                url = "http://dev.auth.flashforge.shop/userAgreement";
-            }
+        if (m_cur_language.compare("zh_CN") == 0) {
+            url = "http://dev.auth.flashforge.shop/userAgreement";
         }
         wxLaunchDefaultBrowser(url);
     });
@@ -602,12 +557,8 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     m_privacy_policy_page1->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e){
         e.Skip();
         wxString url = "http://dev.auth.flashforge.shop/en/privacyPolicy";
-        AppConfig *app_config = wxGetApp().app_config;
-        if(app_config){
-            std::string language = app_config->get("language");
-            if(language.compare("zh_CN") == 0){
-                url = "http://dev.auth.flashforge.shop/privacyPolicy";
-            }
+        if (m_cur_language.compare("zh_CN") == 0) {
+            url = "http://dev.auth.flashforge.shop/privacyPolicy";
         }
         wxLaunchDefaultBrowser(url);
     });
@@ -686,12 +637,8 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     forget_password_link->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
         event.Skip();
         wxString url = "http://dev.auth.flashforge.shop/en/resetPassword?channel=Orca";
-        AppConfig *app_config = wxGetApp().app_config;
-        if (app_config) {
-            std::string language = app_config->get("language");
-            if (language.compare("zh_CN") == 0) {
-                url = "http://dev.auth.flashforge.shop/zh/resetPassword?channel=Orca";
-            }
+        if (m_cur_language.compare("zh_CN") == 0) {
+            url = "http://dev.auth.flashforge.shop/zh/resetPassword?channel=Orca";
         }
         wxLaunchDefaultBrowser(url);
     });
@@ -755,7 +702,7 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     m_login_button_page2->SetFontColor(wxColour(255, 255, 255));
     m_login_button_page2->SetBorderColor(wxColour(50,141,251));
     m_login_button_page2->SetBGColor(wxColour(50,141,251));
-    m_login_button_page2->Bind(wxEVT_LEFT_UP,&LoginDialog::onPage3Login, this);
+    m_login_button_page2->Bind(wxEVT_LEFT_UP,&LoginDialog::onPage2Login, this);
     m_login_button_page2->Disable();
     m_login_button_page2->SetMinSize(wxSize(FromDIP(77),FromDIP(33)));
 
@@ -795,12 +742,8 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     m_service_link_page2->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
         event.Skip();
         wxString url = "http://dev.auth.flashforge.shop/en/userAgreement";
-        AppConfig *app_config = wxGetApp().app_config;
-        if(app_config){
-            std::string language = app_config->get("language");
-            if(language.compare("zh_CN") == 0){
-                url = "http://dev.auth.flashforge.shop/userAgreement";
-            }
+        if (m_cur_language.compare("zh_CN") == 0) {
+            url = "http://dev.auth.flashforge.shop/userAgreement";
         }
         wxLaunchDefaultBrowser(url);
     });
@@ -811,12 +754,8 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     m_privacy_policy_page2->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
         event.Skip();
         wxString url = "http://dev.auth.flashforge.shop/en/privacyPolicy";
-        AppConfig *app_config = wxGetApp().app_config;
-        if(app_config){
-            std::string language = app_config->get("language");
-            if(language.compare("zh_CN") == 0){
-                url = "http://dev.auth.flashforge.shop/privacyPolicy";
-            }
+        if (m_cur_language.compare("zh_CN") == 0) {
+            url = "http://dev.auth.flashforge.shop/privacyPolicy";
         }
         wxLaunchDefaultBrowser(url);
     });
@@ -925,43 +864,17 @@ void LoginDialog::onAgreeCheckBoxChangedPage2(wxCommandEvent& event)
         }
 }
 
-void LoginDialog::onPage1Login(wxCommandEvent& event)
+void LoginDialog::onPage1Login(wxMouseEvent& event)
 {
     wxString usrname = m_username_ctrl_page1->GetValue();
     wxString verify_code = m_verifycode_ctrl_page1->GetValue();
     com_token_data_t token_data;
     std::string message;
-    ComErrno login_result = MultiComUtils::getTokenBySMSCode(
-        usrname.ToStdString(), verify_code.ToStdString(), "en", token_data, message);
-    if(login_result == ComErrno::COM_OK){
-        LoginDialog::m_token_data = token_data;
-        wxGetApp().handle_login_result("default.jpg",usrname.ToStdString());
-        this->Hide();
-        AppConfig *app_config = wxGetApp().app_config;
-        if(app_config){
-            //主动点击登录，设置token值
-            app_config->set("access_token",token_data.accessToken);
-            app_config->set("refresh_token",token_data.refreshToken);
-            app_config->set("expire_time",std::to_string(token_data.expiresIn));
-             Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data.accessToken);
-        }
+    std::string language = serverLanguageEn;
+    if (m_cur_language.compare("zh_CN") == 0) {
+        language = serverLanguageZh;
     }
-    else if (login_result == ComErrno::COM_INVALID_VALIDATION){
-        m_timer.Bind(wxEVT_TIMER, &LoginDialog::OnTimer, this);
-        //账号、验证码错误
-        m_error_label->Show(true);
-        startTimer();
-    }
-}
-
-void LoginDialog::onPage4Login(wxMouseEvent& event)
-{
-    wxString usrname = m_username_ctrl_page1->GetValue();
-    wxString verify_code = m_verifycode_ctrl_page1->GetValue();
-    com_token_data_t token_data;
-    std::string message;
-    ComErrno login_result = MultiComUtils::getTokenBySMSCode(
-        usrname.ToStdString(), verify_code.ToStdString(), "en", token_data, message);
+    ComErrno login_result = MultiComUtils::getTokenBySMSCode(usrname.ToStdString(), verify_code.ToStdString(), language, token_data,message);
     if(login_result == ComErrno::COM_OK){
         ComErrno add_dev_result = Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data.accessToken);
         if (add_dev_result == COM_OK) {
@@ -980,13 +893,23 @@ void LoginDialog::onPage4Login(wxMouseEvent& event)
         } else {
              page1ShowErrorLabel(_L("Server connection exception"));
         }
-    }
-    else if (login_result == ComErrno::COM_INVALID_VALIDATION){
-        page1ShowErrorLabel(_L("Verify code is incorrect"));
-    } else if (login_result == ComErrno::COM_ERROR) {
-        page1ShowErrorLabel(_L("Server connection exception"));
-    } else if (login_result == ComErrno::COM_UNREGISTER_USER) {
-        page1ShowErrorLabel(_L("User not registered"));
+    } else {
+        if (!message.empty()) {
+             page1ShowErrorLabel(wxString::FromUTF8(message));
+        } else {
+             if (login_result == ComErrno::COM_INVALID_VALIDATION)
+             {
+                page1ShowErrorLabel(_L("Verify code is incorrect"));
+             }
+             else if (login_result == ComErrno::COM_ERROR)
+             {
+                page1ShowErrorLabel(_L("Server connection exception"));
+             }
+             else if (login_result == ComErrno::COM_UNREGISTER_USER)
+             {
+                page1ShowErrorLabel(_L("User not registered"));
+             }
+        }
     }
     event.Skip();
 }
@@ -1013,37 +936,7 @@ void LoginDialog::page1ShowErrorLabel(const wxString& labelInfo)
     startTimer();
 }
 
-void LoginDialog::onPage2Login(wxCommandEvent& event)
-{
-    wxString usrname = m_username_ctrl_page2->GetValue();
-    wxString password = m_password_ctrl_page2->GetValue();
-    com_token_data_t token_data;
-    std::string message;
-    ComErrno login_result = MultiComUtils::getTokenByPassword(
-        usrname.ToStdString(), password.ToStdString(), "en", token_data, message);
-    if(login_result == ComErrno::COM_OK){
-        LoginDialog::m_token_data = token_data;
-        wxGetApp().handle_login_result("default.jpg",usrname.ToStdString());
-        this->Hide();
-        AppConfig *app_config = wxGetApp().app_config;
-        if(app_config){
-            //主动点击登录，设置token值
-            app_config->set("access_token",token_data.accessToken);
-            app_config->set("refresh_token",token_data.refreshToken);
-            app_config->set("expire_time",std::to_string(token_data.expiresIn));
-             Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data.accessToken);
-        }
-        
-    }
-    else if (login_result == ComErrno::COM_INVALID_VALIDATION){
-        m_timer.Bind(wxEVT_TIMER, &LoginDialog::OnTimer, this);
-        //账号、密码错误
-        m_error_label_page2->Show(true);
-        startTimer();
-    }
-}
-
-void LoginDialog::onPage3Login(wxMouseEvent& event)
+void LoginDialog::onPage2Login(wxMouseEvent& event)
 {
     event.Skip();
     wxString usrname = m_username_ctrl_page2->GetValue();
@@ -1081,9 +974,12 @@ void LoginDialog::onPage3Login(wxMouseEvent& event)
     // 1、getTokenByPassword   2、addWanDev
     com_token_data_t token_data;
     std::string message;
-    ComErrno login_result = MultiComUtils::getTokenByPassword(
-        usrname.ToStdString(), password.ToStdString(), "en", token_data, message);
-    if(login_result == ComErrno::COM_OK){
+    std::string language = serverLanguageEn;
+    if (m_cur_language.compare("zh_CN") == 0) {
+        language = serverLanguageZh;
+    }
+    ComErrno login_result = MultiComUtils::getTokenByPassword(usrname.ToStdString(), password.ToStdString(), language, token_data, message);
+    if (login_result == ComErrno::COM_OK) {
         ComErrno add_dev_result =  Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data.accessToken);
         if (add_dev_result == COM_OK) {
             m_usr_name = usrname.ToStdString();
@@ -1101,13 +997,23 @@ void LoginDialog::onPage3Login(wxMouseEvent& event)
         } else {
             page2ShowErrorLabel(_L("Server connection exception"));
         }
-    }
-    else if (login_result == ComErrno::COM_INVALID_VALIDATION){
-        page2ShowErrorLabel(_L("Password is incorrect"));
-    } else if (login_result == ComErrno::COM_ERROR) {
-        page2ShowErrorLabel(_L("Server connection exception"));
-    } else if (login_result == ComErrno::COM_UNREGISTER_USER) {
-        page2ShowErrorLabel(_L("User not registered"));
+    } else {
+        if (!message.empty()) {
+            page2ShowErrorLabel(wxString::FromUTF8(message));
+        } else {
+            if (login_result == ComErrno::COM_INVALID_VALIDATION)
+            {
+                page2ShowErrorLabel(_L("Password is incorrect"));
+            }
+            else if (login_result == ComErrno::COM_ERROR)
+            {
+                page2ShowErrorLabel(_L("Server connection exception"));
+            }
+            else if (login_result == ComErrno::COM_UNREGISTER_USER)
+            {
+                page2ShowErrorLabel(_L("User not registered"));
+            }
+        }
     }
 }
 
@@ -1161,32 +1067,6 @@ void LoginDialog::OnTimer(wxTimerEvent& event)
     }
 
     m_timer.Stop();
-}
-
-void LoginDialog::onLoginBtnTimer(wxTimerEvent &event) 
-{
-    event.Skip();
-    if (m_page_body_page1_panel == NULL || m_page_body_page2_panel == NULL) {
-        return;
-    }
-    if (m_page_body_page1_panel->IsShown()) {
-        if (m_login_button_page1) {
-            m_login_button_page1->Show();
-            m_login_button_page1->Refresh();
-            //Layout();
-        }
-        if (m_get_code_button) {
-            m_get_code_button->Show();
-            m_get_code_button->Refresh();
-        }
-    } else if (m_page_body_page2_panel->IsShown()) {
-        if (m_login_button_page2) {
-            m_login_button_page2->Show();
-            m_login_button_page2->Refresh();
-            //Layout();
-        }
-        
-    }
 }
 
 
