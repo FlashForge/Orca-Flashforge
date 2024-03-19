@@ -36,8 +36,8 @@ const wxString    TEMP_CANCEL  = _L("cancel");
 const wxString    TEMP_CONFIRM = _L("confirm");
 
 const int TEXT_LENGTH = 20;
-const int MATERIAL_PIC_WIDTH  = 78;
-const int MATERIAL_PIC_HEIGHT = 84;
+const int MATERIAL_PIC_WIDTH  = 86;
+const int MATERIAL_PIC_HEIGHT = 80;
 
 
 MaterialPanel::MaterialPanel(wxWindow* parent)
@@ -548,7 +548,7 @@ void SingleDeviceState::setCurId(int curId)
     //query device data by id
     const com_dev_data_t &data = MultiComMgr::inst()->devData(m_cur_id);
     onDevStateChanged(data.devDetail->status, data);
-    Layout();
+    //Layout();
     reInitData();
 }
 
@@ -565,6 +565,15 @@ void SingleDeviceState::modifyVideoPlayerAddress(const std::string &urlAddress)
    // 将JSON对象转换为字符串
    std::string newJsonStr = jsonObj.dump();
    wxString    strJS      = wxString::Format("window.postMessage(%s)", wxString::FromUTF8(newJsonStr));
+   if (m_browser) {
+     WebView::RunScript(m_browser, strJS);
+   }
+}
+
+void SingleDeviceState::notifyWebDevOffline() 
+{
+   std::string jsonStr = R"({"command" : "close_rtsp", "sequence_id" : "10001"})";
+   wxString    strJS   = wxString::Format("window.postMessage(%s)", wxString::FromUTF8(jsonStr));
    if (m_browser) {
      WebView::RunScript(m_browser, strJS);
    }
@@ -1011,7 +1020,7 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         //***添加右侧材料
         static Slic3r::GUI::BitmapCache cache;
         m_material_weight_pic = create_scaled_bitmap("device_material_weight", this, 16);
-        m_material_pic = create_scaled_bitmap("monitor_item_prediction_0", this, 60);
+        //m_material_pic = create_scaled_bitmap("monitor_item_prediction_0", this, 60);
         
         m_material_weight_staticbitmap = new wxStaticBitmap(m_panel_control_material, wxID_ANY,m_material_weight_pic);
 //        m_material_weight_staticbitmap->SetMinSize(wxSize(8,8));
@@ -1836,6 +1845,7 @@ void SingleDeviceState::onConnectExit(ComConnectionExitEvent &event)
         m_cur_id = -1;
         m_machine_idle_panel->Show();
         m_machine_ctrl_panel->Hide();
+        notifyWebDevOffline();
         reInit();
     }
 }
@@ -2045,11 +2055,12 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
                 if (!m_pic_data.empty()) {
                     //translate pic data from vector to wxImage object
                     wxMemoryInputStream stream(m_pic_data.data(), m_pic_data.size());
-                    wxImage image(stream, wxBITMAP_TYPE_ANY,-1);
+                    wxImage image(stream, wxBITMAP_TYPE_ANY);
                     image.Rescale(MATERIAL_PIC_WIDTH, MATERIAL_PIC_HEIGHT);
                     //translate pic data  from wxImage object to wxBitmap object
-                    wxBitmap bitmap(image,-1);
+                    wxBitmap bitmap(image);
                     m_material_staticbitmap->SetBitmap(bitmap);
+                //    Layout();
                 }
             } else {
                 m_file_pic_url.clear();

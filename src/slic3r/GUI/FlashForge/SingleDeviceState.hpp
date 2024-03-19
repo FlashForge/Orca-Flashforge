@@ -109,6 +109,7 @@ public:
 
     void setCurId(int curId);
     void modifyVideoPlayerAddress(const std::string &urlAddress);
+    void notifyWebDevOffline();
     void reInit();
     void reInitData();
     void reInitUI();
