@@ -16,6 +16,7 @@
 
 #include <regex>
 #include <wx/regex.h>
+#include <wx/string.h>
 
 namespace Slic3r {
 namespace GUI {
@@ -978,7 +979,9 @@ void LoginDialog::onPage2Login(wxMouseEvent& event)
     if (m_cur_language.compare("zh_CN") == 0) {
         language = serverLanguageZh;
     }
-    ComErrno login_result = MultiComUtils::getTokenByPassword(usrname.ToStdString(), password.ToStdString(), language, token_data, message);
+    const char *charData = password.mb_str(wxConvUTF8);
+    std::string finalPassword(charData);
+    ComErrno    login_result = MultiComUtils::getTokenByPassword(usrname.ToStdString(), finalPassword, language, token_data, message);
     if (login_result == ComErrno::COM_OK) {
         ComErrno add_dev_result =  Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data.accessToken);
         if (add_dev_result == COM_OK) {

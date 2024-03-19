@@ -1709,9 +1709,8 @@ void SingleDeviceState::connectEvent()
    MultiComMgr::inst()->Bind(COM_WAN_DEV_INFO_UPDATE_EVENT, &SingleDeviceState::onConnectWanDevInfoUpdate, this);
    //局域网数据更新
    MultiComMgr::inst()->Bind(COM_DEV_DETAIL_UPDATE_EVENT, &SingleDeviceState::onComDevDetailUpdate, this);
-   //连接断开
+   //局域网连接断开
    MultiComMgr::inst()->Bind(COM_CONNECTION_EXIT_EVENT, &SingleDeviceState::onConnectExit, this);
-
 #if 0
 //local file list
    m_staticText_file_list->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e){
@@ -1823,7 +1822,13 @@ void SingleDeviceState::onConnectWanDevInfoUpdate(ComWanDevInfoUpdateEvent &even
     if (m_cur_id == event.id) {
         //当前选中的设备，获取相应数据，更新界面显示
         const com_dev_data_t &data = MultiComMgr::inst()->devData(event.id);
-        fillValue(data);
+        // 离线判断
+        std::string status = data.wanDevInfo.status;
+        if (status.compare("offline") == 0) {
+            setPageOffline();
+        } else {
+            fillValue(data);
+        }
    }
 }
 
@@ -1842,12 +1847,7 @@ void SingleDeviceState::onConnectExit(ComConnectionExitEvent &event)
 { 
     event.Skip(); 
     if (event.id == m_cur_id) {
-        //离线
-        m_cur_id = -1;
-        m_machine_idle_panel->Show();
-        m_machine_ctrl_panel->Hide();
-        notifyWebDevOffline();
-        reInit();
+        setPageOffline();
     }
 }
 
@@ -2190,8 +2190,18 @@ std::string SingleDeviceState::truncateString(const std::string &s, size_t lengt
        return trunkName + "...";
        ;
    } else {
-       return s;
+       return wxString::FromUTF8(s).ToStdString();
    }
+}
+
+void SingleDeviceState::setPageOffline() 
+{
+   // 离线
+   m_cur_id = -1;
+   m_machine_idle_panel->Show();
+   m_machine_ctrl_panel->Hide();
+   notifyWebDevOffline();
+   reInit();
 }
 
 void SingleDeviceState::onScriptMessage(wxWebViewEvent &evt)
