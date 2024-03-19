@@ -5,7 +5,7 @@
 
 FFButton::FFButton(wxWindow* parent, wxWindowID id/*= wxID_ANY*/, const wxString& label/*= ""*/,
 	int borderRadius/*=4*/, bool borderFlag/* = true*/)
-	: wxButton(parent, id, label, wxDefaultPosition, wxDefaultSize, wxNO_BORDER)
+	: wxWindow(parent, id, wxDefaultPosition, wxDefaultSize, wxNO_BORDER)
 	, m_hoverFlag(false)
 	, m_pressFlag(false)
 	, m_borderFlag(borderFlag)
@@ -22,12 +22,19 @@ FFButton::FFButton(wxWindow* parent, wxWindowID id/*= wxID_ANY*/, const wxString
 	, m_bgHoverColor("#ffffff")
 	, m_bgPressColor("#ffffff")
 	, m_bgDisableColor("#dddddd")
+	, m_text(label) 
 {
+	if (parent) {
+		SetBackgroundColour(parent->GetBackgroundColour());	
+	}
 	Bind(wxEVT_ENTER_WINDOW, [this](wxMouseEvent& e) { m_hoverFlag = true; Refresh(); e.Skip(); });
 	Bind(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent& e) { m_hoverFlag = false; m_pressFlag = false; Refresh(); e.Skip(); });
 	Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e) { m_pressFlag = true; Refresh(); e.Skip(); });
 	Bind(wxEVT_LEFT_UP, [this](wxMouseEvent& e) { m_pressFlag = false; Refresh(); e.Skip(); });
 	Bind(wxEVT_PAINT, &FFButton::OnPaint, this);
+	Bind(wxEVT_ERASE_BACKGROUND, [=](auto& e) {
+		e.Skip();
+	});
 	updateState();
 }
 
@@ -140,22 +147,23 @@ void FFButton::OnPaint(wxPaintEvent& event)
 #else
     render(dc);
 #endif
-
-	if (!IsEnabled()) {
-		dc.SetTextForeground(m_fontDisableColor);
-	} else if (m_pressFlag) {
-		dc.SetTextForeground(m_fontPressColor);
-	} else if (m_hoverFlag) {
-		dc.SetTextForeground(m_fontHoverColor);
-	} else {
-		dc.SetTextForeground(m_fontColor);
+	if (!m_text.IsEmpty()) {
+		if (!IsEnabled()) {
+			dc.SetTextForeground(m_fontDisableColor);
+		} else if (m_pressFlag) {
+			dc.SetTextForeground(m_fontPressColor);
+		} else if (m_hoverFlag) {
+			dc.SetTextForeground(m_fontHoverColor);
+		} else {
+			dc.SetTextForeground(m_fontColor);
+		}
+		// For Text: Just align-center
+		dc.SetFont(GetFont());
+		auto textSize = dc.GetMultiLineTextExtent(m_text);
+		auto pt = wxPoint((size.x - textSize.x) / 2, (size.y - textSize.y) / 2);
+		dc.DrawText(m_text, pt);
 	}
-	// For Text: Just align-center
-	dc.SetFont(GetFont());
-	auto text = GetLabel();
-    auto textSize = dc.GetMultiLineTextExtent(text);
-    auto pt = wxPoint((size.x - textSize.x) / 2, (size.y - textSize.y) / 2);
-    dc.DrawText(text, pt);
+	event.Skip();
 }
 
 void FFButton::render(wxDC &dc)
