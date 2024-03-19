@@ -99,7 +99,8 @@ AddMachinePanel::~AddMachinePanel() {
  MonitorPanel::MonitorPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
     : wxPanel(parent, id, pos, size, style),
      m_select_machine(SelectMachinePopup(this)),
-     m_connect_fail_time1(0)
+     m_connect_fail_time1(0), 
+     m_connect_fail_time0(0)
 {
 #ifdef __WINDOWS__
     SetDoubleBuffered(true);
@@ -359,6 +360,14 @@ void MonitorPanel::update_all()
         return;
     }
 
+    if (m_connect_fail_time0 > 0) {
+        time_t connect_failed_time2 = time(nullptr);
+        if ((connect_failed_time2 - m_connect_fail_time0) /*/ (double)CLOCKS_PER_SEC*/ > 10) {
+            m_connect_fail_time0 = 0;
+            obj->set_connecting(false);
+        }
+    }
+
     if (m_connect_fail_time1 > 0) {
         time_t connect_failed_time2 = time(nullptr);
         if ((connect_failed_time2 - m_connect_fail_time1) /*/ (double)CLOCKS_PER_SEC*/ > 5) {
@@ -368,16 +377,20 @@ void MonitorPanel::update_all()
     }
 
     if (obj->is_connecting()) {
+        if (m_connect_fail_time0 == 0)
+            m_connect_fail_time0 = time(nullptr);
         m_side_tools->update_device_status(obj);
         show_status(MONITOR_CONNECTING);
         return;
     } else if (!obj->is_connected_ready()) {  // connect failed
+        m_connect_fail_time0 = 0;
         if (m_connect_fail_time1 == 0)
             m_connect_fail_time1 = time(nullptr);
         m_side_tools->update_device_status(obj);
         show_status(MONITOR_CONNECTED_FAILED);
         return;
     } else {
+        m_connect_fail_time0 = 0;
         m_side_tools->update_device_status(nullptr);
         show_status(MONITOR_NORMAL);
         return;

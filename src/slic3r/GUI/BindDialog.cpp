@@ -284,7 +284,7 @@ BindMachineDialog::BindMachineDialog()
     // result panel
     m_result_panel = new wxPanel(m_simplebook);    
     m_result_text = new wxStaticText(m_result_panel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
-    //m_result_text->SetFont(wxFont(wxFontInfo(14)));
+    m_result_text->SetFont(wxFont(wxFontInfo(14)));
     m_result_btn = new FFButton(m_result_panel, wxID_ANY, _L("OK"), 4, false);
     m_result_btn->SetFontUniformColor(*wxWHITE);
     m_result_btn->SetBGColor(wxColour("#419488"));
