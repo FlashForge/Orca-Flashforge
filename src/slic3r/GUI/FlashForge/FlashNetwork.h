@@ -287,23 +287,24 @@ FNET_API int fnet_downloadFile(const char *url, fnet_file_data_t **fileData,
 
 FNET_API void fnet_freeFileData(fnet_file_data_t *fileData);
 
-FNET_API int fnet_getTokenByPassword(const char *userName, const char *password,
-    fnet_token_data_t **tokenData, int msTimeout);
+FNET_API int fnet_getTokenByPassword(const char *userName, const char *password, const char *language,
+    fnet_token_data_t **tokenData, char **message, int msTimeout); // en/zh/de/fr/es/ja/ko, call fnet_freeString to release message
 
-FNET_API int fnet_refreshToken(const char *refreshToken, fnet_token_data_t **tokenData,
-    int msTimeout);
+FNET_API int fnet_refreshToken(const char *refreshToken, const char *language,
+    fnet_token_data_t **tokenData, char **message, int msTimeout);
 
 FNET_API void fnet_freeToken(fnet_token_data_t *tokenData);
 
-FNET_API int fnet_getClientToken(fnet_client_token_data_t **clientTokenData, int msTimeout);
+FNET_API int fnet_getClientToken(const char *language, fnet_client_token_data_t **clientTokenData,
+    char **message, int msTimeout);
 
 FNET_API void fnet_freeClientToken(fnet_client_token_data_t *clientTokenData);
 
 FNET_API int fnet_sendSMSCode(const char *clientAccessToken, const char *phoneNumber,
-    const char *language, int msTimeout); // en/zh
+    const char *language, char **message, int msTimeout);
 
-FNET_API int fnet_getTokenBySMSCode(const char *userName, const char *SMSCode,
-    fnet_token_data_t **tokenData, int msTimeout);
+FNET_API int fnet_getTokenBySMSCode(const char *userName, const char *SMSCode, const char *language,
+    fnet_token_data_t **tokenData, char **message, int msTimeout);
 
 FNET_API int fnet_checkToken(const char *accessToken, int msTimeout);
 

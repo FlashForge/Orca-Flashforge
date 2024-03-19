@@ -20,16 +20,17 @@ public:
     static ComErrno getLanDevList(std::vector<fnet_lan_dev_info> &devInfos);
 
     static ComErrno getTokenByPassword(const std::string &userName, const std::string &password,
-        com_token_data_t &tokenData);
+        const std::string &language, com_token_data_t &tokenData, std::string &message);
 
     static ComErrno refreshToken(const std::string &refreshToken, com_token_data_t &tokenData);
 
     static ComErrno getClientToken(com_clinet_token_data_t &clinetTokenData);
 
-    static ComErrno sendSMSCode(const std::string &clinetAccessToken, const std::string &phoneNumber);
+    static ComErrno sendSMSCode(const std::string &clinetAccessToken, const std::string &phoneNumber,
+        const std::string &language, std::string &message);
 
     static ComErrno getTokenBySMSCode(const std::string &userName, const std::string &SMSCode,
-        com_token_data_t &tokenData);
+        const std::string &language, com_token_data_t &tokenData, std::string &message);
 
     static ComErrno checkToken(const std::string &accessToken);
 

@@ -505,7 +505,9 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
 
         m_get_code_button->SetState(true);
         m_get_code_button->startTimer();
-        ComErrno send_result =MultiComUtils::sendSMSCode(m_client_SMS_token.accessToken,m_username_ctrl_page1->GetValue().ToStdString());
+        std::string message;
+        ComErrno send_result = MultiComUtils::sendSMSCode(
+            m_client_SMS_token.accessToken, m_username_ctrl_page1->GetValue().ToStdString(), "en", message);
         if(send_result == ComErrno::COM_ERROR){
             BOOST_LOG_TRIVIAL(warning) << boost::format("MultiComUtils::sendSMSCode Failed!");
         }
@@ -928,7 +930,9 @@ void LoginDialog::onPage1Login(wxCommandEvent& event)
     wxString usrname = m_username_ctrl_page1->GetValue();
     wxString verify_code = m_verifycode_ctrl_page1->GetValue();
     com_token_data_t token_data;
-    ComErrno login_result =  MultiComUtils::getTokenBySMSCode(usrname.ToStdString(),verify_code.ToStdString(),token_data);
+    std::string message;
+    ComErrno login_result = MultiComUtils::getTokenBySMSCode(
+        usrname.ToStdString(), verify_code.ToStdString(), "en", token_data, message);
     if(login_result == ComErrno::COM_OK){
         LoginDialog::m_token_data = token_data;
         wxGetApp().handle_login_result("default.jpg",usrname.ToStdString());
@@ -955,7 +959,9 @@ void LoginDialog::onPage4Login(wxMouseEvent& event)
     wxString usrname = m_username_ctrl_page1->GetValue();
     wxString verify_code = m_verifycode_ctrl_page1->GetValue();
     com_token_data_t token_data;
-    ComErrno login_result =  MultiComUtils::getTokenBySMSCode(usrname.ToStdString(),verify_code.ToStdString(),token_data);
+    std::string message;
+    ComErrno login_result = MultiComUtils::getTokenBySMSCode(
+        usrname.ToStdString(), verify_code.ToStdString(), "en", token_data, message);
     if(login_result == ComErrno::COM_OK){
         ComErrno add_dev_result = Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data.accessToken);
         if (add_dev_result == COM_OK) {
@@ -1012,7 +1018,9 @@ void LoginDialog::onPage2Login(wxCommandEvent& event)
     wxString usrname = m_username_ctrl_page2->GetValue();
     wxString password = m_password_ctrl_page2->GetValue();
     com_token_data_t token_data;
-    ComErrno login_result =  MultiComUtils::getTokenByPassword(usrname.ToStdString(),password.ToStdString(),token_data);
+    std::string message;
+    ComErrno login_result = MultiComUtils::getTokenByPassword(
+        usrname.ToStdString(), password.ToStdString(), "en", token_data, message);
     if(login_result == ComErrno::COM_OK){
         LoginDialog::m_token_data = token_data;
         wxGetApp().handle_login_result("default.jpg",usrname.ToStdString());
@@ -1072,7 +1080,9 @@ void LoginDialog::onPage3Login(wxMouseEvent& event)
 
     // 1、getTokenByPassword   2、addWanDev
     com_token_data_t token_data;
-    ComErrno login_result =  MultiComUtils::getTokenByPassword(usrname.ToStdString(),password.ToStdString(),token_data);
+    std::string message;
+    ComErrno login_result = MultiComUtils::getTokenByPassword(
+        usrname.ToStdString(), password.ToStdString(), "en", token_data, message);
     if(login_result == ComErrno::COM_OK){
         ComErrno add_dev_result =  Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data.accessToken);
         if (add_dev_result == COM_OK) {
