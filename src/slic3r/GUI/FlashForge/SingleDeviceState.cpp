@@ -548,7 +548,8 @@ void SingleDeviceState::setCurId(int curId)
     //query device data by id
     const com_dev_data_t &data = MultiComMgr::inst()->devData(m_cur_id);
     onDevStateChanged(data.devDetail->status, data);
-    //Layout();
+    fillValue(data);
+    Layout();
     reInitData();
 }
 
