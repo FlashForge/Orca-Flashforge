@@ -4151,7 +4151,7 @@ void GUI_App::handle_login_result(std::string url, std::string name)
     m_login_success = true;
     LoginDialog::SetUsrLogin(true);
     // 原始的JSON字符串
-    std::string jsonStr = R"({"command": "studio_userlogin","data": {"avatar": "default.jpg","name": "ShanZhu"},"sequence_id": "10001"})";
+    std::string jsonStr = R"({"command": "studio_userlogin","data": {"avatar": "default.jpg","name": ""},"sequence_id": "10001"})";
 
     // 将JSON字符串解析为JSON对象
     json jsonObj = json::parse(jsonStr);
@@ -4162,6 +4162,12 @@ void GUI_App::handle_login_result(std::string url, std::string name)
     }
     if (!name.empty()) {
         jsonObj["data"]["name"] = name;
+    } else if (name.empty()) {
+        std::string usr_name = app_config->get("usr_name");
+        if (usr_name.empty()) {
+            usr_name = app_config->get("usr_input_name");
+            jsonObj["data"]["name"] = usr_name;
+        }
     }
 
     // 将JSON对象转换为字符串
