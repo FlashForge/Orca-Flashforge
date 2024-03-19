@@ -30,7 +30,7 @@ FFButton::FFButton(wxWindow* parent, wxWindowID id/*= wxID_ANY*/, const wxString
 	Bind(wxEVT_ENTER_WINDOW, [this](wxMouseEvent& e) { m_hoverFlag = true; Refresh(); e.Skip(); });
 	Bind(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent& e) { m_hoverFlag = false; m_pressFlag = false; Refresh(); e.Skip(); });
 	Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e) { m_pressFlag = true; Refresh(); e.Skip(); });
-	Bind(wxEVT_LEFT_UP, [this](wxMouseEvent& e) { m_pressFlag = false; Refresh(); e.Skip(); });
+	Bind(wxEVT_LEFT_UP, [this](wxMouseEvent& e) { m_pressFlag = false; Refresh(); sendEvent(); e.Skip(); });
 	Bind(wxEVT_PAINT, &FFButton::OnPaint, this);
 	Bind(wxEVT_ERASE_BACKGROUND, [=](auto& e) {
 		e.Skip();
@@ -214,6 +214,15 @@ void FFButton::updateState()
 	}
 	Update();
 }
+
+void FFButton::sendEvent()
+{
+	wxCommandEvent event(wxEVT_BUTTON);
+	event.SetEventObject(this);
+	event.SetId(GetId());
+	wxPostEvent(this, event);
+}
+
 
 FFPushButton::FFPushButton(wxWindow* parent,wxWindowID id,const wxString& normalIcon,const wxString& hoverIcon,const wxString& pressIcon,const wxString& disableIcon)
     : wxButton(parent, id, "", wxPoint(10, 10), wxSize(25, 25), wxNO_BORDER)

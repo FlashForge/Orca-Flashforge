@@ -31,6 +31,7 @@ protected:
 
 private:
 	void updateState();
+	void sendEvent();
 
 private:
 	bool		m_hoverFlag;
