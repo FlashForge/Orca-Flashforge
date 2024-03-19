@@ -7,7 +7,6 @@
 #include "slic3r/GUI/Widgets/FFToggleButton.hpp"
 #include "slic3r/GUI/Widgets/FFCheckBox.hpp"
 #include "slic3r/GUI/wxExtensions.hpp"
-#include "slic3r/GUI/FFUtils.hpp"
 #include "DeviceData.hpp"
 
 namespace Slic3r {
@@ -1449,7 +1448,7 @@ void DeviceListPanel::onComDevDetailUpdate(ComDevDetailUpdateEvent& event)
     auto conn_id = event.id;
     bool valid = false;
     const auto& data = MultiComMgr::inst()->devData(conn_id, &valid);
-    BOOST_LOG_TRIVIAL(error) << "onComDevDetailUpdate: " << data.connectMode << ", " << valid ? "valid" : "invalid";
+    BOOST_LOG_TRIVIAL(info) << "onComDevDetailUpdate: " << data.connectMode << ", " << valid ? "valid" : "invalid";
     if (COM_CONNECT_LAN == data.connectMode && valid) {
         std::string dev_id = data.lanDevInfo.serialNumber;
         DeviceInfoItemPanel::DeviceInfo info;
@@ -1458,9 +1457,12 @@ void DeviceListPanel::onComDevDetailUpdate(ComDevDetailUpdateEvent& event)
         info.name = data.devDetail->name;
         info.pid = data.devDetail->pid;
         info.placement = data.devDetail->location;
+        if (info.status != data.devDetail->status) {
+            updateFilterMap();
+        }
         info.status = data.devDetail->status;
         updateDeviceInfo(dev_id, info);
-        BOOST_LOG_TRIVIAL(error) << "onComDevDetailUpdate: " << info.name << ", " << info.placement << ", " << info.status;
+        BOOST_LOG_TRIVIAL(info) << "onComDevDetailUpdate: " << info.name << ", " << info.placement << ", " << info.status;
     }
     flush_logs();
     event.Skip();
@@ -1480,6 +1482,9 @@ void DeviceListPanel::onComWanDeviceInfoUpdate(ComWanDevInfoUpdateEvent& event)
         info.name = data.wanDevInfo.name;
         info.pid = data.devDetail->pid;
         info.placement = data.wanDevInfo.location;
+        if (info.status != data.wanDevInfo.status) {
+            updateFilterMap();
+        }
         info.status = data.wanDevInfo.status;
         updateDeviceInfo(dev_id, info);
         BOOST_LOG_TRIVIAL(error) << "onComDevDetailUpdate: " << info.name << ", " << info.placement << ", " << info.status;

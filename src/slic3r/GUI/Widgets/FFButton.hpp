@@ -1,7 +1,7 @@
 #ifndef _Slic3r_GUI_FFButton_hpp_
 #define _Slic3r_GUI_FFButton_hpp_
-#include <wx/tglbtn.h>
 #include <wx/window.h>
+#include <wx/button.h>
 
 
 class FFButton : public wxWindow
@@ -10,6 +10,8 @@ public:
 	FFButton(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& label = "", int borderRadius = 4, bool borderFlag = true);
 	~FFButton() {};
 
+	bool Enable(bool enable = true) override;
+	void SetLabel(const wxString & label) override;
 	void SetFontColor(const wxColour& color);
 	void SetFontHoverColor(const wxColour& color);
 	void SetFontPressColor(const wxColour& color);

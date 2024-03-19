@@ -17,6 +17,7 @@
 #include "FlashForge/MultiComMgr.hpp"
 #include "FlashForge/LoginDialog.hpp"
 #include "FlashForge/DeviceData.hpp"
+#include "Widgets/FFButton.hpp"
 
 namespace Slic3r {
 namespace GUI {
@@ -291,7 +292,7 @@ BindMachineDialog::BindMachineDialog()
     m_result_btn->SetBGHoverColor(wxColour("#65A79E"));
     m_result_btn->SetBGPressColor(wxColour("#1A8676"));
     m_result_btn->SetSize(wxSize(-1, FromDIP(30)));
-    m_result_btn->SetMinSize(wxSize(- 1, FromDIP(30)));
+    m_result_btn->SetMinSize(wxSize(FromDIP(60), FromDIP(30)));
     m_result_btn->SetMaxSize(wxSize(- 1, FromDIP(30)));
     m_result_btn->Bind(wxEVT_BUTTON, &BindMachineDialog::on_result_ok, this);
 
