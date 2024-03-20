@@ -633,6 +633,7 @@ void DeviceObjectOpr::sendDeviceListUpdateEvent(const std::string& dev_id, int c
 void DeviceObjectOpr::onConnectExit(ComConnectionExitEvent &event)
 {
     BOOST_LOG_TRIVIAL(info) << "DeviceData-onConnectExit: " << event.id;
+    flush_logs();
     event.Skip();
     id_connect_mode mode;
     string devId = find_dev_from_id(mode, event.id);

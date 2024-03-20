@@ -250,6 +250,7 @@ protected:
     std::string     m_cur_print_file_name;
     std::string     m_cur_dev_name;
     std::string     m_cur_dev_location;
+    int             m_cur_printing_ctrl;  // 0:normal, 1: pause 2: continue  3: abort
     wxBitmap       *m_bitmap{nullptr};
 };
 

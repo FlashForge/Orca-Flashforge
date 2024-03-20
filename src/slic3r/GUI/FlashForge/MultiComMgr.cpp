@@ -1,5 +1,6 @@
 #include "MultiComMgr.hpp"
 #include "FreeInDestructor.h"
+#include "libslic3r/Utils.hpp"
 
 namespace Slic3r { namespace GUI {
 
@@ -401,11 +402,13 @@ com_dev_data_t MultiComMgr::makeDevData(const fnet_wan_dev_info_t *wanDevInfo)
 
 void MultiComMgr::updateWanDevInfo(com_id_t id, const std::string &name, const std::string &status,
     const std::string &location)
-{
+{    
     com_dev_data_t &devData = m_datMap.at(id);
+    BOOST_LOG_TRIVIAL(info) << devData.lanDevInfo.name << " status---" << devData.devDetail->status;
+    flush_logs();
     if (devData.connectMode != COM_CONNECT_WAN) {
         return;
-    }
+    }    
     devData.wanDevInfo.name = name;
     devData.wanDevInfo.status = status;
     devData.wanDevInfo.location = location;
