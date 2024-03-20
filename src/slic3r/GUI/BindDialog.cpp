@@ -434,7 +434,7 @@ void BindMachineDialog::on_bind_printer(wxCommandEvent &event)
         //m_bind_btn->Enable(true);
         //return;
     }
-   
+    BOOST_LOG_TRIVIAL(info) << "on_bind_printer: " << dev_id << "--dev_pid:" << dev_pid << "--dev_name: " << dev_name;
     m_bind_job = std::make_shared<BindJob>(nullptr, wxGetApp().plater(), dev_id, dev_pid, dev_name);
     m_bind_job->set_event_handle(this);
     m_bind_job->start();
