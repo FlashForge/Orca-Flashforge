@@ -151,7 +151,8 @@ function SetLoginInfo(strAvatar, strName) {
   $("#Login2").css("display", "flex");
 }
 
-var flag = false;
+var flag= false;
+
 function SetUrlInfo(strAddress) {
   window.strAddress = strAddress;
   $("#url-studio").text(strAddress);
@@ -201,6 +202,11 @@ function SetUrlInfo(strAddress) {
 
                 // 当视频开始播放时，隐藏加载动画
                 video.addEventListener('playing', hideLoader);
+                // 视频暂停时，不显示加载动画
+                video.addEventListener('pause', hideLoader);
+            
+                // 视频发生错误时显示加载动画
+                video.addEventListener('error', hideLoader);
 
                 setTimeout(function () {
                   video.src = "";
@@ -238,6 +244,12 @@ function SetUrlInfo(strAddress) {
 
               // 当视频开始播放时，隐藏加载动画
               video.addEventListener('playing', hideLoader);
+
+              // 视频暂停时，不显示加载动画
+              video.addEventListener('pause', hideLoader);
+            
+              // 视频发生错误时显示加载动画
+              video.addEventListener('error', hideLoader);
                 setTimeout(function () {
                   video.src = "";
                   video.style.backgroundImage = "url('hei.svg')";
@@ -266,8 +278,8 @@ function SetUrlInfo(strAddress) {
       };
 
 	  if (!flag) {
-		video.removeEventListener("click", handleClick);
-		video.addEventListener("click", handleClick);
+		  video.removeEventListener("click", handleClick);
+		  video.addEventListener("click", handleClick);
 	  }
       
     } else {
@@ -293,6 +305,11 @@ function SetUrlInfo(strAddress) {
                 // 隐藏加载动画
                 videoLoader.style.display = 'none';
             }, { once: true }); // 使用 { once: true } 参数，确保事件只触发一次
+
+            videoStream.addEventListener('error', function() {
+                // 隐藏加载动画
+                videoLoader.style.display = 'none';
+            });
             streamPaused = true;
             setTimeout(function () {
               videoStreamImg.src = "hei.svg";
