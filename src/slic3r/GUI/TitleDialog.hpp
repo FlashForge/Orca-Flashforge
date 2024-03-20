@@ -1,6 +1,7 @@
 #ifndef slic3r_GUI_TitleDialog_hpp_
 #define slic3r_GUI_TitleDialog_hpp_
 #include <wx/window.h>
+#include <wx/dc.h>
 #include "GUI_Utils.hpp"
 //#include "ImageButton.hpp"
 
@@ -50,6 +51,7 @@ public:
     wxBoxSizer* MainSizer();
 
 protected:    
+    void OnErase(wxEraseEvent& event);
     void OnPaint(wxPaintEvent& event);
     void DoRender(wxDC &dc);
     void OnSize(wxSizeEvent& event);

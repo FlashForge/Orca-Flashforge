@@ -1155,14 +1155,14 @@ void SendToPrinterDialog::update_user_machine_list()
                     mdata.name = wxString::FromUTF8(data.wanDevInfo.name);
                     status = data.wanDevInfo.status;
                 }
-                if (!status.empty() && status != "offline") {
+                //if (!status.empty() && status != "offline") {
                     auto iter = m_machineListMap.find(dev_id);
                     if (iter == m_machineListMap.end()) {
                         m_machineListMap.emplace(dev_id, mdata);    
                     } else if (COM_CONNECT_LAN == data.connectMode) {
                         iter->second = mdata;
                     }
-                }
+                //}
             } else {
                 BOOST_LOG_TRIVIAL(warning) << "com_id (" << id << "): get com data error";
             }
@@ -1305,7 +1305,7 @@ void SendToPrinterDialog::update_user_printer()
     //m_sendBook->Layout();
     //updateVisible();
     Layout();
-    //Fit();
+    Fit();
     //MainSizer()->Fit(this);
     Thaw();
     Layout();
