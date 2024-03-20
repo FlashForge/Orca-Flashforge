@@ -670,7 +670,7 @@ const DeviceInfoItemPanel::DeviceInfo& DeviceInfoItemPanel::deviceInfo() const
 
 void DeviceInfoItemPanel::sendEvent()
 {
-    if (m_info.conn_id >= 0 && m_event_handle) {
+    if (m_info.conn_id >= 0 && !m_info.status.empty() && m_info.status != "offline" && m_event_handle) {
         wxCommandEvent event(EVT_DEVICE_ITEM_SELECTED, GetId());
         event.SetEventObject(m_event_handle);
         event.SetInt(m_info.conn_id);
@@ -1450,6 +1450,7 @@ void DeviceListPanel::updateDeviceInfo(const std::string& dev_id, const DeviceIn
         }
     }
     if (status_changed) {
+        updateTypeMap();
         updateStaticMap();
         if (m_static_btn->GetValue()) {
             updateDeviceSizer();
@@ -1496,9 +1497,6 @@ void DeviceListPanel::onComWanDeviceInfoUpdate(ComWanDevInfoUpdateEvent& event)
         info.name = data.wanDevInfo.name;
         info.pid = data.devDetail->pid;
         info.placement = data.wanDevInfo.location;
-        if (info.status != data.wanDevInfo.status) {
-            updateFilterMap();
-        }
         info.status = data.wanDevInfo.status;
         updateDeviceInfo(dev_id, info);
         BOOST_LOG_TRIVIAL(error) << "onComDevDetailUpdate: " << info.name << ", " << info.placement << ", " << info.status;

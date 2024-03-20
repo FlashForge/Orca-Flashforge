@@ -1140,7 +1140,7 @@ void SendToPrinterDialog::update_user_machine_list()
         for (auto id : idList) {
             auto data = MultiComMgr::inst()->devData(id, &valid);
             if (valid) {
-                std::string dev_id;                
+                std::string dev_id, status;      
                 MachineItem::MachineData mdata;
                 mdata.comId = id;
                 mdata.flag = data.connectMode;
@@ -1148,16 +1148,20 @@ void SendToPrinterDialog::update_user_machine_list()
                     dev_id = data.lanDevInfo.serialNumber;
                     mdata.pid = data.lanDevInfo.pid;
                     mdata.name = wxString::FromUTF8(data.lanDevInfo.name);
+                    status = data.devDetail->status;
                 } else if (COM_CONNECT_WAN == data.connectMode) {
                     dev_id = data.wanDevInfo.serialNumber;
                     mdata.pid = data.devDetail->pid;
                     mdata.name = wxString::FromUTF8(data.wanDevInfo.name);
+                    status = data.wanDevInfo.status;
                 }
-                auto iter = m_machineListMap.find(dev_id);
-                if (iter == m_machineListMap.end()) {
-                    m_machineListMap.emplace(dev_id, mdata);    
-                } else if (COM_CONNECT_LAN == data.connectMode) {
-                    iter->second = mdata;
+                if (!status.empty() && status != "offline") {
+                    auto iter = m_machineListMap.find(dev_id);
+                    if (iter == m_machineListMap.end()) {
+                        m_machineListMap.emplace(dev_id, mdata);    
+                    } else if (COM_CONNECT_LAN == data.connectMode) {
+                        iter->second = mdata;
+                    }
                 }
             } else {
                 BOOST_LOG_TRIVIAL(warning) << "com_id (" << id << "): get com data error";
@@ -1300,10 +1304,15 @@ void SendToPrinterDialog::update_user_printer()
     //updateVisible();
     Layout();
     Fit();
-    MainSizer()->Fit(this);
+    //MainSizer()->Fit(this);
     Thaw();
+    Layout();
+    Fit();
     Update();
     updateSendButtonState();
+    auto sz = m_machineListWindow->GetSize();
+    auto sz1 = m_machineBook->GetSize();
+    auto sz2 = GetSize();
 #if 0
     Slic3r::DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
     if (!dev) return;

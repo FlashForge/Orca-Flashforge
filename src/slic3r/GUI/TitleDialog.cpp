@@ -138,7 +138,7 @@ TitleDialog::TitleDialog(wxWindow* parent, const wxString& title, int borderRadi
     SetSizer(sizer);
     Layout();
 
-    //Bind(wxEVT_PAINT, &TitleDialog::OnPaint, this);
+    Bind(wxEVT_PAINT, &TitleDialog::OnPaint, this);
     Bind(wxEVT_SIZE, &TitleDialog::OnSize, this);
 }
 
@@ -155,16 +155,17 @@ wxBoxSizer* TitleDialog::MainSizer()
 void TitleDialog::OnPaint(wxPaintEvent& event)
 {
     wxPaintDC dc(this);
-    dc.SetBrush(*wxWHITE);
+    //dc.SetBrush(*wxWHITE);
     auto sz = GetSize();
-    wxColour color(230, 230, 230, 80);
-    for (int i = 0; i < m_shadow_width; ++i) {
-        wxColour color(230, 230, 230, 80 - i * 15);
-        dc.SetPen(color);
-        dc.DrawRectangle(m_shadow_width-i, m_shadow_width-i, sz.x - 2 * (m_shadow_width - i), sz.y - 2 * (m_shadow_width - i));
-    }    
-    //dc.SetBrush(wxColour(255, 255, 255));
-    //dc.SetPen(*wxTRANSPARENT_PEN);
+    //wxColour color("#f0f0f0");
+    //for (int i = 0; i < m_shadow_width; ++i) {
+    //    wxColour color(230, 230, 230, 80 - i * 15);
+    //    dc.SetPen(color);
+    //    dc.DrawRectangle(m_shadow_width-i, m_shadow_width-i, sz.x - 2 * (m_shadow_width - i), sz.y - 2 * (m_shadow_width - i));
+    //}    
+    dc.SetBrush(wxColour(255, 255, 255));
+    dc.SetPen(wxColour("#f0f0f0"));
+    dc.DrawRectangle(m_shadow_width, m_shadow_width, sz.x - 2 * m_shadow_width, sz.y - 2 * m_shadow_width);
     //dc.DrawRoundedRectangle(, m_borderRadius);
     //dc.DrawRectangle(GetClientSize());
 }
