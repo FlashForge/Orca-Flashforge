@@ -195,7 +195,7 @@ void TitleDialog::OnPaint(wxPaintEvent& event)
     }
     memdc.SelectObject(wxNullBitmap);
     dc.DrawBitmap(bmp, 0, 0);
-    bmp.SaveFile("D:/aa.png", wxBITMAP_TYPE_PNG);
+    //bmp.SaveFile("D:/aa.png", wxBITMAP_TYPE_PNG);
 #else
     DoRender(dc);
 #endif
