@@ -429,11 +429,11 @@ void BindMachineDialog::on_bind_printer(wxCommandEvent &event)
     unsigned short dev_pid = m_device_info->get_dev_pid();
     std::string dev_name = m_device_info->get_dev_name();
 
-    //if (dev_id.empty() || dev_pid == 0) {
-    //    BOOST_LOG_TRIVIAL(error) << "dev_id is empty or dev_pid is 0";
-    //    m_bind_btn->Enable(true);
-    //    return;
-    //}
+    if (dev_id.empty() || dev_pid == 0) {
+        BOOST_LOG_TRIVIAL(error) << "dev_id is empty or dev_pid is 0";
+        //m_bind_btn->Enable(true);
+        //return;
+    }
    
     m_bind_job = std::make_shared<BindJob>(nullptr, wxGetApp().plater(), dev_id, dev_pid, dev_name);
     m_bind_job->set_event_handle(this);
