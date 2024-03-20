@@ -287,6 +287,13 @@ void TempInput::SetIconNormal()
     Refresh();
 }
 
+void TempInput::SetTextBindInput() 
+{
+    text_ctrl->Bind(wxEVT_CHAR, [&](wxKeyEvent &event) { 
+        event.Skip(false);
+    });
+}
+
 void TempInput::SetMaxTemp(int temp) { max_temp = temp; }
 
 void TempInput::SetMinTemp(int temp) { min_temp = temp; }

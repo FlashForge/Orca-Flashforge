@@ -224,6 +224,7 @@ void StartFilter::onAirFilterToggled(wxCommandEvent &event)
 }
 
 wxDEFINE_EVENT(EVT_MODIFY_TEMP_CLICKED, wxCommandEvent);
+wxDEFINE_EVENT(EVT_MODIFY_TEMP_CANCEL_CLICKED, wxCommandEvent);
 ModifyTemp::ModifyTemp(wxWindow *parent) 
     : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL)
 {
@@ -271,8 +272,9 @@ void ModifyTemp::create_panel(wxWindow *parent)
     m_cancel_btn->SetBGColor(wxColour(75, 75, 75));
     m_cancel_btn->Bind(wxEVT_LEFT_DOWN, [this, operate_panel](wxMouseEvent &event) {
         event.Skip();
-        Hide();
-        Layout();
+        wxCommandEvent ev(EVT_MODIFY_TEMP_CANCEL_CLICKED, GetId());
+        ev.SetEventObject(this);
+        wxPostEvent(this, ev);
     });
 
     bSizer_operate_hor->AddStretchSpacer();
@@ -596,6 +598,8 @@ void SingleDeviceState::reInitData()
    m_last_z_axis_compensation = 0.00;
    m_last_cooling_fan_speed   = 0.00;
    m_last_chamber_fan_speed   = 0.00;
+   m_right_target_temp        = 0.00;
+   m_plat_target_temp         = 0.00;
    m_camera_stream_url.clear();
    m_file_pic_url.clear();
    m_cur_dev_state.clear();
@@ -1230,6 +1234,8 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         m_tempCtrl_mid->SetMaxTemp(120);
         m_tempCtrl_mid->SetMinSize((wxSize(FromDIP(106), FromDIP(29))));
         m_tempCtrl_mid->SetBorderWidth(0);
+        m_tempCtrl_mid->SetReadOnly(true);
+        m_tempCtrl_mid->SetTextBindInput();
         //StateColor tempinput_text_colour(std::make_pair(wxColour(171, 172, 172), (int) StateColor::Disabled), std::make_pair(wxColour(48,58,60), (int) StateColor::Normal));
         //m_tempCtrl_mid->SetTextColor(tempinput_text_colour);
         //StateColor tempinput_border_colour(std::make_pair(*wxWHITE, (int)StateColor::Disabled), std::make_pair(wxColour(0, 150, 136), (int)StateColor::Focused),
@@ -1321,6 +1327,11 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
 //添加温度修改确认页面
         m_busy_temp_brn = new ModifyTemp(parent);
         m_busy_temp_brn->Bind(EVT_MODIFY_TEMP_CLICKED, &SingleDeviceState::onModifyTempClicked,this);
+        m_busy_temp_brn->Bind(EVT_MODIFY_TEMP_CANCEL_CLICKED, [this](wxCommandEvent &event) {
+            event.Skip();
+            m_busy_temp_brn->Hide();
+            Layout();
+        });
         busySizer->Add(m_busy_temp_brn, 0, wxALL | wxEXPAND, 0);
         m_busy_temp_brn->Hide();
 }
@@ -1912,6 +1923,7 @@ void SingleDeviceState::onModifyTempClicked(wxCommandEvent &event)
 {
     event.Skip();
     m_busy_temp_brn->Hide();
+    Layout();
     double top_temp;
     double bottom_temp;
     double mid_temp; 
@@ -2121,13 +2133,19 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
    m_tempCtrl_top->Unbind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);  
    m_tempCtrl_top->SetCurrTemp(rightTemp,true);
    double rightTargetTemp = data.devDetail->rightTargetTemp; // 右喷头目标温度
-   m_tempCtrl_top->SetTagTemp(rightTargetTemp, true);
+   if (m_right_target_temp != rightTargetTemp) {
+        m_right_target_temp = rightTargetTemp;
+        m_tempCtrl_top->SetTagTemp(rightTargetTemp, true);
+   }
    m_tempCtrl_top->Bind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);  
    double platTemp = data.devDetail->platTemp; // 平台温度
    m_tempCtrl_bottom->Unbind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this); 
    m_tempCtrl_bottom->SetCurrTemp(platTemp, true);
    double platTargetTemp = data.devDetail->platTargetTemp; // 平台目标温度
-   m_tempCtrl_bottom->SetTagTemp(platTargetTemp, true);
+   if (m_plat_target_temp != platTargetTemp) {
+        m_plat_target_temp = platTargetTemp;
+        m_tempCtrl_bottom->SetTagTemp(platTargetTemp, true);
+   }
    m_tempCtrl_bottom->Bind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);  
    double chamberTemp = data.devDetail->chamberTemp; // 腔体温度
    m_tempCtrl_mid->Unbind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this); 

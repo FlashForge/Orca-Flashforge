@@ -86,6 +86,7 @@ public:
     void SetIconNormal();
 
    void SetReadOnly(bool ro) { m_read_only = ro; }
+    void SetTextBindInput();
 
     void SetMaxTemp(int temp);
     void SetMinTemp(int temp);
