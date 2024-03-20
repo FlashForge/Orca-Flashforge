@@ -670,7 +670,7 @@ const DeviceInfoItemPanel::DeviceInfo& DeviceInfoItemPanel::deviceInfo() const
 
 void DeviceInfoItemPanel::sendEvent()
 {
-    if (m_info.conn_id >= 0 && m_event_handle) {
+    if (m_info.conn_id >= 0 && m_event_handle && m_info.status.compare("offline") !=0) {
         wxCommandEvent event(EVT_DEVICE_ITEM_SELECTED, GetId());
         event.SetEventObject(m_event_handle);
         event.SetInt(m_info.conn_id);
