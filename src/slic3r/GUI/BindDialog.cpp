@@ -179,7 +179,6 @@ BindMachineDialog::BindMachineDialog()
     m_user_name->Wrap(FromDIP(350));
     m_user_sizer = new wxBoxSizer(wxVERTICAL);
 
-    m_printer_img_panel = new wxPanel(m_normal_panel, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(120), FromDIP(120)));
     //m_user_img = new wxStaticBitmap(m_normal_panel, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxSize(FromDIP(80), FromDIP(80)), 0);
     m_user_panel = new RoundImagePanel(m_normal_panel, wxSize(FromDIP(80), FromDIP(80)));
     m_user_sizer->AddStretchSpacer(1);
@@ -311,7 +310,7 @@ BindMachineDialog::BindMachineDialog()
     mainSizer->AddSpacer(FromDIP(25));
     mainSizer->Add(m_simplebook, 1, wxEXPAND | wxALL, 0);
 
-    mainSizer->Fit(this);
+    //mainSizer->Fit(this);
     //SetSizer(m_sizer_main);
     Layout();
     Fit();
@@ -497,7 +496,7 @@ void BindMachineDialog::on_show(wxShowEvent &event)
             m_user_sizer->Layout();
         }
         m_simplebook->Layout();
-        MainSizer()->Fit(this);
+        //MainSizer()->Fit(this);
         Layout();
         Fit();
         event.Skip();
@@ -511,8 +510,6 @@ UnBindMachineDialog::UnBindMachineDialog()
 #ifdef __WINDOWS__
     SetDoubleBuffered(true);
 #endif //__WINDOWS__
-
-    SetBackgroundColour(*wxWHITE);
 
     wxBoxSizer* main_sizer = MainSizer();
 
@@ -535,7 +532,6 @@ UnBindMachineDialog::UnBindMachineDialog()
     m_user_name->Wrap(FromDIP(350));
     m_user_sizer = new wxBoxSizer(wxVERTICAL);
 
-    m_printer_img_panel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(120), FromDIP(120)));
     //m_user_img = new wxStaticBitmap(m_normal_panel, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxSize(FromDIP(80), FromDIP(80)), 0);
     m_user_panel = new RoundImagePanel(this, wxSize(FromDIP(80), FromDIP(80)));
     m_user_sizer->AddStretchSpacer(1);
@@ -592,9 +588,9 @@ UnBindMachineDialog::UnBindMachineDialog()
     main_sizer->AddSpacer(FromDIP(36));
     main_sizer->Add(btnSizer, 0, wxEXPAND | wxALIGN_CENTER_HORIZONTAL);
     main_sizer->AddSpacer(FromDIP(50));
-    main_sizer->Layout();
+    //main_sizer->Layout();
 
-    main_sizer->Fit(this);
+    //main_sizer->Fit(this);
     //SetSizer(m_sizer_main);
     Layout();
     Fit();
@@ -764,7 +760,7 @@ void UnBindMachineDialog::on_show(wxShowEvent &event)
             m_user_sizer->Layout();
         }
         //m_simplebook->Layout();
-        MainSizer()->Fit(this);
+        //MainSizer()->Fit(this);
         Layout();
         Fit();
         event.Skip();

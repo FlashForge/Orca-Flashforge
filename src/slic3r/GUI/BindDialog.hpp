@@ -86,7 +86,6 @@ private:
     wxSimplebook *m_simplebook;
     wxPanel*       m_normal_panel;
     wxSizer*       m_machine_sizer;
-    wxPanel*       m_printer_img_panel;
     wxStaticBitmap *m_printer_img;
     wxStaticText * m_printer_name;
     wxSizer*       m_user_sizer;
@@ -136,7 +135,6 @@ private:
     wxWindow*      m_panel_agreement;
 
     wxSizer*       m_machine_sizer;
-    wxPanel*       m_printer_img_panel;
     wxStaticBitmap *m_printer_img;
     wxStaticText * m_printer_name;
     wxSizer*       m_user_sizer;
