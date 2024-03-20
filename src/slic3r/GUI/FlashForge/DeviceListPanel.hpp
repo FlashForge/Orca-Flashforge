@@ -130,6 +130,7 @@ public:
 
 private:
     void onPaint(wxPaintEvent& event);
+    void OnDismiss() override;
 
 private:
     wxBoxSizer*     m_sizer;

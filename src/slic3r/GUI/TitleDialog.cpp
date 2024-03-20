@@ -1,6 +1,7 @@
 #include "TitleDialog.hpp"
 #include <wx/stattext.h>
 #include <wx/graphics.h>
+#include <wx/dcgraph.h>
 #include "wxExtensions.hpp"
 #include "libslic3r/Utils.hpp"
 
@@ -13,7 +14,7 @@ TitleBar::TitleBar(wxWindow *parent, const wxString& title, const wxColour& colo
     , m_bgColor(color)
     , m_title(title)
 {
-    SetBackgroundColour(m_bgColor);
+    //SetBackgroundColour(m_bgColor);
     m_titleLbl = new wxStaticText(this, wxID_ANY, m_title, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
     m_titleLbl->Bind(wxEVT_LEFT_DOWN, &TitleBar::OnMouseLeftDown, this);
     m_titleLbl->SetBackgroundColour(m_bgColor/*wxColour("#ff0000")*/);
@@ -43,11 +44,6 @@ wxSize TitleBar::DoGetBestClientSize() const
     return wxSize(-1, 48);
 }
 
-//void TitleBar::SetBackgroundColor(const wxColour& color)
-//{
-//    SetBackgroundColor
-//}
-
 void TitleBar::SetTitle(const wxString& title)
 {
     m_titleLbl->SetLabel(title);
@@ -56,11 +52,34 @@ void TitleBar::SetTitle(const wxString& title)
 void TitleBar::OnPaint(wxPaintEvent& event)
 {
     wxPaintDC dc(this);
-    dc.SetBrush(m_bgColor);
-    dc.SetPen(*wxTRANSPARENT_PEN);
     wxSize size = GetSize();
-    //dc.DrawRoundedRectangle(0, 0, size.x, size.y, m_borderRadius);
-    dc.DrawRectangle(0, size.y / 2, size.x, size.y);
+#ifdef __WXMSW__
+    wxMemoryDC memdc;
+    wxBitmap bmp(size.x, size.y);
+    memdc.SelectObject(bmp);
+    memdc.Blit({0, 0}, size, &dc, {0, 0});
+    {
+        wxGCDC dc2(memdc);
+		dc2.SetFont(GetFont());
+        DoRender(dc2);
+    }
+    memdc.SelectObject(wxNullBitmap);
+    dc.DrawBitmap(bmp, 0, 0);
+#else
+    DoRender(dc);
+#endif
+}
+
+void TitleBar::DoRender(wxDC &dc)
+{
+    wxSize sz = GetSize();
+	dc.SetPen(*wxTRANSPARENT_PEN);
+    dc.SetBrush(wxColour("#c1c1c1"));
+    dc.DrawRectangle(sz);
+
+    dc.SetBrush(m_bgColor);
+    dc.DrawRoundedRectangle(0, 0, sz.x, sz.y / 2, m_borderRadius);
+    dc.DrawRectangle(0, sz.y / 2, sz.x, sz.y);
 }
 
 void TitleBar::OnMouseLeftDown(wxMouseEvent &event)
@@ -129,7 +148,7 @@ TitleDialog::TitleDialog(wxWindow* parent, const wxString& title, int borderRadi
     , m_titleBar(new TitleBar(this, title, "#E1E2E6", borderRadius))
     , m_mainSizer(new wxBoxSizer(wxVERTICAL))
 {
-    SetBackgroundColour("#f0f0f0");
+    //SetBackgroundColour("#f0f0f0");
     wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
     sizer->AddSpacer(m_shadow_width);
     sizer->Add(m_titleBar, 0, wxEXPAND | wxALIGN_TOP | wxLEFT | wxRIGHT, m_shadow_width);
@@ -155,26 +174,39 @@ wxBoxSizer* TitleDialog::MainSizer()
 void TitleDialog::OnPaint(wxPaintEvent& event)
 {
     wxPaintDC dc(this);
-    //dc.SetBrush(*wxWHITE);
-    auto sz = GetSize();
-    //wxColour color("#f0f0f0");
-    //for (int i = 0; i < m_shadow_width; ++i) {
-    //    wxColour color(230, 230, 230, 80 - i * 15);
-    //    dc.SetPen(color);
-    //    dc.DrawRectangle(m_shadow_width-i, m_shadow_width-i, sz.x - 2 * (m_shadow_width - i), sz.y - 2 * (m_shadow_width - i));
-    //}    
+    wxSize size = GetSize();
+#ifdef __WXMSW__
+    wxMemoryDC memdc;
+    wxBitmap bmp(size.x, size.y);
+    memdc.SelectObject(bmp);
+    memdc.Blit({0, 0}, size, &dc, {0, 0});
+    {
+        wxGCDC dc2(memdc);
+		dc2.SetFont(GetFont());
+        DoRender(dc2);
+    }
+    memdc.SelectObject(wxNullBitmap);
+    dc.DrawBitmap(bmp, 0, 0);
+#else
+    DoRender(dc);
+#endif
+}
+
+void TitleDialog::DoRender(wxDC &dc)
+{
+    wxSize sz = GetSize();
+	dc.SetPen(*wxTRANSPARENT_PEN);
+    dc.SetBrush(wxColour("#c1c1c1"));
+    dc.DrawRectangle(sz);
     dc.SetBrush(wxColour(255, 255, 255));
-    dc.SetPen(wxColour("#f0f0f0"));
-    dc.DrawRectangle(m_shadow_width, m_shadow_width, sz.x - 2 * m_shadow_width, sz.y - 2 * m_shadow_width);
-    //dc.DrawRoundedRectangle(, m_borderRadius);
-    //dc.DrawRectangle(GetClientSize());
+    dc.DrawRoundedRectangle(m_shadow_width, m_shadow_width, sz.x - 2 * m_shadow_width, sz.y - 2 * m_shadow_width, m_borderRadius);
 }
 
 void TitleDialog::OnSize(wxSizeEvent& event)
 {
     wxGraphicsPath path = wxGraphicsRenderer::GetDefaultRenderer()->CreatePath();
     wxSize size = GetSize();
-    path.AddRoundedRectangle(0, 0, size.x, size.y, m_borderRadius);
+    path.AddRoundedRectangle(0, 0, size.x, size.y, m_borderRadius+1);
     SetShape(path);
 }
 

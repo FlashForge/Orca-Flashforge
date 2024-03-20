@@ -57,7 +57,7 @@ void FFButton::SetLabel(const wxString & label)
 	//wxPaintDC dc(this);
 	dc.SetFont(GetFont());
 	auto textSize = dc.GetTextExtent(label);
-	SetMinSize(textSize+wxSize(10, 5));
+	SetMinSize(textSize+wxSize(40, 14));
 	Refresh();
 }
 

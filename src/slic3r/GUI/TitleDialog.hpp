@@ -19,6 +19,7 @@ public:
 
 protected:
     void OnPaint(wxPaintEvent& event);
+    void DoRender(wxDC &dc);
     void OnMouseLeftDown(wxMouseEvent &event);
     void OnMouseLeftUp(wxMouseEvent &event);
     void OnMouseMotion(wxMouseEvent &event);
@@ -50,6 +51,7 @@ public:
 
 protected:    
     void OnPaint(wxPaintEvent& event);
+    void DoRender(wxDC &dc);
     void OnSize(wxSizeEvent& event);
     
 protected:
