@@ -126,6 +126,9 @@ public:
     void     on_close(wxCloseEvent& event);
     void     on_destroy();
     void     on_result_ok(wxCommandEvent& event);
+
+private:
+    wxString trimString(wxDC &dc, wxString &str, int width);
 };
 
 // unbind

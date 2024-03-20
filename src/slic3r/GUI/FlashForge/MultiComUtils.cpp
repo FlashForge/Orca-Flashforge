@@ -1,5 +1,5 @@
 #include "MultiComUtils.hpp"
-#include <boost/thread/thread.hpp>
+#include <wx/thread.h>
 #include "FreeInDestructor.h"
 #include "MultiComMgr.hpp"
 #include "WaitEvent.hpp"
@@ -7,6 +7,30 @@
 namespace Slic3r { namespace GUI {
 
 wxDEFINE_EVENT(COM_ASYNC_CALL_FINISH_EVENT, ComAsyncCallFinishEvent);
+
+class ComAsyncThread : public wxThread
+{
+public:
+    ComAsyncThread()
+        : wxThread(wxTHREAD_JOINABLE)
+    {
+    }
+    ExitCode Entry()
+    {
+        ComAsyncCallFinishEvent *event = new ComAsyncCallFinishEvent;
+        event->SetEventType(COM_ASYNC_CALL_FINISH_EVENT);
+        event->ret = func();
+        evtHandler->QueueEvent(event);
+        evtHandler->CallAfter([this]() {
+            com_thread_ptr_t scopedThreadPtr = std::move(threadPtr);
+            Wait();
+        });
+        return 0;
+    }
+    wxEvtHandler *evtHandler;
+    com_async_call_func_t func;
+    com_thread_ptr_t threadPtr;
+};
 
 ComErrno MultiComUtils::getLanDevList(std::vector<fnet_lan_dev_info> &devInfos)
 {
@@ -208,23 +232,20 @@ ComErrno MultiComUtils::fnetRet2ComErrno(int networkRet)
     }
 }
 
-void MultiComUtils::asyncCall(wxEvtHandler *evtHandler, const std::function<ComErrno()> &func)
+com_thread_ptr_t MultiComUtils::asyncCall(wxEvtHandler *evtHandler, const com_async_call_func_t &func)
 {
-    WaitEvent waitEvent;
-    boost::thread *thread = nullptr;
-    thread = new boost::thread([evtHandler, func, &waitEvent, &thread]() {
-        boost::thread *myThread = thread;
-        waitEvent.set(true);
-        ComAsyncCallFinishEvent *event = new ComAsyncCallFinishEvent;
-        event->SetEventType(COM_ASYNC_CALL_FINISH_EVENT);
-        event->ret = func();
-        evtHandler->QueueEvent(event);
-        evtHandler->CallAfter([myThread]() {
-            myThread->join();
-            delete myThread;
-        });
-    });
-    waitEvent.waitTrue();
+    ComAsyncThread *thread = new ComAsyncThread;
+    thread->evtHandler = evtHandler;
+    thread->func = func;
+    thread->threadPtr.reset(thread);
+    thread->Run();
+    return thread->threadPtr;
+}
+
+void MultiComUtils::killAsyncCall(const com_thread_ptr_t &thread)
+{
+    thread->Kill();
+    thread->threadPtr.reset();
 }
 
 }} // namespace Slic3r::GUI

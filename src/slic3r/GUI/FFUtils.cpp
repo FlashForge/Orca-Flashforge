@@ -140,10 +140,25 @@ std::string FFUtils::truncateString(const std::string &s, size_t length)
         std::string transName = wxString::FromUTF8(s).ToStdString();
         std::string trunkName = utf8Substr(transName, 0, length);
         return trunkName + "...";
-        ;
     } else {
         return wxString::FromUTF8(s).ToStdString();
     }
+}
+
+wxString FFUtils::trimString(wxDC &dc, wxString &str, int width)
+{
+    wxString clipText = str;
+    int      clipw    = 0;
+    if (dc.GetTextExtent(str).x > width) {
+        for (int i = 0; i < str.length(); ++i) {
+            clipText = str.Left(i) + wxT("...");
+            clipw    = dc.GetTextExtent(clipText).x;
+            if (clipw + dc.GetTextExtent(wxT("...")).x > width) {
+                break;
+            }
+        }
+    }
+    return clipText;
 }
 
 } // end namespace
