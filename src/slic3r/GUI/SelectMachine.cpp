@@ -726,7 +726,9 @@ void SelectMachinePopup::update_other_devices()
             }
         });
 
-        op->Bind(EVT_BIND_MACHINE, [this, deviceObj](wxCommandEvent &e) {            
+        op->Bind(EVT_BIND_MACHINE, [this, deviceObj](wxCommandEvent &e) {
+            if (!deviceObj)
+                return;
             BindMachineDialog dlg;
             dlg.update_device_info(deviceObj);
             int dlg_result = wxID_CANCEL;
