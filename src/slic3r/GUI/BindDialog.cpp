@@ -18,9 +18,12 @@
 #include "FlashForge/LoginDialog.hpp"
 #include "FlashForge/DeviceData.hpp"
 #include "Widgets/FFButton.hpp"
+#include "slic3r/GUI/FFUtils.hpp"
 
 namespace Slic3r {
 namespace GUI {
+
+    const int USER_NAME_LENGTH = 180;
 
 wxString get_fail_reason(int code)
 {
@@ -175,8 +178,9 @@ BindMachineDialog::BindMachineDialog()
 
     m_user_name = new wxStaticText(m_normal_panel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize);
     m_user_name->SetForegroundColour(wxColor("#333333"));
-    m_user_name->SetMaxSize(wxSize(FromDIP(350), -1));
-    m_user_name->Wrap(FromDIP(350));
+    //m_user_name->SetMaxSize(wxSize(FromDIP(50), -1));
+    //m_user_name->Wrap(FromDIP(50));    
+    
     m_user_sizer = new wxBoxSizer(wxVERTICAL);
 
     //m_user_img = new wxStaticBitmap(m_normal_panel, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxSize(FromDIP(80), FromDIP(80)), 0);
@@ -484,7 +488,13 @@ void BindMachineDialog::on_show(wxShowEvent &event)
         if (LoginDialog::IsUsrLogin()) {
             auto user_info = LoginDialog::GetUsrInfo();
             BOOST_LOG_TRIVIAL(error) << "Get user info: nickname (" << user_info.nickname << "), headImgUrl (" << user_info.headImgUrl << ")";
-            m_user_name->SetLabelText(wxString::FromUTF8(user_info.nickname));
+
+            wxString username = wxString::FromUTF8(user_info.nickname);
+            wxGCDC   dc(this);
+            wxString clipName = FFUtils::trimString(dc, username, FromDIP(USER_NAME_LENGTH));            
+            m_user_name->SetLabelText(clipName);
+            m_user_name->SetToolTip(wxString::FromUTF8(user_info.nickname));
+            //m_user_name->SetLabelText(wxString::FromUTF8(user_info.nickname));
             if (!user_info.headImgUrl.empty()) {
                 m_web_request = wxWebSession::GetDefault().CreateRequest(this, user_info.headImgUrl);
                 if (!m_web_request.IsOk()) {
@@ -748,7 +758,12 @@ void UnBindMachineDialog::on_show(wxShowEvent &event)
         if (LoginDialog::IsUsrLogin()) {
             auto user_info = LoginDialog::GetUsrInfo();
             BOOST_LOG_TRIVIAL(error) << "Get user info: nickname (" << user_info.nickname << "), headImgUrl (" << user_info.headImgUrl << ")";
-            m_user_name->SetLabelText(wxString::FromUTF8(user_info.nickname));
+            wxString username = wxString::FromUTF8(user_info.nickname);
+            wxGCDC   dc(this);
+            wxString clipName = FFUtils::trimString(dc, username, FromDIP(USER_NAME_LENGTH));
+            m_user_name->SetLabelText(clipName);
+            m_user_name->SetToolTip(wxString::FromUTF8(user_info.nickname));
+            //m_user_name->SetLabelText(wxString::FromUTF8(user_info.nickname));
             if (!user_info.headImgUrl.empty()) {
                 m_web_request = wxWebSession::GetDefault().CreateRequest(this, user_info.headImgUrl);
                 if (!m_web_request.IsOk()) {
