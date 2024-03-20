@@ -255,6 +255,7 @@ void ModifyTemp::create_panel(wxWindow *parent)
     wxBoxSizer *bSizer_operate_hor = new wxBoxSizer(wxHORIZONTAL);
     wxPanel    *operate_panel      = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(109)), wxTAB_TRAVERSAL);
     m_cancel_btn = new FFButton(operate_panel, wxID_ANY, TEMP_CANCEL);
+    m_cancel_btn->SetMinSize(wxSize(FromDIP(64), FromDIP(32)));
     //m_cancel_btn->SetFont(wxFont(wxFontInfo(16)));
     m_cancel_btn->SetFontHoverColor(wxColour(255, 255, 255));
     m_cancel_btn->SetBGHoverColor(wxColour(127, 127, 127));
@@ -278,6 +279,7 @@ void ModifyTemp::create_panel(wxWindow *parent)
     bSizer_operate_hor->AddSpacer(FromDIP(19));
 
     m_confirm_btn = new FFButton(operate_panel, wxID_ANY, TEMP_CONFIRM);
+    m_confirm_btn->SetMinSize(wxSize(FromDIP(64), FromDIP(32)));
     //m_confirm_btn->SetFont(wxFont(wxFontInfo(16)));
     m_confirm_btn->SetFontHoverColor(wxColour(255, 255, 255));
     m_confirm_btn->SetBGHoverColor(wxColour(149, 197, 255));
@@ -1074,11 +1076,11 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
 
 //***打印布局
         wxBoxSizer *bSizer_control_print = new wxBoxSizer(wxHORIZONTAL);
-        auto m_panel_control_print = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(30)), wxTAB_TRAVERSAL);
+        auto m_panel_control_print = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(35)), wxTAB_TRAVERSAL);
         m_panel_control_print->SetBackgroundColour(wxColour(255,255,255));
 
         //显示继续打印按钮
-        m_print_button = new Button(m_panel_control_print, _L("pause print"), "device_pause_print", 0, FromDIP(18));
+        m_print_button = new Button(m_panel_control_print, _L("pause print"), "device_pause_print", 0, 16);
         m_print_button->SetFlashForge(true);
         //m_print_button->SetFont(wxFont(wxFontInfo(16)));
         m_print_button->SetBorderWidth(0);
@@ -1118,7 +1120,7 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         bSizer_control_print->Add(m_panel_separotor_print, 0, wxEXPAND | wxALL, 0);
 
         //显示取消打印按钮
-        m_cancel_button = new Button(m_panel_control_print, _L("cancel print"), "device_cancel_print", 0, FromDIP(18));
+        m_cancel_button = new Button(m_panel_control_print, _L("cancel print"), "device_cancel_print", 0, 16);
         m_cancel_button->SetFlashForge(true);
         //m_cancel_button->SetFont(wxFont(wxFontInfo(16)));
         m_cancel_button->SetBorderWidth(0);
@@ -1246,7 +1248,7 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
 
 //***灯控制布局
         wxBoxSizer *bSizer_control_lamp = new wxBoxSizer(wxHORIZONTAL);
-        auto m_panel_control_lamp = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(30)), wxTAB_TRAVERSAL);
+        auto m_panel_control_lamp = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(35)), wxTAB_TRAVERSAL);
         m_panel_control_lamp->SetBackgroundColour(wxColour(255,255,255));
 
         //显示文件信息按钮
@@ -1896,7 +1898,7 @@ void SingleDeviceState::onDevStateChanged(std::string devState, const com_dev_da
     if (m_cur_dev_state != state) {
         m_cur_dev_state = state;
         m_file_pic_url.clear();
-        m_material_staticbitmap->SetBitmap(create_scaled_bitmap("monitor_item_prediction_0", this, 60));
+        //m_material_staticbitmap->SetBitmap(create_scaled_bitmap("monitor_item_prediction_0", this, 60));
 
         double total_weight = data.devDetail->estimatedRightWeight; //材料重量
         char   weight[64];
@@ -2061,8 +2063,16 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
                     wxImage image(stream, wxBITMAP_TYPE_ANY);
                     image.Rescale(MATERIAL_PIC_WIDTH, MATERIAL_PIC_HEIGHT);
                     //translate pic data  from wxImage object to wxBitmap object
-                    wxBitmap bitmap(image);
-                    m_material_staticbitmap->SetBitmap(bitmap);
+                    if (m_last_pic_data != m_pic_data) {
+                        bool equal = false;
+                    }
+                    if (m_last_pic_data != m_pic_data) {
+                        m_last_pic_data = m_pic_data;
+                        delete m_bitmap;
+                        m_bitmap = nullptr;
+                        m_bitmap = new wxBitmap(image);
+                        m_material_staticbitmap->SetBitmap(*m_bitmap);
+                    }
                 //    Layout();
                 }
             } else {

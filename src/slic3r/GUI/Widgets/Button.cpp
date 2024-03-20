@@ -201,8 +201,10 @@ void Button::render(wxDC& dc)
         }
         szIcon = icon.GetBmpSize();
         szContent.x += szIcon.x;
-        if (szIcon.y > szContent.y)
+        if (szIcon.y > szContent.y) {
             szContent.y = szIcon.y;
+            //szContent.y += 10; 
+        }
         if (szContent.x > size.x) {
             int d = std::min(padding, szContent.x - size.x);
             padding -= d;
@@ -257,6 +259,8 @@ void Button::messureSize()
             szContent.y = szIcon.y;
     }
     wxSize size = szContent + paddingSize * 2;
+    //size.SetHeight(size.GetHeight() + 10);
+    //minSize.SetHeight(minSize.GetHeight() + 10);
     if (minSize.GetHeight() > 0)
         size.SetHeight(minSize.GetHeight());
 
@@ -356,6 +360,82 @@ void Button::sendButtonEvent()
     wxCommandEvent event(wxEVT_COMMAND_BUTTON_CLICKED, GetId());
     event.SetEventObject(this);
     GetEventHandler()->ProcessEvent(event);
+}
+
+TempButton::TempButton(wxWindow *parent, wxString text, wxString icon, long style, int iconSize, wxWindowID btn_id) 
+    : Button(parent, text, icon, style, iconSize, btn_id)
+{ 
+    
+}
+
+void TempButton::doRender(wxDC &dc)
+{ 
+    wxSize size   = GetSize();
+    int    states = StateColor::Enabled;
+    if (background_color2.count() == 0) {
+        if ((border_width && border_color.count() > 0) || background_color.count() > 0) {
+            wxRect rc(0, 0, size.x, size.y);
+            if (border_width && border_color.count() > 0) {
+                if (dc.GetContentScaleFactor() == 1.0) {
+                    int d  = floor(border_width / 2.0);
+                    int d2 = floor(border_width - 1);
+                    rc.x += d;
+                    rc.width -= d2;
+                    rc.y += d;
+                    rc.height -= d2;
+                } else {
+                    int d = 1;
+                    rc.x += d;
+                    rc.width -= d;
+                    rc.y += d;
+                    rc.height -= d;
+                }
+                dc.SetPen(wxPen(border_color.colorForStates(states), border_width));
+            } else {
+                dc.SetPen(wxPen(background_color.colorForStates(states)));
+            }
+            if (background_color.count() > 0)
+                dc.SetBrush(wxBrush(background_color.colorForStates(states)));
+            else
+                dc.SetBrush(wxBrush(GetBackgroundColour()));
+            if (radius == 0) {
+                dc.DrawRectangle(rc);
+            } else {
+                dc.DrawRoundedRectangle(rc, radius - border_width);
+            }
+        }
+    } else {
+        wxColor start = background_color.colorForStates(states);
+        wxColor stop  = background_color2.colorForStates(states);
+        int     r = start.Red(), g = start.Green(), b = start.Blue();
+        int     dr = (int) stop.Red() - r, dg = (int) stop.Green() - g, db = (int) stop.Blue() - b;
+        int     lr = 0, lg = 0, lb = 0;
+        for (int y = 0; y < size.y; ++y) {
+            dc.SetPen(wxPen(wxColor(r, g, b)));
+            dc.DrawLine(0, y, size.x, y);
+            lr += dr;
+            while (lr >= size.y) {
+                ++r, lr -= size.y;
+            }
+            while (lr <= -size.y) {
+                --r, lr += size.y;
+            }
+            lg += dg;
+            while (lg >= size.y) {
+                ++g, lg -= size.y;
+            }
+            while (lg <= -size.y) {
+                --g, lg += size.y;
+            }
+            lb += db;
+            while (lb >= size.y) {
+                ++b, lb -= size.y;
+            }
+            while (lb <= -size.y) {
+                --b, lb += size.y;
+            }
+        }
+    }
 }
 
 #ifdef __WIN32__

@@ -243,12 +243,14 @@ protected:
 
     std::string      m_file_pic_url;
     std::vector<char> m_pic_data;
+    std::vector<char> m_last_pic_data;
     wxPanel         *m_panel_control_material{nullptr};
 
     std::string     m_cur_dev_state;
     std::string     m_cur_print_file_name;
     std::string     m_cur_dev_name;
     std::string     m_cur_dev_location;
+    wxBitmap       *m_bitmap{nullptr};
 };
 
 

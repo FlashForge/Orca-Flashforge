@@ -260,6 +260,10 @@ private:
     IconText *m_temp_ctrl_bottom{nullptr};
     IconText *m_temp_ctrl_mid{nullptr};
 
+    TempButton *m_top_btn{nullptr};
+    TempButton *m_bottom_btn{nullptr};
+    TempButton *m_mid_btn{nullptr};
+
     Label *m_machine_type_data{nullptr};
     Label *m_spray_nozzle_data{nullptr};
     Label *m_print_size_data{nullptr};
