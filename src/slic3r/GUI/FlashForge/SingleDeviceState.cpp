@@ -1941,7 +1941,7 @@ void SingleDeviceState::onDevStateChanged(std::string devState, const com_dev_da
     std::string state = data.devDetail->status; // 状态
     //if (m_cur_dev_state != state) {
         m_cur_dev_state = state;
-        m_file_pic_url.clear();
+        //m_file_pic_url.clear();
         //m_material_staticbitmap->SetBitmap(create_scaled_bitmap("monitor_item_prediction_0", this, 60));
 
         double total_weight = data.devDetail->estimatedRightWeight; //材料重量
