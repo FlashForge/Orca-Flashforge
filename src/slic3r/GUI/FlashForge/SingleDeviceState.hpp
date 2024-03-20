@@ -56,6 +56,7 @@ private:
     int  m_cur_id = -1;
 };
 wxDECLARE_EVENT(EVT_MODIFY_TEMP_CLICKED, wxCommandEvent);
+wxDECLARE_EVENT(EVT_MODIFY_TEMP_CANCEL_CLICKED, wxCommandEvent);
 class ModifyTemp : public wxPanel
 {
 public:
@@ -250,7 +251,11 @@ protected:
     std::string     m_cur_print_file_name;
     std::string     m_cur_dev_name;
     std::string     m_cur_dev_location;
+    int             m_cur_printing_ctrl;  // 0:normal, 1: pause 2: continue  3: abort
     wxBitmap       *m_bitmap{nullptr};
+
+    double m_right_target_temp;
+    double m_plat_target_temp;
 };
 
 
