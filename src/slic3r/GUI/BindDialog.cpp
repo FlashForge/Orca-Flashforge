@@ -694,9 +694,12 @@ void UnBindMachineDialog::on_unbind_completed(wxCommandEvent &event)
 
 void UnBindMachineDialog::on_unbind_printer(wxCommandEvent &event)
 {
+    event.Skip();
+    m_unbind_btn->Enable(false);
     m_result_code = 0;
     if (!m_device_info) {
         BOOST_LOG_TRIVIAL(error) << "device_info is null"; 
+        m_unbind_btn->Enable(true);
         return;
     }
     m_unbind_job = std::make_shared<UnbindJob>(m_device_info);
