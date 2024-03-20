@@ -1574,8 +1574,7 @@ wxBoxSizer* MainFrame::create_side_tools()
         {
             SidePopup* p = new SidePopup(this);
 
-            if (wxGetApp().preset_bundle
-                && !wxGetApp().preset_bundle->is_bbl_vendor()) {
+            if (wxGetApp().preset_bundle && !wxGetApp().preset_bundle->is_bbl_vendor()) {
                 // ThirdParty Buttons
                 SideButton* export_gcode_btn = new SideButton(p, _L("Export G-code file"), "");
                 export_gcode_btn->SetCornerRadius(0);
@@ -1602,8 +1601,59 @@ wxBoxSizer* MainFrame::create_side_tools()
 
                 p->append_button(send_gcode_btn);
                 p->append_button(export_gcode_btn);
-            }
-            else {
+            } else if (wxGetApp().preset_bundle && wxGetApp().preset_bundle->is_flashforge_vendor()) {
+                //Orca-Flashforge Buttons
+                SideButton* print_plate_btn = new SideButton(p, _L("Print plate"), "");
+                print_plate_btn->SetCornerRadius(0);
+
+                SideButton* send_to_printer_btn = new SideButton(p, _L("Send"), "");
+                send_to_printer_btn->SetCornerRadius(0);
+
+                SideButton* export_sliced_file_btn = new SideButton(p, _L("Export plate sliced file"), "");
+                export_sliced_file_btn->SetCornerRadius(0);
+
+                print_plate_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
+                    m_print_btn->SetLabel(_L("Print plate"));
+                    m_print_select = ePrintPlate;
+                    m_print_enable = get_enable_print_status();
+                    m_print_btn->Enable(m_print_enable);
+                    this->Layout();
+                    p->Dismiss();
+                    });
+
+                send_to_printer_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
+                    m_print_btn->SetLabel(_L("Send"));
+                    m_print_select = eSendToPrinter;
+                    m_print_enable = get_enable_print_status();
+                    m_print_btn->Enable(m_print_enable);
+                    this->Layout();
+                    p->Dismiss();
+                    });
+
+                export_sliced_file_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
+                    m_print_btn->SetLabel(_L("Export plate sliced file"));
+                    m_print_select = eExportSlicedFile;
+                    m_print_enable = get_enable_print_status();
+                    m_print_btn->Enable(m_print_enable);
+                    this->Layout();
+                    p->Dismiss();
+                    });
+
+                SideButton* export_gcode_btn = new SideButton(p, _L("Export G-code file"), "");
+                export_gcode_btn->SetCornerRadius(0);
+                export_gcode_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
+                    m_print_btn->SetLabel(_L("Export G-code file"));
+                    m_print_select = eExportGcode;
+                    m_print_enable = get_enable_print_status();
+                    m_print_btn->Enable(m_print_enable);
+                    this->Layout();
+                    p->Dismiss();
+                    });
+                p->append_button(print_plate_btn);
+                p->append_button(send_to_printer_btn);
+                p->append_button(export_sliced_file_btn);
+                p->append_button(export_gcode_btn);
+            } else {
                 //Orca-Flashforge Buttons
                 SideButton* print_plate_btn = new SideButton(p, _L("Print plate"), "");
                 print_plate_btn->SetCornerRadius(0);

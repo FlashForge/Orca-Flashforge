@@ -496,7 +496,7 @@ void BindMachineDialog::on_show(wxShowEvent &event)
             m_user_sizer->Layout();
         }
         m_simplebook->Layout();
-        //MainSizer()->Fit(this);
+        GetSizer()->Fit(this);
         Layout();
         Fit();
         event.Skip();
@@ -760,7 +760,7 @@ void UnBindMachineDialog::on_show(wxShowEvent &event)
             m_user_sizer->Layout();
         }
         //m_simplebook->Layout();
-        //MainSizer()->Fit(this);
+        GetSizer()->Fit(this);
         Layout();
         Fit();
         event.Skip();

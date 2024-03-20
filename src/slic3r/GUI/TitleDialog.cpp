@@ -16,6 +16,9 @@ TitleBar::TitleBar(wxWindow *parent, const wxString& title, const wxColour& colo
 {
     //SetBackgroundColour(m_bgColor);
     m_titleLbl = new wxStaticText(this, wxID_ANY, m_title, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
+    wxFont font = m_titleLbl->GetFont();
+    font.SetWeight(wxFONTWEIGHT_BOLD);
+    m_titleLbl->SetFont(font);
     m_titleLbl->Bind(wxEVT_LEFT_DOWN, &TitleBar::OnMouseLeftDown, this);
     m_titleLbl->SetBackgroundColour(m_bgColor/*wxColour("#ff0000")*/);
 
