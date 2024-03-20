@@ -1980,6 +1980,8 @@ void SingleDeviceState::onDevStateChanged(std::string devState, const com_dev_da
             m_idle_tempMixDevice->setState(1);
             m_staticText_idle->SetLabel(_L("The Current Device has no Printing Projects"));
         } else if (state == P_ERROR) {
+            m_machine_idle_panel->Show();
+            m_machine_ctrl_panel->Hide();
             std::string error_state = _L("error").ToStdString();
             std::string error_info  = data.devDetail->errorCode;
             setTipMessage(error_state, "#FB4747", error_info, true);
@@ -2113,8 +2115,8 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
                         m_bitmap = nullptr;
                         m_bitmap = new wxBitmap(image);
                         m_material_staticbitmap->SetBitmap(*m_bitmap);
-                    }
-                //    Layout();
+                        Layout();
+                    } 
                 }
             } else {
                 m_file_pic_url.clear();
