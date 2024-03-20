@@ -143,7 +143,6 @@ private:
     std::string convertSecondsToHMS(int totalSeconds);
     void  fillValue(const com_dev_data_t &data);
 
-    std::string truncateString(const std::string &s, size_t length);
     void  setPageOffline();
 
 protected:
