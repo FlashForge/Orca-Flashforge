@@ -816,7 +816,7 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/)
     m_machineSizer->AddSpacer(FromDIP(20));
     m_machineSizer->Add(selectSizer, 0, wxALIGN_LEFT | wxLEFT | wxRIGHT, FromDIP(10));
     m_machineSizer->AddSpacer(FromDIP(10));
-    m_machineSizer->Add(m_machineListWindow, 1, wxEXPAND);
+    m_machineSizer->Add(m_machineListWindow, 0, wxEXPAND);
     m_machineSizer->AddSpacer(FromDIP(10));
     m_machinePanel->SetSizer(m_machineSizer);
     m_machinePanel->Show(false);
@@ -1259,7 +1259,9 @@ void SendToPrinterDialog::update_user_printer()
         m_machineListWindow->SetMaxSize(wxSize(-1, height));
         m_machineListWindow->SetSize(wxSize(-1, height));
         m_machineListWindow->SetVirtualSize(-1, vh);
-        int hh = m_selectAllLbl->GetSize().y + height +FromDIP(40);
+        int sh = m_selectAll->GetSize().y > m_selectAllLbl->GetSize().y
+            ? m_selectAll->GetSize().y : m_selectAllLbl->GetSize().y;
+        int hh = sh + height +FromDIP(40);
         m_machinePanel->SetMinSize(wxSize(-1, hh));
         m_machinePanel->SetMaxSize(wxSize(-1, hh));
         m_machinePanel->SetSize(wxSize(-1, hh));
@@ -1303,7 +1305,7 @@ void SendToPrinterDialog::update_user_printer()
     //m_sendBook->Layout();
     //updateVisible();
     Layout();
-    Fit();
+    //Fit();
     //MainSizer()->Fit(this);
     Thaw();
     Layout();

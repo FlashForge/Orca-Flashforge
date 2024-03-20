@@ -116,7 +116,7 @@ void TitleBar::FinishDrag()
     }
     if (HasCapture()) {
         ReleaseMouse();
-        BOOST_LOG_TRIVIAL(info) << "TitleBar::CaptureMouse";
+        BOOST_LOG_TRIVIAL(info) << "TitleBar::ReleaseMouse";
         flush_logs();
     }
 }
