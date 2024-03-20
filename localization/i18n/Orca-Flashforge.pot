@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-03-18 15:15+0800\n"
+"POT-Creation-Date: 2024-03-20 14:31+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -10854,9 +10854,6 @@ msgstr ""
 msgid "pause print"
 msgstr ""
 
-msgid "continue print"
-msgstr ""
-
 msgid "cancel print"
 msgstr ""
 
@@ -10918,6 +10915,15 @@ msgid "Print cancelled,in cache command"
 msgstr ""
 
 msgid "pause"
+msgstr ""
+
+msgid "continue print"
+msgstr ""
+
+msgid "pausing"
+msgstr ""
+
+msgid "heating"
 msgstr ""
 
 msgid "printing"

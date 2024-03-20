@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Slic3rPE\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-03-18 15:15+0800\n"
-"PO-Revision-Date: 2024-03-18 15:16+0800\n"
+"POT-Creation-Date: 2024-03-20 14:31+0800\n"
+"PO-Revision-Date: 2024-03-20 14:32+0800\n"
 "Last-Translator: SoftFever <softfeverever@gmail.com>\n"
 "Language-Team: \n"
 "Language: zh_CN\n"
@@ -15,7 +15,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
-"X-Generator: Poedit 3.4.2\n"
+"X-Generator: Poedit 3.4.1\n"
 
 msgid "Supports Painting"
 msgstr "支撑绘制"
@@ -11344,9 +11344,6 @@ msgstr "剩余时间"
 msgid "pause print"
 msgstr "暂停打印"
 
-msgid "continue print"
-msgstr "继续打印"
-
 msgid "cancel print"
 msgstr "取消打印"
 
@@ -11409,6 +11406,15 @@ msgstr "打印已取消，当前缓存命令中"
 
 msgid "pause"
 msgstr "暂停"
+
+msgid "continue print"
+msgstr "继续打印"
+
+msgid "pausing"
+msgstr "暂停打印中"
+
+msgid "heating"
+msgstr "加热中"
 
 msgid "printing"
 msgstr "打印中"

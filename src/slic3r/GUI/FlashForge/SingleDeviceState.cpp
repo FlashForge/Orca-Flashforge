@@ -31,6 +31,7 @@ const std::string P_COMPLETED = "completed";
 const std::string P_ERROR     = "error";
 const std::string P_PAUSING  = "pausing";
 const std::string P_BUSY      = "busy";
+const std::string P_HEATING   = "heating";
 
 const wxString    TEMPERATURE = _L("Temperature");
 const wxString    TEMP_CANCEL  = _L("cancel");
@@ -1985,7 +1986,7 @@ void SingleDeviceState::onDevStateChanged(std::string devState, const com_dev_da
             std::string error_state = _L("error").ToStdString();
             std::string error_info  = data.devDetail->errorCode;
             setTipMessage(error_state, "#FB4747", error_info, true);
-        } else if (state == PAUSE || state == P_PAUSING) {
+        } else if (state == PAUSE) {
             m_machine_ctrl_panel->Show();
             m_machine_idle_panel->Hide();
             std::string print_state = _L("pause").ToStdString();
@@ -2004,7 +2005,28 @@ void SingleDeviceState::onDevStateChanged(std::string devState, const com_dev_da
             m_staticText_time_label->SetLabel(_L("Remaining Time"));
             double estimatedTime = data.devDetail->estimatedTime; // 剩余时间
             m_staticText_count_time->SetLabel(convertSecondsToHMS(estimatedTime));
-        } else {
+        } else if (state == P_PAUSING || state == P_HEATING) {
+            m_machine_ctrl_panel->Show();
+            m_machine_idle_panel->Hide();
+            std::string print_state = _L("pausing").ToStdString();
+            if (state == P_HEATING) {
+                print_state = _L("heating").ToStdString();
+            }
+            setTipMessage(print_state, "#982187");
+            m_print_button->SetTextColor(wxColor("#999999"));
+            m_cancel_button->SetTextColor(wxColor("#999999"));
+            m_print_button->Enable(false);
+            m_cancel_button->Enable(false);
+            m_print_button->SetIcon("device_pause_print_disable");
+            m_cancel_button->SetIcon("device_cancel_print_disable");
+            m_print_button->SetLabel(_L("continue print"));
+            m_print_button->SetIcon("device_continue_print");
+            m_print_button->Refresh();
+
+            m_staticText_time_label->SetLabel(_L("Remaining Time"));
+            double estimatedTime = data.devDetail->estimatedTime; // 剩余时间
+            m_staticText_count_time->SetLabel(convertSecondsToHMS(estimatedTime));
+        }else{
             m_machine_ctrl_panel->Show();
             m_machine_idle_panel->Hide();
             std::string print_state = _L("printing").ToStdString();
