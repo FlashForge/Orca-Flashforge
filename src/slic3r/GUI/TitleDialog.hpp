@@ -53,9 +53,10 @@ protected:
     void OnSize(wxSizeEvent& event);
     
 protected:
-    int             m_borderRadius;
-    TitleBar*       m_titleBar;
-    wxBoxSizer*     m_mainSizer;
+    int             m_borderRadius {6};
+    TitleBar*       m_titleBar {nullptr};
+    wxBoxSizer*     m_mainSizer {nullptr};
+    const int       m_shadow_width {1};
 };
 
 } // Slic3r::GUI

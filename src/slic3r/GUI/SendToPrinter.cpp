@@ -332,37 +332,39 @@ void MultiSend::send_event(int code, const wxString& msg)
 
 void MultiSend::on_cnnection_exit(ComConnectionExitEvent& event)
 {
-    BOOST_LOG_TRIVIAL(info) << "MultiSend: on_cnnection_exit";
+    event.Skip();    
+    BOOST_LOG_TRIVIAL(info) << "MultiSend: com connection exit, com_id: " << event.id;
     auto jobIter = m_send_jobs.find(event.id);
     if (jobIter == m_send_jobs.end()) {
-        event.Skip();
         return;
-    } else {
+    } else if (!jobIter->second.finish) {
         jobIter->second.finish = true;
         jobIter->second.result = Result_Fail_Network;
+        BOOST_LOG_TRIVIAL(info) << "MultiSend: com connection exit, com_id: " << event.id << ", fail";
     }
-    BOOST_LOG_TRIVIAL(info) << "MultiSend: com connection exit, com_id: " << event.id;
     auto iter = std::find(m_printers.begin(), m_printers.end(), event.id);
     if (iter != m_printers.end()) {
         m_printers.erase(iter);
         m_send_jobs[event.id].finish = true;
         m_send_jobs[event.id].result = Result_Fail_Network;
+        BOOST_LOG_TRIVIAL(info) << "MultiSend: com connection exit, com_id: " << event.id << ", fail";
     }
-    
+    flush_logs();
     send_next_job();
     update_progress();
-    event.Skip();
 }
 
 void MultiSend::on_send_gcode_finished(ComSendGcodeFinishEvent& event)
 {
+    event.Skip();
     BOOST_LOG_TRIVIAL(info) << "MultiSend: on_send_gcode_finished";
     auto iter = m_send_jobs.find(event.id);
     if (iter == m_send_jobs.end()) {
-        event.Skip();
         return;
     }
-    BOOST_LOG_TRIVIAL(info) << "MultiSend: com send gcode finish, com_id: " << event.id;
+    BOOST_LOG_TRIVIAL(info) << "MultiSend: com send gcode finish, com_id: " << event.id
+        << ", " << event.ret;
+    flush_logs();
     iter->second.finish = true;
     iter->second.progress = 100;
     switch (event.ret) {
@@ -380,7 +382,6 @@ void MultiSend::on_send_gcode_finished(ComSendGcodeFinishEvent& event)
     }
     send_next_job();
     update_progress();
-    event.Skip();
 }
 
 void MultiSend::on_send_gcode_progress(ComSendGcodeProgressEvent& event)
@@ -776,11 +777,12 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/)
 
     // machine book
     m_machineBook = new wxSimplebook(this, wxID_ANY);
+    //m_machineBook->SetBackgroundColour("#FFFF00");
     
     // machine
     m_machinePanel = new wxPanel(m_machineBook);
-    m_machinePanel->SetBackgroundColour(wxColour("#FAFAFA"));
-
+    //m_machinePanel->SetBackgroundColour(wxColour("#FAFAFA"));
+    //m_machinePanel->SetBackgroundColour(wxColour("#Ff0000"));
     m_selectAll = new FFCheckBox(m_machinePanel, wxID_ANY);
     m_selectAll->Bind(wxEVT_TOGGLEBUTTON, &SendToPrinterDialog::onMachineSelectionToggled, this);
     m_selectAll->SetValue(false);
@@ -896,6 +898,8 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/)
     m_progressInfoLbl = new wxStaticText(m_progressPanel, wxID_ANY, wxEmptyString);
     m_progressLbl = new wxStaticText(m_progressPanel, wxID_ANY, wxEmptyString);
     m_progressCancelBtn = new FFButton(m_progressPanel, wxID_ANY, _L("Cancel"), FromDIP(4), true);
+    //m_progressCancelBtn->SetMinSize(wxSize(FromDIP(50), FromDIP(24)));
+
     m_progressCancelBtn->Bind(wxEVT_BUTTON, &SendToPrinterDialog::on_cancel, this);
     wxBoxSizer* progressDownSizer = new wxBoxSizer(wxHORIZONTAL);
     progressDownSizer->Add(m_progressBar, 1, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxTOP | wxBOTTOM, FromDIP(6));
@@ -928,7 +932,7 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/)
     m_sizer_main->AddSpacer(FromDIP(12));
     m_sizer_main->Add(m_machineBook, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
     m_sizer_main->AddSpacer(FromDIP(10));
-    m_sizer_main->Add(m_sendBook, 1, wxEXPAND | wxALIGN_LEFT | wxLEFT | wxRIGHT, FromDIP(40));
+    m_sizer_main->Add(m_sendBook, 0, wxEXPAND | wxALIGN_LEFT | wxLEFT | wxRIGHT, FromDIP(40));
     m_sizer_main->AddSpacer(FromDIP(45));
 
     m_redirect_timer = new wxTimer();
@@ -1116,7 +1120,7 @@ void SendToPrinterDialog::init_bind()
 {
     Bind(wxEVT_SIZE, &SendToPrinterDialog::on_size, this);
     Bind(wxEVT_CLOSE_WINDOW, &SendToPrinterDialog::on_close, this);
-    Bind(EVT_UPDATE_USER_MACHINE_LIST, &SendToPrinterDialog::update_printer_list, this);
+    //Bind(EVT_UPDATE_USER_MACHINE_LIST, &SendToPrinterDialog::update_printer_list, this);
     MultiComMgr::inst()->Bind(COM_CONNECTION_READY_EVENT, &SendToPrinterDialog::onConnectionReady, this);
     Bind(EVT_MULTI_SEND_COMPLETED, &SendToPrinterDialog::on_multi_send_completed, this);
     Bind(EVT_MULTI_SEND_PROGRESS, &SendToPrinterDialog::on_multi_send_progress, this);
@@ -1251,8 +1255,17 @@ void SendToPrinterDialog::update_user_printer()
         m_machineListWindow->SetMaxSize(wxSize(-1, height));
         m_machineListWindow->SetSize(wxSize(-1, height));
         m_machineListWindow->SetVirtualSize(-1, vh);
+        int hh = m_selectAllLbl->GetSize().y + height +FromDIP(40);
+        m_machinePanel->SetMinSize(wxSize(-1, hh));
+        m_machinePanel->SetMaxSize(wxSize(-1, hh));
+        m_machinePanel->SetSize(wxSize(-1, hh));
+        m_machineBook->SetMinSize(wxSize(-1, hh));
+        m_machineBook->SetMaxSize(wxSize(-1, hh));
+        m_machineBook->SetSize(wxSize(-1, hh));
         m_machineListPanel->Layout();
+        m_machineListWindow->Layout();
         m_machinePanel->Layout();
+        m_machineBook->Layout();
         //m_machinePanel->Fit();
         //m_machineListWindow->Fit();
         //m_machineListPanel->Fit();
@@ -1274,20 +1287,22 @@ void SendToPrinterDialog::update_user_printer()
         panel->Layout();
         panel->Fit();
         auto sz = panel->GetBestSize();
+        m_machineBook->SetMinSize(wxSize(-1, sz.GetHeight()));
         m_machineBook->SetMaxSize(wxSize(-1, sz.GetHeight()));
         m_machineBook->SetSize(-1, sz.GetHeight());
         m_machineBook->Layout();
         m_machineBook->Fit();
     }
-    m_machineBook->Layout();
+    //m_machineBook->Layout();
+    //m_machineBook->Fit();
     //m_sendPanel->Layout();
     //m_sendBook->Layout();
     //updateVisible();
-    MainSizer()->Fit(this);
     Layout();
     Fit();
+    MainSizer()->Fit(this);
     Thaw();
-    Refresh();
+    Update();
     updateSendButtonState();
 #if 0
     Slic3r::DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
@@ -1607,12 +1622,15 @@ bool SendToPrinterDialog::Show(bool show)
     BOOST_LOG_TRIVIAL(error) << "SendToPrinterDialog::Show, " << show ? "show" : "no show";
     if (show) {
         // set default value when show this dialog
+        Bind(EVT_UPDATE_USER_MACHINE_LIST, &SendToPrinterDialog::update_printer_list, this);
         wxGetApp().reset_to_active();
         set_default();
         update_user_machine_list();
         Layout();
         Fit();
         CenterOnParent();
+    } else {
+        Unbind(EVT_UPDATE_USER_MACHINE_LIST, &SendToPrinterDialog::update_printer_list, this);
     }
     return DPIDialog::Show(show);
 }

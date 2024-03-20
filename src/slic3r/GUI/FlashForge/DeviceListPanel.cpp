@@ -1259,12 +1259,26 @@ void DeviceListPanel::onFilterItemClicked(wxCommandEvent& event)
         m_filter_popup->Dismiss();
     } else if (Filter_Popup_Type_Device_Type == m_filter_popup_type) {
         unsigned short pid = (unsigned short)event.GetInt();
-        auto iter = m_filter_types.find(pid);
+        FilterPopupWindow::DeviceTypeItem* item = (FilterPopupWindow::DeviceTypeItem*)event.GetEventObject();
+        if (item) {
+            bool check = item->isChecked();
+            auto iter = m_filter_types.find(pid);
+            if (check) {
+                if (iter == m_filter_types.end()) {
+                    m_filter_types.emplace(pid);
+                }
+            } else {
+                if (iter != m_filter_types.end()) {
+                    m_filter_types.erase(iter);
+                }
+            }
+        }
+        /*auto iter = m_filter_types.find(pid);
         if (iter == m_filter_types.end()) {
             m_filter_types.emplace(pid);
         } else {
             m_filter_types.erase(iter);
-        }
+        }*/
     }
     filterDeviceList();
     updateFilterTitle();

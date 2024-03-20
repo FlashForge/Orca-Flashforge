@@ -2,7 +2,7 @@
 #include <wx/stattext.h>
 #include <wx/graphics.h>
 #include "wxExtensions.hpp"
-
+#include "libslic3r/Utils.hpp"
 
 namespace Slic3r::GUI {
 
@@ -77,6 +77,8 @@ void TitleBar::OnMouseLeftDown(wxMouseEvent &event)
         m_dragStartMouse = ClientToScreen(clientStart);
         m_dragStartWindow = GetParent()->GetPosition();
         CaptureMouse();
+        BOOST_LOG_TRIVIAL(info) << "TitleBar::CaptureMouse";
+        flush_logs();
     }
 }
 void TitleBar::OnMouseLeftUp(wxMouseEvent &event)
@@ -114,6 +116,8 @@ void TitleBar::FinishDrag()
     }
     if (HasCapture()) {
         ReleaseMouse();
+        BOOST_LOG_TRIVIAL(info) << "TitleBar::CaptureMouse";
+        flush_logs();
     }
 }
 
@@ -125,13 +129,16 @@ TitleDialog::TitleDialog(wxWindow* parent, const wxString& title, int borderRadi
     , m_titleBar(new TitleBar(this, title, "#E1E2E6", borderRadius))
     , m_mainSizer(new wxBoxSizer(wxVERTICAL))
 {
+    SetBackgroundColour("#f0f0f0");
     wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
-    sizer->Add(m_titleBar, 0, wxEXPAND | wxALIGN_TOP);
-    sizer->Add(m_mainSizer, 1, wxEXPAND);
+    sizer->AddSpacer(m_shadow_width);
+    sizer->Add(m_titleBar, 0, wxEXPAND | wxALIGN_TOP | wxLEFT | wxRIGHT, m_shadow_width);
+    sizer->Add(m_mainSizer, 1, wxEXPAND | wxLEFT | wxRIGHT, m_shadow_width);
+    sizer->AddSpacer(m_shadow_width);
     SetSizer(sizer);
     Layout();
 
-    Bind(wxEVT_PAINT, &TitleDialog::OnPaint, this);
+    //Bind(wxEVT_PAINT, &TitleDialog::OnPaint, this);
     Bind(wxEVT_SIZE, &TitleDialog::OnSize, this);
 }
 
@@ -148,10 +155,18 @@ wxBoxSizer* TitleDialog::MainSizer()
 void TitleDialog::OnPaint(wxPaintEvent& event)
 {
     wxPaintDC dc(this);
-    dc.SetBrush(wxColour(255, 255, 255));
-    dc.SetPen(*wxTRANSPARENT_PEN);
+    dc.SetBrush(*wxWHITE);
+    auto sz = GetSize();
+    wxColour color(230, 230, 230, 80);
+    for (int i = 0; i < m_shadow_width; ++i) {
+        wxColour color(230, 230, 230, 80 - i * 15);
+        dc.SetPen(color);
+        dc.DrawRectangle(m_shadow_width-i, m_shadow_width-i, sz.x - 2 * (m_shadow_width - i), sz.y - 2 * (m_shadow_width - i));
+    }    
+    //dc.SetBrush(wxColour(255, 255, 255));
+    //dc.SetPen(*wxTRANSPARENT_PEN);
     //dc.DrawRoundedRectangle(, m_borderRadius);
-    dc.DrawRectangle(GetClientSize());
+    //dc.DrawRectangle(GetClientSize());
 }
 
 void TitleDialog::OnSize(wxSizeEvent& event)

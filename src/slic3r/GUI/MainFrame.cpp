@@ -993,8 +993,9 @@ void MainFrame::init_tabpanel() {
         }
         //else if (panel == m_param_panel)
         //    m_param_panel->OnActivate();
-        else if (panel == m_monitor) {
+        else if (panel == m_monitor && m_monitor) {
             //monitor
+            m_monitor->Show(true);
         }
 #ifndef __APPLE__
         if (sel == tp3DEditor) {

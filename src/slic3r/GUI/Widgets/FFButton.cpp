@@ -35,6 +35,7 @@ FFButton::FFButton(wxWindow* parent, wxWindowID id/*= wxID_ANY*/, const wxString
 	Bind(wxEVT_ERASE_BACKGROUND, [=](auto& e) {
 		e.Skip();
 	});
+	Layout();
 	Fit();
 	//updateState();
 }
@@ -51,6 +52,12 @@ bool FFButton::Enable(bool enable/* = true*/)
 void FFButton::SetLabel(const wxString & label)
 {
 	wxWindow::SetLabel(label);
+	wxScreenDC dc;
+	//font = wx.Font(14, wx.DEFAULT, wx.NORMAL, wx.NORMAL)
+	//wxPaintDC dc(this);
+	dc.SetFont(GetFont());
+	auto textSize = dc.GetTextExtent(label);
+	SetMinSize(textSize+wxSize(10, 5));
 	Refresh();
 }
 
