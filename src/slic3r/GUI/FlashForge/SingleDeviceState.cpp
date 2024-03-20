@@ -2110,7 +2110,7 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
    std::string printFileName = data.devDetail->printFileName; // 文件名
    if (m_cur_print_file_name != printFileName && !printFileName.empty()) {
         m_cur_print_file_name       = printFileName;
-        std::string truncatedString = truncateString(printFileName, TEXT_LENGTH);
+        std::string truncatedString = FFUtils::truncateString(printFileName, TEXT_LENGTH);
         m_staticText_file_name->SetLabel(truncatedString);
         m_staticText_file_name->SetToolTip(wxString::FromUTF8(printFileName));
         m_staticText_file_name->Show();
@@ -2251,30 +2251,6 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
    wxString strCumulativeFilament = wxString::Format("%.2f", cumulativeFilament);
 
    m_idle_tempMixDevice->modifyDeviceInfo(machineType, nozzleModel, measure, firmwareVersion, serialNubmer, strCumulativeFilament);
-}
-
-std::string utf8_substr(std::string str, int start, int length)
-{
-   int bytes = 0;
-   int i     = 0;
-   for (i = start, bytes = 0; i < str.length() && bytes < length; ++i) {
-       if ((str[i] & 0xC0) != 0x80) {
-            ++bytes;
-       }
-   }
-   return str.substr(start, i - start);
-}
-
-std::string SingleDeviceState::truncateString(const std::string &s, size_t length)
-{
-   if (s.length() > length) {
-       std::string transName = wxString::FromUTF8(s).ToStdString();
-       std::string trunkName = utf8_substr(transName, 0, length);
-       return trunkName + "...";
-       ;
-   } else {
-       return wxString::FromUTF8(s).ToStdString();
-   }
 }
 
 void SingleDeviceState::setPageOffline() 

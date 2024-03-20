@@ -18,6 +18,10 @@ public:
 	static wxString convertStatus(const std::string& status, wxColour& color);
 
 	static wxString converDeviceError(const std::string &error);
+
+	static std::string utf8Substr(const std::string& str, int start, int length);
+
+	static std::string truncateString(const std::string &s, size_t length);
 };
 
 }

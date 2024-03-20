@@ -641,7 +641,7 @@ void IconText::create_panel(wxWindow* parent,wxString icon,int iconSize,wxString
 
     sizer->AddStretchSpacer();
     sizer->Add(icon_static,0, wxALIGN_CENTER | wxALL | wxEXPAND ,0);
-    sizer->AddSpacer(FromDIP(5));
+    sizer->AddSpacer(FromDIP(12));
     sizer->Add(m_text_ctrl, 0, wxALIGN_CENTER | wxALL | wxEXPAND, 0);
     sizer->AddStretchSpacer();
 
@@ -687,7 +687,7 @@ void IconBottonText::create_panel(
     //m_text_ctrl->SetFont(wxFont(wxFontInfo(textSize)));
     m_text_ctrl->SetForegroundColour(wxColour(51, 51, 51));
     m_text_ctrl->SetBackgroundColour(wxColour(255, 255, 255));
-    m_text_ctrl->SetMinSize(wxSize(FromDIP(48), -1));
+    m_text_ctrl->SetMinSize(wxSize(FromDIP(50), -1));
     //m_text_ctrl->Bind(wxEVT_TEXT, &IconBottonText::onTextChange, this);
     m_text_ctrl->Bind(wxEVT_KILL_FOCUS, &IconBottonText::onTextFocusOut, this);
 
@@ -716,20 +716,20 @@ void IconBottonText::create_panel(
 
     if (positiveOrder) {
         sizer->Add(icon_static, 0, wxALIGN_CENTER | wxALL | wxEXPAND, 0);
-        sizer->AddSpacer(FromDIP(5));
+        sizer->AddSpacer(FromDIP(12));
         sizer->Add(m_dec_btn, 0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND, 0);
         sizer->AddSpacer(FromDIP(5));
-        sizer->Add(m_text_ctrl, 0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND, 0);
-        sizer->Add(m_unitLabel, 0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND, 0);
+        sizer->Add(m_text_ctrl, 0, wxALIGN_CENTER, 0);
+        sizer->Add(m_unitLabel, 0, wxALIGN_CENTER, 0);
         sizer->AddSpacer(FromDIP(5));
         sizer->Add(m_inc_btn, 0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND, 0);
     } else {
         sizer->Add(icon_static, 0, wxALIGN_CENTER | wxALL | wxEXPAND, 0);
-        sizer->AddSpacer(FromDIP(5));
+        sizer->AddSpacer(FromDIP(12));
         sizer->Add(m_inc_btn, 0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND, 0);
         sizer->AddSpacer(FromDIP(5));
-        sizer->Add(m_text_ctrl, 0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND, 0);
-        sizer->Add(m_unitLabel, 0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND, 0);
+        sizer->Add(m_text_ctrl, 0, wxALIGN_CENTER, 0);
+        sizer->Add(m_unitLabel, 0, wxALIGN_CENTER, 0);
         sizer->AddSpacer(FromDIP(5));
         sizer->Add(m_dec_btn, 0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND, 0);
     }

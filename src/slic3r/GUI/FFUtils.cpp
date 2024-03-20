@@ -122,4 +122,28 @@ wxString FFUtils::converDeviceError(const std::string &error)
     return st;
 }
 
+std::string FFUtils::utf8Substr(const std::string &str, int start, int length) 
+{
+    int bytes = 0;
+    int i = 0;
+    for (i = start, bytes = 0; i < str.length() && bytes < length; ++i) {
+        if ((str[i] & 0xC0) != 0x80) {
+            ++bytes;
+        }
+    }
+    return str.substr(start, i - start);
+}
+
+std::string FFUtils::truncateString(const std::string &s, size_t length) 
+{
+    if (s.length() > length) {
+        std::string transName = wxString::FromUTF8(s).ToStdString();
+        std::string trunkName = utf8Substr(transName, 0, length);
+        return trunkName + "...";
+        ;
+    } else {
+        return wxString::FromUTF8(s).ToStdString();
+    }
+}
+
 } // end namespace
