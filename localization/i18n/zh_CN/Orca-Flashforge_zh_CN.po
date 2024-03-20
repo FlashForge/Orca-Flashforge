@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Slic3rPE\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-03-20 14:31+0800\n"
-"PO-Revision-Date: 2024-03-20 14:32+0800\n"
+"POT-Creation-Date: 2024-03-20 15:08+0800\n"
+"PO-Revision-Date: 2024-03-20 15:14+0800\n"
 "Last-Translator: SoftFever <softfeverever@gmail.com>\n"
 "Language-Team: \n"
 "Language: zh_CN\n"
@@ -11427,6 +11427,57 @@ msgstr ""
 
 msgid "Paused"
 msgstr "暂停"
+
+msgid "The printer move out of range.Please go home again!"
+msgstr "移动不在范围内，请先回零"
+
+msgid "Lost communication with MCU eboard"
+msgstr "MCU通讯丢失"
+
+msgid "TMC reports error:GSTAT"
+msgstr "GSTAT错误"
+
+msgid "Unable to read tmc"
+msgstr "不能读取TMC"
+
+msgid "MCU eboard: Unable to connect"
+msgstr "MCU不能连接"
+
+msgid "Nozzle temperature error."
+msgstr "喷头温度错误"
+
+msgid "Extruder not heating at expected.Please check extruder."
+msgstr "喷头加热异常.请检查喷头"
+
+msgid "Platform not heating at expected.Please check platform."
+msgstr "底板加热异常.请检查底板"
+
+msgid "Chamber not heating at expected.Please check chamber."
+msgstr "腔温加热异常.请检查腔体"
+
+msgid "Host error, please restart !"
+msgstr "通讯错误,请重启打印机!"
+
+msgid "Z-Axis go home error."
+msgstr "Z轴回零错误"
+
+msgid "Y-Axis go home error."
+msgstr "Y轴回零错误"
+
+msgid "X-Axis go home error."
+msgstr "X轴回零错误"
+
+msgid "Extruder temperature error !"
+msgstr "喷头加热异常."
+
+msgid "Platform temperature error !"
+msgstr "底板加热异常"
+
+msgid "Move queue overflow"
+msgstr "指令超出队列"
+
+msgid "No filament"
+msgstr "无丝料"
 
 #: resources/data/hints.ini: [hint:3D Scene Operations]
 msgid ""

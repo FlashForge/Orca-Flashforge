@@ -16,6 +16,8 @@ public:
 	static unsigned short getPrinterPID(const std::string& type);
 
 	static wxString convertStatus(const std::string& status, wxColour& color);
+
+	static wxString converDeviceError(const std::string &error);
 };
 
 }

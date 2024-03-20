@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-03-20 14:31+0800\n"
+"POT-Creation-Date: 2024-03-20 15:08+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -10936,6 +10936,57 @@ msgid "The minmum temperature should not be less than "
 msgstr ""
 
 msgid "Paused"
+msgstr ""
+
+msgid "The printer move out of range.Please go home again!"
+msgstr ""
+
+msgid "Lost communication with MCU eboard"
+msgstr ""
+
+msgid "TMC reports error:GSTAT"
+msgstr ""
+
+msgid "Unable to read tmc"
+msgstr ""
+
+msgid "MCU eboard: Unable to connect"
+msgstr ""
+
+msgid "Nozzle temperature error."
+msgstr ""
+
+msgid "Extruder not heating at expected.Please check extruder."
+msgstr ""
+
+msgid "Platform not heating at expected.Please check platform."
+msgstr ""
+
+msgid "Chamber not heating at expected.Please check chamber."
+msgstr ""
+
+msgid "Host error, please restart !"
+msgstr ""
+
+msgid "Z-Axis go home error."
+msgstr ""
+
+msgid "Y-Axis go home error."
+msgstr ""
+
+msgid "X-Axis go home error."
+msgstr ""
+
+msgid "Extruder temperature error !"
+msgstr ""
+
+msgid "Platform temperature error !"
+msgstr ""
+
+msgid "Move queue overflow"
+msgstr ""
+
+msgid "No filament"
 msgstr ""
 
 #: resources/data/hints.ini: [hint:3D Scene Operations]

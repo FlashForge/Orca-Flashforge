@@ -10,6 +10,7 @@
 #include "slic3r/GUI/GUI_App.hpp"
 #include "slic3r/GUI/Plater.hpp"
 #include "slic3r/GUI/MsgDialog.hpp"
+#include "slic3r/GUI/FFUtils.hpp"
 
 using namespace std::literals;
 using json   = nlohmann::json;
@@ -1084,7 +1085,7 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
 
 //***打印布局
         wxBoxSizer *bSizer_control_print = new wxBoxSizer(wxHORIZONTAL);
-        auto m_panel_control_print = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(35)), wxTAB_TRAVERSAL);
+        auto m_panel_control_print = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(37)), wxTAB_TRAVERSAL);
         m_panel_control_print->SetBackgroundColour(wxColour(255,255,255));
 
         //显示继续打印按钮
@@ -1175,7 +1176,7 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
 
 //***温度布局
         wxBoxSizer *bSizer_control_temperature = new wxBoxSizer(wxHORIZONTAL);
-        auto m_panel_control_temperature = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(30)), wxTAB_TRAVERSAL);
+        auto m_panel_control_temperature = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(37)), wxTAB_TRAVERSAL);
         m_panel_control_temperature->SetBackgroundColour(wxColour(255,255,255));
 
         //显示顶部温度控件
@@ -1262,7 +1263,7 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
 
 //***灯控制布局
         wxBoxSizer *bSizer_control_lamp = new wxBoxSizer(wxHORIZONTAL);
-        auto m_panel_control_lamp = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(35)), wxTAB_TRAVERSAL);
+        auto m_panel_control_lamp = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(37)), wxTAB_TRAVERSAL);
         m_panel_control_lamp->SetBackgroundColour(wxColour(255,255,255));
 
         //显示文件信息按钮
@@ -1985,7 +1986,8 @@ void SingleDeviceState::onDevStateChanged(std::string devState, const com_dev_da
             m_machine_ctrl_panel->Hide();
             std::string error_state = _L("error").ToStdString();
             std::string error_info  = data.devDetail->errorCode;
-            setTipMessage(error_state, "#FB4747", error_info, true);
+            wxString trans_error = FFUtils::converDeviceError(error_info);
+            setTipMessage(error_state, "#FB4747", trans_error.ToStdString(), true);
         } else if (state == PAUSE) {
             m_machine_ctrl_panel->Show();
             m_machine_idle_panel->Hide();

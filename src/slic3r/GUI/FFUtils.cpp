@@ -79,4 +79,47 @@ wxString FFUtils::convertStatus(const std::string& status, wxColour& color)
     return st;
 }
 
+wxString FFUtils::converDeviceError(const std::string &error) 
+{
+    wxString st = _L("The printer move out of range.Please go home again!");
+    if ("E0001" == error) {
+        st = _L("The printer move out of range.Please go home again!");
+    } else if ("E0002" == error) {
+        st = _L("Lost communication with MCU eboard");
+    } else if ("E0003" == error) {
+        st = _L("TMC reports error:GSTAT");
+    } else if ("E0004" == error) {
+        st = _L("Unable to read tmc");
+    } else if ("E0005" == error) {
+        st = _L("MCU eboard: Unable to connect");
+    } else if ("E0006" == error) {
+        st = _L("Nozzle temperature error.");
+    } else if ("E0007" == error) {
+        st = _L("Extruder not heating at expected.Please check extruder.");
+    } else if ("E0008" == error) {
+        st = _L("Extruder not heating at expected.Please check extruder.");
+    } else if ("E0009" == error) {
+        st = _L("Platform not heating at expected.Please check platform.");
+    } else if ("E0010" == error) {
+        st = _L("Chamber not heating at expected.Please check chamber.");
+    } else if ("E0011" == error) {
+        st = _L("Host error, please restart !");
+    } else if ("E0012" == error) {
+        st = _L("Z-Axis go home error.");
+    } else if ("E0013" == error) {
+        st = _L("Y-Axis go home error.");
+    } else if ("E0014" == error) {
+        st = _L("X-Axis go home error.");
+    } else if ("E0015" == error) {
+        st = _L("Extruder temperature error !");
+    } else if ("E0016" == error) {
+        st = _L("Platform temperature error !");
+    } else if ("E0017" == error) {
+        st = _L("Move queue overflow");
+    } else if ("E0018" == error) {
+        st = _L("No filament");
+    }
+    return st;
+}
+
 } // end namespace

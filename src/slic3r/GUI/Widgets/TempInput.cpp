@@ -435,7 +435,7 @@ void TempInput::render(wxDC &dc)
 
     // label
     auto text = wxWindow::GetLabel();
-    dc.SetFont(::Label::Head_14);
+    dc.SetFont(::Label::Body_16);
     labelSize = dc.GetMultiLineTextExtent(wxWindow::GetLabel());
     
     if (!IsEnabled()) {
@@ -459,13 +459,13 @@ void TempInput::render(wxDC &dc)
         pt.y = (size.y - labelSize.y) / 2;
     }
 
-    dc.SetTextForeground(StateColor::darkModeColorFor("#323A3C"));
+    dc.SetTextForeground(StateColor::darkModeColorFor("#328DFB"));
     dc.DrawText(text, pt);
 
     // separator
-    dc.SetFont(::Label::Body_12);
+    dc.SetFont(::Label::Body_10);
     auto sepSize = dc.GetMultiLineTextExtent(wxString("/"));
-    dc.SetTextForeground(text_color.colorForStates(states));
+    dc.SetTextForeground(wxColor(51, 51, 51));
     dc.SetTextBackground(background_color.colorForStates(states));
     pt.x += labelSize.x + 10;
     pt.y = (size.y - sepSize.y) / 2;
