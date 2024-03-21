@@ -1985,7 +1985,7 @@ void SingleDeviceState::onDevStateChanged(std::string devState, const com_dev_da
             m_machine_ctrl_panel->Hide();
             std::string busy_state = _L("busy").ToStdString();
             std::string busy_info  = _L("Print cancelled,in cache command").ToStdString();
-            setTipMessage(busy_state, "#F9B61C", busy_info, true);
+            setTipMessage(busy_state, "#F9B61C", busy_info, false);
             m_idle_tempMixDevice->setState(1);
             m_staticText_idle->SetLabel(_L("The Current Device has no Printing Projects"));
         } else if (state == P_CALIBRATE) {
