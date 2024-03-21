@@ -85,6 +85,7 @@ private:
 
     wxSimplebook *m_simplebook;
     wxPanel*       m_normal_panel;
+    wxPanel*       m_top_panel;
     wxSizer*       m_machine_sizer;
     wxStaticBitmap *m_printer_img;
     wxStaticText * m_printer_name;

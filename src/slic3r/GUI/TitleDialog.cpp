@@ -155,11 +155,11 @@ TitleDialog::TitleDialog(wxWindow* parent, const wxString& title, int borderRadi
     sizer->AddSpacer(m_shadow_width);
     sizer->Add(m_titleBar, 0, wxEXPAND | wxALIGN_TOP | wxLEFT | wxRIGHT, m_shadow_width);
     sizer->Add(m_mainSizer, 1, wxEXPAND | wxLEFT | wxRIGHT, m_shadow_width);
-    sizer->AddSpacer(m_shadow_width);
+    sizer->AddSpacer(m_borderRadius);
     SetSizer(sizer);
     Layout();
 
-    //Bind(wxEVT_ERASE_BACKGROUND, &TitleDialog::OnErase, this);
+    Bind(wxEVT_ERASE_BACKGROUND, &TitleDialog::OnErase, this);
     Bind(wxEVT_PAINT, &TitleDialog::OnPaint, this);
     Bind(wxEVT_SIZE, &TitleDialog::OnSize, this);
 }
@@ -198,7 +198,7 @@ void TitleDialog::OnPaint(wxPaintEvent& event)
     }
     memdc.SelectObject(wxNullBitmap);
     dc.DrawBitmap(bmp, 0, 0);
-    //bmp.SaveFile("D:/aa.png", wxBITMAP_TYPE_PNG);
+    bmp.SaveFile("D:/aa.png", wxBITMAP_TYPE_PNG);
 #else
     DoRender(dc);
 #endif
