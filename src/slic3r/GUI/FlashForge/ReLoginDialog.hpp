@@ -56,6 +56,10 @@ protected:
     void on_dpi_changed(const wxRect &suggested_rect) override;
 
 private:
+    void onCloseWnd(wxCloseEvent &event);
+    void onDestroy();
+
+private:
 
     wxBoxSizer *m_sizer_main{nullptr};
     wxPanel* m_panel_page{nullptr};

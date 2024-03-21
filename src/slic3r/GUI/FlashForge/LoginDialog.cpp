@@ -51,6 +51,7 @@ namespace GUI {
         }
         else
         {
+            Enable(true);
             m_timer.Stop();
             m_countdown = 60;
 
@@ -147,7 +148,7 @@ void LoginDialog::on_dpi_changed(const wxRect &suggested_rect)
 void LoginDialog::initWidget()
 {
     m_sizer_main = MainSizer();
-    m_sizer_main->SetMinSize(wxSize(FromDIP(330), FromDIP(439)));
+    m_sizer_main->SetMinSize(wxSize(FromDIP(350), FromDIP(445)));
 
     createSwitchTitle();
     createBodyWidget();
@@ -197,6 +198,9 @@ void LoginDialog::initBindEvent()
 
         m_title_2_underline->Refresh();
         m_panel_checkbox_page1->Refresh();
+
+        m_get_code_button->SetMinSize(wxSize(FromDIP(89), FromDIP(40)));
+        //m_get_code_button->SetMaxSize(wxSize(FromDIP(89), FromDIP(40)));
         Layout();
         });
     m_switch_title_2->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e){
@@ -232,7 +236,7 @@ void LoginDialog::initBindEvent()
 void LoginDialog::initOverseaWidget()
 {
     m_sizer_main = MainSizer();
-    m_sizer_main->SetMinSize(wxSize(FromDIP(330), FromDIP(439)));
+    m_sizer_main->SetMinSize(wxSize(FromDIP(380), FromDIP(445)));
 
     //createBodyWidget();
     m_page_body_sizer = new wxBoxSizer(wxVERTICAL);
@@ -307,7 +311,7 @@ void LoginDialog::createSwitchTitle()
 
     m_switch_title_1_panel = new wxPanel(this, wxID_ANY);
 
-    m_switch_title_1 = new wxStaticText(m_switch_title_1_panel, wxID_ANY, _L("Phone Verify Code Login/ Register"));
+    m_switch_title_1 = new wxStaticText(m_switch_title_1_panel, wxID_ANY, _L("Phone Login/ Register"));
     m_switch_title_1->SetForegroundColour(wxColour(51,51,51));
     m_switch_title_1->SetFont(font_title);
 
@@ -374,7 +378,7 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     usr_name_space1->SetMinSize(wxSize(FromDIP(53), -1));
     //right space
     wxPanel* usr_name_space2 = new wxPanel(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER | wxTAB_TRAVERSAL);
-    usr_name_space2->SetMinSize(wxSize(FromDIP(80), -1));
+    usr_name_space2->SetMinSize(wxSize(FromDIP(57), -1));
 
     m_username_ctrl_page1 = new UserNameCtrl(panel,wxID_ANY,_L("Phone Number / email"));
     m_username_ctrl_page1->SetTextHint(0);
@@ -402,6 +406,7 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
 
     m_get_code_button = new CountdownButton(parent,_L("Get Code"));
     m_get_code_button->SetMinSize(wxSize(FromDIP(89),FromDIP(40)));
+    //m_get_code_button->SetMaxSize(wxSize(FromDIP(89), FromDIP(40)));
     m_get_code_button->Disable();
     m_get_code_button->SetFontDisableColor(wxColour(255, 255, 255));
     m_get_code_button->SetBorderDisableColor(wxColour(221,221,221));
@@ -435,23 +440,13 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
                 }
             }
         }
-        else{
-            //邮箱
-            wxRegEx regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
-            if (regex.IsValid() && regex.Compile("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",wxRE_ADVANCED)) {
-                if(regex.Matches(usrname_value)){
-                    ;
-                }
-                else{
-                    page1ShowErrorLabel(_L("Email Address Error"));
-                    return;
-                }
-            }
-        }
 
         if(m_get_code_button->GetState()){
             return;
         }
+        m_get_code_button->SetState(true);
+        m_get_code_button->startTimer();
+        m_get_code_button->Enable(false);
         if (m_first_call_client_token) {
             ComErrno get_result = MultiComUtils::getClientToken(m_client_SMS_token);
             if (get_result == ComErrno::COM_ERROR) {
@@ -462,9 +457,6 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
                 m_first_call_client_token = false;
             }
         }
-
-        m_get_code_button->SetState(true);
-        m_get_code_button->startTimer();
         std::string message;
         ComErrno send_result = MultiComUtils::sendSMSCode(
             m_client_SMS_token.accessToken, m_username_ctrl_page1->GetValue().ToStdString(), "en", message);
@@ -594,7 +586,7 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     usr_name_space1->SetMinSize(wxSize(FromDIP(53), -1));
     //right space
     wxPanel* usr_name_space2 = new wxPanel(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER | wxTAB_TRAVERSAL);
-    usr_name_space2->SetMinSize(wxSize(FromDIP(80), -1));
+    usr_name_space2->SetMinSize(wxSize(FromDIP(57), -1));
 
     m_username_ctrl_page2 = new UserNameCtrl(parent,wxID_ANY,_L("Phone Number / email"));
     m_username_ctrl_page2->SetTextHint(1);
@@ -793,11 +785,10 @@ void LoginDialog::onUsrNameOrPasswordChangedPage1(wxCommandEvent& event)
         wxString username = m_username_ctrl_page1->GetValue();
         wxString verifycode = m_verifycode_ctrl_page1->GetValue();
         bool agree = m_page1_checkBox->GetValue();
-        if(username.IsEmpty()){
+        if (username.IsEmpty() || m_get_code_button->GetState()) {
             m_get_code_button->Disable();
             m_get_code_button->Refresh();
-        }
-        else{
+        } else {
             m_get_code_button->Enable();
             m_get_code_button->Refresh();
         }

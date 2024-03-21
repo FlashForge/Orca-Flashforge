@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Slic3rPE\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-03-20 15:08+0800\n"
-"PO-Revision-Date: 2024-03-20 15:14+0800\n"
+"POT-Creation-Date: 2024-03-21 10:12+0800\n"
+"PO-Revision-Date: 2024-03-21 10:13+0800\n"
 "Last-Translator: SoftFever <softfeverever@gmail.com>\n"
 "Language-Team: \n"
 "Language: zh_CN\n"
@@ -11245,7 +11245,7 @@ msgstr "需要选择打印机"
 msgid "Get Code"
 msgstr "获取验证码"
 
-msgid "Phone Verify Code Login/ Register"
+msgid "Phone Login/ Register"
 msgstr "手机验证码登录/注册"
 
 msgid "Password Login"
@@ -11256,9 +11256,6 @@ msgstr "手机号/邮箱"
 
 msgid "Mobile Phone Number Error"
 msgstr "手机号码错误"
-
-msgid "Email Address Error"
-msgstr "邮箱地址错误"
 
 msgid "Server connection exception"
 msgstr "服务器连接异常"
@@ -11283,6 +11280,9 @@ msgstr "忘记密码"
 
 msgid "User not registered"
 msgstr "该账号未注册"
+
+msgid "Email Address Error"
+msgstr "邮箱地址错误"
 
 msgid "Password is incorrect"
 msgstr "密码错误"
