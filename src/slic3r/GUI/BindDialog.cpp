@@ -68,8 +68,8 @@ BindMachineDialog::LinkLabel::LinkLabel(wxWindow *parent, const wxString &text, 
     Wrap(FromDIP(450));
     SetForegroundColour(wxColour("#328DFB"));
     Bind(wxEVT_LEFT_DOWN, [this](auto& e) {
-        std::string country_code = Slic3r::GUI::wxGetApp().app_config->get_country_code();
-        wxString url = (country_code == "CN") ? m_cn_link : m_other_link;
+        std::string country_code = Slic3r::GUI::wxGetApp().app_config->get("language");
+        wxString url = (country_code == "zh_CN") ? m_cn_link : m_other_link;
         wxLaunchDefaultBrowser(url);
     });
     Bind(wxEVT_ENTER_WINDOW, [this](auto& e) {

@@ -107,6 +107,7 @@ ReLoginDialog::ReLoginDialog() : TitleDialog(static_cast<wxWindow *>(wxGetApp().
     } else {
         m_web_request.Start();
     }
+    Bind(wxEVT_CLOSE_WINDOW, &ReLoginDialog::onCloseWnd, this);
 
     Bind(wxEVT_WEBREQUEST_STATE, [this](wxWebRequestEvent &evt) {
         switch (evt.GetState()) {
@@ -211,6 +212,7 @@ void ReLoginDialog::onReloginBtnClicked(wxCommandEvent& event)
 void ReLoginDialog::onLoginoutBtnClicked(wxCommandEvent& event)
 {
     Hide();
+    onDestroy();
     wxGetApp().handle_login_out();
     AppConfig *app_config = wxGetApp().app_config;
     if(app_config){
@@ -246,12 +248,26 @@ void ReLoginDialog::onRelogin2BtnClicked(wxMouseEvent& event)
         wxGetApp().handle_login_result(usr_pic,usr_name);
     }
     Hide();
+    onDestroy();
     event.Skip();
 }
 
 void ReLoginDialog::on_dpi_changed(const wxRect &suggested_rect)
 {
     ;
+}
+
+void ReLoginDialog::onCloseWnd(wxCloseEvent &event) 
+{
+    onDestroy();
+    event.Skip();
+}
+
+void ReLoginDialog::onDestroy() 
+{
+    if (m_web_request.IsOk()) {
+        m_web_request.Cancel();
+    }
 }
 
 }
