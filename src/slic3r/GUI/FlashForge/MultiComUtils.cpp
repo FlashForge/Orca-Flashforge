@@ -15,7 +15,7 @@ public:
         : wxThread(wxTHREAD_JOINABLE)
     {
     }
-    ExitCode Entry()
+    wxThread::ExitCode Entry()
     {
         ComAsyncCallFinishEvent *event = new ComAsyncCallFinishEvent;
         event->SetEventType(COM_ASYNC_CALL_FINISH_EVENT);

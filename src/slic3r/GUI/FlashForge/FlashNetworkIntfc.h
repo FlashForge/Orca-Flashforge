@@ -22,7 +22,8 @@ public:
     decltype(&fnet_getVersion) getVersion;
     decltype(&fnet_getLanDevList) getLanDevList;
     decltype(&fnet_freeLanDevInfos) freeLanDevInfos;
-    decltype(&fnet_lanDevSendGcode) lanDevSendGcode;
+    decltype(&fnet_getLanDevProduct) getLanDevProduct;
+    decltype(&fnet_freeDevProduct) freeDevProduct;
     decltype(&fnet_getLanDevDetail) getLanDevDetail;
     decltype(&fnet_freeDevDetail) freeDevDetail;
     decltype(&fnet_ctrlLanDevTemp) ctrlLanDevTemp;
@@ -30,6 +31,9 @@ public:
     decltype(&fnet_ctrlLanDevAirFilter) ctrlLanDevAirFilter;
     decltype(&fnet_ctrlLanDevPrint) ctrlLanDevPrint;
     decltype(&fnet_ctrlLanDevJob) ctrlLanDevJob;
+    decltype(&fnet_lanDevSendGcode) lanDevSendGcode;
+    decltype(&fnet_downloadFile) downloadFile;
+    decltype(&fnet_freeFileData) freeFileData;
     decltype(&fnet_getTokenByPassword) getTokenByPassword;
     decltype(&fnet_refreshToken) refreshToken;
     decltype(&fnet_freeToken) freeToken;
@@ -41,14 +45,12 @@ public:
     decltype(&fnet_signOut) signOut;
     decltype(&fnet_getUserProfile) getUserProfile;
     decltype(&fnet_freeUserProfile) freeUserProfile;
-    decltype(&fnet_downloadFile) downloadFile;
-    decltype(&fnet_freeFileData) freeFileData;
     decltype(&fnet_bindWanDev) bindWanDev;
     decltype(&fent_freeBindData) freeBindData;
     decltype(&fnet_unbindWanDev) unbindWanDev;
     decltype(&fnet_getWanDevList) getWanDevList;
     decltype(&fnet_freeWanDevList) freeWanDevList;
-    decltype(&fnet_getWanDevDetail) getWanDevDetail;
+    decltype(&fnet_getWanDevProductDetail) getWanDevProductDetail;
     decltype(&fnet_wanDevSendGcode) wanDevSendGcode;
     decltype(&fnet_createConnection) createConnection;
     decltype(&fnet_freeConnection) freeConnection;

@@ -27,7 +27,8 @@ FlashNetworkIntfc::FlashNetworkIntfc(const char *libraryPath, const char *logFil
     INIT_FUNC_PTR(getVersion, fnet_getVersion);
     INIT_FUNC_PTR(getLanDevList, fnet_getLanDevList);
     INIT_FUNC_PTR(freeLanDevInfos, fnet_freeLanDevInfos);
-    INIT_FUNC_PTR(lanDevSendGcode, fnet_lanDevSendGcode);
+    INIT_FUNC_PTR(getLanDevProduct, fnet_getLanDevProduct);
+    INIT_FUNC_PTR(freeDevProduct, fnet_freeDevProduct);
     INIT_FUNC_PTR(getLanDevDetail, fnet_getLanDevDetail);
     INIT_FUNC_PTR(freeDevDetail, fnet_freeDevDetail);
     INIT_FUNC_PTR(ctrlLanDevTemp, fnet_ctrlLanDevTemp);
@@ -35,6 +36,9 @@ FlashNetworkIntfc::FlashNetworkIntfc(const char *libraryPath, const char *logFil
     INIT_FUNC_PTR(ctrlLanDevAirFilter, fnet_ctrlLanDevAirFilter);
     INIT_FUNC_PTR(ctrlLanDevPrint, fnet_ctrlLanDevPrint);
     INIT_FUNC_PTR(ctrlLanDevJob, fnet_ctrlLanDevJob);
+    INIT_FUNC_PTR(lanDevSendGcode, fnet_lanDevSendGcode);
+    INIT_FUNC_PTR(downloadFile, fnet_downloadFile);
+    INIT_FUNC_PTR(freeFileData, fnet_freeFileData);
     INIT_FUNC_PTR(getTokenByPassword, fnet_getTokenByPassword);
     INIT_FUNC_PTR(refreshToken, fnet_refreshToken);
     INIT_FUNC_PTR(freeToken, fnet_freeToken);
@@ -46,14 +50,12 @@ FlashNetworkIntfc::FlashNetworkIntfc(const char *libraryPath, const char *logFil
     INIT_FUNC_PTR(signOut, fnet_signOut);
     INIT_FUNC_PTR(getUserProfile, fnet_getUserProfile);
     INIT_FUNC_PTR(freeUserProfile, fnet_freeUserProfile);
-    INIT_FUNC_PTR(downloadFile, fnet_downloadFile);
-    INIT_FUNC_PTR(freeFileData, fnet_freeFileData);
     INIT_FUNC_PTR(bindWanDev, fnet_bindWanDev);
     INIT_FUNC_PTR(freeBindData, fent_freeBindData);
     INIT_FUNC_PTR(unbindWanDev, fnet_unbindWanDev);
     INIT_FUNC_PTR(getWanDevList, fnet_getWanDevList);
     INIT_FUNC_PTR(freeWanDevList, fnet_freeWanDevList);
-    INIT_FUNC_PTR(getWanDevDetail, fnet_getWanDevDetail);
+    INIT_FUNC_PTR(getWanDevProductDetail, fnet_getWanDevProductDetail);
     INIT_FUNC_PTR(wanDevSendGcode, fnet_wanDevSendGcode);
     INIT_FUNC_PTR(createConnection, fnet_createConnection);
     INIT_FUNC_PTR(freeConnection, fnet_freeConnection);

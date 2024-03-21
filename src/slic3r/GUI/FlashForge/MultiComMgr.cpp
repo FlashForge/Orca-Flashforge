@@ -9,6 +9,7 @@ MultiComMgr::MultiComMgr()
 {
     com_dev_data_t devData;
     devData.connectMode = COM_CONNECT_LAN;
+    devData.devProduct = nullptr;
     devData.devDetail = nullptr;
     memset(&devData.lanDevInfo, 0, sizeof(devData.lanDevInfo));
     m_datMap.emplace(ComInvalidId, devData);
@@ -285,9 +286,9 @@ void MultiComMgr::onUpdateUserProfile(const ComGetUserProfileEvent &event)
 
 void MultiComMgr::onConnectionReady(const ComConnectionReadyEvent &event)
 {
-    fnet_dev_detail_t *&devDetail = m_datMap.at(event.id).devDetail;
-    m_networkIntfc->freeDevDetail(devDetail);
-    devDetail = event.devDetail;
+    com_dev_data_t &devData = m_datMap.at(event.id);
+    devData.devProduct = event.devProduct;
+    devData.devDetail = event.devDetail;
     m_readyIdSet.insert(event.id);
     QueueEvent(event.Clone());
 }
@@ -296,10 +297,12 @@ void MultiComMgr::onConnectionExit(const ComConnectionExitEvent &event)
 {
     ComConnection *comConnection = m_ptrMap.left.at(event.id);
     comConnection->joinThread();
-    m_networkIntfc->freeDevDetail(m_datMap.at(event.id).devDetail);
+    com_dev_data_t &devData = m_datMap.at(event.id);
+    m_networkIntfc->freeDevProduct(devData.devProduct);
+    m_networkIntfc->freeDevDetail(devData.devDetail);
     m_readyIdSet.erase(event.id);
     if (comConnection->connectMode() == COM_CONNECT_WAN) {
-        m_devIdMap.erase(m_datMap.at(comConnection->id()).wanDevInfo.devId);
+        m_devIdMap.erase(devData.wanDevInfo.devId);
     }
     m_datMap.erase(event.id);
     m_ptrMap.left.erase(event.id);
@@ -395,6 +398,7 @@ com_dev_data_t MultiComMgr::makeDevData(const fnet_wan_dev_info_t *wanDevInfo)
     devData.wanDevInfo.status = wanDevInfo->status;
     devData.wanDevInfo.location = wanDevInfo->location;
     devData.wanDevInfo.serialNumber = wanDevInfo->serialNumber;
+    devData.devProduct = nullptr;
     devData.devDetail = nullptr;
     memset(&devData.lanDevInfo, 0, sizeof(devData.lanDevInfo));
     return devData;
@@ -402,13 +406,12 @@ com_dev_data_t MultiComMgr::makeDevData(const fnet_wan_dev_info_t *wanDevInfo)
 
 void MultiComMgr::updateWanDevInfo(com_id_t id, const std::string &name, const std::string &status,
     const std::string &location)
-{    
+{
     com_dev_data_t &devData = m_datMap.at(id);
-    BOOST_LOG_TRIVIAL(info) << devData.lanDevInfo.name << " status---" << devData.devDetail->status;
-    flush_logs();
     if (devData.connectMode != COM_CONNECT_WAN) {
         return;
-    }    
+    }
+    BOOST_LOG_TRIVIAL(info) << name << " status---" << status;
     devData.wanDevInfo.name = name;
     devData.wanDevInfo.status = status;
     devData.wanDevInfo.location = location;

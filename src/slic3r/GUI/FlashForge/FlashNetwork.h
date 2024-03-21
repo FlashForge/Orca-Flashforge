@@ -174,6 +174,15 @@ typedef struct fnet_wan_dev_info {
     char *serialNumber;
 } fnet_wan_dev_info_t;
 
+typedef struct fnet_dev_product {
+    int nozzleTempCtrlState;    // 0 disabled, 1 enabled
+    int chamberTempCtrlState;
+    int platformTempCtrlState;
+    int lightCtrlState;
+    int internalFanCtrlState;
+    int externalFanCtrlState;
+} fnet_dev_product_t;
+
 typedef struct fnet_dev_detail {
     int pid;
     int nozzleCnt;
@@ -262,6 +271,11 @@ FNET_API int fnet_getLanDevList(fnet_lan_dev_info_t **infos, int *devCnt, int ms
 
 FNET_API void fnet_freeLanDevInfos(fnet_lan_dev_info_t *infos);
 
+FNET_API int fnet_getLanDevProduct(const char *ip, unsigned short port, const char *serialNumber,
+    const char *checkCode, fnet_dev_product_t **product, int msTimeout);
+
+FNET_API void fnet_freeDevProduct(fnet_dev_product_t *product);
+
 FNET_API int fnet_getLanDevDetail(const char *ip, unsigned short port, const char *serialNumber,
     const char *checkCode, fnet_dev_detail_t **detail, int msTimeout);
 
@@ -331,8 +345,8 @@ FNET_API int fnet_getWanDevList(const char *uid, const char *accessToken, fnet_w
 
 FNET_API void fnet_freeWanDevList(fnet_wan_dev_info_t *infos, int devCnt);
 
-FNET_API int fnet_getWanDevDetail(const char *uid, const char *accessToken, const char *devId,
-    fnet_dev_detail_t **detail, int msTimeout);
+FNET_API int fnet_getWanDevProductDetail(const char *uid, const char *accessToken, const char *devId,
+    fnet_dev_product_t **product, fnet_dev_detail_t **detail, int msTimeout);
 
 FNET_API int fnet_wanDevSendGcode(const char *uid, const char *accessToken, const char *devId,
     const fnet_send_gcode_data_t *sendGcodeData, int msTimeout);

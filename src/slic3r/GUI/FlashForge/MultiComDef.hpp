@@ -64,6 +64,7 @@ struct com_dev_data_t {
     ComConnectMode connectMode;
     fnet_lan_dev_info_t lanDevInfo;
     com_wan_dev_info_t wanDevInfo;
+    fnet_dev_product_t *devProduct;
     fnet_dev_detail_t *devDetail;
 };
 

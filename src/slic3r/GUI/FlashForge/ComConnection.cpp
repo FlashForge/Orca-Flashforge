@@ -82,13 +82,14 @@ bool ComConnection::abortSendGcode(int commandId)
 
 void ComConnection::run()
 {
+    fnet_dev_product_t *product;
     fnet_dev_detail_t *detail;
-    ComErrno ret = initialize(&detail);
+    ComErrno ret = initialize(&product, &detail);
     if (ret != COM_OK) {
         QueueEvent(new ComConnectionExitEvent(COM_CONNECTION_EXIT_EVENT, m_id, ret));
         return;
     }
-    QueueEvent(new ComConnectionReadyEvent(COM_CONNECTION_READY_EVENT, m_id, detail));
+    QueueEvent(new ComConnectionReadyEvent(COM_CONNECTION_READY_EVENT, m_id, product, detail));
     ret = commandLoop();
     QueueEvent(new ComConnectionExitEvent(COM_CONNECTION_EXIT_EVENT, m_id, ret));
 }
@@ -132,16 +133,23 @@ std::string ComConnection::getAccessToken()
     return m_accessToken;
 }
 
-ComErrno ComConnection::initialize(fnet_dev_detail_t **detail)
+ComErrno ComConnection::initialize(fnet_dev_product_t **product, fnet_dev_detail_t **detail)
 {
     ComErrno ret;
-    ComGetDevDetail getDevDetail;
     if (m_connectMode == COM_CONNECT_LAN) {
-        ret = getDevDetail.exec(m_networkIntfc, m_ip, m_port, m_serialNumber, m_checkCode);
+        ComGetDevProduct getDevProduct;
+        ret = getDevProduct.exec(m_networkIntfc, m_ip, m_port, m_serialNumber, m_checkCode);
+        *product = getDevProduct.devProduct();
+        if (ret == COM_OK) {
+            ComGetDevDetail getDevDetail;
+            ret = getDevDetail.exec(m_networkIntfc, m_ip, m_port, m_serialNumber, m_checkCode);
+            *detail = getDevDetail.devDetail();
+        }
     } else {
+        ComGetDevProductDetail getDevProductDetail;
         int tryCnt = 5;
         for (int i = 0; i < tryCnt; ++i) {
-            ret = getDevDetail.exec(m_networkIntfc, m_uid, m_accessToken, m_deviceId);
+            ret = getDevProductDetail.exec(m_networkIntfc, m_uid, m_accessToken, m_deviceId);
             if (ret == COM_OK || ret == COM_UNAUTHORIZED || m_exitThread) {
                 break;
             } else if (i + 1 < tryCnt) {
@@ -152,8 +160,9 @@ ComErrno ComConnection::initialize(fnet_dev_detail_t **detail)
         if (ret != COM_OK) {
             QueueEvent(new CommandFailedEvent(COMMAND_FAILED_EVENT, ret, false));
         }
+        *product = getDevProductDetail.devProduct();
+        *detail = getDevProductDetail.devDetail();
     }
-    *detail = getDevDetail.devDetail();
     return ret;
 }
 
