@@ -1332,6 +1332,12 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         m_busy_temp_brn->Bind(EVT_MODIFY_TEMP_CANCEL_CLICKED, [this](wxCommandEvent &event) {
             event.Skip();
             m_busy_temp_brn->Hide();
+            m_tempCtrl_top->Unbind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);
+            m_tempCtrl_top->SetTagTemp(m_right_target_temp, true);
+            m_tempCtrl_top->Bind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this); 
+            m_tempCtrl_bottom->Unbind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);
+            m_tempCtrl_bottom->SetTagTemp(m_plat_target_temp, true);
+            m_tempCtrl_bottom->Bind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);
             Layout();
         });
         busySizer->Add(m_busy_temp_brn, 0, wxALL | wxEXPAND, 0);
