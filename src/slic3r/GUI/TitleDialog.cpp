@@ -81,7 +81,7 @@ void TitleBar::DoRender(wxDC &dc)
 
     dc.SetBrush(m_bgColor);
     dc.DrawRoundedRectangle(0, 0, sz.x, sz.y / 2, m_borderRadius);
-    dc.DrawRectangle(0, sz.y / 2, sz.x, sz.y);
+    dc.DrawRectangle(0, m_borderRadius+3, sz.x, sz.y);
 }
 
 void TitleBar::OnMouseLeftDown(wxMouseEvent &event)

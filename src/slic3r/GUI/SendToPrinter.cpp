@@ -62,6 +62,7 @@ bool MultiSend::send_to_printer(int plate_idx, const com_id_list_t& com_ids, con
     m_printers.clear();
     m_send_jobs.clear();
     m_plate_idx = plate_idx;
+    m_com_ids = com_ids;
     bind_com_event(true);
 
     for (auto& id : com_ids) {
@@ -157,6 +158,7 @@ bool MultiSend::get_multi_send_result(std::map<com_id_t, MultiSend::Result>& res
 
 void MultiSend::reset()
 {
+    m_com_ids.clear();
     m_printers.clear();
     m_send_jobs.clear();
 }
@@ -1168,49 +1170,10 @@ void SendToPrinterDialog::update_user_machine_list()
             }
         }
     }
-#if 0
-    if (m_machineListMap.empty()) {
-        for (int i = 0; i < 3; ++i) {
-            MachineItem::MachineData mdata;
-            mdata.flag = 0;
-            if (i % 2 == 0) {
-                mdata.pid = 0x0024; //"Adventurer 5M Pro";
-            } else {
-                mdata.pid = 0x0023; //"Adventurer 5M";
-            }
-            mdata.name = "Just For Test";
-            mdata.comId = i;
-            m_machineListMap.emplace(mdata.comId, mdata);
-        }
-    }
-#endif
-    wxCommandEvent event(EVT_UPDATE_USER_MACHINE_LIST);
-    event.SetEventObject(this);
-    wxPostEvent(this, event);
-#if 0
-    NetworkAgent* m_agent = wxGetApp().getAgent();
-    if (m_agent && m_agent->is_user_login()) {
-        boost::thread get_print_info_thread = Slic3r::create_thread([&] {
-            NetworkAgent* agent = wxGetApp().getAgent();
-            unsigned int http_code;
-            std::string body;
-            int result = agent->get_user_print_info(&http_code, &body);
-            if (result == 0) {
-                m_print_info = body;
-            }
-            else {
-                m_print_info = "";
-            }
-            wxCommandEvent event(EVT_UPDATE_USER_MACHINE_LIST);
-            event.SetEventObject(this);
-            wxPostEvent(this, event);
-        });
-    } else {
-        wxCommandEvent event(EVT_UPDATE_USER_MACHINE_LIST);
-        event.SetEventObject(this);
-        wxPostEvent(this, event);
-    }
-#endif
+    //wxCommandEvent event(EVT_UPDATE_USER_MACHINE_LIST);
+    //event.SetEventObject(this);
+    //wxPostEvent(this, event);
+    update_user_printer();
 }
 
 std::vector<std::string> SendToPrinterDialog::sort_string(std::vector<std::string> strArray)
@@ -1308,85 +1271,7 @@ void SendToPrinterDialog::update_user_printer()
     Fit();
     //MainSizer()->Fit(this);
     Thaw();
-    Layout();
-    Fit();
-    Update();
     updateSendButtonState();
-    auto sz = m_machineListWindow->GetSize();
-    auto sz1 = m_machineBook->GetSize();
-    auto sz2 = GetSize();
-#if 0
-    Slic3r::DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
-    if (!dev) return;
-
-    // update user print info
-    if (!m_print_info.empty()) {
-        dev->parse_user_print_info(m_print_info);
-        m_print_info = "";
-    }
-
-    // clear machine list
-    m_list.clear();
-    m_comboBox_printer->Clear();
-    std::vector<std::string>              machine_list;
-    wxArrayString                         machine_list_name;
-    std::map<std::string, MachineObject*> option_list;
-
-    option_list = dev->get_my_machine_list();
-
-    // same machine only appear once
-    for (auto it = option_list.begin(); it != option_list.end(); it++) {
-        if (it->second && (it->second->is_online() || it->second->is_connected())) {
-            machine_list.push_back(it->second->dev_name);
-        }
-    }
-    machine_list = sort_string(machine_list);
-    for (auto tt = machine_list.begin(); tt != machine_list.end(); tt++) {
-        for (auto it = option_list.begin(); it != option_list.end(); it++) {
-            if (it->second->dev_name == *tt) {
-                m_list.push_back(it->second);
-                wxString dev_name_text = from_u8(it->second->dev_name);
-                if (it->second->is_lan_mode_printer()) {
-                    dev_name_text += "(LAN)";
-                }
-                machine_list_name.Add(dev_name_text);
-                break;
-            }
-        }
-    }
-
-    m_comboBox_printer->Set(machine_list_name);
-
-    MachineObject* obj = dev->get_selected_machine();
-    if (obj) {
-        m_printer_last_select = obj->dev_id;
-    } else {
-        m_printer_last_select = "";
-    }
-
-    if (m_list.size() > 0) {
-        // select a default machine
-        if (m_printer_last_select.empty()) {
-            m_printer_last_select = m_list[0]->dev_id;
-            m_comboBox_printer->SetSelection(0);
-            wxCommandEvent event(wxEVT_COMBOBOX);
-            event.SetEventObject(m_comboBox_printer);
-            wxPostEvent(m_comboBox_printer, event);
-        }
-        for (auto i = 0; i < m_list.size(); i++) {
-            if (m_list[i]->dev_id == m_printer_last_select) {
-                m_comboBox_printer->SetSelection(i);
-                wxCommandEvent event(wxEVT_COMBOBOX);
-                event.SetEventObject(m_comboBox_printer);
-                wxPostEvent(m_comboBox_printer, event);
-            }
-        }
-    }
-    else {
-        m_printer_last_select = "";
-        m_comboBox_printer->SetTextLabel("");
-    }
-#endif
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << "for send task, current printer id =  " << m_printer_last_select << std::endl;
 }
 
@@ -1516,50 +1401,6 @@ void SendToPrinterDialog::set_default()
 
         MaterialItem* item = new MaterialItem(m_material_panel, colour_rgb, _L(display_materials[extruder]));
         m_sizer_material->Add(item, 0, wxALL, FromDIP(4));
-#if 0
-        item->Bind(wxEVT_LEFT_UP, [this, item, materials, extruder](wxMouseEvent& e) {});
-        item->Bind(wxEVT_LEFT_DOWN, [this, item, materials, extruder](wxMouseEvent& e) {
-
-            DeviceManager* dev_manager = Slic3r::GUI::wxGetApp().getDeviceManager();
-            if (!dev_manager) return;
-            MachineObject* curr_obj = dev_manager->get_selected_machine();
-
-            MaterialHash::iterator iter = m_materialList.begin();
-            while (iter != m_materialList.end()) {
-                int           id = iter->first;
-                Material* item = iter->second;
-                MaterialItem* m = item->item;
-                m->on_normal();
-                iter++;
-            }
-
-            m_current_filament_id = extruder;
-            item->on_selected();
-
-
-            auto    mouse_pos = ClientToScreen(e.GetPosition());
-            wxPoint rect = item->ClientToScreen(wxPoint(0, 0));
-            // update ams data
-           
-            if (curr_obj && curr_obj->is_support_ams_mapping()) {
-                if (m_mapping_popup.IsShown()) return;
-                wxPoint pos = item->ClientToScreen(wxPoint(0, 0));
-                pos.y += item->GetRect().height;
-                m_mapping_popup.Move(pos);
-
-                if (curr_obj->has_ams() &&
-                    m_checkbox_list["use_ams"]->GetValue() &&
-                    curr_obj->dev_id == m_printer_last_select)
-                {
-                    m_mapping_popup.set_parent_item(item);
-                    m_mapping_popup.set_current_filament_id(extruder);
-                    m_mapping_popup.set_tag_texture(materials[extruder]);
-                    m_mapping_popup.update_ams_data(curr_obj->amsList);
-                    m_mapping_popup.Popup();
-                }
-            }
-         });
-#endif
 
         Material* material_item = new Material();
         material_item->id = extruder;
@@ -1624,7 +1465,17 @@ void SendToPrinterDialog::redirect_window()
         Layout();
     } else {
         EndModal(wxID_OK);
-        wxGetApp().mainframe->select_tab(size_t(MainFrame::tpMonitor));
+        //wxGetApp().mainframe->select_tab(size_t(MainFrame::tpMonitor));
+        const auto& com_ids = m_multiSend->com_ids();
+        if (!com_ids.empty()) {
+            int redirect_type = EVT_SWITCH_TO_DEVICE_LIST;
+            com_id_t com_id = -1;
+            if (com_ids.size() == 1) {
+                redirect_type = EVT_SWITCH_TO_DEVICE_STATUS;
+                com_id = com_ids[0];
+            }
+            wxGetApp().mainframe->jump_to_monitor(redirect_type,  com_id);
+        }
     }
 }
 
@@ -1640,6 +1491,7 @@ bool SendToPrinterDialog::Show(bool show)
         Layout();
         Fit();
         CenterOnParent();
+        Refresh();
     } else {
         Unbind(EVT_UPDATE_USER_MACHINE_LIST, &SendToPrinterDialog::update_printer_list, this);
     }
@@ -1802,8 +1654,8 @@ void SendToPrinterDialog::on_multi_send_completed(wxCommandEvent& event)
     m_is_in_sending_mode = false;
     std::map<com_id_t, MultiSend::Result> send_result;
     m_multiSend->get_multi_send_result(send_result);
-    m_multiSend->reset();
     if (send_result.empty()) {
+        m_multiSend->reset();
         BOOST_LOG_TRIVIAL(error) << "SendToPrinterDialog: result is empty";
         return;
     }
@@ -1869,16 +1721,19 @@ void SendToPrinterDialog::on_multi_send_completed(wxCommandEvent& event)
         SendToPrinterTipDialog dlg(this, successList, failList);
         dlg.ShowModal();
         if (failList.empty()) {
+            m_send_error = false;
             if (m_msg_window) {
                 m_need_redirect = true;
             } else {
                 EndDialog(wxID_OK);
-                wxGetApp().mainframe->select_tab(size_t(MainFrame::tpMonitor));
+                redirect_window();
+                //wxGetApp().mainframe->select_tab(size_t(MainFrame::tpMonitor));
             }
         } else {
             m_sendBook->SetSelection(0);
         }
     }
+    m_multiSend->reset();
     Layout();
     Fit();
 }

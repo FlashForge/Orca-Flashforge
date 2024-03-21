@@ -3269,6 +3269,15 @@ void MainFrame::jump_to_monitor(const std::string &dev_id)
     ((MonitorPanel*)m_monitor)->select_machine(dev_id);
 }
 
+void MainFrame::jump_to_monitor(int type, com_id_t conn_id/*=0*/)
+{
+    m_tabpanel->SetSelection(tpMonitor);
+    wxCommandEvent event(type, m_monitor->GetId());
+    event.SetEventObject(m_monitor);
+    event.SetInt(conn_id);
+    wxPostEvent(m_monitor, event);
+}
+
 //BBS GUI refactor: remove unused layout new/dlg
 void MainFrame::select_tab(size_t tab/* = size_t(-1)*/)
 {

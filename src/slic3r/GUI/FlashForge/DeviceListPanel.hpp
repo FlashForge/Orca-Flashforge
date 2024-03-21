@@ -204,7 +204,7 @@ private:
     wxStaticText*   m_status_text {nullptr};
     wxWindow*       m_event_handle {nullptr};
 };
-wxDECLARE_EVENT(EVT_DEVICE_ITEM_SELECTED, wxCommandEvent);
+//wxDECLARE_EVENT(EVT_DEVICE_ITEM_SELECTED, wxCommandEvent);
 
 
 class DeviceStaticItemPanel : public DeviceItemPanel

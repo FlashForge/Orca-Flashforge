@@ -75,6 +75,8 @@ public:
 	void msw_rescale();
 };
 
+wxDECLARE_EVENT(EVT_SWITCH_TO_DEVICE_LIST, wxCommandEvent);
+wxDECLARE_EVENT(EVT_SWITCH_TO_DEVICE_STATUS, wxCommandEvent);
 class MonitorPanel : public wxPanel
 {
 private:
