@@ -68,8 +68,8 @@ BindMachineDialog::LinkLabel::LinkLabel(wxWindow *parent, const wxString &text, 
     Wrap(FromDIP(450));
     SetForegroundColour(wxColour("#328DFB"));
     Bind(wxEVT_LEFT_DOWN, [this](auto& e) {
-        std::string country_code = Slic3r::GUI::wxGetApp().app_config->get_country_code();
-        wxString url = (country_code == "CN") ? m_cn_link : m_other_link;
+        std::string country_code = Slic3r::GUI::wxGetApp().app_config->get("language");
+        wxString url = (country_code == "zh_CN") ? m_cn_link : m_other_link;
         wxLaunchDefaultBrowser(url);
     });
     Bind(wxEVT_ENTER_WINDOW, [this](auto& e) {
@@ -306,6 +306,7 @@ BindMachineDialog::BindMachineDialog()
     m_result_sizer->AddStretchSpacer(1);
     m_result_sizer->Add(m_result_btn, 0, wxALIGN_CENTER | wxALIGN_BOTTOM);
     m_result_sizer->AddSpacer(FromDIP(30));
+    //m_result_sizer->Add(0, 0, 0, wxTOP, FromDIP(30));
     m_result_panel->SetSizer(m_result_sizer);
     m_result_panel->Layout();
     m_simplebook->AddPage(m_result_panel, wxEmptyString, false);   
