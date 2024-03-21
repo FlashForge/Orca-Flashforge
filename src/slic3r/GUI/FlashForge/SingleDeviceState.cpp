@@ -1916,6 +1916,20 @@ void SingleDeviceState::onTargetTempModify(wxCommandEvent &event)
             }
             Layout();
         }
+       double top_temp;
+       double bottom_temp;
+       m_tempCtrl_top->GetTagTemp().ToDouble(&top_temp);
+       m_tempCtrl_bottom->GetTagTemp().ToDouble(&bottom_temp);
+       if (top_temp > 280) {
+            m_tempCtrl_top->Unbind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);
+            m_tempCtrl_top->SetTagTemp(280, true);
+            m_tempCtrl_top->Bind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);
+       }
+       if (bottom_temp > 110) {
+            m_tempCtrl_bottom->Unbind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);
+            m_tempCtrl_bottom->SetTagTemp(110, true);
+            m_tempCtrl_bottom->Bind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);
+       }
    }
 }
 
