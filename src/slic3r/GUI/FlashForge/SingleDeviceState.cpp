@@ -9,7 +9,6 @@
 #include "slic3r/GUI/GUI.hpp"
 #include "slic3r/GUI/GUI_App.hpp"
 #include "slic3r/GUI/Plater.hpp"
-#include "slic3r/GUI/MsgDialog.hpp"
 #include "slic3r/GUI/FFUtils.hpp"
 
 using namespace std::literals;
@@ -42,7 +41,6 @@ const wxString    TEMP_CONFIRM = _L("confirm");
 const int TEXT_LENGTH = 20;
 const int MATERIAL_PIC_WIDTH  = 86;
 const int MATERIAL_PIC_HEIGHT = 80;
-
 
 MaterialPanel::MaterialPanel(wxWindow* parent)
     : wxPanel(parent, wxID_ANY,wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL)
@@ -261,7 +259,6 @@ void ModifyTemp::create_panel(wxWindow *parent)
     wxPanel    *operate_panel      = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(109)), wxTAB_TRAVERSAL);
     m_cancel_btn = new FFButton(operate_panel, wxID_ANY, TEMP_CANCEL);
     m_cancel_btn->SetMinSize(wxSize(FromDIP(64), FromDIP(32)));
-    //m_cancel_btn->SetFont(wxFont(wxFontInfo(16)));
     m_cancel_btn->SetFontHoverColor(wxColour(255, 255, 255));
     m_cancel_btn->SetBGHoverColor(wxColour(127, 127, 127));
     m_cancel_btn->SetBorderHoverColor(wxColour(127, 127, 127));
@@ -286,7 +283,6 @@ void ModifyTemp::create_panel(wxWindow *parent)
 
     m_confirm_btn = new FFButton(operate_panel, wxID_ANY, TEMP_CONFIRM);
     m_confirm_btn->SetMinSize(wxSize(FromDIP(64), FromDIP(32)));
-    //m_confirm_btn->SetFont(wxFont(wxFontInfo(16)));
     m_confirm_btn->SetFontHoverColor(wxColour(255, 255, 255));
     m_confirm_btn->SetBGHoverColor(wxColour(149, 197, 255));
     m_confirm_btn->SetBorderHoverColor(wxColour(149, 197, 255));
@@ -1144,18 +1140,13 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
 //        m_cancel_button->SetMinSize((wxSize(FromDIP(158), FromDIP(29))));
         m_cancel_button->SetCornerRadius(0);
         m_cancel_button->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e) { 
-            e.Skip();
-            //取消打印指令
-            m_cur_printing_ctrl    = 3;
-            std::string printState = CANCEL;
-            std::string jobId   = Slic3r::GUI::MultiComMgr::inst()->devData(m_cur_id).devDetail->jobId;
-            ComJobCtrl *jobCtrl = new ComJobCtrl(jobId, printState);
-            // 测试，临时将id写死
-            Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, jobCtrl);
-
-            /*m_machine_ctrl_panel->Hide();
-            m_machine_idle_panel->Show();
-            Layout();*/
+            //e.Skip();
+            if (!m_cancel_confirm_page) {
+                m_cancel_confirm_page = new CancelPrint(_L("Whether Cancel Printing"), _L("yes"), _L("no"));
+                m_cancel_confirm_page->Bind(EVT_CANCEL_PRINT_CLICKED, &SingleDeviceState::onCancelPrint,this);
+                m_cancel_confirm_page->Bind(EVT_CONTINUE_PRINT_CLICKED, &SingleDeviceState::onContinuePrint,this);
+            }
+            m_cancel_confirm_page->ShowModal();
         });
 
         //bSizer_control_print->Add(m_cancel_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
@@ -2064,6 +2055,26 @@ void SingleDeviceState::onDevStateChanged(std::string devState, const com_dev_da
         }
         Layout();
     //}
+}
+
+void SingleDeviceState::onCancelPrint(wxCommandEvent &event)
+{
+    //event.Skip();
+    m_cancel_confirm_page->Close();
+    m_cur_printing_ctrl    = 3;
+    std::string printState = CANCEL;
+    std::string jobId      = Slic3r::GUI::MultiComMgr::inst()->devData(m_cur_id).devDetail->jobId;
+    ComJobCtrl *jobCtrl    = new ComJobCtrl(jobId, printState);
+    // 测试，临时将id写死
+    Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, jobCtrl);
+    //m_cancel_confirm_page->Hide();
+}
+
+void SingleDeviceState::onContinuePrint(wxCommandEvent &event)
+{
+    //event.Skip();
+    m_cancel_confirm_page->Close();
+    //m_cancel_confirm_page->Hide();
 }
 
 void SingleDeviceState::setTipMessage(const std::string& title, const std::string& titleColor,const std::string& info,bool showInfo)

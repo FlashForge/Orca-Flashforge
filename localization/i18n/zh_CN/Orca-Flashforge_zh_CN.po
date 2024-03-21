@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Slic3rPE\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-03-21 10:12+0800\n"
-"PO-Revision-Date: 2024-03-21 10:13+0800\n"
+"POT-Creation-Date: 2024-03-21 20:18+0800\n"
+"PO-Revision-Date: 2024-03-21 20:19+0800\n"
 "Last-Translator: SoftFever <softfeverever@gmail.com>\n"
 "Language-Team: \n"
 "Language: zh_CN\n"
@@ -11347,6 +11347,15 @@ msgstr "暂停打印"
 msgid "cancel print"
 msgstr "取消打印"
 
+msgid "Whether Cancel Printing"
+msgstr "是否取消打印"
+
+msgid "yes"
+msgstr "是"
+
+msgid "no"
+msgstr "否"
+
 msgid "The Current Device has no Printing Projects"
 msgstr "当前设备无打印项目"
 
@@ -11418,6 +11427,11 @@ msgstr "加热中"
 
 msgid "printing"
 msgstr "打印中"
+
+#, fuzzy
+#| msgid "Cancel print"
+msgid "Cancel Print"
+msgstr "取消打印"
 
 msgid "The maximum temperature cannot exceed"
 msgstr ""

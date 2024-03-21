@@ -8,8 +8,26 @@
 #include "Label.hpp"
 #include "Button.hpp"
 #include "FFButton.hpp"
+#include "slic3r/GUI/TitleDialog.hpp"
 
 wxDECLARE_EVENT(wxCUSTOMEVT_SET_TEMP_FINISH, wxCommandEvent);
+
+wxDECLARE_EVENT(EVT_CANCEL_PRINT_CLICKED, wxCommandEvent);
+wxDECLARE_EVENT(EVT_CONTINUE_PRINT_CLICKED, wxCommandEvent);
+class CancelPrint : public Slic3r::GUI::TitleDialog
+{
+public:
+    CancelPrint(const wxString &info, const wxString &leftBtnTxt, const wxString &rightBtnTxt);
+
+protected:
+    void on_dpi_changed(const wxRect &suggested_rect){};
+
+private:
+    wxBoxSizer   *m_sizer_main{nullptr};
+    wxStaticText *m_info{nullptr};
+    FFButton     *m_confirm_btn{nullptr};
+    FFButton     *m_cancel_btn{nullptr};
+};
 
 class TempInput : public wxNavigationEnabled<StaticBox>
 {
