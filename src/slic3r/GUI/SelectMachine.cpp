@@ -729,8 +729,9 @@ void SelectMachinePopup::update_other_devices()
         op->Bind(EVT_BIND_MACHINE, [this, deviceObj](wxCommandEvent &e) {
             if (!deviceObj)
                 return;
+            BindInfo*          info = deviceObj->get_bind_info();
             BindMachineDialog dlg;
-            dlg.update_device_info(deviceObj);
+            dlg.update_device_info2(info);
             int dlg_result = wxID_CANCEL;
             dlg_result     = dlg.ShowModal();
             if (dlg_result == wxID_OK) { wxGetApp().mainframe->jump_to_monitor(deviceObj->get_dev_id()); }
@@ -858,8 +859,11 @@ void SelectMachinePopup::update_user_devices()
             op->show_printer_bind(true, PrinterBindState::ALLOW_UNBIND);
             op->Bind(EVT_UNBIND_MACHINE, [this, devObj, devOpr](wxCommandEvent& e) {
                 // show_unbind_dialog
+                if (!devObj)
+                    return;
+                BindInfo*            info = devObj->get_bind_info();
                 UnBindMachineDialog dlg;
-                dlg.update_device_info(devObj);
+                dlg.update_device_info2(info);
                 dlg.ShowModal();
                 /*if (dlg.ShowModal() == wxID_OK) {
                     devOpr->set_selected_machine("");

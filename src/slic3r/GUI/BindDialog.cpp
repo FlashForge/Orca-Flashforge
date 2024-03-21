@@ -365,6 +365,10 @@ BindMachineDialog::~BindMachineDialog()
 {
     Unbind(EVT_BIND_MACHINE_SUCCESS, &BindMachineDialog::on_bind_success, this);
     Unbind(EVT_BIND_MACHINE_FAIL, &BindMachineDialog::on_bind_fail, this);
+    if (m_bind_info) {
+        delete m_bind_info;
+        m_bind_info = nullptr;
+    }
 }
 
 void BindMachineDialog::on_cancel(wxCommandEvent &event)
@@ -433,23 +437,32 @@ void BindMachineDialog::on_bind_printer(wxCommandEvent &event)
     event.Skip();
     m_bind_btn->Enable(false);
     m_result_code = 0;
-    if (!m_device_info) {
-        BOOST_LOG_TRIVIAL(error) << "device_info is null";
-        m_bind_btn->Enable(true);
-        return;
-    }
+    #if 0
+    //if (!m_device_info) {
+    //    BOOST_LOG_TRIVIAL(error) << "device_info is null";
+    //    m_bind_btn->Enable(true);
+    //    return;
+    //}
 
-    std::string dev_id = m_device_info->get_dev_id();
-    unsigned short dev_pid = m_device_info->get_dev_pid();
-    std::string dev_name = m_device_info->get_dev_name();
+    //std::string dev_id = m_device_info->get_dev_id();
+    //unsigned short dev_pid = m_device_info->get_dev_pid();
+    //std::string dev_name = m_device_info->get_dev_name();
 
-    if (dev_id.empty() || dev_pid == 0) {
+    //if (dev_id.empty() || dev_pid == 0) {
+    //    BOOST_LOG_TRIVIAL(error) << "dev_id is empty or dev_pid is 0";
+    //    //m_bind_btn->Enable(true);
+    //    //return;
+    //}
+    #else
+    if (m_bind_info->dev_id.empty() || m_bind_info->dev_pid == 0) {
         BOOST_LOG_TRIVIAL(error) << "dev_id is empty or dev_pid is 0";
-        //m_bind_btn->Enable(true);
-        //return;
     }
-    BOOST_LOG_TRIVIAL(info) << "on_bind_printer: " << dev_id << "--dev_pid:" << dev_pid << "--dev_name: " << dev_name;
-    m_bind_job = std::make_shared<BindJob>(nullptr, wxGetApp().plater(), dev_id, dev_pid, dev_name);
+    #endif
+
+
+    BOOST_LOG_TRIVIAL(info) << "on_bind_printer: " << m_bind_info->dev_id << "--dev_pid:" << m_bind_info->dev_pid
+                            << "--dev_name: " << m_bind_info->dev_name;
+    m_bind_job = std::make_shared<BindJob>(nullptr, wxGetApp().plater(), m_bind_info->dev_id, m_bind_info->dev_pid, m_bind_info->dev_name);
     m_bind_job->set_event_handle(this);
     m_bind_job->start();
 }
@@ -460,9 +473,14 @@ void BindMachineDialog::on_dpi_changed(const wxRect &suggested_rect)
     m_cancel_btn->SetMinSize(BIND_DIALOG_BUTTON_SIZE);
 }
 
-void BindMachineDialog::update_device_info(DeviceObject* info)
-{
-    m_device_info = info;
+//void BindMachineDialog::update_device_info(DeviceObject* info)
+//{
+//    m_device_info = info;
+//}
+
+void BindMachineDialog::update_device_info2(BindInfo *bind_info)
+{ 
+    m_bind_info = bind_info; 
 }
 
 void BindMachineDialog::update_machine_info(MachineObject *info)
@@ -475,13 +493,13 @@ void BindMachineDialog::on_show(wxShowEvent &event)
     m_result_code   = 0;
     if (event.IsShown()) {
         wxBitmap bmp;
-        auto pid = m_device_info->get_dev_pid();
-        if (0x0024 == pid) { // ad 5m pro
+        //auto pid = m_device_info->get_dev_pid();
+        if (0x0024 == m_bind_info->dev_pid) { // ad 5m pro
             bmp = create_scaled_bitmap("adventurer_5m_pro", 0, 80);
-        } else if (0x0023 == pid) { // ad 5m
+        } else if (0x0023 == m_bind_info->dev_pid) { // ad 5m
             bmp = create_scaled_bitmap("adventurer_5m", 0, 80);
         } else {
-            auto img_path = m_device_info->get_printer_thumbnail_img_str();
+            auto img_path = m_bind_info->img /*m_device_info->get_printer_thumbnail_img_str()*/;
             if (wxGetApp().dark_mode()) { img_path += "_dark"; }
             bmp = create_scaled_bitmap(img_path, this, FromDIP(80));
         }
@@ -489,7 +507,8 @@ void BindMachineDialog::on_show(wxShowEvent &event)
         m_printer_img->Refresh();
         //m_printer_img->Show();
 
-        m_printer_name->SetLabelText(from_u8(m_device_info->get_dev_name()));
+        m_printer_name->SetLabelText(from_u8(m_bind_info->dev_name /*m_device_info->get_dev_name()*/));
+        //m_machinePanel->Layout();
         m_machine_sizer->Layout();
 
         if (LoginDialog::IsUsrLogin()) {
@@ -652,6 +671,10 @@ UnBindMachineDialog::UnBindMachineDialog()
 UnBindMachineDialog::~UnBindMachineDialog()
 {
     Unbind(EVT_UNBIND_MACHINE_COMPLETED, &UnBindMachineDialog::on_unbind_completed, this);
+    if (m_unbind_info) {
+        delete m_unbind_info;
+        m_unbind_info = nullptr;
+    }
 }
 
 void UnBindMachineDialog::on_cancel(wxCommandEvent &event)
@@ -715,12 +738,13 @@ void UnBindMachineDialog::on_unbind_printer(wxCommandEvent &event)
     event.Skip();
     m_unbind_btn->Enable(false);
     m_result_code = 0;
-    if (!m_device_info) {
-        BOOST_LOG_TRIVIAL(error) << "device_info is null"; 
-        m_unbind_btn->Enable(true);
-        return;
-    }
-    m_unbind_job = std::make_shared<UnbindJob>(m_device_info);
+    //if (!m_device_info) {
+    //    BOOST_LOG_TRIVIAL(error) << "device_info is null"; 
+    //    m_unbind_btn->Enable(true);
+    //    return;
+    //}
+    //m_unbind_job = std::make_shared<UnbindJob>(m_device_info);
+    m_unbind_job = std::make_shared<UnbindJob>(m_unbind_info->dev_id, m_unbind_info->bind_id);
     m_unbind_job->set_event_handle(this);
     m_unbind_job->start();
 }
@@ -731,9 +755,14 @@ void UnBindMachineDialog::on_dpi_changed(const wxRect &suggested_rect)
     m_cancel_btn->SetMinSize(BIND_DIALOG_BUTTON_SIZE);
 }
 
-void UnBindMachineDialog::update_device_info(DeviceObject* info)
-{
-    m_device_info = info;
+//void UnBindMachineDialog::update_device_info(DeviceObject* info)
+//{
+//    m_device_info = info;
+//}
+
+void UnBindMachineDialog::update_device_info2(BindInfo *info)
+{ 
+    m_unbind_info = info;
 }
 
 void UnBindMachineDialog::update_machine_info(MachineObject *info)
@@ -749,13 +778,13 @@ void UnBindMachineDialog::on_show(wxShowEvent &event)
 
     if (event.IsShown()) {
         wxBitmap bmp;
-        auto pid = m_device_info->get_dev_pid();
-        if (0x0024 == pid) { // ad 5m pro
+        //auto pid = m_device_info->get_dev_pid();
+        if (0x0024 == m_unbind_info->dev_pid) { // ad 5m pro
             bmp = create_scaled_bitmap("adventurer_5m_pro", 0, 80);
-        } else if (0x0023 == pid) { // ad 5m
+        } else if (0x0023 == m_unbind_info->dev_pid) { // ad 5m
             bmp = create_scaled_bitmap("adventurer_5m", 0, 80);
         } else {
-            auto img_path = m_device_info->get_printer_thumbnail_img_str();
+            auto img_path = m_unbind_info->img /*m_device_info->get_printer_thumbnail_img_str()*/;
             if (wxGetApp().dark_mode()) { img_path += "_dark"; }
             bmp = create_scaled_bitmap(img_path, this, FromDIP(80));
         }
@@ -763,7 +792,7 @@ void UnBindMachineDialog::on_show(wxShowEvent &event)
         m_printer_img->Refresh();
         //m_printer_img->Show();
 
-        m_printer_name->SetLabelText(from_u8(m_device_info->get_dev_name()));
+        m_printer_name->SetLabelText(from_u8(m_unbind_info->dev_name /*m_device_info->get_dev_name()*/));
         //m_machinePanel->Layout();
         m_machine_sizer->Layout();
 

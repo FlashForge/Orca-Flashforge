@@ -31,6 +31,7 @@
 #include "TitleDialog.hpp"
 #include "Widgets/FFCheckBox.hpp"
 
+
 #define BIND_DIALOG_GREY200 wxColour(248, 248, 248)
 #define BIND_DIALOG_GREY800 wxColour(50, 58, 61)
 #define BIND_DIALOG_GREY900 wxColour(38, 46, 48)
@@ -65,8 +66,8 @@ private:
     wxImage     m_image { wxNullImage };
 };
 
-
-class DeviceObject;
+struct BindInfo;
+//class DeviceObject;
 class BindMachineDialog : public TitleDialog
 {
 private:
@@ -109,7 +110,8 @@ private:
     bool           m_unbind_flag;
 
     MachineObject *                   m_machine_info{nullptr};
-    DeviceObject                     *m_device_info {nullptr};
+    //DeviceObject                     *m_device_info {nullptr};
+    BindInfo                *m_bind_info{nullptr};
     std::shared_ptr<BindJob>          m_bind_job;
 
 public:
@@ -122,14 +124,12 @@ public:
     void     on_bind_printer(wxCommandEvent &event);
     void     on_dpi_changed(const wxRect &suggested_rect) override;
     void     update_machine_info(MachineObject *info);
-    void     update_device_info(DeviceObject *info);
+    //void     update_device_info(DeviceObject *info);
+    void     update_device_info2(BindInfo* bind_info);
     void     on_show(wxShowEvent &event);
     void     on_close(wxCloseEvent& event);
     void     on_destroy();
     void     on_result_ok(wxCommandEvent& event);
-
-private:
-    wxString trimString(wxDC &dc, wxString &str, int width);
 };
 
 // unbind
@@ -153,7 +153,8 @@ private:
     int            m_result_code;
 
     MachineObject *                   m_machine_info{nullptr};
-    DeviceObject                     *m_device_info {nullptr};
+    //DeviceObject                     *m_device_info {nullptr};
+    BindInfo                  *m_unbind_info{nullptr};
     std::shared_ptr<UnbindJob>        m_unbind_job;
 
 public:
@@ -165,7 +166,8 @@ public:
     void     on_unbind_completed(wxCommandEvent &event);
     void     on_dpi_changed(const wxRect &suggested_rect) override;
     void     update_machine_info(MachineObject *info);
-    void     update_device_info(DeviceObject *info);
+    //void     update_device_info(DeviceObject *info);
+    void     update_device_info2(BindInfo* info);
     void     on_show(wxShowEvent &event);
     void     on_close(wxCloseEvent& event);
     void     on_destroy();
