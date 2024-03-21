@@ -96,6 +96,8 @@ AddMachinePanel::~AddMachinePanel() {
     m_button_add_machine->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(AddMachinePanel::on_add_machine), NULL, this);
 }
 
+wxDEFINE_EVENT(EVT_SWITCH_TO_DEVICE_LIST, wxCommandEvent);
+wxDEFINE_EVENT(EVT_SWITCH_TO_DEVICE_STATUS, wxCommandEvent);
  MonitorPanel::MonitorPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
     : wxPanel(parent, id, pos, size, style),
      m_select_machine(SelectMachinePopup(this)),
@@ -124,7 +126,8 @@ AddMachinePanel::~AddMachinePanel() {
     m_select_machine.Bind(EVT_FINISHED_UPDATE_MACHINE_LIST, [this](wxCommandEvent& e) {
         m_side_tools->start_interval();
     });
-    m_device_list_panel->Bind(EVT_DEVICE_ITEM_SELECTED, [this](wxCommandEvent &event) {
+    //m_device_list_panel->Bind(EVT_DEVICE_ITEM_SELECTED, [this](wxCommandEvent &event) {
+    Bind(EVT_SWITCH_TO_DEVICE_STATUS, [this](wxCommandEvent &event) {
         event.Skip();
         m_tabpanel->SetSelection(1);
         m_status_info_panel_page->setCurId(event.GetInt());

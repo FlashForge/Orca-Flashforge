@@ -85,6 +85,7 @@ private:
 
     wxSimplebook *m_simplebook;
     wxPanel*       m_normal_panel;
+    wxPanel*       m_top_panel;
     wxSizer*       m_machine_sizer;
     wxStaticBitmap *m_printer_img;
     wxStaticText * m_printer_name;
@@ -126,6 +127,9 @@ public:
     void     on_close(wxCloseEvent& event);
     void     on_destroy();
     void     on_result_ok(wxCommandEvent& event);
+
+private:
+    wxString trimString(wxDC &dc, wxString &str, int width);
 };
 
 // unbind

@@ -16,6 +16,9 @@ TitleBar::TitleBar(wxWindow *parent, const wxString& title, const wxColour& colo
 {
     //SetBackgroundColour(m_bgColor);
     m_titleLbl = new wxStaticText(this, wxID_ANY, m_title, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
+    wxFont font = m_titleLbl->GetFont();
+    font.SetWeight(wxFONTWEIGHT_BOLD);
+    m_titleLbl->SetFont(font);
     m_titleLbl->Bind(wxEVT_LEFT_DOWN, &TitleBar::OnMouseLeftDown, this);
     m_titleLbl->SetBackgroundColour(m_bgColor/*wxColour("#ff0000")*/);
 
@@ -78,7 +81,7 @@ void TitleBar::DoRender(wxDC &dc)
 
     dc.SetBrush(m_bgColor);
     dc.DrawRoundedRectangle(0, 0, sz.x, sz.y / 2, m_borderRadius);
-    dc.DrawRectangle(0, sz.y / 2, sz.x, sz.y);
+    dc.DrawRectangle(0, m_borderRadius+3, sz.x, sz.y);
 }
 
 void TitleBar::OnMouseLeftDown(wxMouseEvent &event)
@@ -152,11 +155,11 @@ TitleDialog::TitleDialog(wxWindow* parent, const wxString& title, int borderRadi
     sizer->AddSpacer(m_shadow_width);
     sizer->Add(m_titleBar, 0, wxEXPAND | wxALIGN_TOP | wxLEFT | wxRIGHT, m_shadow_width);
     sizer->Add(m_mainSizer, 1, wxEXPAND | wxLEFT | wxRIGHT, m_shadow_width);
-    sizer->AddSpacer(m_shadow_width);
+    sizer->AddSpacer(m_borderRadius);
     SetSizer(sizer);
     Layout();
 
-    //Bind(wxEVT_ERASE_BACKGROUND, &TitleDialog::OnErase, this);
+    Bind(wxEVT_ERASE_BACKGROUND, &TitleDialog::OnErase, this);
     Bind(wxEVT_PAINT, &TitleDialog::OnPaint, this);
     Bind(wxEVT_SIZE, &TitleDialog::OnSize, this);
 }
@@ -195,7 +198,7 @@ void TitleDialog::OnPaint(wxPaintEvent& event)
     }
     memdc.SelectObject(wxNullBitmap);
     dc.DrawBitmap(bmp, 0, 0);
-    //bmp.SaveFile("D:/aa.png", wxBITMAP_TYPE_PNG);
+    bmp.SaveFile("D:/aa.png", wxBITMAP_TYPE_PNG);
 #else
     DoRender(dc);
 #endif

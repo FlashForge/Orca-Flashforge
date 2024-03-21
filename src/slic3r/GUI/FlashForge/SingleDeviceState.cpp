@@ -33,6 +33,7 @@ const std::string P_ERROR     = "error";
 const std::string P_PAUSING  = "pausing";
 const std::string P_BUSY      = "busy";
 const std::string P_HEATING   = "heating";
+const std::string P_CALIBRATE  = "calibrate_doing";
 
 const wxString    TEMPERATURE = _L("Temperature");
 const wxString    TEMP_CANCEL  = _L("cancel");
@@ -755,7 +756,7 @@ wxBoxSizer* SingleDeviceState::create_machine_control_title()
             e.Skip();
             m_staticText_device_info->Hide();
             m_clear_button->Hide();
-            m_staticText_file_name->SetLabel("333555666777888999");
+            //m_staticText_file_name->SetLabel("333555666777888999");
             Layout();
         });
 
@@ -1332,6 +1333,12 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         m_busy_temp_brn->Bind(EVT_MODIFY_TEMP_CANCEL_CLICKED, [this](wxCommandEvent &event) {
             event.Skip();
             m_busy_temp_brn->Hide();
+            m_tempCtrl_top->Unbind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);
+            m_tempCtrl_top->SetTagTemp(m_right_target_temp, true);
+            m_tempCtrl_top->Bind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this); 
+            m_tempCtrl_bottom->Unbind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);
+            m_tempCtrl_bottom->SetTagTemp(m_plat_target_temp, true);
+            m_tempCtrl_bottom->Bind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);
             Layout();
         });
         busySizer->Add(m_busy_temp_brn, 0, wxALL | wxEXPAND, 0);
@@ -1978,10 +1985,18 @@ void SingleDeviceState::onDevStateChanged(std::string devState, const com_dev_da
             m_machine_ctrl_panel->Hide();
             std::string busy_state = _L("busy").ToStdString();
             std::string busy_info  = _L("Print cancelled,in cache command").ToStdString();
-            setTipMessage(busy_state, "#F9B61C", busy_info, true);
+            setTipMessage(busy_state, "#F9B61C", busy_info, false);
             m_idle_tempMixDevice->setState(1);
             m_staticText_idle->SetLabel(_L("The Current Device has no Printing Projects"));
-        } else if (state == P_ERROR) {
+        } else if (state == P_CALIBRATE) {
+            m_machine_idle_panel->Show();
+            m_machine_ctrl_panel->Hide();
+            std::string busy_state = _L("busy").ToStdString();
+            std::string busy_info  = _L("").ToStdString();
+            setTipMessage(busy_state, "#F9B61C", busy_info, false);
+            m_idle_tempMixDevice->setState(1);
+            m_staticText_idle->SetLabel(_L("The Current Device has no Printing Projects"));
+         } else if (state == P_ERROR) {
             m_machine_idle_panel->Show();
             m_machine_ctrl_panel->Hide();
             std::string error_state = _L("error").ToStdString();

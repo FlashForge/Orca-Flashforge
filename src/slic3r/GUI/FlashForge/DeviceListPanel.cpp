@@ -8,6 +8,8 @@
 #include "slic3r/GUI/Widgets/FFCheckBox.hpp"
 #include "slic3r/GUI/wxExtensions.hpp"
 #include "DeviceData.hpp"
+#include "slic3r/GUI/Monitor.hpp"
+#include "slic3r/GUI/MainFrame.hpp"
 
 namespace Slic3r {
 namespace GUI {
@@ -489,7 +491,7 @@ void FilterPopupWindow::onPaint(wxPaintEvent& event)
 }
 
 
-wxDEFINE_EVENT(EVT_DEVICE_ITEM_SELECTED, wxCommandEvent);
+//wxDEFINE_EVENT(EVT_DEVICE_ITEM_SELECTED, wxCommandEvent);
 std::map<unsigned short, wxBitmap> DeviceItemPanel::m_machineBitmapMap;
 DeviceItemPanel::DeviceItemPanel(wxWindow *parent) 
     : wxPanel(parent)
@@ -680,10 +682,11 @@ const DeviceInfoItemPanel::DeviceInfo& DeviceInfoItemPanel::deviceInfo() const
 void DeviceInfoItemPanel::sendEvent()
 {
     if (m_info.conn_id >= 0 && !m_info.status.empty() && m_info.status != "offline" && m_event_handle) {
-        wxCommandEvent event(EVT_DEVICE_ITEM_SELECTED, GetId());
-        event.SetEventObject(m_event_handle);
-        event.SetInt(m_info.conn_id);
-        wxPostEvent(m_event_handle, event);
+        wxGetApp().mainframe->jump_to_monitor(EVT_SWITCH_TO_DEVICE_STATUS, m_info.conn_id);
+        //wxCommandEvent event(EVT_DEVICE_ITEM_SELECTED, GetId());
+        //event.SetEventObject(m_event_handle);
+        //event.SetInt(m_info.conn_id);
+        //wxPostEvent(m_event_handle, event);
     }
 }
 

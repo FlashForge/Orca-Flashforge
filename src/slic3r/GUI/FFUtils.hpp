@@ -22,6 +22,8 @@ public:
 	static std::string utf8Substr(const std::string& str, int start, int length);
 
 	static std::string truncateString(const std::string &s, size_t length);
+
+	static wxString trimString(wxDC &dc, wxString &str, int width);
 };
 
 }

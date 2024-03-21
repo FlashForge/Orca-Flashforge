@@ -71,6 +71,7 @@ public:
 
     bool send_to_printer(int plate_idx, const com_id_list_t& com_ids, const std::string& job_name, bool send_and_print, bool leveling);
     void cancel();
+    const com_id_list_t& com_ids() const { return m_com_ids; }
     
     bool get_multi_send_result(std::map<com_id_t, Result>& result);
     void reset();
@@ -106,6 +107,7 @@ private:
     std::string     m_slice_path;
     std::string     m_thumb_path;
     std::string     m_slice_job_name;
+    com_id_list_t   m_com_ids;
     std::deque<com_id_t>            m_printers;
     std::map<com_id_t, ResultInfo>  m_send_jobs;
     std::shared_ptr<ExportSliceJob> m_export_job;

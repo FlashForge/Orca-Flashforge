@@ -168,8 +168,8 @@ function SetUrlInfo(strAddress) {
       video.style.backgroundPosition = "center";
 
       var handleClick = function () {
-		    flag = true;
         if (!streamPaused) {
+          // alert(11111111)
           OnGetUrl();
           setTimeout(function () {
             var element = document.getElementById("url-studio");
@@ -217,7 +217,7 @@ function SetUrlInfo(strAddress) {
                   var zanting = document.getElementById("zanting");
                   zanting.style.display = "block";
                   streamPaused = false;
-                }, 600000); // 10分钟后暂停，10分钟 = 600000毫秒
+                }, 300000); // 10分钟后暂停，10分钟 = 600000毫秒
                 streamPaused = true;
               }
             } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
@@ -259,14 +259,15 @@ function SetUrlInfo(strAddress) {
                   var zanting = document.getElementById("zanting");
                   zanting.style.display = "block";
                   streamPaused = false;
-                }, 600000); // 10分钟后暂停，10分钟 = 600000毫秒
+                }, 300000); // 10分钟后暂停，10分钟 = 600000毫秒
                 streamPaused = true;
               }
             }
           }, 10);
         } else {
-          video.pause();
-          //   video.src = ''
+          // alert(222222)
+          // video.pause();
+          video.src = ''
           video.style.backgroundImage = "url('hei.svg')";
           video.style.backgroundSize = "cover";
           video.style.backgroundRepeat = "no-repeat";
@@ -278,6 +279,7 @@ function SetUrlInfo(strAddress) {
       };
 
 	  if (!flag) {
+      flag = true;
 		  video.removeEventListener("click", handleClick);
 		  video.addEventListener("click", handleClick);
 	  }
@@ -287,7 +289,6 @@ function SetUrlInfo(strAddress) {
       // videoStreamImg.src = 'hei.svg'
       // videoStreamImg.style.backgroundImage = 'url("hei.svg")'
       var handleClick = function () {
-        flag = true;
         if (!streamPaused) {
           OnGetUrl();
           setTimeout(function () {
@@ -316,7 +317,7 @@ function SetUrlInfo(strAddress) {
               zanting.style.display = "block";
               videoStreamImg.style.backgroundImage = 'url("hei.svg")';
               streamPaused = false;
-            }, 600000); // 10分钟后暂停，10分钟 = 600000毫秒
+            }, 300000); // 10分钟后暂停，10分钟 = 600000毫秒
           }, 10);
         } else {
           videoStreamImg.src = "hei.svg";
@@ -328,6 +329,7 @@ function SetUrlInfo(strAddress) {
       }
       
       if (!flag) {
+        flag = true;
         for (let i = 0; i < imgs.length; i++) {
           imgs[i].removeEventListener("click", handleClick);
           imgs[i].addEventListener("click", handleClick);
