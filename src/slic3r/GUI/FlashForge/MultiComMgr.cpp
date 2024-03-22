@@ -21,7 +21,7 @@ bool MultiComMgr::initalize(const std::string &newtworkDllPath, const std::strin
         return false;
     }
     m_networkIntfc.reset(new fnet::FlashNetworkIntfc(
-        newtworkDllPath.c_str(), logFileDir.c_str(), 72, FNET_LOG_LEVEL_INFO));
+        newtworkDllPath.c_str(), logFileDir.c_str(), 72, FNET_LOG_LEVEL_DEBUG));
     if (!m_networkIntfc->isOk()) {
         m_networkIntfc.reset(nullptr);
         return false;

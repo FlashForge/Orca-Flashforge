@@ -11,7 +11,7 @@ using com_id_t = int;
 using com_id_list_t = std::vector<com_id_t>;
 constexpr com_id_t ComInvalidId = -1;
 constexpr int ComInvalidCommandId = -1;
-constexpr int ComTimeoutLan = 3000;
+constexpr int ComTimeoutLan = 5000;
 constexpr int ComTimeoutWan = 5000;
 
 enum ComErrno {

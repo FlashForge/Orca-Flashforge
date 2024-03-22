@@ -612,13 +612,12 @@ void SelectMachinePopup::on_connect_ready(ComConnectionReadyEvent &event)
 
 void SelectMachinePopup::on_devList_Updated(DeviceListUpdateEvent &event) 
 {
-    DeviceObjectOpr *devOpr = wxGetApp().getDeviceObjectOpr();
-    devOpr->update_scan_machine();
-
-    update_user_devices();
-    update_other_devices();
-    BOOST_LOG_TRIVIAL(trace) << "SelectMachinePopup update_machine_list end";
+    event.Skip();
+    if (this->IsShown() && m_refresh_timer && !m_refresh_timer->IsRunning()) {
+        m_refresh_timer->Start(MACHINE_LIST_REFRESH_INTERVAL);
+    }
 }
+
 
 void SelectMachinePopup::on_timer(wxTimerEvent &event)
 {

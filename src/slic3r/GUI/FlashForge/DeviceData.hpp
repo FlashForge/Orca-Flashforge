@@ -170,7 +170,6 @@ private:
 };
 wxDECLARE_EVENT(EVT_DEVICE_LIST_UPDATED, DeviceListUpdateEvent);
 
-
 class DeviceObjectOpr : public wxEvtHandler
 {
 public:
@@ -210,6 +209,7 @@ private:
     void get_my_machine_list_v2(map<string, DeviceObject *> &devList);
     
     void sendDeviceListUpdateEvent(const std::string& dev_id, int conn_id);
+
     void removeUserDev(DeviceObject *obj);
 
 private:
