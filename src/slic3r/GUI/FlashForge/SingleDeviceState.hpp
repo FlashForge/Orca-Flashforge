@@ -146,6 +146,7 @@ private:
     void  fillValue(const com_dev_data_t &data);
 
     void  setPageOffline();
+    std::string getCurLanguage();
 
 protected:
 //data

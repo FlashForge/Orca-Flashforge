@@ -560,6 +560,7 @@ void SingleDeviceState::setCurId(int curId)
 
 void SingleDeviceState::modifyVideoPlayerAddress(const std::string &urlAddress)
 {
+    std::string cur_language = getCurLanguage();
    std::string jsonStr = R"({"command": "modify_rtsp_player_address","address": "http://115.231.29.48:1370/ffspace/SNMMOC98989898.m3u8","sequence_id": "10001"})";
    // 将JSON字符串解析为JSON对象
    json jsonObj = json::parse(jsonStr);
@@ -568,6 +569,7 @@ void SingleDeviceState::modifyVideoPlayerAddress(const std::string &urlAddress)
    } else {
       return;
    }
+   jsonObj["language"] = cur_language;
    // 将JSON对象转换为字符串
    std::string newJsonStr = jsonObj.dump();
    wxString    strJS      = wxString::Format("window.postMessage(%s)", wxString::FromUTF8(newJsonStr));
@@ -578,8 +580,12 @@ void SingleDeviceState::modifyVideoPlayerAddress(const std::string &urlAddress)
 
 void SingleDeviceState::notifyWebDevOffline() 
 {
+   std::string cur_language = getCurLanguage();
    std::string jsonStr = R"({"command" : "close_rtsp", "sequence_id" : "10001"})";
-   wxString    strJS   = wxString::Format("window.postMessage(%s)", wxString::FromUTF8(jsonStr));
+   json        jsonObj      = json::parse(jsonStr);
+   jsonObj["language"]      = cur_language;
+   std::string newJsonStr   = jsonObj.dump();
+   wxString    strJS        = wxString::Format("window.postMessage(%s)", wxString::FromUTF8(newJsonStr));
    if (m_browser) {
      WebView::RunScript(m_browser, strJS);
    }
@@ -2187,7 +2193,7 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
             }
         });
         MultiComUtils::asyncCall(this, [&]() { 
-            return MultiComUtils::downloadFile(m_file_pic_url, m_pic_data, 5000); 
+            return MultiComUtils::downloadFile(m_file_pic_url, m_pic_data, 15000); 
         });     
    }
    //m_material_staticbitmap->SetBitmap(create_scaled_bitmap(filePic, this, 60));
@@ -2301,6 +2307,12 @@ void SingleDeviceState::setPageOffline()
    m_machine_ctrl_panel->Hide();
    notifyWebDevOffline();
    reInit();
+}
+
+std::string SingleDeviceState::getCurLanguage() 
+{
+    AppConfig *app_config = wxGetApp().app_config; 
+    return  app_config->get("language");
 }
 
 void SingleDeviceState::onScriptMessage(wxWebViewEvent &evt)
