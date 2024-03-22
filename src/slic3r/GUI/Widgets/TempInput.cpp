@@ -8,6 +8,8 @@
 #include "slic3r/GUI/FlashForge/MultiComMgr.hpp"
 
 wxDEFINE_EVENT(wxCUSTOMEVT_SET_TEMP_FINISH, wxCommandEvent);
+wxDEFINE_EVENT(EVT_CANCEL_PRINT_CLICKED, wxCommandEvent);
+wxDEFINE_EVENT(EVT_CONTINUE_PRINT_CLICKED, wxCommandEvent);
 
 BEGIN_EVENT_TABLE(TempInput, wxPanel)
 EVT_MOTION(TempInput::mouseMoved)
@@ -21,6 +23,98 @@ END_EVENT_TABLE()
 
 const std::string CLOSE = "close";
 const std::string OPEN  = "open";
+
+CancelPrint::CancelPrint(const wxString &info, const wxString &leftBtnTxt, const wxString &rightBtnTxt)
+    : TitleDialog(static_cast<wxWindow *>(Slic3r::GUI::wxGetApp().GetMainTopWindow()), _L("Cancel print"), 6)
+{
+    m_sizer_main = MainSizer();
+    m_sizer_main->SetMinSize(wxSize(FromDIP(370), FromDIP(154)));
+
+    m_sizer_main->AddSpacer(FromDIP(31));
+    m_info = new wxStaticText(this, wxID_ANY, info);
+    m_sizer_main->Add(m_info, 0, wxALIGN_CENTER, 0);
+
+    m_sizer_main->AddSpacer(FromDIP(18));
+
+    // 确认、取消按钮
+    wxBoxSizer *bSizer_operate_hor = new wxBoxSizer(wxHORIZONTAL);
+    wxPanel    *operate_panel      = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+    m_cancel_btn                   = new FFButton(operate_panel, wxID_ANY, leftBtnTxt);
+    m_cancel_btn->SetMinSize(wxSize(FromDIP(76), FromDIP(34)));
+    m_cancel_btn->SetFontHoverColor(wxColour(255, 255, 255));
+    m_cancel_btn->SetBGHoverColor(wxColour("#65A79E"));
+    m_cancel_btn->SetBorderHoverColor(wxColour("#65A79E"));
+
+    m_cancel_btn->SetFontPressColor(wxColour(255, 255, 255));
+    m_cancel_btn->SetBGPressColor(wxColour("#1A8676"));
+    m_cancel_btn->SetBorderPressColor(wxColour("#1A8676"));
+
+    m_cancel_btn->SetFontColor(wxColour(255, 255, 255));
+    m_cancel_btn->SetBorderColor(wxColour("#419488"));
+    m_cancel_btn->SetBGColor(wxColour("#419488"));
+    m_cancel_btn->Bind(wxEVT_LEFT_DOWN, [this, operate_panel](wxMouseEvent &event) {
+        event.Skip();
+        wxCommandEvent ev(EVT_CANCEL_PRINT_CLICKED, GetId());
+         ev.SetEventObject(this);
+         wxPostEvent(this, ev);
+    });
+
+    bSizer_operate_hor->AddStretchSpacer();
+    bSizer_operate_hor->Add(m_cancel_btn, 0, wxALIGN_CENTER, 0);
+    bSizer_operate_hor->AddSpacer(FromDIP(43));
+
+    m_confirm_btn = new FFButton(operate_panel, wxID_ANY, rightBtnTxt);
+    m_confirm_btn->SetMinSize(wxSize(FromDIP(76), FromDIP(34)));
+    m_confirm_btn->SetFontHoverColor(wxColour("#65A79E"));
+    m_confirm_btn->SetBGHoverColor(wxColour(255, 255, 255));
+    m_confirm_btn->SetBorderHoverColor(wxColour("#65A79E"));
+
+    m_confirm_btn->SetFontPressColor(wxColour("#1A8676"));
+    m_confirm_btn->SetBGPressColor(wxColour(255, 255, 255));
+    m_confirm_btn->SetBorderPressColor(wxColour("#1A8676"));
+
+    m_confirm_btn->SetFontColor(wxColour("#333333"));
+    m_confirm_btn->SetBorderColor(wxColour("#333333"));
+    m_confirm_btn->SetBGColor(wxColour(255, 255, 255));
+    m_confirm_btn->Bind(wxEVT_LEFT_DOWN, [this, operate_panel](wxMouseEvent &event) {
+        event.Skip();
+        wxCommandEvent ev(EVT_CONTINUE_PRINT_CLICKED, GetId());
+        ev.SetEventObject(this);
+        wxPostEvent(this, ev);
+    });
+
+    bSizer_operate_hor->Add(m_confirm_btn, 0, wxALIGN_CENTER, 0);
+    bSizer_operate_hor->AddStretchSpacer();
+
+    operate_panel->SetSizer(bSizer_operate_hor);
+    operate_panel->Layout();
+    bSizer_operate_hor->Fit(operate_panel);
+
+    m_sizer_main->Add(operate_panel, 0, wxALL | wxALIGN_CENTER, 0);
+
+    Fit();
+    Thaw();
+    Centre(wxBOTH);
+    Layout();
+}
+
+ShowTip::ShowTip(const wxString &info)
+    : TitleDialog(static_cast<wxWindow *>(Slic3r::GUI::wxGetApp().GetMainTopWindow()), _L("Tip"), 6)
+{
+    m_sizer_main = MainSizer();
+    m_sizer_main->SetMinSize(wxSize(FromDIP(360), FromDIP(160)));
+
+    m_sizer_main->AddSpacer(FromDIP(50));
+    m_info = new wxStaticText(this, wxID_ANY, info, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
+    m_info->SetForegroundColour(wxColor("#419488"));
+    m_sizer_main->Add(m_info, 0, wxALIGN_CENTER);
+    m_sizer_main->AddStretchSpacer();
+
+    Fit();
+    Thaw();
+    Centre(wxBOTH);
+    Layout();
+}
 
 TempInput::TempInput()
     : label_color(std::make_pair(wxColour(0xAC,0xAC,0xAC), (int) StateColor::Disabled),std::make_pair(0x323A3C, (int) StateColor::Normal))

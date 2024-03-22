@@ -195,6 +195,7 @@ public:
 class ThumbnailPanel;
 class DeviceObject;
 class DeviceListUpdateEvent;
+class MachineListUpdateEvent;
 class SelectMachinePopup : public PopupWindow
 {
 public:

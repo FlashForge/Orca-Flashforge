@@ -128,9 +128,13 @@ wxDEFINE_EVENT(EVT_SWITCH_TO_DEVICE_STATUS, wxCommandEvent);
     });
     //m_device_list_panel->Bind(EVT_DEVICE_ITEM_SELECTED, [this](wxCommandEvent &event) {
     Bind(EVT_SWITCH_TO_DEVICE_STATUS, [this](wxCommandEvent &event) {
+        if (event.GetEventType() == EVT_SWITCH_TO_DEVICE_LIST) {
+            m_tabpanel->SetSelection(0);
+        } else if (event.GetEventType() == EVT_SWITCH_TO_DEVICE_STATUS) {
+            m_tabpanel->SetSelection(1);
+            m_status_info_panel_page->setCurId(event.GetInt());
+        }
         event.Skip();
-        m_tabpanel->SetSelection(1);
-        m_status_info_panel_page->setCurId(event.GetInt());
     });
 }
 

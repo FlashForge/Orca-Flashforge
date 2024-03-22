@@ -79,6 +79,7 @@
 #include "slic3r/GUI/FlashForge/ReLoginDialog.hpp"
 #include "slic3r/GUI/FlashForge/MultiComMgr.hpp"
 #include "slic3r/GUI/FlashForge/DeviceData.hpp"
+#include "slic3r/GUI/Widgets/TempInput.hpp"
 #include "Preferences.hpp"
 #include "Tab.hpp"
 #include "SysInfoDialog.hpp"
@@ -4332,6 +4333,14 @@ void GUI_App::wan_dev_maintain(ComWanDevMaintainEvent &event)
             app_config->set("usr_pic", "");
             app_config->set("usr_uid", "");
         }
+        if (!m_logout_tip) {
+            m_logout_tip = new ShowTip(_L("The current account has been logged out!"));
+        } else {
+            delete m_logout_tip;
+            m_logout_tip = nullptr;
+            m_logout_tip = new ShowTip(_L("The current account has been logged out!"));
+        }
+        m_logout_tip->ShowModal();
     }
 }
 

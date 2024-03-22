@@ -37,6 +37,8 @@ protected:
     MachineObject*  m_obj{ nullptr };
     DeviceObject*   m_devObj {nullptr};
     wxString        m_input_access_code;
+    wxPanel        *m_error_panel;
+
 public:
     ConnectPrinterDialog(wxWindow       *parent,
                          wxWindowID      id       = wxID_ANY,

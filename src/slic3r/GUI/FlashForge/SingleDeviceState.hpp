@@ -136,6 +136,8 @@ public:
     void onTargetTempModify(wxCommandEvent &event);
     void onModifyTempClicked(wxCommandEvent &event);
     void onDevStateChanged(std::string devState, const com_dev_data_t &data);
+    void onCancelPrint(wxCommandEvent &event);
+    void onContinuePrint(wxCommandEvent &event);
 
     void setTipMessage(const std::string &title = "", const std::string &titleColor = "", const std::string &info = "", bool showInfo = false);
 
@@ -144,6 +146,7 @@ private:
     void  fillValue(const com_dev_data_t &data);
 
     void  setPageOffline();
+    std::string getCurLanguage();
 
 protected:
 //data
@@ -212,6 +215,7 @@ protected:
 
     Button* m_print_button;
     Button* m_cancel_button;
+    CancelPrint *m_cancel_confirm_page{nullptr};
 
     bool m_print_button_pressed_down = false;
 
