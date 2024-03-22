@@ -249,7 +249,7 @@ void FFButton::sendEvent()
 }
 
 
-FFPushButton::FFPushButton(wxWindow* parent,wxWindowID id,const wxString& normalIcon,const wxString& hoverIcon,const wxString& pressIcon,const wxString& disableIcon)
+FFPushButton::FFPushButton(wxWindow *parent,wxWindowID      id,const wxString &normalIcon,const wxString &hoverIcon,const wxString &pressIcon,const wxString &disableIcon,const int iconSize)
     : wxButton(parent, id, "", wxPoint(10, 10), wxSize(25, 25), wxNO_BORDER)
     , m_normalIcon(normalIcon)
     , m_hoverIcon(hoverIcon)
@@ -257,10 +257,10 @@ FFPushButton::FFPushButton(wxWindow* parent,wxWindowID id,const wxString& normal
     , m_disableIcon(disableIcon)
 {
     //SetBitmap(wxBitmap(normalIcon));
-    m_normalBitmap  = create_scaled_bitmap(normalIcon.ToStdString(), this, 16);
-    m_hoverBitmap   = create_scaled_bitmap(hoverIcon.ToStdString(), this, 16);
-    m_pressBitmap   = create_scaled_bitmap(pressIcon.ToStdString(), this, 16);
-    m_disableBitmap = create_scaled_bitmap(disableIcon.ToStdString(), this, 16);
+    m_normalBitmap  = create_scaled_bitmap(normalIcon.ToStdString(), this, iconSize);
+    m_hoverBitmap   = create_scaled_bitmap(hoverIcon.ToStdString(), this, iconSize);
+    m_pressBitmap   = create_scaled_bitmap(pressIcon.ToStdString(), this, iconSize);
+    m_disableBitmap = create_scaled_bitmap(disableIcon.ToStdString(), this, iconSize);
     Bind(wxEVT_PAINT, &FFPushButton::OnPaint, this);
     Bind(wxEVT_LEFT_DOWN, &FFPushButton::OnMousePress, this);
     Bind(wxEVT_LEFT_UP, &FFPushButton::OnMouseRelease, this);

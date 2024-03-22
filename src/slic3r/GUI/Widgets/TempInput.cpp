@@ -726,6 +726,9 @@ void IconText::create_panel(wxWindow* parent,wxString icon,int iconSize,wxString
     auto icon_static = new wxStaticBitmap(m_panel_page, wxID_ANY, m_icon);
     icon_static->SetBackgroundColour(*wxWHITE);
 
+    wxSize size = icon_static->GetSize();
+    icon_static->SetSize(size.GetWidth(), size.GetHeight());
+
     m_text_ctrl = new Label(m_panel_page, text);
     //m_text_ctrl->Wrap(-1);
     //m_text_ctrl->SetFont(wxFont(wxFontInfo(textSize)));
@@ -734,9 +737,9 @@ void IconText::create_panel(wxWindow* parent,wxString icon,int iconSize,wxString
     //m_text_ctrl->SetMinSize(wxSize(FromDIP(70), -1));
 
     sizer->AddStretchSpacer();
-    sizer->Add(icon_static,0, wxALIGN_CENTER | wxALL | wxEXPAND ,0);
+    sizer->Add(icon_static, 0, wxALIGN_CENTER_HORIZONTAL | wxALL | wxEXPAND, 0);
     sizer->AddSpacer(FromDIP(12));
-    sizer->Add(m_text_ctrl, 0, wxALIGN_CENTER | wxALL | wxEXPAND, 0);
+    sizer->Add(m_text_ctrl, 0, wxALIGN_CENTER_HORIZONTAL | wxALL | wxEXPAND, 0);
     sizer->AddStretchSpacer();
 
     m_panel_page->SetSizer(sizer);
@@ -790,31 +793,31 @@ void IconBottonText::create_panel(
     auto icon_static = new wxStaticBitmap(m_panel_page, wxID_ANY, m_icon);
 
     if (secondIcon.IsEmpty()) {
-        m_dec_btn = new FFPushButton(m_panel_page, wxID_ANY, "push_button_dec_normal", "push_button_dec_hover", "push_button_dec_press","push_button_dec_disable");
+        m_dec_btn = new FFPushButton(m_panel_page, wxID_ANY, "push_button_dec_normal", "push_button_dec_hover", "push_button_dec_press","push_button_dec_disable",20);
     } else {
         m_dec_btn = new FFPushButton(m_panel_page, wxID_ANY, "push_button_arrow_inc_normal", "push_button_arrow_inc_hover",
-                                     "push_button_arrow_inc_press", "push_button_arrow_inc_disable");
+                                     "push_button_arrow_inc_press", "push_button_arrow_inc_disable",20);
     }
     m_dec_btn->Bind(wxEVT_LEFT_UP, &IconBottonText::onDecBtnClicked, this);
     m_dec_btn->SetBackgroundColour(*wxWHITE);
 
     if (secondIcon.IsEmpty()) {
-        m_inc_btn = new FFPushButton(m_panel_page, wxID_ANY, "push_button_inc_normal", "push_button_inc_hover", "push_button_inc_press","push_button_inc_disable");
+        m_inc_btn = new FFPushButton(m_panel_page, wxID_ANY, "push_button_inc_normal", "push_button_inc_hover", "push_button_inc_press","push_button_inc_disable",20);
     } else {
         m_inc_btn = new FFPushButton(m_panel_page, wxID_ANY, "push_button_arrow_dec_normal", "push_button_arrow_dec_hover",
-                                     "push_button_arrow_dec_press", "push_button_arrow_dec_disable");
+                                     "push_button_arrow_dec_press", "push_button_arrow_dec_disable",20);
             
     }
     m_inc_btn->Bind(wxEVT_LEFT_UP, &IconBottonText::onIncBtnClicked, this);
     m_inc_btn->SetBackgroundColour(*wxWHITE);
 
     if (positiveOrder) {
-        sizer->Add(icon_static, 0, wxALIGN_CENTER | wxALL | wxEXPAND, 0);
+        sizer->Add(icon_static, 0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND, 0);
         sizer->AddSpacer(FromDIP(12));
         sizer->Add(m_dec_btn, 0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND, 0);
         sizer->AddSpacer(FromDIP(5));
-        sizer->Add(m_text_ctrl, 0, wxALIGN_CENTER, 0);
-        sizer->Add(m_unitLabel, 0, wxALIGN_CENTER, 0);
+        sizer->Add(m_text_ctrl, 0, wxALIGN_CENTER_HORIZONTAL, 0);
+        sizer->Add(m_unitLabel, 0, wxALIGN_CENTER_HORIZONTAL, 0);
         sizer->AddSpacer(FromDIP(5));
         sizer->Add(m_inc_btn, 0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND, 0);
     } else {

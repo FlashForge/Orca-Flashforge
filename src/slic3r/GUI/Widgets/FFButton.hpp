@@ -58,11 +58,7 @@ private:
 class FFPushButton : public wxButton
 {
 public:
-    FFPushButton(wxWindow *parent, wxWindowID id = wxID_ANY, 
-				 const wxString &normalIcon = "",
-				 const wxString &hoverIcon = "",
-                 const wxString &pressIcon = "",
-				 const wxString &disableIcon = "");
+    FFPushButton(wxWindow *parent, wxWindowID id = wxID_ANY, const wxString &normalIcon = "",const wxString &hoverIcon = "",const wxString &pressIcon = "",const wxString &disableIcon = "",const int iconSize = 16);
     ~FFPushButton(){};
 
 	void OnMousePress(wxMouseEvent &event)
