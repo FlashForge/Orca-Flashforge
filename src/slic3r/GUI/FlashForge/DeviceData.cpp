@@ -8,6 +8,7 @@ namespace Slic3r {
 
 namespace GUI {
 
+
 DeviceObject::DeviceObject(const string &dev_id, const string &dev_name)
     : m_lan_info(nullptr)
     , m_dev_id(dev_id)
@@ -292,7 +293,6 @@ wxDEFINE_EVENT(EVT_DEVICE_LIST_UPDATED, DeviceListUpdateEvent);
 DeviceObjectOpr::DeviceObjectOpr()
 {
     read_local_machine_from_config();
-
     MultiComMgr::inst()->Bind(COM_CONNECTION_EXIT_EVENT, &DeviceObjectOpr::onConnectExit, this);
     MultiComMgr::inst()->Bind(COM_CONNECTION_READY_EVENT, &DeviceObjectOpr::onConnectReady, this);
     MultiComMgr::inst()->Bind(COM_WAN_DEV_INFO_UPDATE_EVENT, &DeviceObjectOpr::onConnectWanDevInfoUpdate, this);
@@ -955,7 +955,7 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
             tmpIt->second->set_device_type(DT_BOTH);
         } else
             userObj->set_device_type(DT_LOCAL);
-    }
+    }    
 }
 
 void DeviceObjectOpr::onConnectWanDevInfoUpdate(ComWanDevInfoUpdateEvent &event)
