@@ -124,7 +124,8 @@ public:
     void on_dpi_changed(const wxRect& suggested_rect) override {};
 
 private:
-    wxBoxSizer* createItem(bool success, const wxString& name);
+    wxPanel* createItem(wxWindow* parent, bool success, const wxString& name);
+    wxPanel* createListPanel(wxWindow* parent, const wxStringList& str_list, bool success_flag);
 };
 
 

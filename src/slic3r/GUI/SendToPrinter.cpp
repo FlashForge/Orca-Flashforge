@@ -158,7 +158,7 @@ bool MultiSend::get_multi_send_result(std::map<com_id_t, MultiSend::Result>& res
 
 void MultiSend::reset()
 {
-    m_com_ids.clear();
+    //m_com_ids.clear();
     m_printers.clear();
     m_send_jobs.clear();
 }
@@ -425,66 +425,115 @@ SendToPrinterTipDialog::SendToPrinterTipDialog(wxWindow* parent, const wxStringL
     Freeze();
     wxBoxSizer* sizer = MainSizer();//new wxBoxSizer(wxVERTICAL);
     sizer->AddSpacer(40);
-
     if (!success.empty()) {
-        wxStaticText* successText = new wxStaticText(this, wxID_ANY, _L("File sent successfully"));
-        successText->SetMaxSize(wxSize(FromDIP(680), -1));
-        successText->Wrap(FromDIP(680));
-        successText->SetForegroundColour("#333333");
-        successText->SetBackgroundColour("#ffffff");
-        sizer->Add(successText, 0, wxEXPAND | wxALIGN_LEFT | wxLEFT | wxRIGHT, 40);
-        int row = (success.size() + 1) / 2;
-        wxGridSizer* gridSizer = new wxGridSizer(row, 2, 10, 10);
-        for (auto& suc : success) {
-            gridSizer->Add(createItem(true, suc), 0, wxEXPAND | wxALIGN_LEFT);
-        }
-        sizer->AddSpacer(20);
-        sizer->Add(gridSizer, 1, wxEXPAND | wxLEFT | wxRIGHT, 40);
-        sizer->AddSpacer(20);
+        wxPanel* panel1 = createListPanel(this, success, true);
+        //auto sz = panel1->GetSize();
+        //panel1->SetBackgroundColour(wxColour("#ff0000"));
+        sizer->Add(panel1, 1, wxEXPAND | wxLEFT | wxRIGHT, 40);
     }
 
     if (!fail.empty()) {
         if (!success.empty()) {
             wxPanel* line = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 1), wxTAB_TRAVERSAL);
             line->SetBackgroundColour(wxColour("#DDDDDD"));
+            sizer->AddSpacer(20);
             sizer->Add(line, 0, wxEXPAND | wxLEFT | wxRIGHT, 40);
             sizer->AddSpacer(20);
         }
-
-        wxStaticText* failText = new wxStaticText(this, wxID_ANY, _L("File sending failure: inconsistent model and slicing configuration or network abnormality"));
-        failText->SetMaxSize(wxSize(FromDIP(500), -1));
-        failText->Wrap(FromDIP(500));
-        failText->SetForegroundColour("#333333");
-        failText->SetBackgroundColour("#ffffff");
-        sizer->Add(failText, 0, wxEXPAND | wxALIGN_LEFT | wxLEFT | wxRIGHT, 40);
-        int row = (success.size() + 1) / 2;
-        wxGridSizer* failSizer = new wxGridSizer(row, 2, 10, 10);
-        for (auto& f : fail) {
-            failSizer->Add(createItem(false, f), 1, wxEXPAND | wxALIGN_LEFT);
-        }
-        sizer->AddSpacer(20);
-        sizer->Add(failSizer, 1, wxEXPAND | wxLEFT | wxRIGHT, 40);
+        wxPanel* panel2 = createListPanel(this, fail, false);
+        //auto sz = panel2->GetSize();
+        //panel2->SetBackgroundColour(wxColour("#ffff00"));
+        sizer->Add(panel2, 1, wxEXPAND | wxLEFT | wxRIGHT, 40);
     }
     sizer->AddSpacer(40);
     sizer->Layout();
-    sizer->Fit(this);
+    //sizer->Fit(this);
     Layout();
     Fit();
     Thaw();
-    Centre();
+    //Centre();
+    GetSizer()->Fit(this);
+
+    Bind(wxEVT_SHOW, [=](auto& e) { if (e.IsShown()) Layout(); e.Skip(); });
 }
 
-wxBoxSizer* SendToPrinterTipDialog::createItem(bool success, const wxString& name)
+wxPanel* SendToPrinterTipDialog::createItem(wxWindow* parent, bool success, const wxString& name)
 {
+    int sz = FromDIP(16);
+    wxPanel* panel = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, sz));
+    panel->SetMinSize(wxSize(-1, sz + 6));
+    panel->SetMaxSize(wxSize(-1, sz + 6));
+    panel->SetSize(wxSize(-1, sz + 6));
     wxBoxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
-    wxStaticText* nameText = new wxStaticText(this, wxID_ANY, name);
+    wxStaticText* nameText = new wxStaticText(panel, wxID_ANY, name);
     nameText->SetForegroundColour(wxColor("#333333"));
     nameText->SetBackgroundColour("#ffffff");
-    wxStaticBitmap* bitmap = new wxStaticBitmap(this, wxID_ANY, create_scaled_bitmap(success ? "ff_complete" : "ff_error", this, 16), wxDefaultPosition, wxSize(FromDIP(16), FromDIP(16)), 0);
+    wxStaticBitmap* bitmap = new wxStaticBitmap(panel, wxID_ANY, create_scaled_bitmap(success ? "ff_complete" : "ff_error", this, 16), wxDefaultPosition, wxSize(sz, sz), 0);
     sizer->Add(bitmap, 0, wxALIGN_CENTER_HORIZONTAL);
     sizer->AddSpacer(10);
     sizer->Add(nameText, 1, wxALIGN_LEFT | wxALIGN_CENTER_HORIZONTAL);
-    return sizer;
+    panel->SetSizer(sizer);
+    panel->Layout();
+    panel->Fit();
+    return panel;
+}
+
+wxPanel* SendToPrinterTipDialog::createListPanel(wxWindow* parent, const wxStringList& str_list, bool success_flag)
+{
+    wxPanel* panel = new wxPanel(parent, wxID_ANY);
+    wxString msg = success_flag ? _L("File sent successfully") :
+        _L("File sending failure: inconsistent model and slicing configuration or network abnormality");
+    wxStaticText* text = new wxStaticText(panel, wxID_ANY, msg);
+    text->SetMaxSize(wxSize(FromDIP(680), -1));
+    text->Wrap(FromDIP(680));
+    text->SetForegroundColour("#333333");
+    text->SetBackgroundColour("#ffffff");
+    text->Fit();
+    auto text_sz = text->GetSize();
+
+    wxScrolledWindow* scroll_window = new wxScrolledWindow(panel, wxID_ANY);
+    //scroll_window->SetBackgroundColour(wxColour("#ff0000"));
+    scroll_window->EnableScrolling(false, true);
+    scroll_window->SetScrollRate(0, 20);
+
+    wxPanel* item_panel = new wxPanel(scroll_window, wxID_ANY);
+    int row = (str_list.size() + 1) / 2;
+    wxGridSizer* gridSizer = new wxGridSizer(row, 2, 10, 10);
+    for (auto& str : str_list) {
+        gridSizer->Add(createItem(item_panel, true, str), 1, wxEXPAND | wxALIGN_LEFT);
+    }
+    item_panel->SetSizer(gridSizer);
+
+    int item_height = FromDIP(16) + 6;
+    int vh = row * item_height + (row - 1) * 10;
+    if (row > 10) row = 10;
+    int height = row * item_height + (row - 1) * 10;
+    item_panel->SetMinSize(wxSize(-1, vh));
+    item_panel->SetMaxSize(wxSize(-1, vh));
+    item_panel->SetSize(wxSize(-1, vh));
+    item_panel->Layout();
+
+    scroll_window->SetMinSize(wxSize(-1, height));
+    scroll_window->SetMaxSize(wxSize(-1, height));
+    scroll_window->SetSize(wxSize(-1, height));
+    scroll_window->SetVirtualSize(wxSize(-1, vh));
+    wxBoxSizer* scroll_sizer = new wxBoxSizer(wxVERTICAL);
+    scroll_sizer->Add(item_panel, 1, wxEXPAND);
+    scroll_window->SetSizer(scroll_sizer);
+    scroll_window->Layout();
+
+    wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
+    sizer->Add(text, 1, wxALIGN_LEFT);
+    sizer->AddSpacer(20);
+    sizer->Add(scroll_window, 1, wxEXPAND);
+    sizer->AddSpacer(20);
+    panel->SetSizer(sizer);
+    int panel_height = text_sz.y + height + 20 * 2;
+    panel->SetMinSize(wxSize(-1, panel_height));
+    panel->SetMaxSize(wxSize(-1, panel_height));
+    panel->SetSize(wxSize(-1, panel_height));
+    panel->Layout();
+    return panel;
 }
 
 
@@ -898,6 +947,8 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/)
     m_progressBar->ShowNumber(false);
     m_progressBar->SetValue(50);
     m_progressInfoLbl = new wxStaticText(m_progressPanel, wxID_ANY, wxEmptyString);
+    m_progressInfoLbl->SetMaxSize(wxSize(FromDIP(500), -1));
+    m_progressInfoLbl->Wrap(FromDIP(500));
     m_progressLbl = new wxStaticText(m_progressPanel, wxID_ANY, wxEmptyString);
     m_progressCancelBtn = new FFButton(m_progressPanel, wxID_ANY, _L("Cancel"), FromDIP(4), true);
     //m_progressCancelBtn->SetMinSize(wxSize(FromDIP(50), FromDIP(24)));
@@ -1157,14 +1208,14 @@ void SendToPrinterDialog::update_user_machine_list()
                     mdata.name = wxString::FromUTF8(data.wanDevInfo.name);
                     status = data.wanDevInfo.status;
                 }
-                //if (!status.empty() && status != "offline") {
+                if (!status.empty() && status != "offline") {
                     auto iter = m_machineListMap.find(dev_id);
                     if (iter == m_machineListMap.end()) {
                         m_machineListMap.emplace(dev_id, mdata);    
                     } else if (COM_CONNECT_LAN == data.connectMode) {
                         iter->second = mdata;
                     }
-                //}
+                }
             } else {
                 BOOST_LOG_TRIVIAL(warning) << "com_id (" << id << "): get com data error";
             }
@@ -1661,11 +1712,13 @@ void SendToPrinterDialog::on_multi_send_completed(wxCommandEvent& event)
     }
     BOOST_LOG_TRIVIAL(info) << "SendToPrinterDialog: receive multi send completed 2";
     m_progressCancelBtn->Show(false);
+    m_progressBar->SetValue(100);
+    m_progressLbl->SetLabel("100%");
     if (send_result.size() == 1) {
         auto iter = send_result.begin();
         if (iter->second == Result_Ok) {
-            m_progressBar->SetValue(100);
-            m_progressLbl->SetLabel("100%");
+            //m_progressBar->SetValue(100);
+            //m_progressLbl->SetLabel("100%");
             m_progressInfoLbl->SetLabel(_L("Send completed, automatically redirected to device status"));
             m_progressInfoLbl->SetForegroundColour(wxColour("#333333"));
             m_send_error = false;
@@ -1684,11 +1737,25 @@ void SendToPrinterDialog::on_multi_send_completed(wxCommandEvent& event)
             m_send_error = true;
             m_redirect_timer->StartOnce(3000);
         }
+        //m_progressPanel->Layout();
+        //auto sz = m_progressInfoLbl->GetSize();
+        //auto y = sz.y;
+        auto psz = m_progressPanel->GetSize();
+        m_progressInfoLbl->SetMaxSize(wxSize(psz.x, -1));
+        m_progressInfoLbl->SetMaxSize(wxSize(psz.x, -1));
+        m_progressInfoLbl->Wrap(m_progressInfoLbl->GetSize().x);
+        m_progressInfoLbl->Fit();
+        //sz = m_progressInfoLbl->GetSize();
+        //sz = m_progressInfoLbl->GetSize();
+        m_progressPanel->Fit();
+        //psz = m_progressPanel->GetSize();
+
         //EndModal(wxID_OK);
         //wxGetApp().mainframe->select_tab(size_t(MainFrame::tpMonitor));
     } else {
         m_progressInfoLbl->SetLabel(_L("Send completed"));
         m_progressInfoLbl->SetForegroundColour(wxColour("#333333"));
+        m_progressPanel->Layout();
 
         wxStringList successList, failList;
         for (auto& iter : send_result) {
@@ -1713,10 +1780,10 @@ void SendToPrinterDialog::on_multi_send_completed(wxCommandEvent& event)
             }
             (iter.second == MultiSend::Result_Ok) ? successList.Add(name) : failList.Add(name);
         }
-        if (successList.size() == send_result.size()) {
-            m_progressBar->SetValue(100);
-            m_progressLbl->SetLabel("100%");
-        }
+        //if (successList.size() == send_result.size()) {
+        //m_progressBar->SetValue(100);
+        //m_progressLbl->SetLabel("100%");
+        //}
         BOOST_LOG_TRIVIAL(info) << "Send multi job completed";
         SendToPrinterTipDialog dlg(this, successList, failList);
         dlg.ShowModal();
@@ -1736,6 +1803,8 @@ void SendToPrinterDialog::on_multi_send_completed(wxCommandEvent& event)
     m_multiSend->reset();
     Layout();
     Fit();
+    GetSizer()->Fit(this);
+    Refresh();
 }
 
 void SendToPrinterDialog::onConnectionExit(ComConnectionExitEvent& event)

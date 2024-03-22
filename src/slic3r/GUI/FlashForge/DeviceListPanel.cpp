@@ -842,7 +842,7 @@ void DeviceListPanel::build()
     m_simple_book->AddPage(m_no_device_panel, wxEmptyString, true);
 
     m_device_scrolled_window = new wxScrolledWindow(m_simple_book, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHSCROLL | wxVSCROLL);
-    m_device_scrolled_window->SetScrollRate(10, 10);
+    m_device_scrolled_window->SetScrollRate(50, 50);
     m_device_panel = new wxPanel(m_device_scrolled_window);
     wxBoxSizer* scroll_sizer = new wxBoxSizer(wxVERTICAL);
     scroll_sizer->AddSpacer(FromDIP(30));
@@ -1074,13 +1074,20 @@ void DeviceListPanel::updatePlacementMap()
 
 void DeviceListPanel::updateStatusMap()
 {
+    for (auto& iter : m_status_item_map) {
+        iter.second->setValid(false);
+    }
     for (auto& iter : m_device_map) {
         std::string status = iter.second->deviceInfo().status;
-        if (m_status_item_map.find(status) == m_status_item_map.end()) {
+        auto status_iter = m_status_item_map.find(status);
+        if (status_iter == m_status_item_map.end()) {
             auto item = new FilterPopupWindow::StatusItem(m_filter_popup, status);
             item->Bind(EVT_FILTER_ITEM_CLICKED, &DeviceListPanel::onFilterItemClicked, this);
             item->Show(false);
+            item->setValid(true);
             m_status_item_map.emplace(std::make_pair(status, item));
+        } else {
+            status_iter->second->setValid(true);
         }
     }
 }
@@ -1090,14 +1097,20 @@ void DeviceListPanel::updateTypeMap()
     if (m_filter_popup->IsShown()) {
         m_filter_popup->Dismiss();
     }
+    for (auto& iter : m_type_item_map) {
+        iter.second->setValid(false);
+    }
     m_filter_types.clear();
     for (auto& iter : m_device_map) {
         auto pid = iter.second->deviceInfo().pid;
-        if (m_type_item_map.find(pid) == m_type_item_map.end()) {
+        auto type_iter = m_type_item_map.find(pid);
+        if (type_iter == m_type_item_map.end()) {
             auto item = new FilterPopupWindow::DeviceTypeItem(m_filter_popup, pid, false, false, false);
             item->Bind(EVT_FILTER_ITEM_CLICKED, &DeviceListPanel::onFilterItemClicked, this);
             item->Show(false);
             m_type_item_map.emplace(std::make_pair(pid, item));
+        } else {
+            type_iter->second->setValid(true);
         }
         if (m_filter_types.find(pid) == m_filter_types.end()) {
             m_filter_types.emplace(pid);
@@ -1290,24 +1303,32 @@ void DeviceListPanel::onFilterButtonClicked(wxMouseEvent &event)
         m_default_filter_item->setBottomCornerRound(m_status_item_map.empty());
         m_default_filter_item->setSelect(m_filter_status_default);
         m_filter_popup->AddItem(m_default_filter_item);
+        FilterPopupWindow::StatusItem* last_item = nullptr;
         for (auto& iter : m_status_item_map) {
-            iter.second->setBottomCornerRound(false);
-            iter.second->setSelect(!m_filter_status_default && (iter.first == m_filter_status));
-            m_filter_popup->AddItem(iter.second);
+            if (iter.second->isValid()) {
+                iter.second->setBottomCornerRound(false);
+                iter.second->setSelect(!m_filter_status_default && (iter.first == m_filter_status));
+                m_filter_popup->AddItem(iter.second);
+                last_item = iter.second;
+            }
         }
-        if (!m_status_item_map.empty()) {
-            m_status_item_map.rbegin()->second->setBottomCornerRound(true);
+        if (last_item) {
+            last_item->setBottomCornerRound(true);
         }
         pos = m_status_btn->ClientToScreen(wxPoint(0, 0));
         pos.y += m_status_btn->GetSize().y + 2;
     } else if (event.GetEventObject() == m_type_btn) {
         m_filter_popup_type = Filter_Popup_Type_Device_Type;
+        FilterPopupWindow::DeviceTypeItem* last_item = nullptr;
         for (auto& iter : m_type_item_map) {
-            iter.second->setBottomCornerRound(false);
-            iter.second->setChecked(m_filter_types.find(iter.first) != m_filter_types.end());
-            m_filter_popup->AddItem(iter.second);
+            if (iter.second->isValid()) {
+                iter.second->setBottomCornerRound(false);
+                iter.second->setChecked(m_filter_types.find(iter.first) != m_filter_types.end());
+                m_filter_popup->AddItem(iter.second);
+                last_item = iter.second;
+            }
         }
-        if (!m_type_item_map.empty()) {
+        if (last_item) {
             m_type_item_map.begin()->second->setTopCornerRound(true);
             m_type_item_map.rbegin()->second->setBottomCornerRound(true);
         }

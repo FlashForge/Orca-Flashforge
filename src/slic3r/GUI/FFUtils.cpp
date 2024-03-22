@@ -38,7 +38,7 @@ unsigned short FFUtils::getPrinterPID(const std::string& type)
 	if (type == "Adventurer 5M") {
 		pid = 0x0023;
 	} else if (type == "Adventurer 5M Pro") {
-		pid == 0x0024;
+		pid = 0x0024;
 	}
 	return pid;
 }

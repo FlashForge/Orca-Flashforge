@@ -53,10 +53,13 @@ public:
         FilterItem(wxWindow* parent, const wxString& text, bool top_corner_round = false, bool bottom_corner_round = false);
         virtual ~FilterItem();
 
+
         void setSelect(bool select);
         bool isSelect() const;
         void setTopCornerRound(bool round);
         void setBottomCornerRound(bool round);
+        void setValid(bool valid) { m_validFlag = valid; }
+        bool isValid() const { return m_validFlag; }
 
     protected:
         void onPaint(wxPaintEvent& event);
@@ -80,6 +83,7 @@ public:
         bool            m_pressFlag {false};
         bool            m_topCornerRound {false};
         bool            m_bottomCornerRound {false};
+        bool            m_validFlag {true};
         wxBoxSizer*     m_main_sizer {nullptr};
         wxStaticText*   m_text {nullptr};
     };

@@ -220,6 +220,7 @@ void TitleDialog::OnSize(wxSizeEvent& event)
     wxSize size = GetSize();
     path.AddRoundedRectangle(0, 0, size.x, size.y, m_borderRadius+1);
     SetShape(path);
+    //GetSizer()->Fit(this);
 }
 
 } // end namespace
