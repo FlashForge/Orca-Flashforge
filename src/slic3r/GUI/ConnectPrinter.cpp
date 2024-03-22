@@ -1,5 +1,6 @@
 #include "ConnectPrinter.hpp"
 #include "GUI_App.hpp"
+#include <wx/dcgraph.h>
 #include <slic3r/GUI/I18N.hpp>
 #include <slic3r/GUI/Widgets/Label.hpp>
 #include "libslic3r/AppConfig.hpp"
@@ -71,13 +72,33 @@ ConnectPrinterDialog::ConnectPrinterDialog(wxWindow *parent, wxWindowID id, cons
 
     sizer_top->Add(0, FromDIP(15));
 
-    m_label_error_info = new Label(this, _L("The access code is wrong, please input again."));
+    wxBoxSizer* error_sizer = new wxBoxSizer(wxHORIZONTAL);
+    m_error_panel           = new wxPanel(this, wxID_ANY);
+    m_error_panel->SetBackgroundColour(wxColour(250, 207, 202));
+    m_error_panel->SetMinSize(wxSize(FromDIP(330), FromDIP(32)));
+
+    wxString error_text = _L("The access code is wrong, please input again.");
+    m_label_error_info = new Label(m_error_panel, error_text);
     m_label_error_info->SetFont(Label::Body_15);
     m_label_error_info->SetBackgroundColour(wxColour(250, 207, 202));
     m_label_error_info->SetForegroundColour(wxColour(234, 53, 34));
-    m_label_error_info->Wrap(-1);
-    sizer_top->Add(m_label_error_info, 0, wxALL, 0);
-    m_label_error_info->Show(err_hint);
+    
+    wxGCDC dc(this);
+    int   sw = dc.GetTextExtent(error_text).x;
+    if (FromDIP(sw) > FromDIP(320)) {
+        m_label_error_info->Wrap(FromDIP(330));
+        m_error_panel->SetMinSize(wxSize(FromDIP(330), FromDIP(64)));
+    }
+    error_sizer->AddStretchSpacer(1);
+    error_sizer->Add(m_label_error_info, 0, wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL, 0);
+    error_sizer->AddStretchSpacer(1);
+    m_error_panel->SetSizer(error_sizer);
+    error_sizer->Fit(m_error_panel);
+
+    sizer_top->Add(m_error_panel, 0, wxALL, 0);
+    //sizer_top->Add(m_label_error_info, 0, wxALL, 0);
+    //m_label_error_info->Show(err_hint);
+    m_error_panel->Show(err_hint);
 
     sizer_top->Add(0, FromDIP(40), 0, wxEXPAND, 0);
 

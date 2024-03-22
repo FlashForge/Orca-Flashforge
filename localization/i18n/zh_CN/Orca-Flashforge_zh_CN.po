@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Slic3rPE\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-03-18 15:15+0800\n"
-"PO-Revision-Date: 2024-03-18 15:16+0800\n"
+"POT-Creation-Date: 2024-03-22 09:17+0800\n"
+"PO-Revision-Date: 2024-03-22 09:23+0800\n"
 "Last-Translator: SoftFever <softfeverever@gmail.com>\n"
 "Language-Team: \n"
 "Language: zh_CN\n"
@@ -15,7 +15,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
-"X-Generator: Poedit 3.4.2\n"
+"X-Generator: Poedit 3.4.1\n"
 
 msgid "Supports Painting"
 msgstr "支撑绘制"
@@ -650,6 +650,9 @@ msgstr "加载当前预设"
 
 msgid "Loading a mode view"
 msgstr "加载模式视图"
+
+msgid "The current account has been logged out!"
+msgstr "当前账户已登出！"
 
 msgid "Choose one file (3mf):"
 msgstr "选择一个文件（3mf）："
@@ -11245,7 +11248,7 @@ msgstr "需要选择打印机"
 msgid "Get Code"
 msgstr "获取验证码"
 
-msgid "Phone Verify Code Login/ Register"
+msgid "Phone Login/ Register"
 msgstr "手机验证码登录/注册"
 
 msgid "Password Login"
@@ -11256,9 +11259,6 @@ msgstr "手机号/邮箱"
 
 msgid "Mobile Phone Number Error"
 msgstr "手机号码错误"
-
-msgid "Email Address Error"
-msgstr "邮箱地址错误"
 
 msgid "Server connection exception"
 msgstr "服务器连接异常"
@@ -11283,6 +11283,9 @@ msgstr "忘记密码"
 
 msgid "User not registered"
 msgstr "该账号未注册"
+
+msgid "Email Address Error"
+msgstr "邮箱地址错误"
 
 msgid "Password is incorrect"
 msgstr "密码错误"
@@ -11344,11 +11347,17 @@ msgstr "剩余时间"
 msgid "pause print"
 msgstr "暂停打印"
 
-msgid "continue print"
-msgstr "继续打印"
-
 msgid "cancel print"
 msgstr "取消打印"
+
+msgid "Whether Cancel Printing"
+msgstr "是否取消打印"
+
+msgid "yes"
+msgstr "是"
+
+msgid "no"
+msgstr "否"
 
 msgid "The Current Device has no Printing Projects"
 msgstr "当前设备无打印项目"
@@ -11410,6 +11419,15 @@ msgstr "打印已取消，当前缓存命令中"
 msgid "pause"
 msgstr "暂停"
 
+msgid "continue print"
+msgstr "继续打印"
+
+msgid "pausing"
+msgstr "暂停打印中"
+
+msgid "heating"
+msgstr "加热中"
+
 msgid "printing"
 msgstr "打印中"
 
@@ -11421,6 +11439,57 @@ msgstr ""
 
 msgid "Paused"
 msgstr "暂停"
+
+msgid "The printer move out of range.Please go home again!"
+msgstr "移动不在范围内，请先回零"
+
+msgid "Lost communication with MCU eboard"
+msgstr "MCU通讯丢失"
+
+msgid "TMC reports error:GSTAT"
+msgstr "GSTAT错误"
+
+msgid "Unable to read tmc"
+msgstr "不能读取TMC"
+
+msgid "MCU eboard: Unable to connect"
+msgstr "MCU不能连接"
+
+msgid "Nozzle temperature error."
+msgstr "喷头温度错误"
+
+msgid "Extruder not heating at expected.Please check extruder."
+msgstr "喷头加热异常.请检查喷头"
+
+msgid "Platform not heating at expected.Please check platform."
+msgstr "底板加热异常.请检查底板"
+
+msgid "Chamber not heating at expected.Please check chamber."
+msgstr "腔温加热异常.请检查腔体"
+
+msgid "Host error, please restart !"
+msgstr "通讯错误,请重启打印机!"
+
+msgid "Z-Axis go home error."
+msgstr "Z轴回零错误"
+
+msgid "Y-Axis go home error."
+msgstr "Y轴回零错误"
+
+msgid "X-Axis go home error."
+msgstr "X轴回零错误"
+
+msgid "Extruder temperature error !"
+msgstr "喷头加热异常."
+
+msgid "Platform temperature error !"
+msgstr "底板加热异常"
+
+msgid "Move queue overflow"
+msgstr "指令超出队列"
+
+msgid "No filament"
+msgstr "无丝料"
 
 #: resources/data/hints.ini: [hint:3D Scene Operations]
 msgid ""
@@ -11675,6 +11744,11 @@ msgid ""
 "clogging when printing lower temperature filament with a higher enclosure "
 "temperature. More info about this in the Wiki."
 msgstr ""
+
+#, fuzzy
+#~| msgid "Cancel print"
+#~ msgid "Cancel Print"
+#~ msgstr "取消打印"
 
 #~ msgid "Connected Failed."
 #~ msgstr "连接失败！"

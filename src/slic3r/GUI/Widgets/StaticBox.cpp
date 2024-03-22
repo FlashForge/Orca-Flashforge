@@ -92,15 +92,15 @@ void StaticBox::SetBackgroundColor2(StateColor const &color)
 
 wxColor StaticBox::GetParentBackgroundColor(wxWindow* parent)
 {
-    if (auto box = dynamic_cast<StaticBox*>(parent)) {
+    if (auto box = dynamic_cast<StaticBox *>(parent)) {
         if (box->background_color.count() > 0) {
             if (box->background_color2.count() == 0)
                 return box->background_color.defaultColor();
             auto s = box->background_color.defaultColor();
             auto e = box->background_color2.defaultColor();
-            int r = (s.Red() + e.Red()) / 2;
-            int g = (s.Green() + e.Green()) / 2;
-            int b = (s.Blue() + e.Blue()) / 2;
+            int  r = (s.Red() + e.Red()) / 2;
+            int  g = (s.Green() + e.Green()) / 2;
+            int  b = (s.Blue() + e.Blue()) / 2;
             return wxColor(r, g, b);
         }
     }
@@ -148,6 +148,7 @@ void StaticBox::render(wxDC& dc)
     memdc.SelectObject(bmp);
     //memdc.Blit({0, 0}, size, &dc, {0, 0});
     memdc.SetBackground(wxBrush(GetBackgroundColour()));
+    //memdc.SetBackground(wxBrush(*wxWHITE));
     memdc.Clear();
     {
         wxGCDC dc2(memdc);

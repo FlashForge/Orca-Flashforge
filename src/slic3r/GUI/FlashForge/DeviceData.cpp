@@ -169,6 +169,16 @@ void DeviceObject::set_lan_dev_info(fnet_lan_dev_info *info)
     m_lan_info = info; 
 }
 
+void DeviceObject::init_obj() 
+{
+    if (m_lan_info == nullptr)
+        return;
+    m_dev_id     = m_lan_info->serialNumber;
+    m_dev_name   = m_lan_info->name;
+    m_bind_state = "free";
+    m_deviceType = DT_LOCAL;
+}
+
 string DeviceObject::get_dev_name()
 {
     return m_dev_name;
@@ -266,6 +276,17 @@ int DeviceObject::connectMode()
     return m_lan_info->connectMode; 
 }
 
+BindInfo* DeviceObject::get_bind_info() 
+{ 
+    BindInfo* info = new BindInfo();
+    info->dev_id = get_dev_id();
+    info->dev_name = get_dev_name();
+    info->bind_id  = get_wan_dev_id();
+    info->dev_pid  = get_dev_pid();
+    info->img      = get_printer_thumbnail_img_str();
+    return info;
+}
+
 
 wxDEFINE_EVENT(EVT_DEVICE_LIST_UPDATED, DeviceListUpdateEvent);
 DeviceObjectOpr::DeviceObjectOpr()
@@ -293,17 +314,41 @@ DeviceObjectOpr::~DeviceObjectOpr()
 
 void DeviceObjectOpr::update_scan_machine()
 {
-    clear_scan_machine();
+    //clear_scan_machine();
 
     std::vector<fnet_lan_dev_info> devInfos;
     MultiComUtils::getLanDevList(devInfos);
-
+    update_scan_list(devInfos);
     for (auto &elem : devInfos) {
         //if (elem.connectMode == 1)
         //    continue;
+        bool          newObj = false;
         string        dev_id = elem.serialNumber;
-        DeviceObject *devObj = new DeviceObject(elem);
+        DeviceObject *devObj = nullptr;
+        auto   scanIt = m_scan_devices.find(dev_id);
+        if (scanIt != m_scan_devices.end()) {
+            devObj       = scanIt->second;
+            auto lanInfo = new fnet_lan_dev_info(elem);
+            devObj->set_lan_dev_info(lanInfo);
+            devObj->init_obj();
+        } else {
+            scanIt = m_old_devices.find(dev_id);
+            if (scanIt != m_old_devices.end()) {
+                devObj       = scanIt->second;
+                auto lanInfo = new fnet_lan_dev_info(elem);
+                devObj->set_lan_dev_info(lanInfo);
+                devObj->init_obj();
+                m_old_devices.erase(scanIt);
+                newObj = true;
+            } else {
+                devObj = new DeviceObject(elem);
+                newObj = true;
+            }
+        }
         devObj->set_connection_type(CONNECTTYPE_LAN);
+
+        //DeviceObject *devObj = new DeviceObject(elem);
+        //devObj->set_connection_type(CONNECTTYPE_LAN);
         auto it = m_local_devices.find(dev_id);
         if (it != m_local_devices.end()) {
             devObj->set_user_access_code(it->second->get_user_access_code(), false);
@@ -321,7 +366,8 @@ void DeviceObjectOpr::update_scan_machine()
                 devObj->set_user_access_code(it->second->get_user_access_code(), false);
             }
         }
-        m_scan_devices.insert(make_pair(dev_id, devObj));
+        if (newObj)
+            m_scan_devices.insert(make_pair(dev_id, devObj));
     }
 }
 
@@ -450,6 +496,7 @@ void DeviceObjectOpr::unbind_lan_machine(DeviceObject *obj)
     auto devIt = m_local_devices.find(dev_id);
     if (devIt != m_local_devices.end()) {
         delete devIt->second;
+        devIt->second = nullptr;
         m_local_devices.erase(devIt);
     }
     MultiComMgr::inst()->removeLanDev(id);
@@ -471,6 +518,26 @@ ComErrno DeviceObjectOpr::unbind_wan_machine(DeviceObject *obj)
         auto devIt = m_user_devices.find(dev_id);
         if (devIt != m_user_devices.end()) {
             delete devIt->second;
+            devIt->second = nullptr;
+            m_user_devices.erase(devIt);
+        }
+        sendDeviceListUpdateEvent(dev_id, -1);
+    }
+    return ret;
+}
+
+ComErrno DeviceObjectOpr::unbind_wan_machine2(const string &dev_id, const string &bind_id) 
+{
+    ComErrno ret    = MultiComMgr::inst()->unbindWanDev(dev_id, bind_id);
+    if (ret == COM_OK) {
+        auto it = m_wan_dev_connect_map.find(dev_id);
+        if (it != m_wan_dev_connect_map.end()) {
+            m_wan_dev_connect_map.erase(it);
+        }
+        auto devIt = m_user_devices.find(dev_id);
+        if (devIt != m_user_devices.end()) {
+            delete devIt->second;
+            devIt->second = nullptr;
             m_user_devices.erase(devIt);
         }
         sendDeviceListUpdateEvent(dev_id, -1);
@@ -488,6 +555,7 @@ void DeviceObjectOpr::removeUserDev(DeviceObject *obj)
     auto devIt = m_user_devices.find(dev_id);
     if (devIt != m_user_devices.end()) {
         delete devIt->second;
+        devIt->second = nullptr;
         m_user_devices.erase(devIt);
     }
     sendDeviceListUpdateEvent(dev_id, -1);
@@ -530,6 +598,7 @@ void DeviceObjectOpr::clear_user_machine()
     for (auto it = m_user_devices.begin(); it != m_user_devices.end(); ++it) {
         if (!it->second->is_lan_mode_printer()) {
             delete it->second;
+            it->second = nullptr;
             m_user_devices.erase(it);
         }
     }
@@ -577,6 +646,33 @@ void DeviceObjectOpr::clear_scan_machine()
         }
     }
     m_scan_devices.clear();
+    for (auto it = m_old_devices.begin(); it != m_old_devices.end(); it++) {
+        if (it->second) {
+            delete it->second;
+            it->second = nullptr;
+        }
+    }
+    m_old_devices.clear();
+}
+
+void DeviceObjectOpr::update_scan_list(const std::vector<fnet_lan_dev_info> &infos)
+{
+    map<std::string, fnet_lan_dev_info> lan_map;
+    for (auto info : infos){
+        lan_map.emplace(make_pair(info.serialNumber, info));
+    }
+    for (auto it = m_scan_devices.begin(); it != m_scan_devices.end(); ++it) {
+        if (it->second) {
+            auto tmpIt = lan_map.find(it->second->get_dev_id());
+            if (tmpIt == lan_map.end()) {
+                auto oldIt = m_old_devices.find(it->second->get_dev_id());
+                if (oldIt == m_old_devices.end()) {
+                    m_old_devices.emplace(make_pair(it->second->get_dev_id(), it->second));
+                }
+                m_scan_devices.erase(it);
+            }
+        }
+    }
 }
 
 string DeviceObjectOpr::find_dev_from_id(id_connect_mode &mode, int connectId) 
@@ -633,6 +729,7 @@ void DeviceObjectOpr::sendDeviceListUpdateEvent(const std::string& dev_id, int c
 void DeviceObjectOpr::onConnectExit(ComConnectionExitEvent &event)
 {
     BOOST_LOG_TRIVIAL(info) << "DeviceData-onConnectExit: " << event.id;
+    flush_logs();
     event.Skip();
     id_connect_mode mode;
     string devId = find_dev_from_id(mode, event.id);

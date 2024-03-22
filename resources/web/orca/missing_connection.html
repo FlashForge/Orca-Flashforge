@@ -44,6 +44,36 @@
     transform: translate(-50%, -50%);
     width: 8%;
   }
+  #point {
+    position: absolute;
+    top: 70%;
+    color: #ffffff;
+    text-align: center;
+    width: 100%;
+    font-size: 0.5rem;
+  }
+
+  .video-loader {
+    display: none; /* 默认隐藏加载动画 */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border: 5px solid rgba(255, 255, 255, 0.3);
+    border-top: 5px solid blue;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin {
+    0% {
+        transform: translate(-50%, -50%) rotate(0deg);
+    }
+    100% {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
+  }
 </style>
 </head>
 <body onLoad="OnInit()">
@@ -58,9 +88,13 @@
 
         <div id="url-studio" style="display: none;"></div>
 
-        <!-- <div id="url-studio"></div>
+        <div id="videoLoader" class="video-loader"></div>
 
-        <div id="url-stro"></div> -->
+        <div id="point" style="display: none;">当前视频无法播放</div>
+
+        <!-- <div id="url-studio"></div> -->
+
+        <!-- <div id="url-stro"></div> -->
 
         <!-- 控制按钮 -->
         <!-- <button id="toggleButton">暂停</button> -->
@@ -98,6 +132,7 @@
                       var zanting = document.getElementById("zanting")
                       zanting.style.display = 'block'
                       videoStreamImg.style.backgroundImage = 'url("hei.svg")'
+                      streamPaused = false;
                     } else {
                       video.style.display = 'none'
                       videoStreamImg.style.display = 'block'
@@ -105,28 +140,39 @@
                       var zanting = document.getElementById("zanting")
                       zanting.style.display = 'block'
                       videoStreamImg.style.backgroundImage = 'url("hei.svg")'
+                      streamPaused = false;
                     }
                   } else if (content.endsWith(".m3u8")) {
-                    videoStreamImg.style.display = "none"
-                    video.src = ''
-	                  video.style.backgroundImage = "url('hei.svg')"
-	                  video.style.backgroundSize = "cover"
-	                  video.style.backgroundRepeat = "no-repeat"
-	                  video.style.backgroundPosition = "center"
-                    var zanting = document.getElementById("zanting")
-                    zanting.style.display = 'block'
-                  } else if (content === '设备离线了') {
-                    if (video.style.display === "block") {
-                      video.src = ''
-                      video.style.backgroundImage = "url('hei.svg')"
-                      video.style.backgroundSize = "cover"
-                      video.style.backgroundRepeat = "no-repeat"
-                      video.style.backgroundPosition = "center"
+                    if (video.readyState < 2) {
                     } else {
-                      videoStreamImg.src = 'hei.svg'
+                      videoStreamImg.style.display = "none"
+                      video.src = ''
+	                    video.style.backgroundImage = "url('hei.svg')"
+	                    video.style.backgroundSize = "cover"
+	                    video.style.backgroundRepeat = "no-repeat"
+	                    video.style.backgroundPosition = "center"
                       var zanting = document.getElementById("zanting")
                       zanting.style.display = 'block'
-                      videoStreamImg.style.backgroundImage = 'url("hei.svg")'
+                      streamPaused = false;
+                    }
+                    // alert(3333333)
+                  } else if (content === '设备离线了') {
+                    if (video.style.display === "block") {
+                        video.src = ''
+                        video.style.backgroundImage = "url('hei.svg')"
+                        video.style.backgroundSize = "cover"
+                        video.style.backgroundRepeat = "no-repeat"
+                        video.style.backgroundPosition = "center"
+                        var zanting = document.getElementById("zanting")
+                        zanting.style.display = 'block'
+                        streamPaused = false;
+                    } else if (videoStreamImg.style.display === "block") {
+                        loader.style.display === 'none'
+                        videoStreamImg.src = 'hei.svg'
+                        var zanting = document.getElementById("zanting")
+                        zanting.style.display = 'block'
+                        videoStreamImg.style.backgroundImage = 'url("hei.svg")'
+                        streamPaused = false;
                     }
                   }
               }
@@ -135,25 +181,29 @@
 
       const config = { attributes: true, childList: true, subtree: true }
 
-      observer.observe(targetNode, config)
+      // observer.observe(targetNode, config)
+
+      observer.disconnect(); // 断开之前的观察者
+      observer.observe(targetNode, config); // 重新开始观察
+
        
 
        // 适配设置
-      //  var docEl = document.documentElement;
-      //  function setRemUnit () {
-      //    var rem = docEl.clientWidth / 10; // 可根据不同电脑分辨率进行手动修改
-      //    console.log(rem)
-      //    docEl.style.fontSize = rem + 'px'
-      //  };
+       var docEl = document.documentElement;
+       function setRemUnit () {
+         var rem = docEl.clientWidth / 10; // 可根据不同电脑分辨率进行手动修改
+         console.log(rem)
+         docEl.style.fontSize = rem + 'px'
+       };
  
-      //  setRemUnit();
+       setRemUnit();
  
-      //  window.addEventListener('resize', setRemUnit);
-      //  window.addEventListener('pageshow', function (e) {
-      //    if (e.persisted) {
-      //      setRemUnit();
-      //    }
-      //  });
+       window.addEventListener('resize', setRemUnit);
+       window.addEventListener('pageshow', function (e) {
+         if (e.persisted) {
+           setRemUnit();
+         }
+       });
     </script>
 </body>
 </html>

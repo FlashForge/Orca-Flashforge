@@ -7,8 +7,9 @@
 #include "slic3r/GUI/Widgets/FFToggleButton.hpp"
 #include "slic3r/GUI/Widgets/FFCheckBox.hpp"
 #include "slic3r/GUI/wxExtensions.hpp"
-#include "slic3r/GUI/FFUtils.hpp"
 #include "DeviceData.hpp"
+#include "slic3r/GUI/Monitor.hpp"
+#include "slic3r/GUI/MainFrame.hpp"
 
 namespace Slic3r {
 namespace GUI {
@@ -83,7 +84,10 @@ void DropDownButton::leaveWindow()
 
 void DropDownButton::updateMinSize()
 {
-    int width = m_text->GetSize().x + FromDIP(12) + m_bitmap->GetSize().x;
+    wxScreenDC dc;
+    dc.SetFont(GetFont());
+    auto text_size = dc.GetTextExtent(m_text->GetLabel());
+    int width = text_size.x + 2 * FromDIP(12) + m_bitmap->GetSize().x;
     SetMinSize(wxSize(width, FromDIP(24)));
     Layout();
     Fit();
@@ -347,6 +351,7 @@ void FilterPopupWindow::StatusItem::setStatus(const std::string& status)
     wxColour color;
     m_text->SetLabel(FFUtils::convertStatus(m_status, color));
     Layout();
+    Fit();
 }
 
 
@@ -449,6 +454,11 @@ void FilterPopupWindow::Popup(wxWindow* focus/*=nullptr*/)
     PopupWindow::Popup();
 }
 
+void FilterPopupWindow::OnDismiss()
+{
+    ClearItem();
+}
+
 bool FilterPopupWindow::ProcessLeftDown(wxMouseEvent &event)
 {
     return PopupWindow::ProcessLeftDown(event);
@@ -481,7 +491,7 @@ void FilterPopupWindow::onPaint(wxPaintEvent& event)
 }
 
 
-wxDEFINE_EVENT(EVT_DEVICE_ITEM_SELECTED, wxCommandEvent);
+//wxDEFINE_EVENT(EVT_DEVICE_ITEM_SELECTED, wxCommandEvent);
 std::map<unsigned short, wxBitmap> DeviceItemPanel::m_machineBitmapMap;
 DeviceItemPanel::DeviceItemPanel(wxWindow *parent) 
     : wxPanel(parent)
@@ -671,11 +681,12 @@ const DeviceInfoItemPanel::DeviceInfo& DeviceInfoItemPanel::deviceInfo() const
 
 void DeviceInfoItemPanel::sendEvent()
 {
-    if (m_info.conn_id >= 0 && m_event_handle) {
-        wxCommandEvent event(EVT_DEVICE_ITEM_SELECTED, GetId());
-        event.SetEventObject(m_event_handle);
-        event.SetInt(m_info.conn_id);
-        wxPostEvent(m_event_handle, event);
+    if (m_info.conn_id >= 0 && !m_info.status.empty() && m_info.status != "offline" && m_event_handle) {
+        wxGetApp().mainframe->jump_to_monitor(EVT_SWITCH_TO_DEVICE_STATUS, m_info.conn_id);
+        //wxCommandEvent event(EVT_DEVICE_ITEM_SELECTED, GetId());
+        //event.SetEventObject(m_event_handle);
+        //event.SetInt(m_info.conn_id);
+        //wxPostEvent(m_event_handle, event);
     }
 }
 
@@ -1063,49 +1074,26 @@ void DeviceListPanel::updatePlacementMap()
 
 void DeviceListPanel::updateStatusMap()
 {
-    StatusItemMap backMap;
-    for (const auto& iter : m_status_item_map) {
-        backMap.emplace(std::make_pair(iter.first, iter.second));
-    }
-    m_status_item_map.clear();
     for (auto& iter : m_device_map) {
         std::string status = iter.second->deviceInfo().status;
-        auto it = backMap.find(status);
-        if (it != backMap.end()) {
-            m_status_item_map.emplace(std::make_pair(status, it->second));
-            it->second = nullptr;
-        } else if (m_status_item_map.find(status) == m_status_item_map.end()) {
+        if (m_status_item_map.find(status) == m_status_item_map.end()) {
             auto item = new FilterPopupWindow::StatusItem(m_filter_popup, status);
             item->Bind(EVT_FILTER_ITEM_CLICKED, &DeviceListPanel::onFilterItemClicked, this);
             item->Show(false);
             m_status_item_map.emplace(std::make_pair(status, item));
         }
     }
-    for (auto& iter : backMap) {
-        if (iter.second) {
-            iter.second->Destroy();
-            iter.second = nullptr;
-        }
-    }
-    backMap.clear();
 }
 
 void DeviceListPanel::updateTypeMap()
 {
-    DeviceTypeItemMap backMap;
-    for (const auto& iter : m_type_item_map) {
-        backMap.emplace(std::make_pair(iter.first, iter.second));
+    if (m_filter_popup->IsShown()) {
+        m_filter_popup->Dismiss();
     }
-    m_type_item_map.clear();
     m_filter_types.clear();
     for (auto& iter : m_device_map) {
         auto pid = iter.second->deviceInfo().pid;
-        //auto type_str = FFUtils::getPrinterName(pid);
-        auto it = backMap.find(pid);
-        if (it != backMap.end()) {
-            m_type_item_map.emplace(std::make_pair(pid, it->second));
-            it->second = nullptr;
-        } else if (m_type_item_map.find(pid) == m_type_item_map.end()) {
+        if (m_type_item_map.find(pid) == m_type_item_map.end()) {
             auto item = new FilterPopupWindow::DeviceTypeItem(m_filter_popup, pid, false, false, false);
             item->Bind(EVT_FILTER_ITEM_CLICKED, &DeviceListPanel::onFilterItemClicked, this);
             item->Show(false);
@@ -1115,13 +1103,6 @@ void DeviceListPanel::updateTypeMap()
             m_filter_types.emplace(pid);
         }
     }
-    for (auto& iter : backMap) {
-        if (iter.second) {
-            iter.second->Destroy();
-            iter.second = nullptr;
-        }
-    }
-    backMap.clear();
 }
 
 void DeviceListPanel::updateFilterTitle()   
@@ -1260,12 +1241,26 @@ void DeviceListPanel::onFilterItemClicked(wxCommandEvent& event)
         m_filter_popup->Dismiss();
     } else if (Filter_Popup_Type_Device_Type == m_filter_popup_type) {
         unsigned short pid = (unsigned short)event.GetInt();
-        auto iter = m_filter_types.find(pid);
+        FilterPopupWindow::DeviceTypeItem* item = (FilterPopupWindow::DeviceTypeItem*)event.GetEventObject();
+        if (item) {
+            bool check = item->isChecked();
+            auto iter = m_filter_types.find(pid);
+            if (check) {
+                if (iter == m_filter_types.end()) {
+                    m_filter_types.emplace(pid);
+                }
+            } else {
+                if (iter != m_filter_types.end()) {
+                    m_filter_types.erase(iter);
+                }
+            }
+        }
+        /*auto iter = m_filter_types.find(pid);
         if (iter == m_filter_types.end()) {
             m_filter_types.emplace(pid);
         } else {
             m_filter_types.erase(iter);
-        }
+        }*/
     }
     filterDeviceList();
     updateFilterTitle();
@@ -1437,6 +1432,7 @@ void DeviceListPanel::updateDeviceInfo(const std::string& dev_id, const DeviceIn
         }
     }
     if (status_changed) {
+        updateStatusMap();
         updateStaticMap();
         if (m_static_btn->GetValue()) {
             updateDeviceSizer();
@@ -1449,7 +1445,7 @@ void DeviceListPanel::onComDevDetailUpdate(ComDevDetailUpdateEvent& event)
     auto conn_id = event.id;
     bool valid = false;
     const auto& data = MultiComMgr::inst()->devData(conn_id, &valid);
-    BOOST_LOG_TRIVIAL(error) << "onComDevDetailUpdate: " << data.connectMode << ", " << valid ? "valid" : "invalid";
+    BOOST_LOG_TRIVIAL(info) << "onComDevDetailUpdate: " << data.connectMode << ", " << valid ? "valid" : "invalid";
     if (COM_CONNECT_LAN == data.connectMode && valid) {
         std::string dev_id = data.lanDevInfo.serialNumber;
         DeviceInfoItemPanel::DeviceInfo info;
@@ -1460,7 +1456,7 @@ void DeviceListPanel::onComDevDetailUpdate(ComDevDetailUpdateEvent& event)
         info.placement = data.devDetail->location;
         info.status = data.devDetail->status;
         updateDeviceInfo(dev_id, info);
-        BOOST_LOG_TRIVIAL(error) << "onComDevDetailUpdate: " << info.name << ", " << info.placement << ", " << info.status;
+        BOOST_LOG_TRIVIAL(info) << "onComDevDetailUpdate: " << info.name << ", " << info.placement << ", " << info.status;
     }
     flush_logs();
     event.Skip();

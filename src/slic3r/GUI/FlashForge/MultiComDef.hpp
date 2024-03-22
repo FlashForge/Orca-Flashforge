@@ -19,6 +19,7 @@ enum ComErrno {
     COM_ERROR,
     COM_UNINITIALIZED,
     COM_UNREGISTER_USER,
+    COM_REPEAT_LOGIN,
     COM_ABORTED_BY_USER,
     COM_DEVICE_IS_BUSY,
     COM_VERIFY_LAN_DEV_FAILED,  // invalid serialNumber/checkCode
@@ -63,6 +64,7 @@ struct com_dev_data_t {
     ComConnectMode connectMode;
     fnet_lan_dev_info_t lanDevInfo;
     com_wan_dev_info_t wanDevInfo;
+    fnet_dev_product_t *devProduct;
     fnet_dev_detail_t *devDetail;
 };
 

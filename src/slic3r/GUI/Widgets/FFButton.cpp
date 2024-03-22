@@ -5,7 +5,7 @@
 
 FFButton::FFButton(wxWindow* parent, wxWindowID id/*= wxID_ANY*/, const wxString& label/*= ""*/,
 	int borderRadius/*=4*/, bool borderFlag/* = true*/)
-	: wxButton(parent, id, label, wxDefaultPosition, wxDefaultSize, wxNO_BORDER)
+	: wxWindow(parent, id, wxDefaultPosition, wxDefaultSize, wxNO_BORDER)
 	, m_hoverFlag(false)
 	, m_pressFlag(false)
 	, m_borderFlag(borderFlag)
@@ -23,36 +23,67 @@ FFButton::FFButton(wxWindow* parent, wxWindowID id/*= wxID_ANY*/, const wxString
 	, m_bgPressColor("#ffffff")
 	, m_bgDisableColor("#dddddd")
 {
+	if (parent) {
+		SetBackgroundColour(parent->GetBackgroundColour());	
+	}
+	SetLabel(label);
 	Bind(wxEVT_ENTER_WINDOW, [this](wxMouseEvent& e) { m_hoverFlag = true; Refresh(); e.Skip(); });
 	Bind(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent& e) { m_hoverFlag = false; m_pressFlag = false; Refresh(); e.Skip(); });
 	Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e) { m_pressFlag = true; Refresh(); e.Skip(); });
-	Bind(wxEVT_LEFT_UP, [this](wxMouseEvent& e) { m_pressFlag = false; Refresh(); e.Skip(); });
+	Bind(wxEVT_LEFT_UP, [this](wxMouseEvent& e) { m_pressFlag = false; Refresh(); sendEvent(); e.Skip(); });
 	Bind(wxEVT_PAINT, &FFButton::OnPaint, this);
-	updateState();
+	Bind(wxEVT_ERASE_BACKGROUND, [=](auto& e) {
+		e.Skip();
+	});
+	Layout();
+	Fit();
+	//updateState();
+}
+
+bool FFButton::Enable(bool enable/* = true*/)
+{
+	bool ret = wxWindow::Enable(enable);
+	if (ret) {
+		Refresh();
+	}
+	return ret;
+}
+
+void FFButton::SetLabel(const wxString & label)
+{
+	wxWindow::SetLabel(label);
+	wxScreenDC dc;
+	//font = wx.Font(14, wx.DEFAULT, wx.NORMAL, wx.NORMAL)
+	//wxPaintDC dc(this);
+	dc.SetFont(GetFont());
+	auto textSize = dc.GetTextExtent(label);
+	SetMinSize(textSize+wxSize(40, 14));
+	Refresh();
 }
 
 void FFButton::SetFontColor(const wxColour& color)
 {
 	m_fontColor = color;
-	updateState();
+	Update();
+	//updateState();
 }
 
 void FFButton::SetFontHoverColor(const wxColour& color)
 {
 	m_fontHoverColor = color;
-	updateState();
+	Update();
 }
 
 void FFButton::SetFontPressColor(const wxColour& color)
 {
 	m_fontPressColor = color;
-	updateState();
+	Update();
 }
 
 void FFButton::SetFontDisableColor(const wxColour& color)
 {
 	m_fontDisableColor = color;
-	updateState();
+	Update();
 }
 
 void FFButton::SetFontUniformColor(const wxColour& color)
@@ -61,7 +92,7 @@ void FFButton::SetFontUniformColor(const wxColour& color)
 	m_fontHoverColor = color;
 	m_fontPressColor = color;
 	m_fontDisableColor = color;
-	updateState();
+	Update();
 }
 
 void FFButton::SetBorderColor(const wxColour& color)
@@ -140,22 +171,24 @@ void FFButton::OnPaint(wxPaintEvent& event)
 #else
     render(dc);
 #endif
-
-	if (!IsEnabled()) {
-		dc.SetTextForeground(m_fontDisableColor);
-	} else if (m_pressFlag) {
-		dc.SetTextForeground(m_fontPressColor);
-	} else if (m_hoverFlag) {
-		dc.SetTextForeground(m_fontHoverColor);
-	} else {
-		dc.SetTextForeground(m_fontColor);
+	wxString text = GetLabel();
+	if (!text.IsEmpty()) {
+		if (!IsEnabled()) {
+			dc.SetTextForeground(m_fontDisableColor);
+		} else if (m_pressFlag) {
+			dc.SetTextForeground(m_fontPressColor);
+		} else if (m_hoverFlag) {
+			dc.SetTextForeground(m_fontHoverColor);
+		} else {
+			dc.SetTextForeground(m_fontColor);
+		}
+		// For Text: Just align-center
+		dc.SetFont(GetFont());
+		auto textSize = dc.GetMultiLineTextExtent(text);
+		auto pt = wxPoint((size.x - textSize.x) / 2, (size.y - textSize.y) / 2);
+		dc.DrawText(text, pt);
 	}
-	// For Text: Just align-center
-	dc.SetFont(GetFont());
-	auto text = GetLabel();
-    auto textSize = dc.GetMultiLineTextExtent(text);
-    auto pt = wxPoint((size.x - textSize.x) / 2, (size.y - textSize.y) / 2);
-    dc.DrawText(text, pt);
+	event.Skip();
 }
 
 void FFButton::render(wxDC &dc)
@@ -206,6 +239,15 @@ void FFButton::updateState()
 	}
 	Update();
 }
+
+void FFButton::sendEvent()
+{
+	wxCommandEvent event(wxEVT_BUTTON);
+	event.SetEventObject(this);
+	event.SetId(GetId());
+	wxPostEvent(this, event);
+}
+
 
 FFPushButton::FFPushButton(wxWindow* parent,wxWindowID id,const wxString& normalIcon,const wxString& hoverIcon,const wxString& pressIcon,const wxString& disableIcon)
     : wxButton(parent, id, "", wxPoint(10, 10), wxSize(25, 25), wxNO_BORDER)

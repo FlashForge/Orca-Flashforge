@@ -1,8 +1,9 @@
 #include "TitleDialog.hpp"
 #include <wx/stattext.h>
 #include <wx/graphics.h>
+#include <wx/dcgraph.h>
 #include "wxExtensions.hpp"
-
+#include "libslic3r/Utils.hpp"
 
 namespace Slic3r::GUI {
 
@@ -13,8 +14,11 @@ TitleBar::TitleBar(wxWindow *parent, const wxString& title, const wxColour& colo
     , m_bgColor(color)
     , m_title(title)
 {
-    SetBackgroundColour(m_bgColor);
+    //SetBackgroundColour(m_bgColor);
     m_titleLbl = new wxStaticText(this, wxID_ANY, m_title, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
+    wxFont font = m_titleLbl->GetFont();
+    font.SetWeight(wxFONTWEIGHT_BOLD);
+    m_titleLbl->SetFont(font);
     m_titleLbl->Bind(wxEVT_LEFT_DOWN, &TitleBar::OnMouseLeftDown, this);
     m_titleLbl->SetBackgroundColour(m_bgColor/*wxColour("#ff0000")*/);
 
@@ -43,11 +47,6 @@ wxSize TitleBar::DoGetBestClientSize() const
     return wxSize(-1, 48);
 }
 
-//void TitleBar::SetBackgroundColor(const wxColour& color)
-//{
-//    SetBackgroundColor
-//}
-
 void TitleBar::SetTitle(const wxString& title)
 {
     m_titleLbl->SetLabel(title);
@@ -56,11 +55,33 @@ void TitleBar::SetTitle(const wxString& title)
 void TitleBar::OnPaint(wxPaintEvent& event)
 {
     wxPaintDC dc(this);
-    dc.SetBrush(m_bgColor);
-    dc.SetPen(*wxTRANSPARENT_PEN);
     wxSize size = GetSize();
-    //dc.DrawRoundedRectangle(0, 0, size.x, size.y, m_borderRadius);
-    dc.DrawRectangle(0, size.y / 2, size.x, size.y);
+#ifdef __WXMSW__
+    wxMemoryDC memdc;
+    wxBitmap bmp(size.x, size.y);
+    memdc.SelectObject(bmp);
+    memdc.Blit({0, 0}, size, &dc, {0, 0});
+    {
+        wxGCDC dc2(memdc);
+        DoRender(dc2);
+    }
+    memdc.SelectObject(wxNullBitmap);
+    dc.DrawBitmap(bmp, 0, 0);
+#else
+    DoRender(dc);
+#endif
+}
+
+void TitleBar::DoRender(wxDC &dc)
+{
+    wxSize sz = GetSize();
+	dc.SetPen(*wxTRANSPARENT_PEN);
+    dc.SetBrush(wxColour("#c1c1c1"));
+    dc.DrawRectangle(0, 0, sz.x, sz.y);
+
+    dc.SetBrush(m_bgColor);
+    dc.DrawRoundedRectangle(0, 0, sz.x, sz.y / 2, m_borderRadius);
+    dc.DrawRectangle(0, m_borderRadius+3, sz.x, sz.y);
 }
 
 void TitleBar::OnMouseLeftDown(wxMouseEvent &event)
@@ -77,6 +98,8 @@ void TitleBar::OnMouseLeftDown(wxMouseEvent &event)
         m_dragStartMouse = ClientToScreen(clientStart);
         m_dragStartWindow = GetParent()->GetPosition();
         CaptureMouse();
+        BOOST_LOG_TRIVIAL(info) << "TitleBar::CaptureMouse";
+        flush_logs();
     }
 }
 void TitleBar::OnMouseLeftUp(wxMouseEvent &event)
@@ -114,6 +137,8 @@ void TitleBar::FinishDrag()
     }
     if (HasCapture()) {
         ReleaseMouse();
+        BOOST_LOG_TRIVIAL(info) << "TitleBar::ReleaseMouse";
+        flush_logs();
     }
 }
 
@@ -125,12 +150,16 @@ TitleDialog::TitleDialog(wxWindow* parent, const wxString& title, int borderRadi
     , m_titleBar(new TitleBar(this, title, "#E1E2E6", borderRadius))
     , m_mainSizer(new wxBoxSizer(wxVERTICAL))
 {
+    SetBackgroundColour(*wxWHITE);
     wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
-    sizer->Add(m_titleBar, 0, wxEXPAND | wxALIGN_TOP);
-    sizer->Add(m_mainSizer, 1, wxEXPAND);
+    sizer->AddSpacer(m_shadow_width);
+    sizer->Add(m_titleBar, 0, wxEXPAND | wxALIGN_TOP | wxLEFT | wxRIGHT, m_shadow_width);
+    sizer->Add(m_mainSizer, 1, wxEXPAND | wxLEFT | wxRIGHT, m_shadow_width);
+    sizer->AddSpacer(m_borderRadius);
     SetSizer(sizer);
     Layout();
 
+    Bind(wxEVT_ERASE_BACKGROUND, &TitleDialog::OnErase, this);
     Bind(wxEVT_PAINT, &TitleDialog::OnPaint, this);
     Bind(wxEVT_SIZE, &TitleDialog::OnSize, this);
 }
@@ -145,20 +174,51 @@ wxBoxSizer* TitleDialog::MainSizer()
     return m_mainSizer;
 }
 
+void TitleDialog::OnErase(wxEraseEvent& event)
+{
+    wxPaintDC dc(this);
+    wxSize sz = GetSize();
+    dc.SetPen(*wxTRANSPARENT_PEN);
+    dc.SetBrush(wxColour("#c0c0c0"));
+    dc.DrawRectangle(0, 0, sz.x, sz.y);
+}
+
 void TitleDialog::OnPaint(wxPaintEvent& event)
 {
     wxPaintDC dc(this);
+    wxSize size = GetSize();
+#ifdef __WXMSW__
+    wxMemoryDC memdc;
+    wxBitmap bmp(size.x, size.y);
+    memdc.SelectObject(bmp);
+    memdc.Blit({0, 0}, size, &dc, {0, 0});
+    {
+        wxGCDC dc2(memdc);
+        DoRender(dc2);
+    }
+    memdc.SelectObject(wxNullBitmap);
+    dc.DrawBitmap(bmp, 0, 0);
+    bmp.SaveFile("D:/aa.png", wxBITMAP_TYPE_PNG);
+#else
+    DoRender(dc);
+#endif
+}
+
+void TitleDialog::DoRender(wxDC &dc)
+{
+    wxSize sz = GetSize();
+	dc.SetPen(*wxTRANSPARENT_PEN);
+    dc.SetBrush(wxColour("#c1c1c1"));
+    dc.DrawRectangle(0, 0, sz.x, sz.y);
     dc.SetBrush(wxColour(255, 255, 255));
-    dc.SetPen(*wxTRANSPARENT_PEN);
-    //dc.DrawRoundedRectangle(, m_borderRadius);
-    dc.DrawRectangle(GetClientSize());
+    dc.DrawRoundedRectangle(m_shadow_width, m_shadow_width, sz.x - 2 * m_shadow_width, sz.y - 2 * m_shadow_width, m_borderRadius);
 }
 
 void TitleDialog::OnSize(wxSizeEvent& event)
 {
     wxGraphicsPath path = wxGraphicsRenderer::GetDefaultRenderer()->CreatePath();
     wxSize size = GetSize();
-    path.AddRoundedRectangle(0, 0, size.x, size.y, m_borderRadius);
+    path.AddRoundedRectangle(0, 0, size.x, size.y, m_borderRadius+1);
     SetShape(path);
 }
 

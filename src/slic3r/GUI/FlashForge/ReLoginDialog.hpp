@@ -4,12 +4,14 @@
 #include <wx/wx.h>
 #include <wx/intl.h>
 #include <wx/webview.h>
+#include <wx/webrequest.h>
 
 #include "slic3r/GUI/GUI_Utils.hpp"
 #include "slic3r/GUI/Widgets/Button.hpp"
 #include "slic3r/GUI/Widgets/Label.hpp"
 #include "slic3r/GUI/Widgets/FFButton.hpp"
 #include "slic3r/GUI/Widgets/WebView.hpp"
+#include "slic3r/GUI/TitleDialog.hpp"
 
 #if wxUSE_WEBVIEW_IE
 #include "wx/msw/webview_ie.h"
@@ -23,7 +25,23 @@
 
 namespace Slic3r { 
 namespace GUI {
-class ReLoginDialog : public DPIDialog
+class RoundImage : public wxPanel
+{
+public:
+    RoundImage(wxWindow *parent, const wxSize &size = wxDefaultSize);
+
+    void SetImage(const wxImage &image);
+
+private:
+    void OnPaint(wxPaintEvent &event);
+    void OnSize(wxSizeEvent &event);
+    void CreateRegion(wxDC &dc);
+
+private:
+    wxImage m_image{wxNullImage};
+};
+
+class ReLoginDialog : public TitleDialog
 {
 public:
     ReLoginDialog();
@@ -38,10 +56,19 @@ protected:
     void on_dpi_changed(const wxRect &suggested_rect) override;
 
 private:
+    void onCloseWnd(wxCloseEvent &event);
+    void onDestroy();
+
+private:
+
+    wxBoxSizer *m_sizer_main{nullptr};
     wxPanel* m_panel_page{nullptr};
 
     wxBitmap m_usr_pic;
-    Label* m_usr_name{nullptr};
+    //Label* m_usr_name{nullptr};
+    wxStaticText *m_usr_name{nullptr};
+    wxWebRequest m_web_request;
+    RoundImage  *m_user_panel;
 
     wxStaticBitmap*  m_usr_pic_staticbitmap;
 

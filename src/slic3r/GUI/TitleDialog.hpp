@@ -1,6 +1,7 @@
 #ifndef slic3r_GUI_TitleDialog_hpp_
 #define slic3r_GUI_TitleDialog_hpp_
 #include <wx/window.h>
+#include <wx/dc.h>
 #include "GUI_Utils.hpp"
 //#include "ImageButton.hpp"
 
@@ -19,6 +20,7 @@ public:
 
 protected:
     void OnPaint(wxPaintEvent& event);
+    void DoRender(wxDC &dc);
     void OnMouseLeftDown(wxMouseEvent &event);
     void OnMouseLeftUp(wxMouseEvent &event);
     void OnMouseMotion(wxMouseEvent &event);
@@ -49,13 +51,16 @@ public:
     wxBoxSizer* MainSizer();
 
 protected:    
+    void OnErase(wxEraseEvent& event);
     void OnPaint(wxPaintEvent& event);
+    void DoRender(wxDC &dc);
     void OnSize(wxSizeEvent& event);
     
 protected:
-    int             m_borderRadius;
-    TitleBar*       m_titleBar;
-    wxBoxSizer*     m_mainSizer;
+    int             m_borderRadius {6};
+    TitleBar*       m_titleBar {nullptr};
+    wxBoxSizer*     m_mainSizer {nullptr};
+    const int       m_shadow_width {1};
 };
 
 } // Slic3r::GUI

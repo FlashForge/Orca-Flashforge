@@ -64,12 +64,16 @@ private:
     void onWanDevMaintian(const ComWanDevMaintainEvent &event);
 
     void onGetWanDev(const GetWanDevEvent &event);
+    
+    void onUpdateUserProfile(const ComGetUserProfileEvent &event);
 
     void onConnectionReady(const ComConnectionReadyEvent &event);
 
     void onConnectionExit(const ComConnectionExitEvent &event);
 
     void onDevDetailUpdate(const ComDevDetailUpdateEvent &event);
+
+    void onCommandFailed(const CommandFailedEvent &event);
 
     void onWanConnReadData(const WanConnReadDataEvent &event);
 

@@ -94,4 +94,13 @@ private:
     DECLARE_EVENT_TABLE()
 };
 
+class TempButton : public Button
+{
+public:
+    TempButton(wxWindow *parent, wxString text, wxString icon = "", long style = 0, int iconSize = 0, wxWindowID btn_id = wxID_ANY);
+ protected:
+    virtual void doRender(wxDC &dc);
+
+};
+
 #endif // !slic3r_GUI_Button_hpp_

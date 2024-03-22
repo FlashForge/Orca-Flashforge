@@ -11,6 +11,8 @@ wxDEFINE_EVENT(GET_WAN_DEV_EVENT, GetWanDevEvent);
 UserDataUpdateThd::UserDataUpdateThd(fnet::FlashNetworkIntfc *networkIntfc)
     : m_thread(boost::bind(&UserDataUpdateThd::run, this))
     , m_networkIntfc(networkIntfc)
+    , m_updateWanDev(false)
+    , m_updateUserProfile(false)
     , m_exitThread(false)
 {
 }
@@ -18,6 +20,8 @@ UserDataUpdateThd::UserDataUpdateThd(fnet::FlashNetworkIntfc *networkIntfc)
 void UserDataUpdateThd::exit()
 {
     m_loopWaitEvent.set(true);
+    m_updateWanDev = false;
+    m_updateUserProfile = false;
     m_exitThread = true;
     m_thread.join();
 }
@@ -42,8 +46,15 @@ void UserDataUpdateThd::setToken(const std::string &accessToken)
     m_accessToken = accessToken;
 }
 
+void UserDataUpdateThd::setUpdateUserProfile()
+{
+    m_updateUserProfile = true;
+    m_loopWaitEvent.set(true);
+}
+
 void UserDataUpdateThd::setUpdateWanDev()
 {
+    m_updateWanDev = true;
     m_loopWaitEvent.set(true);
 }
 
@@ -55,13 +66,20 @@ void UserDataUpdateThd::run()
 
         std::string uid, accessToken;
         getUidToken(uid, accessToken);
-        updateWanDev(uid, accessToken);
+        if (m_updateWanDev) {
+            updateWanDev(uid, accessToken);
+            m_updateWanDev = false;
+        }
+        if (m_updateUserProfile) {
+            updateUserProfile(accessToken);
+            m_updateUserProfile = false;
+        }
     }
 }
 
 void UserDataUpdateThd::updateWanDev(const std::string &uid, const std::string &accessToken)
 {
-    int tryCnt = 3;
+    int tryCnt = 5;
     int fnetRet = FNET_OK;
     fnet_wan_dev_info_t *devInfos = nullptr;
     int devCnt = 0;
@@ -83,6 +101,25 @@ void UserDataUpdateThd::updateWanDev(const std::string &uid, const std::string &
         event->devInfos = devInfos;
         event->devCnt = devCnt;
         QueueEvent(event);
+    }
+}
+
+void UserDataUpdateThd::updateUserProfile(const std::string &accessToken)
+{
+    int tryCnt = 5;
+    ComErrno ret = COM_OK;
+    com_user_profile_t userProfile;
+    for (int i = 0; i < tryCnt && !m_exitThread; ++i) {
+        ret = MultiComUtils::getUserProfile(accessToken, userProfile);
+        if (ret == COM_OK || ret == COM_UNAUTHORIZED) {
+            break;
+        } else if (i + 1 < tryCnt) {
+            int sleepTimes[] = {1, 3, 5};
+            boost::this_thread::sleep_for(boost::chrono::seconds(sleepTimes[i < 3 ? i : 2]));
+        }
+    }
+    if (!m_exitThread) {
+        QueueEvent(new ComGetUserProfileEvent(COM_GET_USER_PROFILE_EVENT, userProfile, ret));
     }
 }
 

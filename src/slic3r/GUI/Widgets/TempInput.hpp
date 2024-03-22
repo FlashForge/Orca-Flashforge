@@ -8,8 +8,39 @@
 #include "Label.hpp"
 #include "Button.hpp"
 #include "FFButton.hpp"
+#include "slic3r/GUI/TitleDialog.hpp"
 
 wxDECLARE_EVENT(wxCUSTOMEVT_SET_TEMP_FINISH, wxCommandEvent);
+
+wxDECLARE_EVENT(EVT_CANCEL_PRINT_CLICKED, wxCommandEvent);
+wxDECLARE_EVENT(EVT_CONTINUE_PRINT_CLICKED, wxCommandEvent);
+class CancelPrint : public Slic3r::GUI::TitleDialog
+{
+public:
+    CancelPrint(const wxString &info, const wxString &leftBtnTxt, const wxString &rightBtnTxt);
+
+protected:
+    void on_dpi_changed(const wxRect &suggested_rect){};
+
+private:
+    wxBoxSizer   *m_sizer_main{nullptr};
+    wxStaticText *m_info{nullptr};
+    FFButton     *m_confirm_btn{nullptr};
+    FFButton     *m_cancel_btn{nullptr};
+};
+
+class ShowTip : public Slic3r::GUI::TitleDialog
+{
+public:
+    ShowTip(const wxString &info);
+
+protected:
+    void on_dpi_changed(const wxRect &suggested_rect){};
+
+private:
+    wxBoxSizer   *m_sizer_main{nullptr};
+    wxStaticText *m_info{nullptr};
+};
 
 class TempInput : public wxNavigationEnabled<StaticBox>
 {
@@ -86,6 +117,7 @@ public:
     void SetIconNormal();
 
    void SetReadOnly(bool ro) { m_read_only = ro; }
+    void SetTextBindInput();
 
     void SetMaxTemp(int temp);
     void SetMinTemp(int temp);
@@ -259,6 +291,10 @@ private:
     IconText *m_temp_ctrl_top{nullptr};
     IconText *m_temp_ctrl_bottom{nullptr};
     IconText *m_temp_ctrl_mid{nullptr};
+
+    TempButton *m_top_btn{nullptr};
+    TempButton *m_bottom_btn{nullptr};
+    TempButton *m_mid_btn{nullptr};
 
     Label *m_machine_type_data{nullptr};
     Label *m_spray_nozzle_data{nullptr};

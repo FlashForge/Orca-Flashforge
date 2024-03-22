@@ -1,5 +1,6 @@
 #include "MultiComMgr.hpp"
 #include "FreeInDestructor.h"
+#include "libslic3r/Utils.hpp"
 
 namespace Slic3r { namespace GUI {
 
@@ -8,6 +9,7 @@ MultiComMgr::MultiComMgr()
 {
     com_dev_data_t devData;
     devData.connectMode = COM_CONNECT_LAN;
+    devData.devProduct = nullptr;
     devData.devDetail = nullptr;
     memset(&devData.lanDevInfo, 0, sizeof(devData.lanDevInfo));
     m_datMap.emplace(ComInvalidId, devData);
@@ -88,10 +90,12 @@ ComErrno MultiComMgr::addWanDev(const std::string &accessToken)
     m_wanAsyncConn->Bind(COM_WAN_DEV_MAINTAIN_EVENT, &MultiComMgr::onWanDevMaintian, this);
     m_wanAsyncConn->Bind(WAN_CONN_READ_DATA_EVENT, &MultiComMgr::onWanConnReadData, this);
     m_wanAsyncConn->Bind(WAN_CONN_RECONNECT_EVENT, &MultiComMgr::onWanConnReconnect, this);
-    m_wanAsyncConn->postSubscribeApp(userProfile.uid);
+    m_userDataUpdateThd->Bind(COM_GET_USER_PROFILE_EVENT, &MultiComMgr::onUpdateUserProfile, this);
+    m_wanAsyncConn->postSubscribeAppSlicer(userProfile.uid);
+    m_wanAsyncConn->postSyncSlicerLogin(userProfile.uid);
     m_userDataUpdateThd->setUidToken(userProfile.uid, accessToken);
     m_userDataUpdateThd->setUpdateWanDev();
-    QueueEvent(new ComGetUserProfileEvent(COM_GET_USER_PROFILE_EVENT, userProfile, COM_OK));
+    onUpdateUserProfile(ComGetUserProfileEvent(COM_GET_USER_PROFILE_EVENT, userProfile, COM_OK));
     return ret;
 }
 
@@ -222,6 +226,7 @@ void MultiComMgr::initConnection(const com_ptr_t &comPtr, const com_dev_data_t &
     comPtr->Bind(COM_CONNECTION_READY_EVENT, &MultiComMgr::onConnectionReady, this);
     comPtr->Bind(COM_CONNECTION_EXIT_EVENT, &MultiComMgr::onConnectionExit, this);
     comPtr->Bind(COM_DEV_DETAIL_UPDATE_EVENT, &MultiComMgr::onDevDetailUpdate, this);
+    comPtr->Bind(COMMAND_FAILED_EVENT, &MultiComMgr::onCommandFailed, this);
     comPtr->connect();
 }
 
@@ -271,11 +276,19 @@ void MultiComMgr::onGetWanDev(const GetWanDevEvent &event)
     m_wanAsyncConn->postSubscribeDev(addDevIds);
 }
 
+void MultiComMgr::onUpdateUserProfile(const ComGetUserProfileEvent &event)
+{
+    if (event.ret != COM_OK) {
+        return;
+    }
+    QueueEvent(event.Clone());
+}
+
 void MultiComMgr::onConnectionReady(const ComConnectionReadyEvent &event)
 {
-    fnet_dev_detail_t *&devDetail = m_datMap.at(event.id).devDetail;
-    m_networkIntfc->freeDevDetail(devDetail);
-    devDetail = event.devDetail;
+    com_dev_data_t &devData = m_datMap.at(event.id);
+    devData.devProduct = event.devProduct;
+    devData.devDetail = event.devDetail;
     m_readyIdSet.insert(event.id);
     QueueEvent(event.Clone());
 }
@@ -284,10 +297,12 @@ void MultiComMgr::onConnectionExit(const ComConnectionExitEvent &event)
 {
     ComConnection *comConnection = m_ptrMap.left.at(event.id);
     comConnection->joinThread();
-    m_networkIntfc->freeDevDetail(m_datMap.at(event.id).devDetail);
+    com_dev_data_t &devData = m_datMap.at(event.id);
+    m_networkIntfc->freeDevProduct(devData.devProduct);
+    m_networkIntfc->freeDevDetail(devData.devDetail);
     m_readyIdSet.erase(event.id);
     if (comConnection->connectMode() == COM_CONNECT_WAN) {
-        m_devIdMap.erase(m_datMap.at(comConnection->id()).wanDevInfo.devId);
+        m_devIdMap.erase(devData.wanDevInfo.devId);
     }
     m_datMap.erase(event.id);
     m_ptrMap.left.erase(event.id);
@@ -304,6 +319,15 @@ void MultiComMgr::onDevDetailUpdate(const ComDevDetailUpdateEvent &event)
         QueueEvent(event.Clone());
     }
     updateWanDevInfo(event.id, devDetail->name, devDetail->status, devDetail->location);
+}
+
+void MultiComMgr::onCommandFailed(const CommandFailedEvent &event)
+{
+    if (event.fatalError) {
+        onWanDevMaintian(ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, event.ret));
+    } else {
+        m_userDataUpdateThd->setUpdateWanDev();
+    }
 }
 
 void MultiComMgr::onWanConnReadData(const WanConnReadDataEvent &event)
@@ -326,6 +350,12 @@ void MultiComMgr::onWanConnReadData(const WanConnReadDataEvent &event)
         }
     };
     switch (event.readData.type) {
+    case FNET_CONN_READ_SYNC_SLICER_LOGIN:
+        onWanDevMaintian(ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, COM_REPEAT_LOGIN));
+        break;
+    case FNET_CONN_READ_SYNC_USER_PROFILE:
+        m_userDataUpdateThd->setUpdateUserProfile();
+        break;
     case FNET_CONN_READ_SYNC_BIND_DEVICE:
     case FNET_CONN_READ_SYNC_UNBIND_DEVICE:
         m_userDataUpdateThd->setUpdateWanDev();
@@ -352,7 +382,7 @@ void MultiComMgr::onWanConnReconnect(const wxCommandEvent &)
     for (auto &item : m_devIdMap) {
         devIds.push_back(item.first);
     }
-    m_wanAsyncConn->postSubscribeApp(m_uid);
+    m_wanAsyncConn->postSubscribeAppSlicer(m_uid);
     m_wanAsyncConn->postSubscribeDev(devIds);
     m_userDataUpdateThd->setUpdateWanDev();
 }
@@ -368,6 +398,7 @@ com_dev_data_t MultiComMgr::makeDevData(const fnet_wan_dev_info_t *wanDevInfo)
     devData.wanDevInfo.status = wanDevInfo->status;
     devData.wanDevInfo.location = wanDevInfo->location;
     devData.wanDevInfo.serialNumber = wanDevInfo->serialNumber;
+    devData.devProduct = nullptr;
     devData.devDetail = nullptr;
     memset(&devData.lanDevInfo, 0, sizeof(devData.lanDevInfo));
     return devData;
@@ -380,6 +411,7 @@ void MultiComMgr::updateWanDevInfo(com_id_t id, const std::string &name, const s
     if (devData.connectMode != COM_CONNECT_WAN) {
         return;
     }
+    BOOST_LOG_TRIVIAL(info) << name << " status---" << status;
     devData.wanDevInfo.name = name;
     devData.wanDevInfo.status = status;
     devData.wanDevInfo.location = location;

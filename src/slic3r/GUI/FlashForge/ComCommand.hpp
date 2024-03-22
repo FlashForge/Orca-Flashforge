@@ -40,6 +40,34 @@ protected:
     static int s_commandNum;
 };
 
+class ComGetDevProduct : public ComCommand
+{
+public:
+    ComGetDevProduct()
+        : m_devProduct(nullptr)
+    {
+    }
+    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &ip,
+        unsigned int port, const std::string &serialNumber, const std::string &checkCode)
+    {
+        int ret = networkIntfc->getLanDevProduct(
+            ip.c_str(), port, serialNumber.c_str(), checkCode.c_str(), &m_devProduct, ComTimeoutLan);
+        return MultiComUtils::fnetRet2ComErrno(ret);
+    }
+    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &uid,
+        const std::string &accessToken, const std::string &deviceId)
+    {
+        return COM_ERROR;
+    }
+    fnet_dev_product_t *devProduct()
+    {
+        return m_devProduct;
+    }
+ 
+private:
+    fnet_dev_product_t *m_devProduct;
+};
+
 class ComGetDevDetail : public ComCommand
 {
 public:
@@ -57,9 +85,7 @@ public:
     ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &uid,
         const std::string &accessToken, const std::string &deviceId)
     {
-        int ret = networkIntfc->getWanDevDetail(
-            uid.c_str(), accessToken.c_str(), deviceId.c_str(), &m_devDetail, ComTimeoutWan);
-        return MultiComUtils::fnetRet2ComErrno(ret);
+        return COM_ERROR;
     }
     fnet_dev_detail_t *devDetail()
     {
@@ -67,6 +93,40 @@ public:
     }
  
 private:
+    fnet_dev_detail_t *m_devDetail;
+};
+
+class ComGetDevProductDetail : public ComCommand
+{
+public:
+    ComGetDevProductDetail()
+        : m_devProduct(nullptr)
+        , m_devDetail(nullptr)
+    {
+    }
+    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &ip,
+        unsigned int port, const std::string &serialNumber, const std::string &checkCode)
+    {
+        return COM_ERROR;
+    }
+    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &uid,
+        const std::string &accessToken, const std::string &deviceId)
+    {
+        int ret = networkIntfc->getWanDevProductDetail(uid.c_str(), accessToken.c_str(),
+            deviceId.c_str(), &m_devProduct, &m_devDetail, ComTimeoutWan);
+        return MultiComUtils::fnetRet2ComErrno(ret);
+    }
+    fnet_dev_product_t *devProduct()
+    {
+        return m_devProduct;
+    }
+    fnet_dev_detail_t *devDetail()
+    {
+        return m_devDetail;
+    }
+ 
+private:
+    fnet_dev_product_t *m_devProduct;
     fnet_dev_detail_t *m_devDetail;
 };
 

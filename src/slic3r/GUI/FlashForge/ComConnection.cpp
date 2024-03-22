@@ -4,6 +4,8 @@
 
 namespace Slic3r { namespace GUI {
 
+wxDEFINE_EVENT(COMMAND_FAILED_EVENT, CommandFailedEvent);
+
 ComConnection::ComConnection(com_id_t id, const std::string &checkCode,
     const fnet_lan_dev_info_t &devInfo, fnet::FlashNetworkIntfc *networkIntfc)
     : m_id(id)
@@ -80,13 +82,14 @@ bool ComConnection::abortSendGcode(int commandId)
 
 void ComConnection::run()
 {
+    fnet_dev_product_t *product;
     fnet_dev_detail_t *detail;
-    ComErrno ret = initialize(&detail);
+    ComErrno ret = initialize(&product, &detail);
     if (ret != COM_OK) {
         QueueEvent(new ComConnectionExitEvent(COM_CONNECTION_EXIT_EVENT, m_id, ret));
         return;
     }
-    QueueEvent(new ComConnectionReadyEvent(COM_CONNECTION_READY_EVENT, m_id, detail));
+    QueueEvent(new ComConnectionReadyEvent(COM_CONNECTION_READY_EVENT, m_id, product, detail));
     ret = commandLoop();
     QueueEvent(new ComConnectionExitEvent(COM_CONNECTION_EXIT_EVENT, m_id, ret));
 }
@@ -106,8 +109,13 @@ ComErrno ComConnection::commandLoop()
             processCommand(frontCommand.get(), ret);
             if (ret == COM_OK || ret == COM_DEVICE_IS_BUSY) {
                 errorCnt = 0;
-            } else if (ret == COM_VERIFY_LAN_DEV_FAILED || ret == COM_UNAUTHORIZED || ++errorCnt > 5) {
-                return ret;
+            } else if (ret == COM_VERIFY_LAN_DEV_FAILED || ret != COM_ABORTED_BY_USER && ++errorCnt > 5) {
+                if (m_connectMode == COM_CONNECT_LAN) {
+                    return ret;
+                } else {
+                    QueueEvent(new CommandFailedEvent(COMMAND_FAILED_EVENT, ret, false));
+                    errorCnt = 0;
+                }
             }
             m_commandQue.pop(frontCommand->commandId());
         }
@@ -125,16 +133,23 @@ std::string ComConnection::getAccessToken()
     return m_accessToken;
 }
 
-ComErrno ComConnection::initialize(fnet_dev_detail_t **detail)
+ComErrno ComConnection::initialize(fnet_dev_product_t **product, fnet_dev_detail_t **detail)
 {
     ComErrno ret;
-    ComGetDevDetail getDevDetail;
     if (m_connectMode == COM_CONNECT_LAN) {
-        ret = getDevDetail.exec(m_networkIntfc, m_ip, m_port, m_serialNumber, m_checkCode);
+        ComGetDevProduct getDevProduct;
+        ret = getDevProduct.exec(m_networkIntfc, m_ip, m_port, m_serialNumber, m_checkCode);
+        *product = getDevProduct.devProduct();
+        if (ret == COM_OK) {
+            ComGetDevDetail getDevDetail;
+            ret = getDevDetail.exec(m_networkIntfc, m_ip, m_port, m_serialNumber, m_checkCode);
+            *detail = getDevDetail.devDetail();
+        }
     } else {
-        int tryCnt = 3;
+        ComGetDevProductDetail getDevProductDetail;
+        int tryCnt = 5;
         for (int i = 0; i < tryCnt; ++i) {
-            ret = getDevDetail.exec(m_networkIntfc, m_uid, m_accessToken, m_deviceId);
+            ret = getDevProductDetail.exec(m_networkIntfc, m_uid, m_accessToken, m_deviceId);
             if (ret == COM_OK || ret == COM_UNAUTHORIZED || m_exitThread) {
                 break;
             } else if (i + 1 < tryCnt) {
@@ -142,8 +157,12 @@ ComErrno ComConnection::initialize(fnet_dev_detail_t **detail)
                 boost::this_thread::sleep_for(boost::chrono::seconds(sleepTimes[i < 3 ? i : 2]));
             }
         }
+        if (ret != COM_OK) {
+            QueueEvent(new CommandFailedEvent(COMMAND_FAILED_EVENT, ret, false));
+        }
+        *product = getDevProductDetail.devProduct();
+        *detail = getDevProductDetail.devDetail();
     }
-    *detail = getDevDetail.devDetail();
     return ret;
 }
 

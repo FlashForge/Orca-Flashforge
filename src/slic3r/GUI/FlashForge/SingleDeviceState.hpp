@@ -56,6 +56,7 @@ private:
     int  m_cur_id = -1;
 };
 wxDECLARE_EVENT(EVT_MODIFY_TEMP_CLICKED, wxCommandEvent);
+wxDECLARE_EVENT(EVT_MODIFY_TEMP_CANCEL_CLICKED, wxCommandEvent);
 class ModifyTemp : public wxPanel
 {
 public:
@@ -135,6 +136,8 @@ public:
     void onTargetTempModify(wxCommandEvent &event);
     void onModifyTempClicked(wxCommandEvent &event);
     void onDevStateChanged(std::string devState, const com_dev_data_t &data);
+    void onCancelPrint(wxCommandEvent &event);
+    void onContinuePrint(wxCommandEvent &event);
 
     void setTipMessage(const std::string &title = "", const std::string &titleColor = "", const std::string &info = "", bool showInfo = false);
 
@@ -142,7 +145,8 @@ private:
     std::string convertSecondsToHMS(int totalSeconds);
     void  fillValue(const com_dev_data_t &data);
 
-    std::string truncateString(const std::string &s, size_t length);
+    void  setPageOffline();
+    std::string getCurLanguage();
 
 protected:
 //data
@@ -211,6 +215,7 @@ protected:
 
     Button* m_print_button;
     Button* m_cancel_button;
+    CancelPrint *m_cancel_confirm_page{nullptr};
 
     bool m_print_button_pressed_down = false;
 
@@ -242,12 +247,18 @@ protected:
 
     std::string      m_file_pic_url;
     std::vector<char> m_pic_data;
+    std::vector<char> m_last_pic_data;
     wxPanel         *m_panel_control_material{nullptr};
 
     std::string     m_cur_dev_state;
     std::string     m_cur_print_file_name;
     std::string     m_cur_dev_name;
     std::string     m_cur_dev_location;
+    int             m_cur_printing_ctrl;  // 0:normal, 1: pause 2: continue  3: abort
+    wxBitmap       *m_bitmap{nullptr};
+
+    double m_right_target_temp;
+    double m_plat_target_temp;
 };
 
 

@@ -14,6 +14,7 @@
 #include "slic3r/GUI/WebUserLoginDialog.hpp"
 #include "slic3r/GUI/HMS.hpp"
 #include "slic3r/GUI/Jobs/UpgradeNetworkJob.hpp"
+#include "slic3r/GUI/FlashForge/MultiComEvent.hpp"
 #include "slic3r/GUI/HttpServer.hpp"
 #include "../Utils/PrintHost.hpp"
 
@@ -46,6 +47,7 @@ class wxBookCtrlBase;
 // BBS
 class Notebook;
 struct wxLanguageInfo;
+class ShowTip;
 
 
 namespace Slic3r {
@@ -288,6 +290,7 @@ private:
     //FlashForge login
     LoginDialog*    m_login_dlg {nullptr};
     ReLoginDialog*  m_re_login_dlg{nullptr};
+    ShowTip        *m_logout_tip{nullptr};
 
     VersionInfo version_info;
     VersionInfo privacy_version_info;
@@ -451,6 +454,9 @@ private:
     void            on_user_login(wxCommandEvent &evt);
     void            on_user_login_handle(wxCommandEvent& evt);
     void            enable_user_preset_folder(bool enable);
+    void            on_connect_event();
+    void            get_usr_profile(ComGetUserProfileEvent &event);
+    void            wan_dev_maintain(ComWanDevMaintainEvent &event);
 
     // BBS
     bool            is_studio_active();

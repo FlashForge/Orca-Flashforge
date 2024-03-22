@@ -9,11 +9,72 @@
 #include "slic3r/GUI/FlashForge/MultiComMgr.hpp"
 #include "slic3r/GUI/FlashForge/LoginDialog.hpp"
 #include "slic3r/GUI/FlashForge/DeviceData.hpp"
+#include "slic3r/GUI/FFUtils.hpp"
 
 namespace Slic3r {
 namespace GUI {
+RoundImage::RoundImage(wxWindow *parent, const wxSize &size /*=wxDefaultSize*/)
+    : wxPanel(parent, wxID_ANY, wxDefaultPosition, size)
+{
+    Bind(wxEVT_PAINT, &RoundImage::OnPaint, this);
+    // Bind(wxEVT_SIZE, &RoundImagePanel::OnSize, this);
+}
 
-ReLoginDialog::ReLoginDialog() : DPIDialog(static_cast<wxWindow *>(wxGetApp().mainframe), wxID_ANY, from_u8((boost::format(_utf8(_L("Login")))).str()))
+void RoundImage::SetImage(const wxImage &image)
+{
+    m_image = image;
+    Refresh();
+}
+
+void RoundImage::OnSize(wxSizeEvent &event) {}
+
+void RoundImage::OnPaint(wxPaintEvent &event)
+{
+    if (!m_image.IsOk()) {
+        event.Skip();
+        return;
+    }
+
+    wxSize  size = GetSize();
+    wxImage img  = m_image;
+    img.Rescale(size.x, size.y);
+    if (!img.HasAlpha()) {
+        img.InitAlpha();
+    }
+
+    wxPaintDC dc(this);
+    wxBitmap  bmp(size.x, size.y);
+    {
+        wxMemoryDC memdc;
+        memdc.SelectObject(bmp);
+        memdc.Blit({0, 0}, size, &dc, {0, 0});
+        wxGCDC dc2(memdc);
+        dc2.SetFont(GetFont());
+        CreateRegion(dc2);
+        memdc.SelectObject(wxNullBitmap);
+    }
+    wxImage ref_img = bmp.ConvertToImage();
+    for (int y = 0; y < img.GetHeight(); ++y) {
+        for (int x = 0; x < img.GetWidth(); ++x) {
+            img.SetAlpha(x, y, ref_img.GetRed(x, y));
+        }
+    }
+    dc.DrawBitmap(wxBitmap(img), 0, 0);
+}
+
+void RoundImage::CreateRegion(wxDC &dc)
+{
+    wxSize sz = GetSize();
+    int    x  = sz.x / 2;
+    int    y  = sz.y / 2;
+    dc.SetBrush(*wxBLACK_BRUSH);
+    dc.DrawRectangle(0, 0, sz.x, sz.y);
+    dc.SetPen(*wxTRANSPARENT_PEN);
+    dc.SetBrush(*wxRED);
+    dc.DrawCircle(x, y, (x < y) ? x : y);
+}
+
+ReLoginDialog::ReLoginDialog() : TitleDialog(static_cast<wxWindow *>(wxGetApp().mainframe), _L("Login"), 6)
 {
     SetFont(wxGetApp().normal_font());
     SetBackgroundColour(*wxWHITE);
@@ -30,53 +91,64 @@ ReLoginDialog::ReLoginDialog() : DPIDialog(static_cast<wxWindow *>(wxGetApp().ma
     }
 
 //水平布局
-    wxBoxSizer *bSizer_frame = new wxBoxSizer(wxHORIZONTAL);
-
-//左侧间距
-    auto m_panel_separotor_left = new wxPanel(this, wxID_ANY, wxDefaultPosition,wxSize(FromDIP(53), -1), wxTAB_TRAVERSAL);
-    m_panel_separotor_left->SetBackgroundColour(wxColour(255,255,255));
-    //m_panel_separotor_left->SetMinSize(wxSize(FromDIP(85), -1));
-
-    bSizer_frame->Add(m_panel_separotor_left, 0, wxEXPAND | wxALL, 0);
-
-//中间布局
-    wxBoxSizer* bSizer_mid = new wxBoxSizer(wxVERTICAL);
-
-    m_panel_page = new wxPanel(this, wxID_ANY,wxDefaultPosition, wxSize(FromDIP(300), FromDIP(430)), wxTAB_TRAVERSAL);
-    m_panel_page->SetBackgroundColour(wxColour(255,255,255));
+    m_sizer_main = MainSizer();
+    m_sizer_main->SetMinSize(wxSize(FromDIP(380), FromDIP(445)));
 
 //***添加空白间距
-    auto m_panel_separotor_0 = new wxPanel(m_panel_page, wxID_ANY, wxDefaultPosition, wxSize(-1,FromDIP(83)), wxTAB_TRAVERSAL);
+    auto m_panel_separotor_0 = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1,FromDIP(83)), wxTAB_TRAVERSAL);
     m_panel_separotor_0->SetBackgroundColour(wxColour(255,255,255));
 
-    bSizer_mid->Add(m_panel_separotor_0, 0, wxEXPAND | wxALL, 0);
+    m_sizer_main->Add(m_panel_separotor_0, 0, wxEXPAND | wxALL, 0);
 
 //**添加用户
-    // m_usr_pic = create_scaled_bitmap("login_default_usr_pic", this, 66);
-    // m_usr_pic_staticbitmap = new wxStaticBitmap(m_panel_page, wxID_ANY,m_usr_pic);
-    // m_usr_pic_staticbitmap->SetMinSize(wxSize(64,64));
+    m_web_request = wxWebSession::GetDefault().CreateRequest(this, usr_pic);
+    if (!m_web_request.IsOk()) {
+        BOOST_LOG_TRIVIAL(error) << "web session create request fail";
+    } else {
+        m_web_request.Start();
+    }
+    Bind(wxEVT_CLOSE_WINDOW, &ReLoginDialog::onCloseWnd, this);
 
-    m_user_pic_view = WebView::CreateWebView(m_panel_page, usr_pic);
-    m_user_pic_view->SetMinSize(wxSize(64,64));
+    Bind(wxEVT_WEBREQUEST_STATE, [this](wxWebRequestEvent &evt) {
+        switch (evt.GetState()) {
+        case wxWebRequest::State_Completed: {
+            BOOST_LOG_TRIVIAL(error) << "BindDialog: web request state completed";
+            wxImage avatar_stream = *evt.GetResponse().GetStream();
+            if (avatar_stream.IsOk()) {
+                avatar_stream.Rescale(FromDIP(80), FromDIP(80));
+                m_user_panel->SetImage(avatar_stream);
+                Layout();
+            }
+            break;
+        }
+        case wxWebRequest::State_Failed: {
+            BOOST_LOG_TRIVIAL(error) << "BindDialog: web request state failed";
+            break;
+        }
+        }
+    });
+    m_user_panel = new RoundImage(this, wxSize(FromDIP(80), FromDIP(80)));
 
-    bSizer_mid->Add(m_user_pic_view,0, wxALIGN_CENTER,0);
+    m_sizer_main->Add(m_user_panel, 0, wxALIGN_CENTER, 0);
+    m_sizer_main->AddSpacer(FromDIP(6));
 
-    //bSizer_mid->Add(m_usr_pic_staticbitmap,0, wxALIGN_CENTER,0);
+    wxString username = wxString::FromUTF8(usr_name);
+    wxGCDC   dc(this);
+    wxString clipName = FFUtils::trimString(dc, username, FromDIP(180));
+    m_usr_name = new wxStaticText(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize);
+    m_usr_name->SetLabelText(clipName);
+    m_usr_name->SetToolTip(wxString::FromUTF8(usr_name));
 
-    m_usr_name = new Label(m_panel_page,wxString::FromUTF8(usr_name.c_str()));
-
-    //m_usr_name->Fit(m_panel_page);
-
-    bSizer_mid->Add(m_usr_name,0, wxALIGN_CENTER,0);
+    m_sizer_main->Add(m_usr_name, 0, wxALIGN_CENTER, 0);
 
 //***添加空白间距
-    auto m_panel_separotor_1 = new wxPanel(m_panel_page, wxID_ANY, wxDefaultPosition, wxSize(-1,FromDIP(29)), wxTAB_TRAVERSAL);
+    auto m_panel_separotor_1 = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1,FromDIP(29)), wxTAB_TRAVERSAL);
     m_panel_separotor_1->SetBackgroundColour(wxColour(255,255,255));
 
-    bSizer_mid->Add(m_panel_separotor_1, 0, wxEXPAND | wxALL, 0);
+    m_sizer_main->Add(m_panel_separotor_1, 0, wxEXPAND | wxALL, 0);
 
 //**登录按钮
-    m_re_login_button = new FFButton(m_panel_page, wxID_ANY,_L("Login"));
+    m_re_login_button = new FFButton(this, wxID_ANY,_L("Login"));
 
     m_re_login_button->SetFontDisableColor(wxColour(255, 255, 255));
     m_re_login_button->SetBorderDisableColor(wxColour(221,221,221));
@@ -97,46 +169,28 @@ ReLoginDialog::ReLoginDialog() : DPIDialog(static_cast<wxWindow *>(wxGetApp().ma
     m_re_login_button->SetMinSize(wxSize(FromDIP(170),FromDIP(35)));
     m_re_login_button->SetFont((wxFont(wxFontInfo(16))));
 
-    bSizer_mid->Add(m_re_login_button,0, wxALIGN_CENTER,0);
+    m_sizer_main->Add(m_re_login_button, 0, wxALIGN_CENTER, 0);
 
 //***添加空白间距
-    auto m_panel_separotor_2 = new wxPanel(m_panel_page, wxID_ANY, wxDefaultPosition, wxSize(-1,FromDIP(18)), wxTAB_TRAVERSAL);
+    auto m_panel_separotor_2 = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1,FromDIP(18)), wxTAB_TRAVERSAL);
     m_panel_separotor_2->SetBackgroundColour(wxColour(255,255,255));
 
-    bSizer_mid->Add(m_panel_separotor_2, 0, wxEXPAND | wxALL, 0);
+    m_sizer_main->Add(m_panel_separotor_2, 0, wxEXPAND | wxALL, 0);
 
 //**登出按钮
-    m_login_out_button = new wxButton(m_panel_page, wxID_ANY, _L("Login out"));
+    m_login_out_button = new wxButton(this, wxID_ANY, _L("Login out"));
     m_login_out_button->SetForegroundColour(wxColour(50,141,251));
     m_login_out_button->SetBackgroundColour(wxColour(255,255,255)); 
     m_login_out_button->SetWindowStyleFlag(wxBORDER_NONE); 
     m_login_out_button->SetFont((wxFont(wxFontInfo(16))));
     m_login_out_button->Bind(wxEVT_BUTTON,&ReLoginDialog::onLoginoutBtnClicked, this);
 
-    //m_login_out_button->Fit(m_panel_page);
+    m_sizer_main->Add(m_login_out_button, 0, wxALIGN_CENTER, 0);
 
-    bSizer_mid->Add(m_login_out_button,0, wxALIGN_CENTER,0);
-
-    bSizer_mid->AddStretchSpacer();
-
-    //SetSizerAndFit(bSizer_mid);
-
-    m_panel_page->SetSizer(bSizer_mid);
-    m_panel_page->Layout();
-    bSizer_mid->Fit(m_panel_page);
-
-    bSizer_frame->Add(m_panel_page, 0, wxEXPAND | wxALL, 0);
-
-//右侧间距
-    auto m_panel_separotor_right = new wxPanel(this, wxID_ANY, wxDefaultPosition,wxSize(FromDIP(53), -1), wxTAB_TRAVERSAL);
-    m_panel_separotor_right->SetBackgroundColour(wxColour(255,255,255));
-    //m_panel_separotor_right->SetMinSize(wxSize(FromDIP(85), -1));
-
-    bSizer_frame->Add(m_panel_separotor_right, 0, wxEXPAND | wxALL, 0);
-
-    this->SetSizerAndFit(bSizer_frame);
-    this->Layout();
-
+    Fit();
+    Thaw();
+    Centre(wxBOTH);
+    Layout();
 }
 
 ReLoginDialog::~ReLoginDialog()
@@ -158,6 +212,7 @@ void ReLoginDialog::onReloginBtnClicked(wxCommandEvent& event)
 void ReLoginDialog::onLoginoutBtnClicked(wxCommandEvent& event)
 {
     Hide();
+    onDestroy();
     wxGetApp().handle_login_out();
     AppConfig *app_config = wxGetApp().app_config;
     if(app_config){
@@ -193,12 +248,26 @@ void ReLoginDialog::onRelogin2BtnClicked(wxMouseEvent& event)
         wxGetApp().handle_login_result(usr_pic,usr_name);
     }
     Hide();
+    onDestroy();
     event.Skip();
 }
 
 void ReLoginDialog::on_dpi_changed(const wxRect &suggested_rect)
 {
     ;
+}
+
+void ReLoginDialog::onCloseWnd(wxCloseEvent &event) 
+{
+    onDestroy();
+    event.Skip();
+}
+
+void ReLoginDialog::onDestroy() 
+{
+    if (m_web_request.IsOk()) {
+        m_web_request.Cancel();
+    }
 }
 
 }
