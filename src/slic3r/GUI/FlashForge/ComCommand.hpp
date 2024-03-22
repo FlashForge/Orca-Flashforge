@@ -155,14 +155,14 @@ public:
         unsigned int port, const std::string &serialNumber, const std::string &checkCode)
     {
         int ret = networkIntfc->lanDevSendGcode(ip.c_str(), port, serialNumber.c_str(),
-            checkCode.c_str(), &m_sendGcodeData, ComTimeoutLan);
+            checkCode.c_str(), &m_sendGcodeData, 15000);
         return MultiComUtils::fnetRet2ComErrno(ret);
     }
     ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &uid,
         const std::string &accessToken, const std::string &deviceId)
     {
         int ret = networkIntfc->wanDevSendGcode(
-            uid.c_str(), accessToken.c_str(), deviceId.c_str(), &m_sendGcodeData, ComTimeoutWan);
+            uid.c_str(), accessToken.c_str(), deviceId.c_str(), &m_sendGcodeData, 15000);
         return MultiComUtils::fnetRet2ComErrno(ret);
     }
     void abort()

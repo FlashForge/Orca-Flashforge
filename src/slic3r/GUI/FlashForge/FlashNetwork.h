@@ -32,7 +32,9 @@ typedef void (*fnet_conn_reconnect_callback_t)(void *data);
 
 typedef enum fnet_log_level {
     FNET_LOG_LEVEL_ERROR,
+    FNET_LOG_LEVEL_WARN,
     FNET_LOG_LEVEL_INFO,
+    FNET_LOG_LEVEL_DEBUG,
 } fnet_log_level_t;
 
 typedef enum fnet_conn_write_data_type {
