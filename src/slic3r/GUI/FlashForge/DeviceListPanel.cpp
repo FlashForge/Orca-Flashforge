@@ -937,7 +937,7 @@ void DeviceListPanel::initWlanDevice(std::map<std::string, DeviceInfoItemPanel::
             auto iter = deviceInfoMap.find(dev_id);
             if (iter == deviceInfoMap.end()) {
                 deviceInfoMap.emplace(std::make_pair(dev_id, dev_info));
-            } else {
+            } else if (dev_info.status != "offline" || dev_info.lanFlag) {
                 iter->second = dev_info;
             }
         }
@@ -1365,7 +1365,7 @@ void DeviceListPanel::onDeviceListUpdated(DeviceListUpdateEvent& event)
                 DeviceKey key(generateNewPriorityId(), dev_id, dev_info.name);
                 DeviceInfoItemPanel* info_item = new DeviceInfoItemPanel(m_device_panel, dev_info, this);
                 m_device_map.emplace(std::make_pair(key, info_item));
-            } else {
+            } else if (dev_info.status != "offline" || dev_info.lanFlag) {
                 info_iter->second->updateInfo(dev_info);
                 refresh_flag = false;
             }
@@ -1385,7 +1385,7 @@ void DeviceListPanel::onDeviceListUpdated(DeviceListUpdateEvent& event)
                 DeviceKey key(generateNewPriorityId(), dev_id, dev_info.name);
                 DeviceInfoItemPanel* info_item = new DeviceInfoItemPanel(m_device_panel, dev_info, this);
                 m_device_map.emplace(std::make_pair(key, info_item));
-            } else {
+            } else if (dev_info.status != "offline" || dev_info.lanFlag) {
                 info_iter->second->updateInfo(dev_info);
                 refresh_flag = false;
             }
@@ -1443,20 +1443,22 @@ void DeviceListPanel::updateDeviceInfo(const std::string& dev_id, const DeviceIn
     bool status_changed = false;
     auto iter = m_device_map.find(dev_id);
     if (iter != m_device_map.end()) {
-        const auto& dev_info = iter->second->deviceInfo();
-        if (dev_info.status != info.status) {
-            status_changed = true;
-        }
-        if (status_changed || dev_info.conn_id != info.conn_id || dev_info.lanFlag != info.lanFlag
-            || dev_info.name != info.name || dev_info.pid != info.pid || dev_info.placement != info.placement) {
-            iter->second->updateInfo(info);
-        }
-    }
-    if (status_changed) {
-        updateStatusMap();
-        updateStaticMap();
-        if (m_static_btn->GetValue()) {
-            updateDeviceSizer();
+        auto dev_info = iter->second->deviceInfo();        
+        if (info.lanFlag || info.status != "offline" || !dev_info.lanFlag) {
+            if (dev_info.status != info.status) {
+                status_changed = true;
+            }
+            if (status_changed || dev_info.conn_id != info.conn_id || dev_info.lanFlag != info.lanFlag
+                || dev_info.name != info.name || dev_info.pid != info.pid || dev_info.placement != info.placement) {
+                iter->second->updateInfo(info);
+            }
+            if (status_changed) {
+                updateStatusMap();
+                updateStaticMap();
+                if (m_static_btn->GetValue()) {
+                    updateDeviceSizer();
+                }
+            }
         }
     }
 }

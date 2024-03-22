@@ -1792,7 +1792,6 @@ void SendToPrinterDialog::on_multi_send_completed(wxCommandEvent& event)
             if (m_msg_window) {
                 m_need_redirect = true;
             } else {
-                EndDialog(wxID_OK);
                 redirect_window();
                 //wxGetApp().mainframe->select_tab(size_t(MainFrame::tpMonitor));
             }
