@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-03-21 20:18+0800\n"
+"POT-Creation-Date: 2024-03-22 09:17+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -640,6 +640,9 @@ msgid "Loading current presets"
 msgstr ""
 
 msgid "Loading a mode view"
+msgstr ""
+
+msgid "The current account has been logged out!"
 msgstr ""
 
 msgid "Choose one file (3mf):"
@@ -10936,9 +10939,6 @@ msgid "heating"
 msgstr ""
 
 msgid "printing"
-msgstr ""
-
-msgid "Cancel Print"
 msgstr ""
 
 msgid "The maximum temperature cannot exceed"

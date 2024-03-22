@@ -98,6 +98,24 @@ CancelPrint::CancelPrint(const wxString &info, const wxString &leftBtnTxt, const
     Layout();
 }
 
+ShowTip::ShowTip(const wxString &info)
+    : TitleDialog(static_cast<wxWindow *>(Slic3r::GUI::wxGetApp().GetMainTopWindow()), _L("Tip"), 6)
+{
+    m_sizer_main = MainSizer();
+    m_sizer_main->SetMinSize(wxSize(FromDIP(360), FromDIP(160)));
+
+    m_sizer_main->AddSpacer(FromDIP(50));
+    m_info = new wxStaticText(this, wxID_ANY, info, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
+    m_info->SetForegroundColour(wxColor("#419488"));
+    m_sizer_main->Add(m_info, 0, wxALIGN_CENTER);
+    m_sizer_main->AddStretchSpacer();
+
+    Fit();
+    Thaw();
+    Centre(wxBOTH);
+    Layout();
+}
+
 TempInput::TempInput()
     : label_color(std::make_pair(wxColour(0xAC,0xAC,0xAC), (int) StateColor::Disabled),std::make_pair(0x323A3C, (int) StateColor::Normal))
     , text_color(std::make_pair(wxColour(0xAC,0xAC,0xAC), (int) StateColor::Disabled), std::make_pair(0x6B6B6B, (int) StateColor::Normal))

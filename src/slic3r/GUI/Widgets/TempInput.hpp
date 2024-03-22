@@ -29,6 +29,19 @@ private:
     FFButton     *m_cancel_btn{nullptr};
 };
 
+class ShowTip : public Slic3r::GUI::TitleDialog
+{
+public:
+    ShowTip(const wxString &info);
+
+protected:
+    void on_dpi_changed(const wxRect &suggested_rect){};
+
+private:
+    wxBoxSizer   *m_sizer_main{nullptr};
+    wxStaticText *m_info{nullptr};
+};
+
 class TempInput : public wxNavigationEnabled<StaticBox>
 {
     bool   hover;

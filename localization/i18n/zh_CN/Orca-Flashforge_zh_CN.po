@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Slic3rPE\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-03-21 20:18+0800\n"
-"PO-Revision-Date: 2024-03-21 20:19+0800\n"
+"POT-Creation-Date: 2024-03-22 09:17+0800\n"
+"PO-Revision-Date: 2024-03-22 09:23+0800\n"
 "Last-Translator: SoftFever <softfeverever@gmail.com>\n"
 "Language-Team: \n"
 "Language: zh_CN\n"
@@ -650,6 +650,9 @@ msgstr "加载当前预设"
 
 msgid "Loading a mode view"
 msgstr "加载模式视图"
+
+msgid "The current account has been logged out!"
+msgstr "当前账户已登出！"
 
 msgid "Choose one file (3mf):"
 msgstr "选择一个文件（3mf）："
@@ -11428,11 +11431,6 @@ msgstr "加热中"
 msgid "printing"
 msgstr "打印中"
 
-#, fuzzy
-#| msgid "Cancel print"
-msgid "Cancel Print"
-msgstr "取消打印"
-
 msgid "The maximum temperature cannot exceed"
 msgstr ""
 
@@ -11746,6 +11744,11 @@ msgid ""
 "clogging when printing lower temperature filament with a higher enclosure "
 "temperature. More info about this in the Wiki."
 msgstr ""
+
+#, fuzzy
+#~| msgid "Cancel print"
+#~ msgid "Cancel Print"
+#~ msgstr "取消打印"
 
 #~ msgid "Connected Failed."
 #~ msgstr "连接失败！"
