@@ -1018,7 +1018,7 @@ void StartFiltering::create_panel(wxWindow* parent)
     sizer->Add(internal_circulate_panel, 0, wxEXPAND | wxALIGN_CENTER, 0);
     sizer->AddSpacer(FromDIP(14));
     sizer->Add(external_circulate_panel, 0, wxEXPAND | wxALIGN_CENTER, 0);
-    sizer->AddSpacer(FromDIP(12));
+    sizer->AddSpacer(FromDIP(140));
 
     parent->SetSizer(sizer);
 }
@@ -1127,7 +1127,7 @@ void TempMixDevice::create_panel(wxWindow* parent,bool idle, wxString nozzleTemp
 //***温度控件
 
     wxBoxSizer *bSizer_temperature  = new wxBoxSizer(wxHORIZONTAL);
-    auto        m_panel_temperature = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(35)), wxTAB_TRAVERSAL);
+    auto        m_panel_temperature = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(52)), wxTAB_TRAVERSAL);
     m_panel_temperature->SetBackgroundColour(*wxWHITE);
 
     wxString temperatureString = "100";
@@ -1193,7 +1193,7 @@ void TempMixDevice::create_panel(wxWindow* parent,bool idle, wxString nozzleTemp
     //添加空白间距
     auto m_panel_separotor5 = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     m_panel_separotor5->SetBackgroundColour(wxColour(240,240,240));
-    m_panel_separotor5->SetMinSize(wxSize(-1, FromDIP(6)));
+    m_panel_separotor5->SetMinSize(wxSize(-1, FromDIP(13)));
 
     idleSizer->Add(m_panel_separotor5,0, wxALL | wxEXPAND, 0);
 
@@ -1212,7 +1212,7 @@ void TempMixDevice::create_panel(wxWindow* parent,bool idle, wxString nozzleTemp
     // 添加空白间距
     auto m_panel_separotor4 = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     m_panel_separotor4->SetBackgroundColour(wxColour(240, 240, 240));
-    m_panel_separotor4->SetMinSize(wxSize(-1, FromDIP(6)));
+    m_panel_separotor4->SetMinSize(wxSize(-1, FromDIP(23)));
 
     idleSizer->Add(m_panel_separotor4, 0, wxALL | wxEXPAND, 0);
 //***添加设备信息布局
@@ -1244,7 +1244,7 @@ void TempMixDevice::setupLayoutIdleDeviceState(wxBoxSizer *deviceStateSizer, wxP
 {
 //***灯控制布局
     wxBoxSizer *bSizer_control_lamp  = new wxBoxSizer(wxHORIZONTAL);
-    auto        m_panel_control_lamp = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(35)), wxTAB_TRAVERSAL);
+    auto        m_panel_control_lamp = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(52)), wxTAB_TRAVERSAL);
     m_panel_control_lamp->SetBackgroundColour(wxColour(255, 255, 255));
 
     // 显示文件信息按钮
@@ -1369,7 +1369,7 @@ void TempMixDevice::setupLayoutDeviceInfo(wxBoxSizer *deviceInfoSizer, wxPanel *
     private_material->SetForegroundColour(wxColour(153, 153, 153));
     private_material->SetBackgroundColour(wxColour(255, 255, 255));
 
-    bSizer_device_name->AddSpacer(FromDIP(12));
+    bSizer_device_name->AddSpacer(FromDIP(2));
     bSizer_device_name->Add(machine_type, 0, wxALL | wxEXPAND, 0);
     bSizer_device_name->AddSpacer(FromDIP(18));
     bSizer_device_name->Add(spray_nozzle, 0, wxALL | wxEXPAND, 0);
@@ -1381,7 +1381,8 @@ void TempMixDevice::setupLayoutDeviceInfo(wxBoxSizer *deviceInfoSizer, wxPanel *
     bSizer_device_name->Add(serial_number, 0, wxALL | wxEXPAND, 0);
     bSizer_device_name->AddSpacer(FromDIP(18));
     bSizer_device_name->Add(private_material, 0, wxALL | wxEXPAND, 0);
-    bSizer_device_name->AddSpacer(FromDIP(20));
+    bSizer_device_name->AddSpacer(FromDIP(15));
+    //bSizer_device_name->AddStretchSpacer();
 
     m_panel_device_info->SetSizer(bSizer_device_name);
     m_panel_device_info->Layout();
@@ -1431,7 +1432,7 @@ void TempMixDevice::setupLayoutDeviceInfo(wxBoxSizer *deviceInfoSizer, wxPanel *
     m_private_material_data->SetForegroundColour(wxColour(51, 51, 51));
     m_private_material_data->SetBackgroundColour(wxColour(255, 255, 255));
 
-    bSizer_device_data->AddSpacer(FromDIP(12));
+    bSizer_device_data->AddSpacer(FromDIP(2));
     bSizer_device_data->Add(m_machine_type_data, 0, wxALL | wxEXPAND, 0);
     bSizer_device_data->AddSpacer(FromDIP(18));
     bSizer_device_data->Add(m_spray_nozzle_data, 0, wxALL | wxEXPAND, 0);
@@ -1443,7 +1444,7 @@ void TempMixDevice::setupLayoutDeviceInfo(wxBoxSizer *deviceInfoSizer, wxPanel *
     bSizer_device_data->Add(m_serial_number_data, 0, wxALL | wxEXPAND, 0);
     bSizer_device_data->AddSpacer(FromDIP(18));
     bSizer_device_data->Add(m_private_material_data, 0, wxALL | wxEXPAND, 0);
-    bSizer_device_data->AddSpacer(FromDIP(20));
+    bSizer_device_data->AddSpacer(FromDIP(15));
 
     m_panel_device_data->SetSizer(bSizer_device_data);
     m_panel_device_data->Layout();

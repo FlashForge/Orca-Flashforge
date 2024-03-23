@@ -311,7 +311,7 @@ void ModifyTemp::create_panel(wxWindow *parent)
     sizer->Add(m_panel_temp_title, 0, wxEXPAND | wxALL, 0);
     sizer->AddSpacer(FromDIP(12));
     sizer->Add(operate_panel, 0, wxEXPAND | wxALL, 0);
-    sizer->AddSpacer(FromDIP(109));
+    sizer->AddSpacer(FromDIP(87));
 
     parent->SetSizer(sizer);
     parent->Layout();
@@ -467,7 +467,7 @@ void DeviceDetail::create_panel(wxWindow* parent)
         bSizer_h->Add(m_panel_separotor1);
 
         sizer->Add(bSizer_h, 0, wxEXPAND | wxALL, 0);
-        sizer->AddSpacer(FromDIP(39));
+        sizer->AddSpacer(FromDIP(22));
 
         parent->SetSizer(sizer);
         parent->Layout();
@@ -706,10 +706,7 @@ wxBoxSizer* SingleDeviceState::create_monitoring_page()
 
         //播放控件
         m_camera_play_url = wxString::Format("file://%s/web/orca/missing_connection.html?lang=http://192.168.4.64:8080/?action=stream", from_u8(resources_dir()));
-//#if 0
-        //m_camera_play_url = wxString::Format("file://%s/web/orca/missing_connection.html?lang=http://115.231.29.48:1370/ffspace/SNMMOC98989898.m3u8",from_u8(resources_dir()));
-        //m_camera_play_url =wxString::Format("file://%s/web/homepage/index.html",from_u8(resources_dir()));
-//#endif
+
         m_browser = WebView::CreateWebView(this,m_camera_play_url);
 
         wxEvtHandler::Bind(wxEVT_WEBVIEW_SCRIPT_MESSAGE_RECEIVED, &SingleDeviceState::onScriptMessage, this);
@@ -718,9 +715,10 @@ wxBoxSizer* SingleDeviceState::create_monitoring_page()
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format("load web view of SingleDeviceState url failed");
             return sizer;
         }
-        m_browser->SetMinSize(wxSize(FromDIP(574), FromDIP(288)));
+        m_browser->SetMinSize(wxSize(FromDIP(410), FromDIP(364)));
         m_browser->EnableContextMenu(true);
-        sizer->Add(m_browser, 1, wxEXPAND | wxALL, 0);
+        //sizer->Add(m_browser, 1, wxEXPAND | wxALL, 0);
+        sizer->Add(m_browser, 0, wxEXPAND | wxALL, 0);
 
         return sizer;
 }
@@ -810,7 +808,7 @@ wxBoxSizer* SingleDeviceState::create_machine_control_page()
         bSizer_v_idle->Fit(m_machine_idle_panel);
 //***
         bSizer_right->Add(m_machine_ctrl_panel,  0, wxEXPAND, 0);
-        bSizer_right->Add(m_machine_idle_panel,  0, wxEXPAND, 0);
+        bSizer_right->Add(m_machine_idle_panel, 0, wxEXPAND, 0);
         //m_machine_idle_panel->Hide();
         m_machine_ctrl_panel->Hide();
         return bSizer_right;
@@ -921,11 +919,11 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         //最终添加至整体布局
 
         wxBoxSizer *bSizer_file_info = new wxBoxSizer(wxVERTICAL);
-        m_panel_control_info = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(180)), wxTAB_TRAVERSAL);
+        m_panel_control_info = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(167)), wxTAB_TRAVERSAL);
         m_panel_control_info->SetBackgroundColour(wxColour(255,255,255));
 
 //***顶部白条（分隔）
-        auto m_panel_separotor_top = new wxPanel(m_panel_control_info, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(20)), wxTAB_TRAVERSAL);
+        auto m_panel_separotor_top = new wxPanel(m_panel_control_info, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(8)), wxTAB_TRAVERSAL);
         m_panel_separotor_top->SetBackgroundColour(wxColour(255,255,255));
 
         bSizer_file_info->Add(m_panel_separotor_top, 0, wxEXPAND | wxALL, 0);
@@ -986,7 +984,8 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
 //        m_panel_separotor_mid->SetBackgroundColour(wxColour(255,255,255));
 //
 //        bSizer_control_file_info->Add(m_panel_separotor_mid, 0, wxEXPAND | wxALL, 0);
-        bSizer_control_file_info->AddStretchSpacer();
+        //bSizer_control_file_info->AddStretchSpacer();
+        bSizer_control_file_info->AddSpacer(FromDIP(40));
 
         //显示倒计时
         m_staticText_count_time = new Label(m_panel_control_file_info, ("00:33:22"));
@@ -1014,8 +1013,8 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         m_progress_bar = new ProgressBar(m_panel_control_file_info,wxID_ANY,100,wxDefaultPosition,wxSize(FromDIP(201),FromDIP(5)),true);
         m_progress_bar->SetProgress(30);
         m_progress_bar->SetProgressBackgroundColour(wxColour(50, 141, 251));
-        bSizer_control_file_info->Add(m_progress_bar, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
-        bSizer_control_file_info->AddSpacer(FromDIP(13));
+        bSizer_control_file_info->Add(m_progress_bar, 0, wxALIGN_CENTER_VERTICAL, FromDIP(4));
+        //bSizer_control_file_info->AddSpacer(FromDIP(6));
 
         m_panel_control_file_info->SetSizer(bSizer_control_file_info);
         m_panel_control_file_info->Layout();
@@ -1056,9 +1055,10 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         hbox->Add(m_material_weight_label, wxALIGN_CENTER | wxEXPAND | wxALL,0);
 
         bSizer_control_material->Add(hbox, 0, /*wxALIGN_CENTER*/ wxRIGHT | wxEXPAND | wxALL, 0);
-        bSizer_control_material->AddStretchSpacer();
+        //bSizer_control_material->AddStretchSpacer();
+        bSizer_control_material->AddSpacer(FromDIP(70));
         bSizer_control_material->Add(m_material_staticbitmap,0, /*wxALIGN_CENTER*/wxRIGHT | wxEXPAND | wxALL,0);
-        bSizer_control_material->AddSpacer(FromDIP(12));
+        //bSizer_control_material->AddSpacer(FromDIP(6));
 
         m_panel_control_material->SetSizer(bSizer_control_material);
         m_panel_control_material->Layout();
@@ -1381,8 +1381,10 @@ void SingleDeviceState::setupLayoutIdlePage(wxBoxSizer* idleSizer,wxPanel* paren
         wxBoxSizer *bSizer_v_device_text = new wxBoxSizer(wxVERTICAL);
         m_panel_idle = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
         m_panel_idle->SetBackgroundColour(*wxWHITE);
+        //m_panel_idle->SetMinSize(wxSize(-1,FromDIP(178)));
         
-        m_idle_device_pic = create_scaled_bitmap("adventurer_5m", this, 112);
+        //m_idle_device_pic = create_scaled_bitmap("adventurer_5m", this, 112);
+        m_idle_device_pic = create_scaled_bitmap("adventurer_5m", 0, 170);
         m_idle_device_staticbitmap = new wxStaticBitmap(m_panel_idle, wxID_ANY, m_idle_device_pic);
         m_staticText_idle = new Label(m_panel_idle, _L("The Current Device has no Printing Projects"));
         m_staticText_idle->Wrap(-1);
@@ -1405,7 +1407,7 @@ void SingleDeviceState::setupLayoutIdlePage(wxBoxSizer* idleSizer,wxPanel* paren
         //添加空白间距
         auto m_panel_separotor1 = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
         m_panel_separotor1->SetBackgroundColour(wxColour(255,255,255));
-        m_panel_separotor1->SetMinSize(wxSize(-1, FromDIP(14)));
+        m_panel_separotor1->SetMinSize(wxSize(-1, FromDIP(44)));
 
         idleSizer->Add(m_panel_separotor1, 0, wxALL | wxEXPAND, 0);
 
@@ -1413,7 +1415,7 @@ void SingleDeviceState::setupLayoutIdlePage(wxBoxSizer* idleSizer,wxPanel* paren
         //添加空白间距
         auto m_panel_separotor2 = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
         m_panel_separotor2->SetBackgroundColour(wxColour(240,240,240));
-        m_panel_separotor2->SetMinSize(wxSize(-1, FromDIP(6)));
+        m_panel_separotor2->SetMinSize(wxSize(-1, FromDIP(14)));
 
         idleSizer->Add(m_panel_separotor2, 0, wxALL | wxEXPAND, 0);
 
@@ -2289,8 +2291,10 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
 
    if (m_pid != data.devDetail->pid && data.devDetail->pid == 0x0024) {
        m_pid = data.devDetail->pid;
-       m_idle_device_staticbitmap->SetBitmap(create_scaled_bitmap("adventurer_5m_pro", this, 112));
-
+       m_idle_device_staticbitmap->SetBitmap(create_scaled_bitmap("adventurer_5m_pro", 0, 170));
+   } else if (m_pid != data.devDetail->pid && data.devDetail->pid == 0x0023) {
+       m_pid = data.devDetail->pid;
+       m_idle_device_staticbitmap->SetBitmap(create_scaled_bitmap("adventurer_5m", 0, 170));
    }
 
    std::string machineType = data.devDetail->pid == 0x0024 ? "Adventurer 5M Pro" :(data.devDetail->pid == 0x0023 ? "Adventurer 5M" : "Unknow");
