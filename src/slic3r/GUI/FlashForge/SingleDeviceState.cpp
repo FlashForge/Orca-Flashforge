@@ -2149,6 +2149,8 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
 
         m_camera_stream_url = data.devDetail->cameraStreamUrl;
         modifyVideoPlayerAddress(m_camera_stream_url);  
+   } else if (stram_url.empty()) {
+        notifyWebDevOffline();
    }
    std::string device_name = data.devDetail->name;  //设备名
    if (m_cur_dev_name != device_name && !device_name.empty()) {
