@@ -500,13 +500,13 @@ wxPanel* SendToPrinterTipDialog::createListPanel(wxWindow* parent, const wxStrin
     int row = (str_list.size() + 1) / 2;
     wxGridSizer* gridSizer = new wxGridSizer(row, 2, 10, 10);
     for (auto& str : str_list) {
-        gridSizer->Add(createItem(item_panel, true, str), 1, wxEXPAND | wxALIGN_LEFT);
+        gridSizer->Add(createItem(item_panel, success_flag, str), 1, wxEXPAND | wxALIGN_LEFT);
     }
     item_panel->SetSizer(gridSizer);
 
     int item_height = FromDIP(16) + 6;
     int vh = row * item_height + (row - 1) * 10;
-    if (row > 10) row = 10;
+    if (row > 6) row = 6;
     int height = row * item_height + (row - 1) * 10;
     item_panel->SetMinSize(wxSize(-1, vh));
     item_panel->SetMaxSize(wxSize(-1, vh));

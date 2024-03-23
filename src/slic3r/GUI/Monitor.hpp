@@ -120,6 +120,7 @@ public:
         PT_MAX_NUM = 5
     };
     
+    void OnActivate();
 	void init_bitmap();
     void init_timer();
     void init_tabpanel();

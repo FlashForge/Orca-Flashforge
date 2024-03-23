@@ -7,7 +7,7 @@
 #include "slic3r/GUI/Widgets/FFToggleButton.hpp"
 #include "slic3r/GUI/Widgets/FFCheckBox.hpp"
 #include "slic3r/GUI/wxExtensions.hpp"
-#include "DeviceData.hpp"
+//#include "DeviceData.hpp"
 #include "slic3r/GUI/Monitor.hpp"
 #include "slic3r/GUI/MainFrame.hpp"
 
@@ -525,17 +525,35 @@ void DeviceItemPanel::blockMouseEvent(bool block)
         Unbind(wxEVT_LEFT_UP, &DeviceItemPanel::mouseReleased, this);
         Unbind(wxEVT_ENTER_WINDOW, &DeviceItemPanel::onEnter, this);
         Unbind(wxEVT_LEAVE_WINDOW, &DeviceItemPanel::onLeave, this);
+        Unbind(wxEVT_MOTION, &DeviceItemPanel::onMotion, this);
     } else {
         Bind(wxEVT_LEFT_DOWN, &DeviceItemPanel::mouseDown, this);
         Bind(wxEVT_LEFT_UP, &DeviceItemPanel::mouseReleased, this);
         Bind(wxEVT_ENTER_WINDOW, &DeviceItemPanel::onEnter, this);
         Bind(wxEVT_LEAVE_WINDOW, &DeviceItemPanel::onLeave, this);
+        Bind(wxEVT_MOTION, &DeviceItemPanel::onMotion, this);
     }
+}
+
+wxPoint DeviceItemPanel::getEventPoint(wxMouseEvent& event)
+{
+    return event.GetPosition();
 }
 
 bool DeviceItemPanel::isPointIn(const wxPoint& pt)
 {
     return !(wxHT_WINDOW_OUTSIDE == HitTest(pt));
+}
+
+void DeviceItemPanel::enterWindow()
+{
+    m_hovered = true;
+    Refresh();
+    if (!HasCapture()) {
+        CaptureMouse();
+        //BOOST_LOG_TRIVIAL(error) << "DeviceItemPanel CaptureMouse";
+        //flush_logs();
+    }
 }
 
 void DeviceItemPanel::leaveWindow()
@@ -552,7 +570,7 @@ void DeviceItemPanel::leaveWindow()
 
 void DeviceItemPanel::mouseDown(wxMouseEvent& event)
 {
-    if (isPointIn(event.GetPosition())) {
+    if (isPointIn(getEventPoint(event))) {
         m_pressed = true;
         Refresh();
     }
@@ -561,7 +579,7 @@ void DeviceItemPanel::mouseDown(wxMouseEvent& event)
 
 void DeviceItemPanel::mouseReleased(wxMouseEvent& event)
 {
-    if (isPointIn(event.GetPosition())) {
+    if (isPointIn(getEventPoint(event))) {
         sendEvent();
     }
     m_pressed = false;
@@ -571,14 +589,8 @@ void DeviceItemPanel::mouseReleased(wxMouseEvent& event)
 
 void DeviceItemPanel::onEnter(wxMouseEvent& event)
 {
-    if (isPointIn(event.GetPosition())) {
-        m_hovered = true;
-        Refresh();
-        if (!HasCapture()) {
-            CaptureMouse();
-            //BOOST_LOG_TRIVIAL(error) << "DeviceItemPanel CaptureMouse";
-            //flush_logs();
-        }
+    if (isPointIn(getEventPoint(event))) {
+        enterWindow();
     }
     event.Skip();
 }
@@ -593,7 +605,9 @@ void DeviceItemPanel::onLeave(wxMouseEvent& event)
 
 void DeviceItemPanel::onMotion(wxMouseEvent& event)
 {
-    if (!isPointIn(event.GetPosition())) {
+    if (isPointIn(getEventPoint(event))) {
+        enterWindow();
+    } else {
         leaveWindow();
     }
     event.Skip();
@@ -651,11 +665,14 @@ DeviceInfoItemPanel::DeviceInfoItemPanel(wxWindow *parent, const DeviceInfo& inf
     m_main_sizer->AddSpacer(FromDIP(3));
     m_main_sizer->Add(m_status_text, 0, wxEXPAND | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(10));
     m_main_sizer->AddStretchSpacer(1);
-
+    
+    updateInfo(info);
     Layout();
     Thaw();
-
-    updateInfo(info);
+    m_name_text->Bind(wxEVT_MOTION, &DeviceInfoItemPanel::onMotion, this);
+    m_icon->Bind(wxEVT_MOTION, &DeviceInfoItemPanel::onMotion, this);
+    m_placement_text->Bind(wxEVT_MOTION, &DeviceInfoItemPanel::onMotion, this);
+    m_status_text->Bind(wxEVT_MOTION, &DeviceInfoItemPanel::onMotion, this);
 }
 
 void DeviceInfoItemPanel::updateInfo(const DeviceInfo& info)
@@ -677,6 +694,37 @@ void DeviceInfoItemPanel::updateInfo(const DeviceInfo& info)
 const DeviceInfoItemPanel::DeviceInfo& DeviceInfoItemPanel::deviceInfo() const
 {
     return m_info;
+}
+
+void DeviceInfoItemPanel::blockMouseEvent(bool block)
+{
+    if (block) {
+        m_name_text->Unbind(wxEVT_MOTION, &DeviceInfoItemPanel::onMotion, this);
+        m_icon->Unbind(wxEVT_MOTION, &DeviceInfoItemPanel::onMotion, this);
+        m_placement_text->Unbind(wxEVT_MOTION, &DeviceInfoItemPanel::onMotion, this);
+        m_status_text->Unbind(wxEVT_MOTION, &DeviceInfoItemPanel::onMotion, this);
+    } else {
+        m_name_text->Bind(wxEVT_MOTION, &DeviceInfoItemPanel::onMotion, this);
+        m_icon->Bind(wxEVT_MOTION, &DeviceInfoItemPanel::onMotion, this);
+        m_placement_text->Bind(wxEVT_MOTION, &DeviceInfoItemPanel::onMotion, this);
+        m_status_text->Bind(wxEVT_MOTION, &DeviceInfoItemPanel::onMotion, this);
+    }
+    DeviceItemPanel::blockMouseEvent(block);
+}
+
+wxPoint DeviceInfoItemPanel::getEventPoint(wxMouseEvent& event)
+{
+    wxPoint pnt = event.GetPosition();
+    if (event.GetEventObject() == m_name_text) {
+        pnt += m_name_text->GetPosition();
+    } else if (event.GetEventObject() == m_icon) {
+        pnt += m_icon->GetPosition();
+    } else if (event.GetEventObject() == m_placement_text) {
+        pnt += m_placement_text->GetPosition();
+    } else if (event.GetEventObject() == m_status_text) {
+        pnt += m_status_text->GetPosition();
+    }
+    return pnt;
 }
 
 void DeviceInfoItemPanel::sendEvent()
@@ -741,6 +789,8 @@ DeviceStaticItemPanel::DeviceStaticItemPanel(wxWindow* parent, std::string statu
     m_main_sizer->AddStretchSpacer(1);
     Layout();
     Thaw();
+    m_status_text->Bind(wxEVT_MOTION, &DeviceStaticItemPanel::onMotion, this);
+    m_count_text->Bind(wxEVT_MOTION, &DeviceStaticItemPanel::onMotion, this);
 }
 
 void DeviceStaticItemPanel::setStatus(const std::string& status)
@@ -756,6 +806,29 @@ void DeviceStaticItemPanel::setCount(int count)
     m_count = count;
     m_count_text->SetLabel(wxString::Format("%d", m_count));
     Layout();
+}
+
+void DeviceStaticItemPanel::blockMouseEvent(bool block)
+{
+    if (block) {
+        m_status_text->Unbind(wxEVT_MOTION, &DeviceStaticItemPanel::onMotion, this);
+        m_count_text->Unbind(wxEVT_MOTION, &DeviceStaticItemPanel::onMotion, this);
+    } else {
+        m_status_text->Bind(wxEVT_MOTION, &DeviceStaticItemPanel::onMotion, this);
+        m_count_text->Bind(wxEVT_MOTION, &DeviceStaticItemPanel::onMotion, this);
+    }
+    DeviceItemPanel::blockMouseEvent(block);
+}
+
+wxPoint DeviceStaticItemPanel::getEventPoint(wxMouseEvent& event)
+{
+    wxPoint pnt = event.GetPosition();
+    if (event.GetEventObject() == m_status_text) {
+        pnt += m_status_text->GetPosition();
+    } else if (event.GetEventObject() == m_count_text) {
+        pnt += m_count_text->GetPosition();
+    }
+    return pnt;
 }
 
 
@@ -877,6 +950,11 @@ void DeviceListPanel::build()
     this->Fit();
 }
 
+void DeviceListPanel::OnActivate()
+{
+    updateDeviceList();
+}
+
 void DeviceListPanel::connectEvent()
 {
     m_placement_btn->Bind(wxEVT_LEFT_DOWN, &DeviceListPanel::onFilterButtonClicked, this);
@@ -889,6 +967,7 @@ void DeviceListPanel::connectEvent()
     MultiComMgr::inst()->Bind(COM_WAN_DEV_INFO_UPDATE_EVENT, &DeviceListPanel::onComWanDeviceInfoUpdate, this);
     wxGetApp().getDeviceObjectOpr()->Bind(EVT_DEVICE_LIST_UPDATED, &DeviceListPanel::onDeviceListUpdated, this);
     m_filter_popup->Bind(wxEVT_SHOW, &DeviceListPanel::onPopupShow, this);
+    m_refresh_timer.Bind(wxEVT_TIMER, &DeviceListPanel::onRefreshTimeout, this);
 }
 
 void DeviceListPanel::initLocalDevice(std::map<std::string, DeviceInfoItemPanel::DeviceInfo>& deviceInfoMap)
@@ -1184,7 +1263,9 @@ void DeviceListPanel::updateDeviceSizer()
     } else {
         filterDeviceList();
     }
-    Refresh();
+    if (IsShownOnScreen()) {
+        Refresh();
+    }
 }
 
 void DeviceListPanel::updateDeviceWindowSize()
@@ -1351,8 +1432,79 @@ void DeviceListPanel::onStaticModeToggled(wxCommandEvent &event)
     event.Skip();
 }
 
+void DeviceListPanel::copyDeviceInfo(DeviceInfoItemPanel::DeviceInfo& dest, const DeviceInfoItemPanel::DeviceInfo& source)
+{
+    dest.conn_id = source.conn_id;
+    dest.lanFlag = source.lanFlag;
+    if (!source.name.empty()) dest.name = source.name;
+    if (source.pid > 0) dest.pid = source.pid;
+    if (!source.placement.empty()) dest.placement = source.placement;
+    if (!source.status.empty()) dest.status = source.status;
+}
+
 void DeviceListPanel::onDeviceListUpdated(DeviceListUpdateEvent& event)
 {
+//    bool is_show_on_screen = IsShownOnScreen();
+    DeviceCacheData device_data;
+    device_data.dev_id = event.GetDeviceId();
+    device_data.op = event.GetOperator();
+
+    int conn_id = event.GetConnectionId();
+    bool valid = getDeviceInfo(device_data.device_info, conn_id);
+    auto iter = m_device_data_cached.find(device_data.dev_id);
+    if (iter == m_device_data_cached.end()) {
+        DeviceKey key(generateNewPriorityId(), device_data.dev_id, device_data.device_info.name);
+        m_device_data_cached.emplace(std::make_pair(key, device_data));
+    } else {
+        auto old_data = iter->second;
+        if (DeviceListUpdateEvent::UpdateType::UpdateType_Add == device_data.op) {
+            if (DeviceListUpdateEvent::UpdateType::UpdateType_Add == old_data.op
+                || DeviceListUpdateEvent::UpdateType::UpdateType_Update == old_data.op) {
+                iter->second.op = DeviceListUpdateEvent::UpdateType::UpdateType_Update ;
+                copyDeviceInfo(iter->second.device_info, device_data.device_info);
+            } else if (DeviceListUpdateEvent::UpdateType::UpdateType_Remove == old_data.op) {
+                m_device_data_cached.erase(iter);
+            }
+        } else if (DeviceListUpdateEvent::UpdateType::UpdateType_Remove == device_data.op) {
+            if (DeviceListUpdateEvent::UpdateType::UpdateType_Add == old_data.op) {
+                m_device_data_cached.erase(iter);
+            } else if (DeviceListUpdateEvent::UpdateType::UpdateType_Update == old_data.op
+                || DeviceListUpdateEvent::UpdateType::UpdateType_Remove == old_data.op) {
+                copyDeviceInfo(iter->second.device_info, device_data.device_info);
+                iter->second.op = DeviceListUpdateEvent::UpdateType::UpdateType_Remove;
+            }
+        } else if (DeviceListUpdateEvent::UpdateType::UpdateType_Update == device_data.op) {
+            if (DeviceListUpdateEvent::UpdateType::UpdateType_Add == old_data.op) {
+                copyDeviceInfo(iter->second.device_info, device_data.device_info);
+            } else if (DeviceListUpdateEvent::UpdateType::UpdateType_Remove == old_data.op) {
+                iter->second.op = DeviceListUpdateEvent::UpdateType::UpdateType_Update;
+            } else if (DeviceListUpdateEvent::UpdateType::UpdateType_Update == old_data.op) {
+                if (valid) {                    
+                    copyDeviceInfo(iter->second.device_info, device_data.device_info);
+                } else {
+                    iter->second.device_info.conn_id = -1;
+                    iter->second.device_info.status = "offline";
+                }
+                 iter->second.op = DeviceListUpdateEvent::UpdateType::UpdateType_Update; 
+            }
+        }
+    }
+
+    if (/*IsShownOnScreen() && */!m_refresh_timer.IsRunning()) {
+        m_refresh_timer.StartOnce(1000);
+    }
+    event.Skip();
+
+    //if ()
+    //m_device_income_cached
+}
+
+void DeviceListPanel::onRefreshTimeout(wxTimerEvent& event)
+{
+    updateDeviceList();
+    event.Skip();
+    
+#if 0
     std::string dev_id = event.GetDeviceId();
     DeviceListUpdateEvent::UpdateType op = event.GetOperator();
     int conn_id = event.GetConnectionId();
@@ -1409,6 +1561,67 @@ void DeviceListPanel::onDeviceListUpdated(DeviceListUpdateEvent& event)
     }
     updateStaticMap();
     event.Skip();
+#endif
+}
+
+void DeviceListPanel::updateDeviceList()
+{
+    if (m_device_data_cached.empty()) {
+        return;
+    }
+
+    DeviceKeySet device_key_set;
+    for (const auto& iter : m_device_data_cached) {
+        device_key_set.emplace(iter.first);
+    }
+    bool refresh_flag = false;
+    for (const auto& it : device_key_set) {
+        const std::string& dev_id = it.dev_id;
+        auto cache_data = m_device_data_cached[it];
+        DeviceListUpdateEvent::UpdateType op = cache_data.op;
+        auto dev_info = cache_data.device_info;
+        if (DeviceListUpdateEvent::UpdateType::UpdateType_Add == op) {
+            auto info_iter = m_device_map.find(dev_id);
+            if (info_iter == m_device_map.end()) {
+                DeviceInfoItemPanel* info_item = new DeviceInfoItemPanel(m_device_panel, dev_info, this);
+                m_device_map.emplace(std::make_pair(it, info_item));
+                refresh_flag = true;
+            } else if (dev_info.status != "offline" || dev_info.lanFlag) {
+                auto _dev_info = info_iter->second->deviceInfo();
+                copyDeviceInfo(_dev_info, dev_info);
+                info_iter->second->updateInfo(_dev_info);
+            }
+        } else if (DeviceListUpdateEvent::UpdateType::UpdateType_Remove == op) {
+            auto iter = m_device_map.find(dev_id);
+            if (iter != m_device_map.end()) {
+                iter->second->Destroy();
+                m_device_map.erase(iter);
+                refresh_flag = true;
+            }
+        } else if (DeviceListUpdateEvent::UpdateType::UpdateType_Update == op) {
+            auto info_iter = m_device_map.find(dev_id);
+            if (info_iter == m_device_map.end()) {
+                DeviceInfoItemPanel* info_item = new DeviceInfoItemPanel(m_device_panel, dev_info, this);
+                m_device_map.emplace(std::make_pair(it, info_item));
+                refresh_flag = true;
+            } else if (dev_info.status != "offline" || dev_info.lanFlag) {
+                auto _dev_info = info_iter->second->deviceInfo();
+                copyDeviceInfo(_dev_info, dev_info);
+                info_iter->second->updateInfo(_dev_info);
+            }
+        }
+    }
+    //std::sort(m_device_map.begin(), m_device_map.end(), deviceKeySortFunc);
+    if (refresh_flag) {
+        m_filter_placement_default = true;
+        m_filter_status_default = true;
+        m_simple_book->ChangeSelection(m_device_map.empty() ? 0 : 1);
+        updateFilterMap();
+        //updateDeviceWindowSize();
+        updateDeviceSizer();
+    }
+    updateStaticMap();
+    m_device_data_cached.clear();
 }
 
 bool DeviceListPanel::getDeviceInfo(DeviceInfoItemPanel::DeviceInfo& info, int conn_id)

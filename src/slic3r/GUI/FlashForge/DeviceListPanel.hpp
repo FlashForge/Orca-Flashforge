@@ -4,11 +4,13 @@
 #include <set>
 #include <wx/simplebook.h>
 #include <wx/tglbtn.h>
+#include <wx/timer.h>
 #include "slic3r/GUI/Widgets/Button.hpp"
 #include "slic3r/GUI/Widgets/ComboBox.hpp"
 #include "slic3r/GUI/Widgets/PopupWindow.hpp"
 #include "MultiComMgr.hpp"
 #include "MultiComEvent.hpp"
+#include "DeviceData.hpp"
 
 class FFToggleButton;
 class FFBitmapToggleButton;
@@ -152,6 +154,7 @@ public:
 
 protected:
     void leaveWindow();
+    void enterWindow();
     void mouseDown(wxMouseEvent &event);
     void mouseReleased(wxMouseEvent &event);
     void onEnter(wxMouseEvent &event);
@@ -160,7 +163,8 @@ protected:
     void onPaint(wxPaintEvent& event);
     void onMouseCaptionLost(wxMouseCaptureLostEvent& event);
 
-private:
+protected:
+    virtual wxPoint getEventPoint(wxMouseEvent& event);
     bool isPointIn(const wxPoint& pt);
     virtual void sendEvent() {};
 
@@ -194,8 +198,10 @@ public:
 
     void updateInfo(const DeviceInfo& info);
     const DeviceInfo& deviceInfo() const;
+    void blockMouseEvent(bool block);
 
 private:
+    wxPoint getEventPoint(wxMouseEvent& event) override;
     void sendEvent() override;
     void updateStatus();
     static wxBitmap machineBitmap(unsigned short pid);
@@ -219,6 +225,10 @@ public:
     std::string getStatus() const { return m_status; }
     void setCount(int count);
     int getCount() const { return m_count; }
+    void blockMouseEvent(bool block);
+
+private:
+    wxPoint getEventPoint(wxMouseEvent& event) override;
 
 private:
     int             m_count {0};
@@ -237,7 +247,7 @@ typedef std::map<std::string, FilterPopupWindow::FilterItem*, StringCompareFunc>
 typedef std::map<std::string, FilterPopupWindow::StatusItem*, StringCompareFunc> StatusItemMap;
 typedef std::map<unsigned short, FilterPopupWindow::DeviceTypeItem*> DeviceTypeItemMap;
 
-class DeviceListUpdateEvent;
+//class DeviceListUpdateEvent;
 class DeviceListPanel : public wxPanel
 {
 public:
@@ -254,6 +264,7 @@ public:
     ~DeviceListPanel();
 
     void msw_rescale();
+    void OnActivate();
 
 private:
     void build();
@@ -272,6 +283,8 @@ private:
     void updateDeviceWindowSize();
     bool getDeviceInfo(DeviceInfoItemPanel::DeviceInfo& info, int conn_id);
     void updateDeviceInfo(const std::string& dev_id, const DeviceInfoItemPanel::DeviceInfo& info);
+    void updateDeviceList();
+    void copyDeviceInfo(DeviceInfoItemPanel::DeviceInfo& dest, const DeviceInfoItemPanel::DeviceInfo& source);
 
     void onFilterButtonClicked(wxMouseEvent &event);
     void onNetworkTypeToggled(wxCommandEvent& event);
@@ -281,6 +294,7 @@ private:
     void onComWanDeviceInfoUpdate(ComWanDevInfoUpdateEvent& event);
     void onPopupShow(wxShowEvent& event);
     void onFilterItemClicked(wxCommandEvent& event);
+    void onRefreshTimeout(wxTimerEvent& event);
 
 private:
     struct DeviceKey {
@@ -304,11 +318,17 @@ private:
             return lhs.dev_name < rhs.dev_name;
         }
     };
-
     typedef std::map<DeviceKey, DeviceInfoItemPanel*> DeviceItemMap;
     typedef std::set<DeviceKey, DeviceKeySortFunc> DeviceKeySet;
     int generateNewPriorityId();
     void updatePriorityId();
+
+    struct DeviceCacheData {
+        std::string dev_id;
+        DeviceListUpdateEvent::UpdateType op;
+        DeviceInfoItemPanel::DeviceInfo device_info;
+    };
+    typedef std::map<DeviceKey, DeviceCacheData> DeviceCacheDataMap;
 
 private: 
     DropDownButton* m_placement_btn {nullptr};
@@ -330,6 +350,8 @@ private:
     FilterPopupType m_filter_popup_type {Filter_Popup_Type_None};
     FilterPopupWindow* m_filter_popup {nullptr};
 
+    DeviceCacheDataMap  m_device_data_cached;
+    wxTimer             m_refresh_timer;
     DeviceItemMap       m_device_map;
     std::map<std::string, DeviceStaticItemPanel*> m_device_stat_map;
     FilterPopupWindow::FilterItem*  m_default_filter_item {nullptr};

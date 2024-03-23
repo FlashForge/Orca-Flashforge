@@ -147,6 +147,13 @@ MonitorPanel::~MonitorPanel()
     delete m_refresh_timer;
 }
 
+void MonitorPanel::OnActivate()
+{
+    if (0 == m_tabpanel->GetSelection()) {
+        m_device_list_panel->OnActivate();
+    }
+}
+
  void MonitorPanel::init_timer()
 {
     m_refresh_timer = new wxTimer();
@@ -161,7 +168,7 @@ MonitorPanel::~MonitorPanel()
         GUI::wxGetApp().sidebar().load_ams_list(obj_->dev_id, obj_);
 }
 
- void MonitorPanel::init_tabpanel()
+void MonitorPanel::init_tabpanel()
 {
     m_side_tools = new SideTools(this, wxID_ANY);
     wxBoxSizer* sizer_side_tools = new wxBoxSizer(wxVERTICAL);
