@@ -22,7 +22,7 @@ static const wxFont& TAB_BUTTON_FONT_SEL = Label::Head_14;
 
 
 static const int BUTTON_DEF_HEIGHT = 46;
-static const int BUTTON_DEF_WIDTH  = 220;
+static const int BUTTON_DEF_WIDTH  = 270;
 
 
 TabButtonsListCtrl::TabButtonsListCtrl(wxWindow *parent, wxBoxSizer *side_tools) :
