@@ -87,8 +87,12 @@ public:
     void        reset_update_time();
 
     fnet_lan_dev_info *get_lan_dev_info();
-    void               set_lan_dev_info(fnet_lan_dev_info * info);
-    void               init_obj();
+    //void               set_lan_dev_info(fnet_lan_dev_info *info);
+    void               set_lan_dev_info(const fnet_lan_dev_info &info);
+    void               set_wan_dev_info(const device_wan_info& info);
+
+    void               init_lan_obj();
+    void               init_wan_obj();
     string      get_dev_name();
     void        set_dev_name(const string& name);
     string      get_dev_id();  // serialNumber
@@ -222,6 +226,7 @@ private:
     map<string, DeviceObject *>       m_scan_devices;       /* dev_id -> DeviceObject*, scan in lan (only lan connectMode, and wan connectMode)   */
     map<string, DeviceObject *>       m_old_devices;
     map<string, DeviceObject *>       m_user_devices;        /* dev_id -> DeviceObject*, when user login, the user's devices that has bound. And machine connected successfully. */
+    map<string, DeviceObject *>       m_old_user_devices;
     map<string, DeviceObject*>        m_local_devices;      /* dev_id -> DeviceObject*,  in lan connectMode, device has input access code. Read data from appconfig. */
     //map<string, com_id_t>             m_dev_connect_map;   /* dev_id -> connectId */
     map<string, id_connect_mode>      m_lan_dev_connect_map;

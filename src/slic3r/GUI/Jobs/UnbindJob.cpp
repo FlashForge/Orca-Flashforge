@@ -40,6 +40,8 @@ void UnbindJob::process()
     if (!devOpr || /*!m_dev_obj*/m_dev_id.empty() || m_bind_id.empty()) {
         if (!devOpr) {
             BOOST_LOG_TRIVIAL(error) << "UnbindJob: Invalid parameter: device object opr is null";
+        } else {
+            BOOST_LOG_TRIVIAL(error) << "UnbindJob: Invalid parameter: dev id or bind id is empty";
         }
         //if (!m_dev_obj) {
         //    BOOST_LOG_TRIVIAL(error) << "UnbindJob: Invalid parameter: device object is null";

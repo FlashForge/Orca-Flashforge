@@ -395,6 +395,7 @@ void BindMachineDialog::on_result_ok(wxCommandEvent& event)
         Layout();
         //Fit();
     } else {
+        on_destroy();
         EndModal(wxID_OK);
     }
 }
@@ -521,6 +522,7 @@ void BindMachineDialog::on_show(wxShowEvent &event)
             m_user_name->SetLabelText(clipName);
             m_user_name->SetToolTip(wxString::FromUTF8(user_info.nickname));
             //m_user_name->SetLabelText(wxString::FromUTF8(user_info.nickname));
+            #if 1
             if (!user_info.headImgUrl.empty()) {
                 m_web_request = wxWebSession::GetDefault().CreateRequest(this, user_info.headImgUrl);
                 if (!m_web_request.IsOk()) {
@@ -529,6 +531,7 @@ void BindMachineDialog::on_show(wxShowEvent &event)
                     m_web_request.Start();
                 }
             }
+            #endif
             m_user_sizer->Layout();
         }
         //m_normal_panel->Fit();
@@ -701,6 +704,7 @@ void UnBindMachineDialog::on_result_ok(wxCommandEvent& event)
         Layout();
         Fit();
     } else {
+        on_destroy();
         EndModal(wxID_OK);
     }
 }
@@ -805,6 +809,7 @@ void UnBindMachineDialog::on_show(wxShowEvent &event)
             m_user_name->SetLabelText(clipName);
             m_user_name->SetToolTip(wxString::FromUTF8(user_info.nickname));
             //m_user_name->SetLabelText(wxString::FromUTF8(user_info.nickname));
+            #if 1
             if (!user_info.headImgUrl.empty()) {
                 m_web_request = wxWebSession::GetDefault().CreateRequest(this, user_info.headImgUrl);
                 if (!m_web_request.IsOk()) {
@@ -813,6 +818,7 @@ void UnBindMachineDialog::on_show(wxShowEvent &event)
                     m_web_request.Start();
                 }
             }
+            #endif
             m_user_sizer->Layout();
         }
         //m_simplebook->Layout();

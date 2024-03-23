@@ -165,12 +165,41 @@ fnet_lan_dev_info * DeviceObject::get_lan_dev_info()
     return m_lan_info;
 }
 
-void DeviceObject::set_lan_dev_info(fnet_lan_dev_info *info) 
+//void DeviceObject::set_lan_dev_info(fnet_lan_dev_info *info) 
+//{ 
+//    m_lan_info = info;
+//}
+
+void DeviceObject::set_lan_dev_info(const fnet_lan_dev_info &info) 
 { 
-    m_lan_info = info; 
+    if (m_lan_info != nullptr) {
+        m_lan_info->bindStatus = info.bindStatus;
+        m_lan_info->connectMode = info.connectMode;
+        m_lan_info->pid         = info.pid;
+        m_lan_info->port        = info.port;
+        m_lan_info->vid         = info.vid;
+        strcpy(m_lan_info->ip, info.ip);
+        strcpy(m_lan_info->serialNumber, info.serialNumber);
+        strcpy(m_lan_info->name, info.name);
+    } else {
+        m_lan_info = new fnet_lan_dev_info(info);
+    }
+    //m_lan_info = info; 
 }
 
-void DeviceObject::init_obj() 
+void DeviceObject::set_wan_dev_info(const device_wan_info &info)
+{
+    if (m_wan_info != nullptr) {
+        m_wan_info->bind_dev_id = info.bind_dev_id;
+        m_wan_info->name        = info.name;
+        m_wan_info->pid         = info.pid;
+        m_wan_info->serialNum   = info.serialNum;
+    } else {
+        m_wan_info = new device_wan_info(info);
+    }
+}
+
+void DeviceObject::init_lan_obj()
 {
     if (m_lan_info == nullptr)
         return;
@@ -178,6 +207,16 @@ void DeviceObject::init_obj()
     m_dev_name   = m_lan_info->name;
     m_bind_state = "free";
     m_deviceType = DT_LOCAL;
+}
+
+void DeviceObject::init_wan_obj()
+{
+    if (m_wan_info == nullptr)
+        return;
+    m_dev_id     = m_wan_info->serialNum;
+    m_dev_name   = m_wan_info->name;
+    m_bind_state = "free";
+    m_deviceType = DT_USER;
 }
 
 string DeviceObject::get_dev_name()
@@ -328,16 +367,16 @@ void DeviceObjectOpr::update_scan_machine()
         auto   scanIt = m_scan_devices.find(dev_id);
         if (scanIt != m_scan_devices.end()) {
             devObj       = scanIt->second;
-            auto lanInfo = new fnet_lan_dev_info(elem);
-            devObj->set_lan_dev_info(lanInfo);
-            devObj->init_obj();
+            //auto lanInfo = new fnet_lan_dev_info(elem);
+            devObj->set_lan_dev_info(elem);
+            devObj->init_lan_obj();
         } else {
             scanIt = m_old_devices.find(dev_id);
             if (scanIt != m_old_devices.end()) {
                 devObj       = scanIt->second;
-                auto lanInfo = new fnet_lan_dev_info(elem);
-                devObj->set_lan_dev_info(lanInfo);
-                devObj->init_obj();
+                //auto lanInfo = new fnet_lan_dev_info(elem);
+                devObj->set_lan_dev_info(elem);
+                devObj->init_lan_obj();
                 m_old_devices.erase(scanIt);
                 newObj = true;
             } else {
@@ -354,9 +393,9 @@ void DeviceObjectOpr::update_scan_machine()
             devObj->set_user_access_code(it->second->get_user_access_code(), false);
             auto info    = devObj->get_lan_dev_info();
             string name          = info->name;
-            auto lanInfo = new fnet_lan_dev_info(*info);
-            lanInfo->connectMode = 0;            
-            it->second->set_lan_dev_info(lanInfo);
+            //auto lanInfo = new fnet_lan_dev_info(*info);
+            info->connectMode = 0;            
+            it->second->set_lan_dev_info(*info);
             if (name != it->second->get_dev_name()) {
                 it->second->set_dev_name(name);
             }
@@ -536,11 +575,17 @@ ComErrno DeviceObjectOpr::unbind_wan_machine2(const string &dev_id, const string
         }
         auto devIt = m_user_devices.find(dev_id);
         if (devIt != m_user_devices.end()) {
-            delete devIt->second;
-            devIt->second = nullptr;
+            //delete devIt->second;
+            //devIt->second = nullptr;
+            auto old_it   = m_old_user_devices.find(dev_id);
+            if (old_it == m_old_user_devices.end()) {
+                m_old_user_devices.emplace(make_pair(dev_id, devIt->second));
+            }
             m_user_devices.erase(devIt);
         }
         sendDeviceListUpdateEvent(dev_id, -1);
+    } else {
+        BOOST_LOG_TRIVIAL(info) << "unbindWanDev failed: " << dev_id;
     }
     return ret;
 }
@@ -554,8 +599,12 @@ void DeviceObjectOpr::removeUserDev(DeviceObject *obj)
     }
     auto devIt = m_user_devices.find(dev_id);
     if (devIt != m_user_devices.end()) {
-        delete devIt->second;
-        devIt->second = nullptr;
+        //delete devIt->second;
+        //devIt->second = nullptr;
+        auto old_it   = m_old_user_devices.find(dev_id);
+        if (old_it == m_old_user_devices.end()) {
+            m_old_user_devices.emplace(make_pair(dev_id, devIt->second));
+        }
         m_user_devices.erase(devIt);
     }
     sendDeviceListUpdateEvent(dev_id, -1);
@@ -600,6 +649,13 @@ void DeviceObjectOpr::clear_user_machine()
             delete it->second;
             it->second = nullptr;
             m_user_devices.erase(it);
+        }
+    }
+    for (auto it = m_old_user_devices.begin(); it != m_old_user_devices.end(); ++it) {
+        if (!it->second->is_lan_mode_printer()) {
+            delete it->second;
+            it->second = nullptr;
+            m_old_user_devices.erase(it);
         }
     }
 }
@@ -791,7 +847,7 @@ void DeviceObjectOpr::onConnectExit(ComConnectionExitEvent &event)
                         }
                     } else if (event.ret == COM_ERROR) {
                         devObj->set_connected_ready(false); // connect finished, and failed.
-                      } else {
+                    } else {
                         // do nothing, this device still belongs to other device. (Including exit successfully)
                     }
                 } else {
@@ -886,6 +942,7 @@ void DeviceObjectOpr::onConnectExit(ComConnectionExitEvent &event)
 
 void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
 {
+    BOOST_LOG_TRIVIAL(info) << "DeviceObjectOpr::onConnectReady: " << event.id;
     event.Skip();
     int connectId = event.id ;
     const com_dev_data_t &data      = MultiComMgr::inst()->devData(connectId);
@@ -898,7 +955,20 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
             wanInfo.bind_dev_id = data.wanDevInfo.devId;
             wanInfo.pid = data.devDetail->pid;
             wanInfo.serialNum = data.wanDevInfo.serialNumber;
-            DeviceObject *devObj = new DeviceObject(wanInfo);
+
+            DeviceObject *devObj = nullptr;
+            it = m_old_user_devices.find(macSN);
+            if (it != m_old_user_devices.end()) {
+                devObj = it->second;
+                //auto wan_info = new device_wan_info(wanInfo);
+                devObj->set_wan_dev_info(wanInfo);
+                devObj->init_wan_obj();
+                m_old_user_devices.erase(it);
+            } else {
+                devObj = new DeviceObject(wanInfo);
+            }
+
+            //DeviceObject *devObj = new DeviceObject(wanInfo);
             devObj->set_connection_type(CONNECTTYPE_CLOUD);
             devObj->set_connecting(false);
             devObj->set_connected_ready(true);

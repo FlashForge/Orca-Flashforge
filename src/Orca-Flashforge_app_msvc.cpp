@@ -7,7 +7,8 @@
 #include <shellapi.h>
 #include <wchar.h>
 
-
+    // for minidump
+#include <DbgHelp.h> 
 
 #ifdef SLIC3R_GUI
 extern "C"
@@ -33,6 +34,48 @@ extern "C"
 #include <boost/algorithm/string/classification.hpp>
 
 #include <stdio.h>
+
+// generate the minidump for windows system
+void make_minidump(EXCEPTION_POINTERS *e)
+{
+    auto hDbgHelp = LoadLibraryA("dbghelp");
+    if (hDbgHelp == nullptr)
+        return;
+
+    auto pMiniDumpWriteDump = (decltype(&MiniDumpWriteDump)) GetProcAddress(hDbgHelp, "MiniDumpWriteDump");
+    if (pMiniDumpWriteDump == nullptr)
+        return;
+
+    char name[MAX_PATH];
+    {
+        auto       nameEnd = name + GetModuleFileNameA(GetModuleHandleA(0), name, MAX_PATH);
+        SYSTEMTIME t;
+        GetSystemTime(&t);
+        wsprintfA(nameEnd - strlen(".exe"), "_%4d%02d%02d_%02d%02d%02d.dmp", t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond);
+    }
+
+    auto hFile = CreateFileA(name, GENERIC_WRITE, FILE_SHARE_READ, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+    if (hFile == INVALID_HANDLE_VALUE)
+        return;
+
+    MINIDUMP_EXCEPTION_INFORMATION exception_info;
+    exception_info.ExceptionPointers = e;
+    exception_info.ThreadId          = GetCurrentThreadId();
+    exception_info.ClientPointers    = FALSE;
+
+    auto dumped = pMiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), hFile,
+                                     MINIDUMP_TYPE(MiniDumpWithIndirectlyReferencedMemory | MiniDumpScanMemory),
+                                     e ? &exception_info : nullptr, nullptr, nullptr);
+
+    CloseHandle(hFile);
+}
+//capture the unhandled exception
+LONG CALLBACK unhandled_exception_handler(EXCEPTION_POINTERS *e)
+{
+    make_minidump(e);
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+
 
 #ifdef SLIC3R_GUI
 class OpenGLVersionCheck
@@ -211,6 +254,8 @@ extern "C" {
 #ifdef SLIC3R_WRAPPER_NOCONSOLE
 int APIENTRY wWinMain(HINSTANCE /* hInstance */, HINSTANCE /* hPrevInstance */, PWSTR /* lpCmdLine */, int /* nCmdShow */)
 {
+    // should put it to the position as early as possible when startup, usually put it in the main function first line
+    SetUnhandledExceptionFilter(unhandled_exception_handler);
     int 	  argc;
     wchar_t **argv = ::CommandLineToArgvW(::GetCommandLineW(), &argc);
 #else
@@ -221,7 +266,7 @@ int wmain(int argc, wchar_t **argv)
     // Without this call, the seemingly same message box is being opened by the abort() function, but that is too late and
     // the application will be killed even if "Ignore" button is pressed.
     _set_error_mode(_OUT_TO_MSGBOX);
-
+    
     std::vector<wchar_t*> argv_extended;
     argv_extended.emplace_back(argv[0]);
 
