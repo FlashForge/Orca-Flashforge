@@ -463,11 +463,11 @@ bool DeviceObjectOpr::my_machine_empty()
     return false;
 }
 
-bool DeviceObjectOpr::set_selected_machine(const string &dev_id)
+bool DeviceObjectOpr::set_selected_machine(const string &dev_id, bool my_machine /*= false*/)
 {
     BOOST_LOG_TRIVIAL(info) << "set_selected_machine=" << dev_id;
     map<string, DeviceObject *> my_machine_list;
-    get_my_machine_list_v2(my_machine_list);
+    get_my_machine_list_v2(my_machine_list, my_machine);
     auto it = my_machine_list.find(dev_id);
 
     if (it != my_machine_list.end()) {
@@ -511,7 +511,7 @@ DeviceObject *DeviceObjectOpr::get_selected_machine()
             if (it != m_scan_devices.end())
                 return it->second;
         }
-    }    
+    }
     return nullptr;
 }
 
@@ -673,18 +673,20 @@ DeviceObject* DeviceObjectOpr::get_scan_device(const string& dev_id)
     return it->second;
 }
 
-void DeviceObjectOpr::get_my_machine_list_v2(map<string, DeviceObject*>& devList)
+void DeviceObjectOpr::get_my_machine_list_v2(map<string, DeviceObject *> &devList, bool my_machine/* = false*/)
 {
-    for (auto it = m_scan_devices.begin(); it != m_scan_devices.end(); it++) {
-        if (!it->second)
-            continue;
-        if (!it->second->get_user_access_code(true).empty()) {
-            // remove redundant in userMachineList
-            if (devList.find(it->first) == devList.end()) {
-                devList.emplace(make_pair(it->first, it->second));
+    if (!my_machine) {
+        for (auto it = m_scan_devices.begin(); it != m_scan_devices.end(); it++) {
+            if (!it->second)
+                continue;
+            if (!it->second->get_user_access_code(true).empty()) {
+                // remove redundant in userMachineList
+                if (devList.find(it->first) == devList.end()) {
+                    devList.emplace(make_pair(it->first, it->second));
+                }
             }
         }
-    }
+    }    
 
     for (auto it = m_local_devices.begin(); it != m_local_devices.end(); it++) {
         if (devList.find(it->first) == devList.end()) {
@@ -719,6 +721,7 @@ void DeviceObjectOpr::update_scan_list(const std::vector<fnet_lan_dev_info> &inf
     }
     for (auto it = m_scan_devices.begin(); it != m_scan_devices.end(); ++it) {
         if (it->second) {
+            it->second->set_connecting(false);
             auto tmpIt = lan_map.find(it->second->get_dev_id());
             if (tmpIt == lan_map.end()) {
                 auto oldIt = m_old_devices.find(it->second->get_dev_id());

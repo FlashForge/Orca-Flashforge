@@ -824,7 +824,7 @@ void SelectMachinePopup::update_user_devices()
                     if (m_updateConnect && devObj->get_lan_dev_info() != nullptr) {
                         /*m_updateConnect = false;
                         m_refresh_timer->Stop();*/
-                        devOpr->set_selected_machine(devObj->get_dev_id());
+                        devOpr->set_selected_machine(devObj->get_dev_id(), true);
                     }
                 } else {
                     op->set_printer_state(PrinterState::OFFLINE_WAN);

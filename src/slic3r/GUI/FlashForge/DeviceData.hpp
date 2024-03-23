@@ -197,7 +197,7 @@ public:
     // clear user machine
     void clear_user_machine();
 
-    bool set_selected_machine(const string &dev_id);
+    bool set_selected_machine(const string &dev_id, bool my_machine = false);
     DeviceObject* get_selected_machine();
 
     void unbind_lan_machine(DeviceObject *obj);
@@ -210,7 +210,7 @@ private:
     DeviceObject *get_scan_device(const string &dev_id);
 
     // before connect, scan machine's access code which hasn't written in config file
-    void get_my_machine_list_v2(map<string, DeviceObject *> &devList);
+    void get_my_machine_list_v2(map<string, DeviceObject *> &devList, bool my_machine = false);
     
     void sendDeviceListUpdateEvent(const std::string& dev_id, int conn_id);
 
