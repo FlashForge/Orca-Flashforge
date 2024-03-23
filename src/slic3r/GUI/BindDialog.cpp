@@ -522,7 +522,7 @@ void BindMachineDialog::on_show(wxShowEvent &event)
             m_user_name->SetLabelText(clipName);
             m_user_name->SetToolTip(wxString::FromUTF8(user_info.nickname));
             //m_user_name->SetLabelText(wxString::FromUTF8(user_info.nickname));
-            #if 1
+            #if 0
             if (!user_info.headImgUrl.empty()) {
                 m_web_request = wxWebSession::GetDefault().CreateRequest(this, user_info.headImgUrl);
                 if (!m_web_request.IsOk()) {
@@ -809,7 +809,7 @@ void UnBindMachineDialog::on_show(wxShowEvent &event)
             m_user_name->SetLabelText(clipName);
             m_user_name->SetToolTip(wxString::FromUTF8(user_info.nickname));
             //m_user_name->SetLabelText(wxString::FromUTF8(user_info.nickname));
-            #if 1
+            #if 0
             if (!user_info.headImgUrl.empty()) {
                 m_web_request = wxWebSession::GetDefault().CreateRequest(this, user_info.headImgUrl);
                 if (!m_web_request.IsOk()) {
