@@ -622,6 +622,9 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     register_link->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
         event.Skip();
         wxString url = "http://dev.auth.flashforge.shop/en/signUp?channel=Orca";
+        if (m_cur_language.compare("zh_CN") == 0) {
+            url = "http://dev.auth.flashforge.shop/zh/signUp?channel=Orca";
+        }
         wxLaunchDefaultBrowser(url);
     });
 
