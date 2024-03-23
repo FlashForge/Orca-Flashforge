@@ -546,9 +546,8 @@ void SingleDeviceState::setCurId(int curId)
     m_busy_circula_filter->setCurId(curId);
     m_idle_tempMixDevice->setCurId(curId);
 
-    // open video
-    ComCameraStreamCtrl *cameraStreamCtrl = new ComCameraStreamCtrl(OPENSTREAM);
-    Slic3r::GUI::MultiComMgr::inst()->putCommand(curId, cameraStreamCtrl);
+    reInitProductState();
+    m_idle_tempMixDevice->reInitProductState();
 
     //query device data by id
     const com_dev_data_t &data = MultiComMgr::inst()->devData(m_cur_id);
@@ -622,6 +621,33 @@ void SingleDeviceState::reInitUI()
    m_idle_tempMixDevice->setState(0);
    m_cur_printing_ctrl = 0;
    Layout();
+}
+
+void SingleDeviceState::setDevProductAuthority(const fnet_dev_product_t &data) 
+{
+   bool lightCtrl = data.lightCtrlState == 0 ? false : true;
+   bool fanCtrl   = data.internalFanCtrlState == 0 ? false : true;
+   if (!lightCtrl) {
+     m_lamp_control_button->SetIcon("device_lamp_offline");
+     m_lamp_control_button->Enable(false);
+   }
+   if (!fanCtrl) {
+     m_filter_button->SetIcon("device_filter_offline");
+     m_filter_button->Enable(false);
+     if (m_busy_circula_filter) {
+            m_busy_circula_filter->Hide();
+     }
+   }
+}
+
+void SingleDeviceState::reInitProductState() 
+{ 
+    m_lamp_control_button->SetIcon("device_lamp_control");
+    m_filter_button->SetIcon("device_filter");
+    m_filter_button->SetBackgroundColor(wxColour(255, 255, 255));
+    m_filter_button->SetBorderColor(wxColour(255, 255, 255));
+    m_lamp_control_button->Enable(true); 
+    m_filter_button->Enable(true);
 }
 
 wxBoxSizer* SingleDeviceState::create_monitoring_page()
@@ -1965,6 +1991,7 @@ void SingleDeviceState::onModifyTempClicked(wxCommandEvent &event)
 void SingleDeviceState::onDevStateChanged(std::string devState, const com_dev_data_t &data)
 {
     std::string state = data.devDetail->status; // 状态
+    setDevProductAuthority(*data.devProduct);
     //if (m_cur_dev_state != state) {
         m_cur_dev_state = state;
         //m_file_pic_url.clear();
@@ -1982,6 +2009,7 @@ void SingleDeviceState::onDevStateChanged(std::string devState, const com_dev_da
             setTipMessage(idle_state, "#00CD6D", "", false);
             m_idle_tempMixDevice->setState(1);
             m_staticText_idle->SetLabel(_L("The Current Device has no Printing Projects"));
+            m_idle_tempMixDevice->setDevProductAuthority(*data.devProduct);
         } else if (state == P_COMPLETED) {
             m_machine_ctrl_panel->Show();
             m_machine_idle_panel->Hide();
@@ -2007,6 +2035,7 @@ void SingleDeviceState::onDevStateChanged(std::string devState, const com_dev_da
             setTipMessage(busy_state, "#F9B61C", busy_info, false);
             m_idle_tempMixDevice->setState(1);
             m_staticText_idle->SetLabel(_L("The Current Device has no Printing Projects"));
+            m_idle_tempMixDevice->setDevProductAuthority(*data.devProduct);
         } else if (state == P_CALIBRATE) {
             m_machine_idle_panel->Show();
             m_machine_ctrl_panel->Hide();
@@ -2015,6 +2044,7 @@ void SingleDeviceState::onDevStateChanged(std::string devState, const com_dev_da
             setTipMessage(busy_state, "#F9B61C", busy_info, false);
             m_idle_tempMixDevice->setState(1);
             m_staticText_idle->SetLabel(_L("The Current Device has no Printing Projects"));
+            m_idle_tempMixDevice->setDevProductAuthority(*data.devProduct);
          } else if (state == P_ERROR) {
             m_machine_idle_panel->Show();
             m_machine_ctrl_panel->Hide();
@@ -2022,6 +2052,7 @@ void SingleDeviceState::onDevStateChanged(std::string devState, const com_dev_da
             std::string error_info  = data.devDetail->errorCode;
             wxString trans_error = FFUtils::converDeviceError(error_info);
             setTipMessage(error_state, "#FB4747", trans_error.ToStdString(), true);
+            m_idle_tempMixDevice->setDevProductAuthority(*data.devProduct);
         } else if (state == PAUSE) {
             m_machine_ctrl_panel->Show();
             m_machine_idle_panel->Hide();
@@ -2091,11 +2122,15 @@ void SingleDeviceState::onCancelPrint(wxCommandEvent &event)
     m_cancel_confirm_page->Close();
     m_cur_printing_ctrl    = 3;
     std::string printState = CANCEL;
-    std::string jobId      = Slic3r::GUI::MultiComMgr::inst()->devData(m_cur_id).devDetail->jobId;
-    ComJobCtrl *jobCtrl    = new ComJobCtrl(jobId, printState);
-    // 测试，临时将id写死
-    Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, jobCtrl);
-    //m_cancel_confirm_page->Hide();
+    bool valid = false;
+    const com_dev_data_t &data = MultiComMgr::inst()->devData(m_cur_id, &valid);
+    if (valid) {
+         std::string jobId   = Slic3r::GUI::MultiComMgr::inst()->devData(m_cur_id).devDetail->jobId;
+         ComJobCtrl *jobCtrl = new ComJobCtrl(jobId, printState);
+         // 测试，临时将id写死
+         Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, jobCtrl);
+         // m_cancel_confirm_page->Hide();
+    }
 }
 
 void SingleDeviceState::onContinuePrint(wxCommandEvent &event)
@@ -2247,12 +2282,12 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
 
    m_idle_tempMixDevice->modifyTemp(modify_nozzle_temp, modify_plat_temp, modify_chamber_temp);
    std::string lightStatus = data.devDetail->lightStatus; // 灯状态
-   if (lightStatus.compare(CLOSE) == 0) {
+   if (data.devProduct->lightCtrlState == 1 && lightStatus.compare(CLOSE) == 0) {
         m_lamp_control_button->SetIcon("device_lamp_control");
         m_lamp_control_button->Refresh();
         m_lamp_control_button->SetFlashForgeSelected(false);
         m_idle_tempMixDevice->modifyDeviceLampState(false);
-   } else if (lightStatus.compare(OPEN) == 0) {
+   } else if (data.devProduct->lightCtrlState == 1 && lightStatus.compare(OPEN) == 0) {
         m_lamp_control_button->SetIcon("device_lamp_control_press");
         m_lamp_control_button->Refresh();
         m_lamp_control_button->SetFlashForgeSelected(true);

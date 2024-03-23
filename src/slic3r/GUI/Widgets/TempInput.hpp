@@ -9,6 +9,7 @@
 #include "Button.hpp"
 #include "FFButton.hpp"
 #include "slic3r/GUI/TitleDialog.hpp"
+#include "slic3r/GUI/FlashForge/FlashNetwork.h"
 
 wxDECLARE_EVENT(wxCUSTOMEVT_SET_TEMP_FINISH, wxCommandEvent);
 
@@ -260,6 +261,8 @@ public:
 
     void setState(int state);
     void setCurId(int curId);
+    void reInitProductState();
+    void setDevProductAuthority(const fnet_dev_product_t &data);
 
     void create_panel(wxWindow* parent,bool idle, wxString nozzleTemp,wxString platformTemp,wxString cavityTemp);
 

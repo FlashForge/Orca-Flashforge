@@ -1118,6 +1118,33 @@ void TempMixDevice::setCurId(int curId)
     m_panel_circula_filter->setCurId(curId);
 }
 
+void TempMixDevice::reInitProductState() 
+{ 
+    m_idle_lamp_control_button->SetIcon("device_lamp_control");
+    m_idle_filter_button->SetIcon("device_filter");
+    m_idle_lamp_control_button->Enable(true);
+    m_idle_filter_button->Enable(true);
+}
+
+void TempMixDevice::setDevProductAuthority(const fnet_dev_product_t &data) 
+{
+    bool lightCtrl = data.lightCtrlState == 0 ? false : true;
+    bool fanCtrl   = data.internalFanCtrlState == 0 ? false : true;
+    if (!lightCtrl) {
+        m_idle_lamp_control_button->SetIcon("device_lamp_offline");
+        m_idle_lamp_control_button->Enable(false);
+    }
+    if (!fanCtrl) {
+        m_idle_filter_button->SetIcon("device_filter_offline");
+        m_idle_filter_button->Enable(false);
+        m_idle_filter_button->SetBackgroundColor(wxColour(255, 255, 255));
+        m_idle_filter_button->SetBorderColor(wxColour(255, 255, 255));
+        if (m_panel_circula_filter) {
+            m_panel_circula_filter->Hide();
+        }
+    }
+}
+
 
 void TempMixDevice::create_panel(wxWindow* parent,bool idle, wxString nozzleTemp,wxString platformTemp,wxString cavityTemp)
 {
