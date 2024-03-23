@@ -429,7 +429,7 @@ SendToPrinterTipDialog::SendToPrinterTipDialog(wxWindow* parent, const wxStringL
         wxPanel* panel1 = createListPanel(this, success, true);
         //auto sz = panel1->GetSize();
         //panel1->SetBackgroundColour(wxColour("#ff0000"));
-        sizer->Add(panel1, 1, wxEXPAND | wxLEFT | wxRIGHT, 40);
+        sizer->Add(panel1, 0, wxEXPAND | wxLEFT | wxRIGHT, 40);
     }
 
     if (!fail.empty()) {
@@ -443,7 +443,7 @@ SendToPrinterTipDialog::SendToPrinterTipDialog(wxWindow* parent, const wxStringL
         wxPanel* panel2 = createListPanel(this, fail, false);
         //auto sz = panel2->GetSize();
         //panel2->SetBackgroundColour(wxColour("#ffff00"));
-        sizer->Add(panel2, 1, wxEXPAND | wxLEFT | wxRIGHT, 40);
+        sizer->Add(panel2, 0, wxEXPAND | wxLEFT | wxRIGHT, 40);
     }
     sizer->AddSpacer(40);
     sizer->Layout();
