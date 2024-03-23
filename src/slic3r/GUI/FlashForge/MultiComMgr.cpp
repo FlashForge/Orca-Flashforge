@@ -155,6 +155,8 @@ ComErrno MultiComMgr::unbindWanDev(const std::string &serialNumber, const std::s
         m_wanAsyncConn->postSyncUnbindDev(m_uid, devId);
         for (auto &comPtr : m_comPtrs) {
             if (comPtr->deviceId() == devId) {
+                const char *name = m_datMap.at(comPtr->id()).devDetail->name;
+                BOOST_LOG_TRIVIAL(info) << name << ", " << serialNumber << ", unbind_disconnect";
                 comPtr->disconnect(0);
                 break;
             }
@@ -291,10 +293,18 @@ void MultiComMgr::onConnectionReady(const ComConnectionReadyEvent &event)
     devData.devDetail = event.devDetail;
     m_readyIdSet.insert(event.id);
     QueueEvent(event.Clone());
+
+    const char *name = m_datMap.at(event.id).devDetail->name;
+    const std::string &serialNumber = m_ptrMap.left.at(event.id)->serialNumber();
+    BOOST_LOG_TRIVIAL(info) << name << ", " << serialNumber << ", connection_ready";
 }
 
 void MultiComMgr::onConnectionExit(const ComConnectionExitEvent &event)
 {
+    const char *name = m_datMap.at(event.id).devDetail->name;
+    const std::string &serialNumber = m_ptrMap.left.at(event.id)->serialNumber();
+    BOOST_LOG_TRIVIAL(info) << name << ", " << serialNumber << ", connection_exit";
+
     ComConnection *comConnection = m_ptrMap.left.at(event.id);
     comConnection->joinThread();
     com_dev_data_t &devData = m_datMap.at(event.id);
