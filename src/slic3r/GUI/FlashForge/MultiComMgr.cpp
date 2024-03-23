@@ -301,10 +301,11 @@ void MultiComMgr::onConnectionReady(const ComConnectionReadyEvent &event)
 
 void MultiComMgr::onConnectionExit(const ComConnectionExitEvent &event)
 {
-    const char *name = m_datMap.at(event.id).devDetail->name;
-    const std::string &serialNumber = m_ptrMap.left.at(event.id)->serialNumber();
-    BOOST_LOG_TRIVIAL(info) << name << ", " << serialNumber << ", connection_exit";
-
+    if (m_readyIdSet.find(event.id) != m_readyIdSet.end()) {
+        const char *name = m_datMap.at(event.id).devDetail->name;
+        const std::string &serialNumber = m_ptrMap.left.at(event.id)->serialNumber();
+        BOOST_LOG_TRIVIAL(info) << name << ", " << serialNumber << ", connection_exit";
+    }
     ComConnection *comConnection = m_ptrMap.left.at(event.id);
     comConnection->joinThread();
     com_dev_data_t &devData = m_datMap.at(event.id);
