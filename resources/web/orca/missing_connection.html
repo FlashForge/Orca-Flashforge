@@ -30,6 +30,7 @@
     height: 100vh;
   }
   video {
+    background-color: black;
     width: 100vw;
     height: 100vh;
     object-fit: fill;
@@ -127,24 +128,22 @@
                   var content = element.innerHTML
 
                   if (content.endsWith("action=stream")) {
-                    if (video.style.display === 'none') {
-                      videoStreamImg.src = 'hei.svg'
-                      var zanting = document.getElementById("zanting")
-                      zanting.style.display = 'block'
-                      videoStreamImg.style.backgroundImage = 'url("hei.svg")'
-                      streamPaused = false;
-                    } else {
-                      video.style.display = 'none'
-                      videoStreamImg.style.display = 'block'
-                      videoStreamImg.src = 'hei.svg'
-                      var zanting = document.getElementById("zanting")
-                      zanting.style.display = 'block'
-                      videoStreamImg.style.backgroundImage = 'url("hei.svg")'
-                      streamPaused = false;
-                    }
+                      if (video.style.display === 'none') {
+                        videoStreamImg.src = 'hei.svg'
+                        var zanting = document.getElementById("zanting")
+                        zanting.style.display = 'block'
+                        videoStreamImg.style.backgroundImage = 'url("hei.svg")'
+                        streamPaused = false;
+                      } else {
+                        video.style.display = 'none'
+                        videoStreamImg.style.display = 'block'
+                        videoStreamImg.src = 'hei.svg'
+                        var zanting = document.getElementById("zanting")
+                        zanting.style.display = 'block'
+                        videoStreamImg.style.backgroundImage = 'url("hei.svg")'
+                        streamPaused = false;
+                      }
                   } else if (content.endsWith(".m3u8")) {
-                    if (video.readyState < 2) {
-                    } else {
                       videoStreamImg.style.display = "none"
                       video.src = ''
 	                    video.style.backgroundImage = "url('hei.svg')"
@@ -154,8 +153,6 @@
                       var zanting = document.getElementById("zanting")
                       zanting.style.display = 'block'
                       streamPaused = false;
-                    }
-                    // alert(3333333)
                   } else if (content === '设备离线了') {
                     if (video.style.display === "block") {
                         video.src = ''
@@ -167,7 +164,8 @@
                         zanting.style.display = 'block'
                         streamPaused = false;
                     } else if (videoStreamImg.style.display === "block") {
-                        loader.style.display === 'none'
+                        videoStreamImg.src = ''
+                        // loader.style.display === 'none'
                         videoStreamImg.src = 'hei.svg'
                         var zanting = document.getElementById("zanting")
                         zanting.style.display = 'block'

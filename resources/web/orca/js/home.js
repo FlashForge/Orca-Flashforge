@@ -152,6 +152,7 @@ function SetLoginInfo(strAvatar, strName) {
 }
 
 var flag= false;
+var flag1= false;
 
 function SetUrlInfo(strAddress) {
   window.strAddress = strAddress;
@@ -169,103 +170,171 @@ function SetUrlInfo(strAddress) {
 
       var handleClick = function () {
         if (!streamPaused) {
-          // alert(11111111)
           OnGetUrl();
           setTimeout(function () {
             var element = document.getElementById("url-studio");
             var content = element.innerHTML;
             lang = content;
-            if (Hls.isSupported()) {
-              // var video = document.getElementById('video')
-              video.style.backgroundImage = "none";
-              var zanting = document.getElementById("zanting");
-              zanting.style.display = "none";
-              var hls = new Hls();
-              // 绑定视频流地址
-              hls.loadSource(lang);
-              // 绑定 video 容器
-              hls.attachMedia(video);
-              if (!streamPaused) {
-                // 当视频被点击，检查其播放状态
-                if (video.readyState < 2) {
-                    // 如果视频未加载足够的数据，则显示加载动画
-                    loader.style.display = 'block';
-                    // 尝试播放视频
-                    video.play().catch(function(e) {
-                        console.error("播放失败:", e);
-                    });
-                }
-                
-                function hideLoader() {
-                  loader.style.display = 'none';
-                }
-
-                // 当视频开始播放时，隐藏加载动画
-                video.addEventListener('playing', hideLoader);
-                // 视频暂停时，不显示加载动画
-                video.addEventListener('pause', hideLoader);
-            
-                // 视频发生错误时显示加载动画
-                video.addEventListener('error', hideLoader);
-
-                setTimeout(function () {
-                  video.src = "";
-                  video.style.backgroundImage = "url('hei.svg')";
-                  video.style.backgroundSize = "cover";
-                  video.style.backgroundRepeat = "no-repeat";
-                  video.style.backgroundPosition = "center";
-                  var zanting = document.getElementById("zanting");
-                  zanting.style.display = "block";
-                  streamPaused = false;
-                }, 300000); // 10分钟后暂停，10分钟 = 600000毫秒
-                streamPaused = true;
-              }
-            } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-              if (!streamPaused) {
-                // 对于原生支持 HLS 的平台（如 Safari），直接播放
+            if (lang === '设备离线了') {
+              point.style.display = 'block'
+              setTimeout(function() {
+                point.style.display = 'none'
+              },3000)
+            } else {
+              if (Hls.isSupported()) {
+                // var video = document.getElementById('video')
                 video.style.backgroundImage = "none";
                 var zanting = document.getElementById("zanting");
                 zanting.style.display = "none";
-                video.src = lang;
+                var hls = new Hls();
+                // 绑定视频流地址
+                hls.loadSource(lang);
+                // 绑定 video 容器
+                hls.attachMedia(video);
+                if (!streamPaused) {
+                  // 当视频被点击，检查其播放状态
+                  if (video.readyState < 2) {
+                      // 如果视频未加载足够的数据，则显示加载动画
+                      loader.style.display = 'block';
+                      // setTimeout(function() {
+                      //   loader.style.display = 'none';
+                      //   video.src = "";
+                      //   video.style.backgroundImage = "url('hei.svg')";
+                      //   video.style.backgroundSize = "cover";
+                      //   video.style.backgroundRepeat = "no-repeat";
+                      //   video.style.backgroundPosition = "center";
+                      //   var zanting = document.getElementById("zanting");
+                      //   zanting.style.display = "block";
+                      //   streamPaused = false;
+                      //   point.style.display = 'block'
+                      //   setTimeout(function() {
+                      //     point.style.display = 'none'
+                      //   },3000)
+                      // },30000)
+                      // 尝试播放视频
+                      video.play().catch(function(e) {
+                          console.error("播放失败:", e);
+                      });
+                  }
 
-                // 当视频被点击，检查其播放状态
-                if (video.readyState < 2) {
-                    // 如果视频未加载足够的数据，则显示加载动画
-                    loader.style.display = 'block';
-                    // 尝试播放视频
-                    video.play().catch(function(e) {
-                        console.error("播放失败:", e);
-                    });
+                  // 设置一个标志来跟踪视频是否开始播放
+                  var isVideoStarting = false;
+                  
+                  function hideLoader() {
+                    isVideoStarting = true;
+                    loader.style.display = 'none';
+                  }
+  
+                  // 当视频开始播放时，隐藏加载动画
+                  video.addEventListener('playing', hideLoader);
+                  // 视频暂停时，不显示加载动画
+                  video.addEventListener('pause', hideLoader);
+              
+                  // 视频发生错误时显示加载动画
+                  video.addEventListener('error', hideLoader);
+
+                  // 设置一个超时时间，在30秒后检查视频是否开始播放
+                  setTimeout(function() {
+                    if (!isVideoStarting) {
+                      loader.style.display = 'none';
+                      video.src = "";
+                      video.style.backgroundImage = "url('hei.svg')";
+                      video.style.backgroundSize = "cover";
+                      video.style.backgroundRepeat = "no-repeat";
+                      video.style.backgroundPosition = "center";
+                      var zanting = document.getElementById("zanting");
+                      zanting.style.display = "block";
+                      streamPaused = false;
+                      point.style.display = 'block'
+                      setTimeout(function() {
+                        point.style.display = 'none'
+                      },3000)
+                    }
+                  }, 30000); // 30秒超时时间
+  
+                  setTimeout(function () {
+                    video.src = "";
+                    video.style.backgroundImage = "url('hei.svg')";
+                    video.style.backgroundSize = "cover";
+                    video.style.backgroundRepeat = "no-repeat";
+                    video.style.backgroundPosition = "center";
+                    var zanting = document.getElementById("zanting");
+                    zanting.style.display = "block";
+                    streamPaused = false;
+                  }, 300000); // 10分钟后暂停，10分钟 = 600000毫秒
+                  streamPaused = true;
                 }
-                
-                function hideLoader() {
-                  loader.style.display = 'none';
-                }
-
-              // 当视频开始播放时，隐藏加载动画
-              video.addEventListener('playing', hideLoader);
-
-              // 视频暂停时，不显示加载动画
-              video.addEventListener('pause', hideLoader);
-            
-              // 视频发生错误时显示加载动画
-              video.addEventListener('error', hideLoader);
-                setTimeout(function () {
-                  video.src = "";
-                  video.style.backgroundImage = "url('hei.svg')";
-                  video.style.backgroundSize = "cover";
-                  video.style.backgroundRepeat = "no-repeat";
-                  video.style.backgroundPosition = "center";
+              } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+                if (!streamPaused) {
+                  // 对于原生支持 HLS 的平台（如 Safari），直接播放
+                  video.style.backgroundImage = "none";
                   var zanting = document.getElementById("zanting");
-                  zanting.style.display = "block";
-                  streamPaused = false;
-                }, 300000); // 10分钟后暂停，10分钟 = 600000毫秒
-                streamPaused = true;
+                  zanting.style.display = "none";
+                  video.src = lang;
+  
+                  // 当视频被点击，检查其播放状态
+                  if (video.readyState < 2) {
+                      // 如果视频未加载足够的数据，则显示加载动画
+                      loader.style.display = 'block';
+                      // 尝试播放视频
+                      video.play().catch(function(e) {
+                          console.error("播放失败:", e);
+                      });
+                  }
+
+                  // 设置一个标志来跟踪视频是否开始播放
+                  var isVideoStarting = false;
+                  
+                  function hideLoader() {
+                    isVideoStarting = true;
+                    loader.style.display = 'none';
+                  }
+  
+                // 当视频开始播放时，隐藏加载动画
+                video.addEventListener('playing', hideLoader);
+  
+                // 视频暂停时，不显示加载动画
+                video.addEventListener('pause', hideLoader);
+              
+                // 视频发生错误时显示加载动画
+                video.addEventListener('error', hideLoader);
+
+                // 设置一个超时时间，在30秒后检查视频是否开始播放
+                setTimeout(function() {
+                  if (!isVideoStarting) {
+                    loader.style.display = 'none';
+                    video.src = "";
+                    video.style.backgroundImage = "url('hei.svg')";
+                    video.style.backgroundSize = "cover";
+                    video.style.backgroundRepeat = "no-repeat";
+                    video.style.backgroundPosition = "center";
+                    var zanting = document.getElementById("zanting");
+                    zanting.style.display = "block";
+                    streamPaused = false;
+                    point.style.display = 'block'
+                    setTimeout(function() {
+                      point.style.display = 'none'
+                    },3000)
+                  }
+                }, 30000); // 30秒超时时间
+
+
+                  setTimeout(function () {
+                    video.src = "";
+                    video.style.backgroundImage = "url('hei.svg')";
+                    video.style.backgroundSize = "cover";
+                    video.style.backgroundRepeat = "no-repeat";
+                    video.style.backgroundPosition = "center";
+                    var zanting = document.getElementById("zanting");
+                    zanting.style.display = "block";
+                    streamPaused = false;
+                  }, 300000); // 10分钟后暂停，10分钟 = 600000毫秒
+                  streamPaused = true;
+                }
               }
             }
           }, 10);
         } else {
-          // alert(222222)
           // video.pause();
           video.src = ''
           video.style.backgroundImage = "url('hei.svg')";
@@ -278,6 +347,7 @@ function SetUrlInfo(strAddress) {
         }
       };
 
+
 	  if (!flag) {
       flag = true;
 		  video.removeEventListener("click", handleClick);
@@ -285,39 +355,91 @@ function SetUrlInfo(strAddress) {
 	  }
       
     } else {
+      // flag = false;
+      // alert(flag)
       // video.style.display = 'none'
       // videoStreamImg.src = 'hei.svg'
       // videoStreamImg.style.backgroundImage = 'url("hei.svg")'
-      var handleClick = function () {
+      var handleClicktr = function () {
         if (!streamPaused) {
           OnGetUrl();
           setTimeout(function () {
             var element = document.getElementById("url-studio");
             var content = element.innerHTML;
             lang = content;
-            loader.style.display = 'block'
-            // alert(lang)
-            videoStreamImg.src = "";
-            videoStreamImg.style.backgroundImage = 'url("")';
-            var zanting = document.getElementById("zanting");
-            zanting.style.display = "none";
-            videoStreamImg.src = lang;
-            videoStream.addEventListener('load', function() {
-                // 隐藏加载动画
-                videoLoader.style.display = 'none';
-            }, { once: true }); // 使用 { once: true } 参数，确保事件只触发一次
+            if (lang === '设备离线了') {
+              point.style.display = 'block'
+              setTimeout(function() {
+                point.style.display = 'none'
+              },3000)
+            } else {
+              loader.style.display = 'block'
+              // alert(lang)
+              videoStreamImg.src = "";
+              videoStreamImg.style.backgroundImage = 'url("")';
+              var zanting = document.getElementById("zanting");
+              zanting.style.display = "none";
+              videoStreamImg.src = lang;
 
-            videoStream.addEventListener('error', function() {
-                // 隐藏加载动画
-                videoLoader.style.display = 'none';
-            });
-            streamPaused = true;
-            setTimeout(function () {
-              videoStreamImg.src = "hei.svg";
-              zanting.style.display = "block";
-              videoStreamImg.style.backgroundImage = 'url("hei.svg")';
-              streamPaused = false;
-            }, 300000); // 10分钟后暂停，10分钟 = 600000毫秒
+              // videoStream.addEventListener('loadstart', function() {
+              //   loader.style.display = 'block'
+              //   setTimeout(function() {
+              //     loader.style.display = 'none';
+              //     videoStreamImg.src = ''
+              //     // loader.style.display === 'none'
+              //     videoStreamImg.src = 'hei.svg'
+              //     var zanting = document.getElementById("zanting")
+              //     zanting.style.display = 'block'
+              //     videoStreamImg.style.backgroundImage = 'url("hei.svg")'
+              //     streamPaused = false;
+              //     point.style.display = 'block'
+              //     setTimeout(function() {
+              //       point.style.display = 'none'
+              //     },3000)
+              //   },30000)
+              // });
+
+              // 设置一个标志来跟踪视频是否开始播放
+              var isVideoStarting = false;
+
+              videoStream.addEventListener('load', function() {
+                  isVideoStarting = true;
+                  // 隐藏加载动画
+                  videoLoader.style.display = 'none';
+              }, { once: true }); // 使用 { once: true } 参数，确保事件只触发一次
+  
+              videoStream.addEventListener('error', function() {
+                  isVideoStarting = true;
+                  // 隐藏加载动画
+                  videoLoader.style.display = 'none';
+              });
+
+              // 设置一个超时时间，在30秒后检查视频是否开始播放
+              setTimeout(function() {
+                if (!isVideoStarting) {
+                  loader.style.display = 'none';
+                  videoStreamImg.src = ''
+                  videoStreamImg.src = 'hei.svg'
+                  var zanting = document.getElementById("zanting")
+                  zanting.style.display = 'block'
+                  videoStreamImg.style.backgroundImage = 'url("hei.svg")'
+                  streamPaused = false;
+                  point.style.display = 'block'
+                  setTimeout(function() {
+                    point.style.display = 'none'
+                  },3000)
+                }
+              }, 30000); // 30秒超时时间
+
+
+              streamPaused = true;
+              setTimeout(function () {
+                videoStreamImg.src = "hei.svg";
+                zanting.style.display = "block";
+                videoStreamImg.style.backgroundImage = 'url("hei.svg")';
+                streamPaused = false;
+              }, 300000); // 10分钟后暂停，10分钟 = 600000毫秒
+            }
           }, 10);
         } else {
           videoStreamImg.src = "hei.svg";
@@ -328,11 +450,11 @@ function SetUrlInfo(strAddress) {
         }
       }
       
-      if (!flag) {
-        flag = true;
+      if (!flag1) {
+        flag1 = true;
         for (let i = 0; i < imgs.length; i++) {
-          imgs[i].removeEventListener("click", handleClick);
-          imgs[i].addEventListener("click", handleClick);
+          imgs[i].removeEventListener("click", handleClicktr);
+          imgs[i].addEventListener("click", handleClicktr);
         }
       }
     }
