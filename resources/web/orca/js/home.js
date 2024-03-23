@@ -81,7 +81,7 @@ function HandleStudio(pVal) {
   } else if (strCmd == "studio_userlogin") {
     SetLoginInfo(pVal["data"]["avatar"], pVal["data"]["name"]);
   } else if (strCmd == "modify_rtsp_player_address") {
-    SetUrlInfo(pVal["address"]);
+    SetUrlInfo(pVal["address"], pVal["language"]);
   } else if (strCmd == "close_rtsp") {
     SetClose();
   } else if (strCmd == "studio_useroffline") {
@@ -154,11 +154,15 @@ function SetLoginInfo(strAvatar, strName) {
 var flag= false;
 var flag1= false;
 
-function SetUrlInfo(strAddress) {
+function SetUrlInfo(strAddress, strLanguage) {
   window.strAddress = strAddress;
   $("#url-studio").text(strAddress);
+  $("#url-studio-r").text(strLanguage);
   var loader = document.getElementById('videoLoader');
   let lang = strAddress;
+
+  var point = document.getElementById("point");
+  var point1 = document.getElementById("point1");
   if (lang) {
     if (lang.endsWith(".m3u8")) {
       video.style.display = "block";
@@ -175,11 +179,22 @@ function SetUrlInfo(strAddress) {
             var element = document.getElementById("url-studio");
             var content = element.innerHTML;
             lang = content;
+
+            var element1 = document.getElementById("url-studio-r");
+            var content1 = element1.innerHTML;
+            lang1 = content1;
             if (lang === '设备离线了') {
-              point.style.display = 'block'
-              setTimeout(function() {
-                point.style.display = 'none'
-              },3000)
+              if (lang1 === 'zh_CN') {
+                point.style.display = 'block'
+                setTimeout(function() {
+                  point.style.display = 'none'
+                },3000)
+              } else if (lang1 === 'en') {
+                point1.style.display = 'block'
+                setTimeout(function() {
+                  point1.style.display = 'none'
+                },3000)
+              }
             } else {
               if (Hls.isSupported()) {
                 // var video = document.getElementById('video')
@@ -245,10 +260,17 @@ function SetUrlInfo(strAddress) {
                       var zanting = document.getElementById("zanting");
                       zanting.style.display = "block";
                       streamPaused = false;
-                      point.style.display = 'block'
-                      setTimeout(function() {
-                        point.style.display = 'none'
-                      },3000)
+                      if (lang1 === 'zh_CN') {
+                        point.style.display = 'block'
+                        setTimeout(function() {
+                          point.style.display = 'none'
+                        },3000)
+                      } else if (lang1 === 'en') {
+                        point1.style.display = 'block'
+                        setTimeout(function() {
+                          point1.style.display = 'none'
+                        },3000)
+                      }
                     }
                   }, 30000); // 30秒超时时间
   
@@ -311,10 +333,17 @@ function SetUrlInfo(strAddress) {
                     var zanting = document.getElementById("zanting");
                     zanting.style.display = "block";
                     streamPaused = false;
-                    point.style.display = 'block'
-                    setTimeout(function() {
-                      point.style.display = 'none'
-                    },3000)
+                    if (lang1 === 'zh_CN') {
+                      point.style.display = 'block'
+                      setTimeout(function() {
+                        point.style.display = 'none'
+                      },3000)
+                    } else if (lang1 === 'en') {
+                      point1.style.display = 'block'
+                      setTimeout(function() {
+                        point1.style.display = 'none'
+                      },3000)
+                    }
                   }
                 }, 30000); // 30秒超时时间
 
@@ -367,11 +396,22 @@ function SetUrlInfo(strAddress) {
             var element = document.getElementById("url-studio");
             var content = element.innerHTML;
             lang = content;
+
+            var element1 = document.getElementById("url-studio-r");
+            var content1 = element1.innerHTML;
+            lang1 = content1;
             if (lang === '设备离线了') {
-              point.style.display = 'block'
-              setTimeout(function() {
-                point.style.display = 'none'
-              },3000)
+              if (lang1 === 'zh_CN') {
+                point.style.display = 'block'
+                setTimeout(function() {
+                  point.style.display = 'none'
+                },3000)
+              } else if (lang1 === 'en') {
+                point1.style.display = 'block'
+                setTimeout(function() {
+                  point1.style.display = 'none'
+                },3000)
+              }
             } else {
               loader.style.display = 'block'
               // alert(lang)
@@ -424,10 +464,17 @@ function SetUrlInfo(strAddress) {
                   zanting.style.display = 'block'
                   videoStreamImg.style.backgroundImage = 'url("hei.svg")'
                   streamPaused = false;
-                  point.style.display = 'block'
-                  setTimeout(function() {
-                    point.style.display = 'none'
-                  },3000)
+                  if (lang1 === 'zh_CN') {
+                    point.style.display = 'block'
+                    setTimeout(function() {
+                      point.style.display = 'none'
+                    },3000)
+                  } else if (lang1 === 'en') {
+                    point1.style.display = 'block'
+                    setTimeout(function() {
+                      point1.style.display = 'none'
+                    },3000)
+                  }
                 }
               }, 30000); // 30秒超时时间
 
