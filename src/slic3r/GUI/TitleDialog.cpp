@@ -144,6 +144,7 @@ void TitleBar::FinishDrag()
 
 
 // TitleDialog
+#ifdef __WINDOWS__
 TitleDialog::TitleDialog(wxWindow* parent, const wxString& title, int borderRadius/*=6*/, const wxSize &size/*=wxDefaultSize*/)
     : DPIDialog(parent, wxID_ANY, "", wxDefaultPosition, size, wxFRAME_SHAPED | wxNO_BORDER)
     , m_borderRadius(borderRadius)
@@ -167,11 +168,6 @@ TitleDialog::TitleDialog(wxWindow* parent, const wxString& title, int borderRadi
 void TitleDialog::SetTitleBackgroundColor(const wxColour& color)
 {
     m_titleBar->SetBackgroundColour(color);
-}
-
-wxBoxSizer* TitleDialog::MainSizer()
-{
-    return m_mainSizer;
 }
 
 void TitleDialog::OnErase(wxEraseEvent& event)
@@ -222,5 +218,23 @@ void TitleDialog::OnSize(wxSizeEvent& event)
     SetShape(path);
     //GetSizer()->Fit(this);
 }
+
+#else
+TitleDialog::TitleDialog(wxWindow* parent, const wxString& title, int borderRadius/*=6*/, const wxSize &size/*=wxDefaultSize*/)
+    : DPIDialog(parent, wxID_ANY, title, wxDefaultPosition, size, wxCAPTION | wxCLOST_BOX)
+    , m_mainSizer(new wxBoxSizer(wxVERTICAL))
+{
+    SetBackgroundColour(*wxWHITE);
+    SetSizer(m_mainSizer);
+    Layout();
+}
+#endif
+
+
+wxBoxSizer* TitleDialog::MainSizer()
+{
+    return m_mainSizer;
+}
+
 
 } // end namespace

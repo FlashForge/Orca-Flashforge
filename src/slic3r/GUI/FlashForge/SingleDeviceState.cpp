@@ -741,11 +741,11 @@ wxBoxSizer* SingleDeviceState::create_monitoring_page()
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format("load web view of SingleDeviceState url failed");
             return sizer;
         }
-        m_browser->SetMinSize(wxSize(FromDIP(786), FromDIP(364)));
-        m_browser->SetMaxSize(wxSize(FromDIP(786), FromDIP(364)));
+        m_browser->SetMinSize(wxSize(FromDIP(730), FromDIP(364)));
+        //m_browser->SetMaxSize(wxSize(FromDIP(786), FromDIP(364)));
         m_browser->EnableContextMenu(true);
         //sizer->Add(m_browser, 1, wxEXPAND | wxALL, 0);
-        sizer->Add(m_browser, 0, wxEXPAND | wxALL, 0);
+        sizer->Add(m_browser, 0, wxALL, 0);
 
         return sizer;
 }
@@ -865,25 +865,25 @@ void SingleDeviceState::setupLayout()
 
         //第二段水平布局，相机布局
         auto m_monitoring_sizer = create_monitoring_page();
-        bSizer_left->Add(m_monitoring_sizer, 1, wxEXPAND | wxALL, 0);
+        bSizer_left->Add(m_monitoring_sizer, 0, wxALL, 0);
 
         //第二段水平布局，相机垂直布局的中间间隔
         auto m_panel_separotor1 = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
         m_panel_separotor1->SetBackgroundColour(wxColour(240, 240, 240));
         m_panel_separotor1->SetMinSize(wxSize(-1, FromDIP(20)));
         m_panel_separotor1->SetMaxSize(wxSize(-1, FromDIP(20)));
-        m_monitoring_sizer->Add(m_panel_separotor1, 0, wxEXPAND, 0);
+        m_monitoring_sizer->Add(m_panel_separotor1, 0, wxALL, 0);
 
         //第二段水平布局，相机垂直布局中的材料站
         m_material_panel = new MaterialPanel(this);
         m_monitoring_sizer->Add(m_material_panel, 0, wxALL | wxEXPAND , 0);
 
-        bSizer_status_below->Add(bSizer_left, 1, wxALL | wxEXPAND, 0);
+        bSizer_status_below->Add(bSizer_left, 0, wxALL | wxEXPAND, 0);
 
         //第二段水平布局，中间间隔
         auto m_panel_separator_middle = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE | wxTAB_TRAVERSAL);
         m_panel_separator_middle->SetBackgroundColour(wxColour(240, 240, 240));
-        m_panel_separator_middle->SetMinSize(wxSize(FromDIP(12), -1));
+        m_panel_separator_middle->SetMinSize(wxSize(FromDIP(20), -1));
 
         bSizer_status_below->Add(m_panel_separator_middle, 0, wxEXPAND | wxALL, 0);
 
@@ -1411,7 +1411,7 @@ void SingleDeviceState::setupLayoutIdlePage(wxBoxSizer* idleSizer,wxPanel* paren
         //m_panel_idle->SetMinSize(wxSize(-1,FromDIP(178)));
         
         //m_idle_device_pic = create_scaled_bitmap("adventurer_5m", this, 112);
-        m_idle_device_pic = create_scaled_bitmap("adventurer_5m", 0, 170);
+        m_idle_device_pic = create_scaled_bitmap("adventurer_5m", 0, 165);
         m_idle_device_staticbitmap = new wxStaticBitmap(m_panel_idle, wxID_ANY, m_idle_device_pic);
         m_staticText_idle = new Label(m_panel_idle, _L("The Current Device has no Printing Projects"));
         m_staticText_idle->Wrap(-1);
@@ -1442,7 +1442,7 @@ void SingleDeviceState::setupLayoutIdlePage(wxBoxSizer* idleSizer,wxPanel* paren
         //添加空白间距
         auto m_panel_separotor2 = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
         m_panel_separotor2->SetBackgroundColour(wxColour(240,240,240));
-        m_panel_separotor2->SetMinSize(wxSize(-1, FromDIP(14)));
+        m_panel_separotor2->SetMinSize(wxSize(-1, FromDIP(16)));
 
         idleSizer->Add(m_panel_separotor2, 0, wxALL | wxEXPAND, 0);
 
@@ -2331,10 +2331,10 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
 
    if (m_pid != data.devDetail->pid && data.devDetail->pid == 0x0024) {
        m_pid = data.devDetail->pid;
-       m_idle_device_staticbitmap->SetBitmap(create_scaled_bitmap("adventurer_5m_pro", 0, 170));
+       m_idle_device_staticbitmap->SetBitmap(create_scaled_bitmap("adventurer_5m_pro", 0, 165));
    } else if (m_pid != data.devDetail->pid && data.devDetail->pid == 0x0023) {
        m_pid = data.devDetail->pid;
-       m_idle_device_staticbitmap->SetBitmap(create_scaled_bitmap("adventurer_5m", 0, 170));
+       m_idle_device_staticbitmap->SetBitmap(create_scaled_bitmap("adventurer_5m", 0, 165));
    }
 
    std::string machineType = data.devDetail->pid == 0x0024 ? "Adventurer 5M Pro" :(data.devDetail->pid == 0x0023 ? "Adventurer 5M" : "Unknow");

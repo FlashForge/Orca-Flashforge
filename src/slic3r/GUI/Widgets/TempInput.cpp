@@ -1220,7 +1220,7 @@ void TempMixDevice::create_panel(wxWindow* parent,bool idle, wxString nozzleTemp
     //添加空白间距
     auto m_panel_separotor5 = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     m_panel_separotor5->SetBackgroundColour(wxColour(240,240,240));
-    m_panel_separotor5->SetMinSize(wxSize(-1, FromDIP(13)));
+    m_panel_separotor5->SetMinSize(wxSize(-1, FromDIP(15)));
 
     idleSizer->Add(m_panel_separotor5,0, wxALL | wxEXPAND, 0);
 

@@ -46,21 +46,26 @@ class TitleDialog : public DPIDialog
 public:
     TitleDialog(wxWindow* parent, const wxString& title, int borderRadius = 6, const wxSize &size = wxDefaultSize);
 
-    void SetTitleBackgroundColor(const wxColour& color);
-
     wxBoxSizer* MainSizer();
+
+#ifdef __WINDOWS__
+    void SetTitleBackgroundColor(const wxColour& color);
 
 protected:    
     void OnErase(wxEraseEvent& event);
     void OnPaint(wxPaintEvent& event);
     void DoRender(wxDC &dc);
     void OnSize(wxSizeEvent& event);
-    
+
 protected:
     int             m_borderRadius {6};
+    const int       m_shadow_width {1};
     TitleBar*       m_titleBar {nullptr};
     wxBoxSizer*     m_mainSizer {nullptr};
-    const int       m_shadow_width {1};
+#else
+protected:
+    wxBoxSizer*     m_mainSizer {nullptr};
+#endif
 };
 
 } // Slic3r::GUI
