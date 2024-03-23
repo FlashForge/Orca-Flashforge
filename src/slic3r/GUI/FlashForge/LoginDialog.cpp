@@ -439,6 +439,9 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
                     return;
                 }
             }
+        } else {
+            page1ShowErrorLabel(_L("Mobile Phone Number Error"));
+            return;
         }
 
         if(m_get_code_button->GetState()){
