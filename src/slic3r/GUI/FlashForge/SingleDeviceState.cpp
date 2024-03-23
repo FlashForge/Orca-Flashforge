@@ -88,9 +88,9 @@ void MaterialPanel::create_panel(wxWindow* parent)
         bSizer_task_name_hor->Fit(task_name_panel);
 
         sizer->Add(m_panel_printing_title, 0, wxEXPAND | wxALL, 0);
-        sizer->AddStretchSpacer();
+        //sizer->AddStretchSpacer();
         sizer->Add(task_name_panel, 0, wxALIGN_CENTER, 0);
-        sizer->AddStretchSpacer();
+        //sizer->AddStretchSpacer();
 
         parent->SetSizer(sizer);
         parent->Layout();
@@ -529,7 +529,7 @@ SingleDeviceState::SingleDeviceState(wxWindow* parent, wxWindowID id, const wxPo
         : wxScrolledWindow(parent, id, pos, size, wxHSCROLL | wxVSCROLL), 
     m_cur_printing_ctrl(0)
 {
-        this->SetScrollRate(5, 5);
+        this->SetScrollRate(30, 30);
         this->SetBackgroundColour(wxColour(240,240,240));
         setupLayout();
         connectEvent();
@@ -715,7 +715,8 @@ wxBoxSizer* SingleDeviceState::create_monitoring_page()
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format("load web view of SingleDeviceState url failed");
             return sizer;
         }
-        m_browser->SetMinSize(wxSize(FromDIP(410), FromDIP(364)));
+        m_browser->SetMinSize(wxSize(FromDIP(786), FromDIP(364)));
+        m_browser->SetMaxSize(wxSize(FromDIP(786), FromDIP(364)));
         m_browser->EnableContextMenu(true);
         //sizer->Add(m_browser, 1, wxEXPAND | wxALL, 0);
         sizer->Add(m_browser, 0, wxEXPAND | wxALL, 0);
@@ -2142,10 +2143,12 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
 
    std::string stram_url = data.devDetail->cameraStreamUrl;
    if (!stram_url.empty() && m_camera_stream_url != data.devDetail->cameraStreamUrl) {
-       //通知设备开流
-        ComCameraStreamCtrl *cameraStreamCtrl = new ComCameraStreamCtrl(OPEN);
-        // 测试，临时将id写死
-        Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, cameraStreamCtrl);
+       if (0 == data.connectMode) {
+            // 通知设备开流
+            ComCameraStreamCtrl *cameraStreamCtrl = new ComCameraStreamCtrl(OPEN);
+            // 测试，临时将id写死
+            Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, cameraStreamCtrl);
+        }
 
         m_camera_stream_url = data.devDetail->cameraStreamUrl;
         modifyVideoPlayerAddress(m_camera_stream_url);  
