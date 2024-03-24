@@ -213,6 +213,9 @@ public:
     void setAdjustValue(double value);
     wxString getTextValue();
     void setText(wxString text);
+    void setCurValue(double value);
+    void setPoint(int value);
+    void checkValue();
 
 private:
     void onTextChange(wxCommandEvent &event);
@@ -224,6 +227,8 @@ private:
     double        m_min;
     double        m_max;
     double        m_adjust_value;
+    double        m_cur_value;
+    int           m_point = 0;
     wxBitmap    m_icon;
     FFPushButton *m_dec_btn{nullptr};
     FFPushButton *m_inc_btn{nullptr};

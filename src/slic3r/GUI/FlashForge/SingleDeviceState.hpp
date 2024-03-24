@@ -25,6 +25,8 @@
 namespace Slic3r { 
 namespace GUI {
 
+wxDECLARE_EVENT(EVT_SWITCH_TO_FILETER, wxCommandEvent);
+
 class MaterialPanel : public wxPanel
 {
 public:
@@ -86,6 +88,7 @@ public:
     void setFillRate(double fillRate);
     void setCoolingFanSpeed(double fanSpeed);
     void setChamberFanSpeed(double fanSpeed);
+    void switchPage();
 
 private:
     IconText       *m_device_material{nullptr};

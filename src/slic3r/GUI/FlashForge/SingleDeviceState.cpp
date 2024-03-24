@@ -17,6 +17,7 @@ namespace pt = boost::property_tree;
 
 namespace Slic3r {
 namespace GUI {
+wxDEFINE_EVENT(EVT_SWITCH_TO_FILETER, wxCommandEvent);
 
 const std::string CLOSE = "close";
 const std::string OPEN  = "open";
@@ -356,6 +357,7 @@ void DeviceDetail::create_panel(wxWindow* parent)
             double z_axis;
             double nozzle_fan;
             double cooling_fan;
+            switchPage();
             if (m_device_speed) {
                 wxString str_speed = m_device_speed->getTextValue();
                 str_speed.ToDouble(&speed);
@@ -420,6 +422,7 @@ void DeviceDetail::create_panel(wxWindow* parent)
         m_device_z_axis = new IconBottonText(m_panel_first_row, wxString("device_z_axis"), 27, wxString("0.002"), 12,wxString("device_z_dec"), wxString("push_button_arrow_dec_normal"));
         m_device_z_axis->setLimit(-5, 5);
         m_device_z_axis->setAdjustValue(0.025);
+        m_device_z_axis->setPoint(3);
         bSizer_first_row->Add(m_device_z_axis, 0, wxEXPAND | wxALL, 0);
         bSizer_first_row->AddStretchSpacer();
 
@@ -474,6 +477,22 @@ void DeviceDetail::create_panel(wxWindow* parent)
         parent->Fit(); 
 }
 
+void DeviceDetail::switchPage() 
+{
+    if (m_device_speed) {
+        m_device_speed->checkValue();
+    }
+    if (m_device_z_axis) {
+        m_device_z_axis->checkValue();
+    }
+    if (m_device_nozzle_fan) {
+        m_device_nozzle_fan->checkValue();
+    }
+    if (m_device_cooling_fan) {
+        m_device_cooling_fan->checkValue();
+    }
+}
+
 void DeviceDetail::setMaterialName(wxString materialName) 
 {
     m_device_material->setText(materialName);
@@ -489,12 +508,14 @@ void DeviceDetail::setSpeed(double speed)
 { 
     auto aspeed = static_cast<int>(speed);
     m_device_speed->setText(wxString::Format("%d", aspeed));
+    m_device_speed->setCurValue(aspeed);
 }
 
 void DeviceDetail::setZAxis(double value) 
 {
     auto aValue = wxString::Format("%.3f", value);
     m_device_z_axis->setText(aValue);
+    m_device_z_axis->setCurValue(value);
 }
 
 void DeviceDetail::setLayer(int printLayer, int targetLayer)
@@ -516,12 +537,14 @@ void DeviceDetail::setCoolingFanSpeed(double fanSpeed)
 { 
     auto aFanSpeed = static_cast<int>(fanSpeed);
     m_device_nozzle_fan->setText(wxString::Format("%d", aFanSpeed));
+    m_device_nozzle_fan->setCurValue(aFanSpeed);
 }
 
 void DeviceDetail::setChamberFanSpeed(double fanSpeed) 
 { 
      auto aFanSpeed = static_cast<int>(fanSpeed);
     m_device_cooling_fan->setText(wxString::Format("%d", aFanSpeed));
+     m_device_cooling_fan->setCurValue(aFanSpeed);
 }
 
 SingleDeviceState::SingleDeviceState(wxWindow* parent, wxWindowID id, const wxPoint& pos, 
@@ -1355,6 +1378,10 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
 
 //添加设备详情
         m_busy_device_detial = new DeviceDetail(parent);
+        m_busy_device_detial->Bind(EVT_SWITCH_TO_FILETER, [this](wxCommandEvent &event) {
+         event.Skip();
+            m_busy_device_detial->switchPage();
+        });
         busySizer->Add(m_busy_device_detial, 0, wxALL | wxEXPAND , 0);
         m_busy_device_detial->Hide();
 //添加循环过滤
@@ -1810,6 +1837,8 @@ void SingleDeviceState::connectEvent()
    });
 
    m_filter_button->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e){
+       wxCommandEvent *event = new wxCommandEvent(EVT_SWITCH_TO_FILETER);
+       wxQueueEvent(m_busy_device_detial, event);
         if(m_busy_circula_filter){
             m_busy_circula_filter->Show();
             m_busy_circula_filter->Show(m_busy_circula_filter->IsShown());
