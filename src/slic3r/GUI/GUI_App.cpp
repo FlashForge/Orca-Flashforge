@@ -4155,6 +4155,8 @@ void GUI_App::handle_login_result(std::string url, std::string name)
 void GUI_App::handle_login_out()
 {
     m_login_success = false;
+    m_usr_pic_data.clear();
+    m_usr_pic_image.Destroy();
     LoginDialog::SetUsrLogin(false);
     // 原始的JSON字符串
     std::string jsonStr = R"({"command":"studio_useroffline","sequence_id":"10001"})";
@@ -4316,6 +4318,21 @@ void GUI_App::get_usr_profile(ComGetUserProfileEvent &event)
             handle_login_result(event.userProfile.headImgUrl, event.userProfile.nickname);
             app_config->save();
         }
+        //download usr pic
+        Bind(COM_ASYNC_CALL_FINISH_EVENT, [&](ComAsyncCallFinishEvent &event) {
+            if (event.ret == COM_OK && !m_usr_pic_data.empty()) {
+                wxMemoryInputStream stream(m_usr_pic_data.data(), m_usr_pic_data.size());
+                wxImage image(stream, wxBITMAP_TYPE_ANY);
+                m_usr_pic_image = image;
+            } else {
+                //if (app_config) {
+                //    std::string usr_pic = app_config->get("usr_pic");
+                //    downloadUrlPic(usr_pic);
+                //}
+            }
+            event.Skip(); 
+        });
+        downloadUrlPic(event.userProfile.headImgUrl);
     }
 }
 
@@ -4342,6 +4359,26 @@ void GUI_App::wan_dev_maintain(ComWanDevMaintainEvent &event)
         }
         m_logout_tip->ShowModal();
     }
+}
+
+void GUI_App::downloadUrlPic(const std::string &url) 
+{
+    if (!url.empty()) {
+        m_usr_pic_data.clear();
+        MultiComUtils::asyncCall(this, [=]() {
+            return MultiComUtils::downloadFile(url, m_usr_pic_data, 15000);
+        });
+    }
+}
+
+wxImage GUI_App::getUsrPic() 
+{
+    return m_usr_pic_image;
+}
+
+void GUI_App::setUsrPic(wxImage image) 
+{ 
+    m_usr_pic_image = image;
 }
 
 void GUI_App::on_set_selected_machine(wxCommandEvent &evt)

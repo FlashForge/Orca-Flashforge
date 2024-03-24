@@ -20,7 +20,7 @@ RoundImage::RoundImage(wxWindow *parent, const wxSize &size /*=wxDefaultSize*/)
     // Bind(wxEVT_SIZE, &RoundImagePanel::OnSize, this);
 }
 
-void RoundImage::SetImage(const wxImage &image)
+void RoundImage::SetImage(const wxImage image)
 {
     m_image = image;
     Refresh();
@@ -101,33 +101,41 @@ ReLoginDialog::ReLoginDialog() : TitleDialog(static_cast<wxWindow *>(wxGetApp().
     m_sizer_main->Add(m_panel_separotor_0, 0, wxEXPAND | wxALL, 0);
 
 //**添加用户
-    m_web_request = wxWebSession::GetDefault().CreateRequest(this, usr_pic);
-    if (!m_web_request.IsOk()) {
-        BOOST_LOG_TRIVIAL(error) << "web session create request fail";
-    } else {
-        m_web_request.Start();
-    }
-    Bind(wxEVT_CLOSE_WINDOW, &ReLoginDialog::onCloseWnd, this);
+    //m_web_request = wxWebSession::GetDefault().CreateRequest(this, usr_pic);
+    //if (!m_web_request.IsOk()) {
+    //    BOOST_LOG_TRIVIAL(error) << "web session create request fail";
+    //} else {
+    //    m_web_request.Start();
+    //}
+    //Bind(wxEVT_CLOSE_WINDOW, &ReLoginDialog::onCloseWnd, this);
 
-    Bind(wxEVT_WEBREQUEST_STATE, [this](wxWebRequestEvent &evt) {
-        switch (evt.GetState()) {
-        case wxWebRequest::State_Completed: {
-            BOOST_LOG_TRIVIAL(error) << "BindDialog: web request state completed";
-            wxImage avatar_stream = *evt.GetResponse().GetStream();
-            if (avatar_stream.IsOk()) {
-                avatar_stream.Rescale(FromDIP(80), FromDIP(80));
-                m_user_panel->SetImage(avatar_stream);
-                Layout();
-            }
-            break;
-        }
-        case wxWebRequest::State_Failed: {
-            BOOST_LOG_TRIVIAL(error) << "BindDialog: web request state failed";
-            break;
-        }
-        }
-    });
+    //Bind(wxEVT_WEBREQUEST_STATE, [this](wxWebRequestEvent &evt) {
+    //    switch (evt.GetState()) {
+    //    case wxWebRequest::State_Completed: {
+    //        BOOST_LOG_TRIVIAL(error) << "BindDialog: web request state completed";
+    //        wxImage avatar_stream = *evt.GetResponse().GetStream();
+    //        if (avatar_stream.IsOk()) {
+    //            avatar_stream.Rescale(FromDIP(80), FromDIP(80));
+    //            m_user_panel->SetImage(avatar_stream);
+    //            Layout();
+    //        }
+    //        break;
+    //    }
+    //    case wxWebRequest::State_Failed: {
+    //        BOOST_LOG_TRIVIAL(error) << "BindDialog: web request state failed";
+    //        break;
+    //    }
+    //    }
+    //});
+
     m_user_panel = new RoundImage(this, wxSize(FromDIP(80), FromDIP(80)));
+
+    wxImage usr_image = wxGetApp().getUsrPic();
+    if (usr_image.IsOk()) {
+        usr_image.Rescale(FromDIP(80), FromDIP(80));
+        m_user_panel->SetImage(usr_image);
+        Layout();
+    }
 
     m_sizer_main->Add(m_user_panel, 0, wxALIGN_CENTER, 0);
     m_sizer_main->AddSpacer(FromDIP(6));
