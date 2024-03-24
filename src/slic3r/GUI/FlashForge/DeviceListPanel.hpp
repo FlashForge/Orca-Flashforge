@@ -186,7 +186,7 @@ class DeviceInfoItemPanel : public DeviceItemPanel
 {
 public:
     struct DeviceInfo {
-        bool lanFlag {false};  // lan or not
+        bool lanFlag {true};  // lan or not
         int conn_id {-1};
         unsigned short pid {0};
         std::string name;

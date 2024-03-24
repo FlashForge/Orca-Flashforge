@@ -1016,7 +1016,7 @@ void DeviceListPanel::initWlanDevice(std::map<std::string, DeviceInfoItemPanel::
             auto iter = deviceInfoMap.find(dev_id);
             if (iter == deviceInfoMap.end()) {
                 deviceInfoMap.emplace(std::make_pair(dev_id, dev_info));
-            } else if (dev_info.status != "offline" || dev_info.lanFlag) {
+            } else {// if (dev_info.status != "offline" || dev_info.lanFlag) {
                 iter->second = dev_info;
             }
         }
@@ -1434,12 +1434,19 @@ void DeviceListPanel::onStaticModeToggled(wxCommandEvent &event)
 
 void DeviceListPanel::copyDeviceInfo(DeviceInfoItemPanel::DeviceInfo& dest, const DeviceInfoItemPanel::DeviceInfo& source)
 {
+    //if (source.status != "offline" || source.lanFlag) {
     dest.conn_id = source.conn_id;
     dest.lanFlag = source.lanFlag;
+    //}
     if (!source.name.empty()) dest.name = source.name;
     if (source.pid > 0) dest.pid = source.pid;
     if (!source.placement.empty()) dest.placement = source.placement;
-    if (!source.status.empty()) dest.status = source.status;
+    if (!source.status.empty()) {
+        dest.status = source.status;
+    }
+    if (dest.conn_id < 0) {
+        dest.status = "offline";
+    }
 }
 
 void DeviceListPanel::onDeviceListUpdated(DeviceListUpdateEvent& event)
@@ -1586,9 +1593,11 @@ void DeviceListPanel::updateDeviceList()
                 DeviceInfoItemPanel* info_item = new DeviceInfoItemPanel(m_device_panel, dev_info, this);
                 m_device_map.emplace(std::make_pair(it, info_item));
                 refresh_flag = true;
-            } else if (dev_info.status != "offline" || dev_info.lanFlag) {
+            } else {
                 auto _dev_info = info_iter->second->deviceInfo();
-                copyDeviceInfo(_dev_info, dev_info);
+                if (dev_info.status != "offline" || dev_info.lanFlag) {
+                    copyDeviceInfo(_dev_info, dev_info);
+                }
                 info_iter->second->updateInfo(_dev_info);
             }
         } else if (DeviceListUpdateEvent::UpdateType::UpdateType_Remove == op) {
@@ -1604,7 +1613,7 @@ void DeviceListPanel::updateDeviceList()
                 DeviceInfoItemPanel* info_item = new DeviceInfoItemPanel(m_device_panel, dev_info, this);
                 m_device_map.emplace(std::make_pair(it, info_item));
                 refresh_flag = true;
-            } else if (dev_info.status != "offline" || dev_info.lanFlag) {
+            } else {
                 auto _dev_info = info_iter->second->deviceInfo();
                 copyDeviceInfo(_dev_info, dev_info);
                 info_iter->second->updateInfo(_dev_info);

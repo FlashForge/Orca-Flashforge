@@ -20,7 +20,7 @@ RoundImage::RoundImage(wxWindow *parent, const wxSize &size /*=wxDefaultSize*/)
     // Bind(wxEVT_SIZE, &RoundImagePanel::OnSize, this);
 }
 
-void RoundImage::SetImage(const wxImage &image)
+void RoundImage::SetImage(const wxImage image)
 {
     m_image = image;
     Refresh();
@@ -101,14 +101,64 @@ ReLoginDialog::ReLoginDialog() : TitleDialog(static_cast<wxWindow *>(wxGetApp().
     m_sizer_main->Add(m_panel_separotor_0, 0, wxEXPAND | wxALL, 0);
 
 //**添加用户
+    #if 0
     m_web_request = wxWebSession::GetDefault().CreateRequest(this, usr_pic);
     if (!m_web_request.IsOk()) {
         BOOST_LOG_TRIVIAL(error) << "web session create request fail";
     } else {
         m_web_request.Start();
     }
-    Bind(wxEVT_CLOSE_WINDOW, &ReLoginDialog::onCloseWnd, this);
+    #else
+    #if 1
+    m_user_panel = new RoundImage(this, wxSize(FromDIP(80), FromDIP(80)));
 
+    wxImage usr_image = wxGetApp().getUsrPic();
+    if (usr_image.IsOk()) {
+        usr_image.Rescale(FromDIP(80), FromDIP(80));
+        m_user_panel->SetImage(usr_image);
+        Layout();
+    } else {
+        Bind(COM_ASYNC_CALL_FINISH_EVENT, [&](ComAsyncCallFinishEvent &event) {
+            // event.Skip();
+            if (event.ret == COM_OK) {
+                if (!m_pic_data.empty()) {
+                    // translate pic data from vector to wxImage object
+                    wxMemoryInputStream stream(m_pic_data.data(), m_pic_data.size());
+                    wxImage             image(stream, wxBITMAP_TYPE_ANY);                    
+                    if (!image.IsOk()) {
+                        BOOST_LOG_TRIVIAL(error) << "download relogin image is not ok";
+                        return;
+                    }
+                    wxGetApp().setUsrPic(image);
+                    image.Rescale(FromDIP(80), FromDIP(80));
+                    m_user_panel->SetImage(image);
+                    Layout();
+                }
+            } else {
+                BOOST_LOG_TRIVIAL(error) << "download relogin image failed";
+            }
+        });
+        if (!usr_pic.empty()) {
+            m_pic_data.clear();
+            MultiComUtils::asyncCall(this, [=]() { 
+                return MultiComUtils::downloadFile(usr_pic, m_pic_data, 15000); }); 
+        } else {
+            wxImage     tmpimage;
+            std::string name = "login_default_usr_pic";
+            if (tmpimage.LoadFile(Slic3r::GUI::from_u8(Slic3r::var(name + ".png")), wxBITMAP_TYPE_PNG)) {
+                wxGetApp().setUsrPic(tmpimage);
+                tmpimage.Rescale(FromDIP(80), FromDIP(80));
+                m_user_panel->SetImage(tmpimage);
+                Layout();
+            }
+        }
+          
+    }        
+     #endif
+    #endif
+
+    Bind(wxEVT_CLOSE_WINDOW, &ReLoginDialog::onCloseWnd, this);
+    #if 0
     Bind(wxEVT_WEBREQUEST_STATE, [this](wxWebRequestEvent &evt) {
         switch (evt.GetState()) {
         case wxWebRequest::State_Completed: {
@@ -127,7 +177,8 @@ ReLoginDialog::ReLoginDialog() : TitleDialog(static_cast<wxWindow *>(wxGetApp().
         }
         }
     });
-    m_user_panel = new RoundImage(this, wxSize(FromDIP(80), FromDIP(80)));
+    #endif
+    
 
     m_sizer_main->Add(m_user_panel, 0, wxALIGN_CENTER, 0);
     m_sizer_main->AddSpacer(FromDIP(6));
@@ -265,9 +316,9 @@ void ReLoginDialog::onCloseWnd(wxCloseEvent &event)
 
 void ReLoginDialog::onDestroy() 
 {
-    if (m_web_request.IsOk()) {
-        m_web_request.Cancel();
-    }
+    //if (m_web_request.IsOk()) {
+    //    m_web_request.Cancel();
+    //}
 }
 
 }

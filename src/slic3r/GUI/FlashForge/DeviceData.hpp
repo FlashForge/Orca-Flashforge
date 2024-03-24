@@ -212,7 +212,7 @@ private:
     // before connect, scan machine's access code which hasn't written in config file
     void get_my_machine_list_v2(map<string, DeviceObject *> &devList, bool my_machine = false);
     
-    void sendDeviceListUpdateEvent(const std::string& dev_id, int conn_id);
+    void sendDeviceListUpdateEvent(const std::string& dev_id, int conn_id, bool wan_offline = false);
 
     void removeUserDev(DeviceObject *obj);
 
