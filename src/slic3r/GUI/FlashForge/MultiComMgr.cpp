@@ -170,8 +170,10 @@ ComErrno MultiComMgr::unbindWanDev(const std::string &serialNumber, const std::s
         m_wanAsyncConn->postSyncUnbindDev(m_uid, devId);
         for (auto &comPtr : m_comPtrs) {
             if (comPtr->deviceId() == devId) {
-                const char *name = m_datMap.at(comPtr->id()).devDetail->name;
-                BOOST_LOG_TRIVIAL(info) << name << ", " << serialNumber << ", unbind_disconnect";
+                if (m_readyIdSet.find(comPtr->id()) != m_readyIdSet.end()) {
+                    const char *name = m_datMap.at(comPtr->id()).devDetail->name;
+                    BOOST_LOG_TRIVIAL(info) << name << ", " << serialNumber << ", unbind_disconnect";
+                }
                 comPtr->disconnect(0);
                 break;
             }
