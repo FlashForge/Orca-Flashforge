@@ -23,7 +23,7 @@ class MultiComMgr : public wxEvtHandler, public Singleton<MultiComMgr>
 public:
     MultiComMgr();
 
-    bool initalize(const std::string &newtworkDllPath, const std::string &logFileDir);
+    bool initalize(const std::string &dllPath, const std::string &logFileDir);
 
     void uninitalize();
 
