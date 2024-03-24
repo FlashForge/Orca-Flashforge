@@ -61,6 +61,24 @@ typedef enum fnet_conn_read_data_type {
     FNET_CONN_READ_DEVICE_OFFLINE,      // data, nullptr
 } fnet_conn_read_data_type_t;
 
+typedef struct fnet_server_settings {
+    const char *userComUrl;
+    const char *devComUrl;
+    const char *devConnHost;
+    const char *devConnPort;
+    const char *devConnTarget;
+    const char *userClientId;
+    const char *userClientSecret;
+    const char *slicerClientId;
+    const char *slicerClientSecret;
+} fnet_server_settings_t;
+
+typedef struct fnet_log_settings {
+    const char *fileDir;
+    int expireHours;
+    fnet_log_level_t level;
+} fnet_log_settings_t;
+
 typedef struct fnet_send_gcode_data {
     const char *gcodeFilePath;          // utf-8
     const char *thumbFilePath;          // utf-8, wan only
@@ -263,7 +281,8 @@ typedef struct fnet_conn_read_data {
 extern "C" {
 #endif
 
-FNET_API int fnet_initlize(const char *logFileDir, int expireHours, fnet_log_level_t logLevel);
+FNET_API int fnet_initlize(const fnet_server_settings_t &serverSettings,
+    const fnet_log_settings_t &logSettings);
 
 FNET_API void fnet_uninitlize();
 

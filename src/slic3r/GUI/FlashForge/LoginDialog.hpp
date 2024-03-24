@@ -110,8 +110,10 @@ private:
     wxPanel* m_page_body_page1_panel {nullptr};
     wxPanel* m_page_body_page2_panel {nullptr};
 
-    wxStaticText* m_error_label {nullptr};
+    //wxStaticText* m_error_label {nullptr};
     wxPanel* m_error_label_panel {nullptr};
+    //Label        *m_error_label{nullptr};
+    FFButton *m_error_label{nullptr};
 
     FFButton* m_login_button_page1 {nullptr};
     CountdownButton* m_get_code_button {nullptr};
@@ -119,9 +121,13 @@ private:
     wxStaticText* m_service_link_page1 {nullptr};
     wxStaticText* m_privacy_policy_page1 {nullptr};
     wxPanel* m_panel_checkbox_page1 {nullptr};
+    wxPanel *m_panel_separotor_login{nullptr};
 
-    wxStaticText* m_error_label_page2 {nullptr};
+    //wxStaticText* m_error_label_page2 {nullptr};
     wxPanel* m_error_label_page2_panel {nullptr};
+    FFButton     *m_error_label_page2{nullptr};
+    wxPanel  *m_panel_separotor_login2{nullptr};
+
     FFButton* m_login_button_page2 {nullptr};
     wxPanel* m_panel_checkbox_page2 {nullptr};
 

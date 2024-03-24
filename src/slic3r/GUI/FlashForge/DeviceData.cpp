@@ -465,7 +465,8 @@ bool DeviceObjectOpr::my_machine_empty()
 
 bool DeviceObjectOpr::set_selected_machine(const string &dev_id, bool my_machine /*= false*/)
 {
-    BOOST_LOG_TRIVIAL(info) << "set_selected_machine=" << dev_id;
+    BOOST_LOG_TRIVIAL(info) << "set_selected_machine begin" << dev_id;
+    flush_logs();
     map<string, DeviceObject *> my_machine_list;
     get_my_machine_list_v2(my_machine_list, my_machine);
     auto it = my_machine_list.find(dev_id);
@@ -488,6 +489,8 @@ bool DeviceObjectOpr::set_selected_machine(const string &dev_id, bool my_machine
 
         m_selected_machine = dev_id;
     }
+    BOOST_LOG_TRIVIAL(info) << "set_selected_machine end";
+    flush_logs();
     return true;
 }
 

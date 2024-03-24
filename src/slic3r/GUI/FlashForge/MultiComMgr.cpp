@@ -15,13 +15,28 @@ MultiComMgr::MultiComMgr()
     m_datMap.emplace(ComInvalidId, devData);
 }
 
-bool MultiComMgr::initalize(const std::string &newtworkDllPath, const std::string &logFileDir)
+bool MultiComMgr::initalize(const std::string &dllPath, const std::string &logFileDir)
 {
     if (networkIntfc() != nullptr) {
         return false;
     }
-    m_networkIntfc.reset(new fnet::FlashNetworkIntfc(
-        newtworkDllPath.c_str(), logFileDir.c_str(), 72, FNET_LOG_LEVEL_DEBUG));
+    fnet_server_settings_t serverSettings;
+    serverSettings.userComUrl = "http://dev.api.auth.flashforge.shop";
+    serverSettings.devComUrl = "https://api.cloud.flashforge.com/api/v1/external/truck";
+    serverSettings.devConnHost = "ws.cloud.flashforge.com";
+    serverSettings.devConnPort = "80";
+    serverSettings.devConnTarget = "/ws/comet";
+    serverSettings.userClientId = "9b12c8d1-fa11-44be-aaf9-7a1b9b39651a";
+    serverSettings.userClientSecret = "BOCgcvBzkmrBVy4B5ZfnFBz9Jt5oU0U6R76UkQx3";
+    serverSettings.slicerClientId = "9b1c3bb9-dcb2-42d6-8d0a-bdf72100af96";
+    serverSettings.slicerClientSecret = "bUNbZqZdZsULNGh2C2VkW39AGVPwHRFwkeRukC9x";
+    
+    fnet_log_settings_t logSettings;
+    logSettings.fileDir = logFileDir.c_str();
+    logSettings.expireHours = 72;
+    logSettings.level = FNET_LOG_LEVEL_DEBUG;
+
+    m_networkIntfc.reset(new fnet::FlashNetworkIntfc(dllPath.c_str(), serverSettings, logSettings));
     if (!m_networkIntfc->isOk()) {
         m_networkIntfc.reset(nullptr);
         return false;
@@ -155,8 +170,10 @@ ComErrno MultiComMgr::unbindWanDev(const std::string &serialNumber, const std::s
         m_wanAsyncConn->postSyncUnbindDev(m_uid, devId);
         for (auto &comPtr : m_comPtrs) {
             if (comPtr->deviceId() == devId) {
-                const char *name = m_datMap.at(comPtr->id()).devDetail->name;
-                BOOST_LOG_TRIVIAL(info) << name << ", " << serialNumber << ", unbind_disconnect";
+                if (m_readyIdSet.find(comPtr->id()) != m_readyIdSet.end()) {
+                    const char *name = m_datMap.at(comPtr->id()).devDetail->name;
+                    BOOST_LOG_TRIVIAL(info) << name << ", " << serialNumber << ", unbind_disconnect";
+                }
                 comPtr->disconnect(0);
                 break;
             }
@@ -252,6 +269,10 @@ void MultiComMgr::onGetWanDev(const GetWanDevEvent &event)
     }
     std::map<std::string, fnet_wan_dev_info_t *> devInfoMap;
     for (int i = 0; i < event.devCnt; ++i) {
+        const char *devId = event.devInfos[i].devId;
+        if (devInfoMap.find(devId) != devInfoMap.end()) {
+            BOOST_LOG_TRIVIAL(fatal) << devId << ", duplicated_devId";
+        }
         devInfoMap.emplace(event.devInfos[i].devId, &event.devInfos[i]);
     }
     for (auto &comPtr : m_comPtrs) {
