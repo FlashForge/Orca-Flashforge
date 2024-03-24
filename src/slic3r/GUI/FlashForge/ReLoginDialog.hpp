@@ -30,7 +30,7 @@ class RoundImage : public wxPanel
 public:
     RoundImage(wxWindow *parent, const wxSize &size = wxDefaultSize);
 
-    void SetImage(const wxImage &image);
+    void SetImage(const wxImage image);
 
 private:
     void OnPaint(wxPaintEvent &event);
