@@ -1790,11 +1790,13 @@ void SendToPrinterDialog::on_multi_send_completed(wxCommandEvent& event)
         if (failList.empty()) {
             m_send_error = false;
             if (m_msg_window) {
-                m_need_redirect = true;
+                m_msg_window->EndModal(0);
+                //m_need_redirect = true;
             } else {
-                redirect_window();
+                //redirect_window();
                 //wxGetApp().mainframe->select_tab(size_t(MainFrame::tpMonitor));
             }
+            redirect_window();
         } else {
             m_sendBook->SetSelection(0);
         }

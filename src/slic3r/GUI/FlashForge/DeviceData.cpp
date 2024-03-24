@@ -752,13 +752,14 @@ string DeviceObjectOpr::find_dev_from_id(id_connect_mode &mode, int connectId)
     return "";
 }
 
-void DeviceObjectOpr::sendDeviceListUpdateEvent(const std::string& dev_id, int conn_id)
+void DeviceObjectOpr::sendDeviceListUpdateEvent(const std::string& dev_id, int conn_id, bool wan_offline/*=false*/)
 {
     DeviceListUpdateEvent event(EVT_DEVICE_LIST_UPDATED);
     event.SetDeviceId(dev_id);
     bool update_flag = false;
     if (conn_id < 0) {
         conn_id = -1;
+        bool local_flag = false;
         auto localIt = m_local_devices.find(dev_id);
         if (localIt != m_local_devices.end()) {
             update_flag = true;
@@ -766,13 +767,16 @@ void DeviceObjectOpr::sendDeviceListUpdateEvent(const std::string& dev_id, int c
             if (connIt != m_lan_dev_connect_map.end()) {
                 conn_id = connIt->second.id;
             }
+            local_flag = true;
         }
-        auto userIt = m_user_devices.find(dev_id);
-        if (userIt != m_user_devices.end()) {
-            update_flag = true;
-            auto connIt = m_wan_dev_connect_map.find(dev_id);
-            if (connIt != m_wan_dev_connect_map.end()) {
-                conn_id = connIt->second.id;
+        if (!local_flag || !wan_offline) {
+            auto userIt = m_user_devices.find(dev_id);
+            if (userIt != m_user_devices.end()) {
+                update_flag = true;
+                auto connIt = m_wan_dev_connect_map.find(dev_id);
+                if (connIt != m_wan_dev_connect_map.end()) {
+                    conn_id = connIt->second.id;
+                }
             }
         }
         event.SetConnectionId(conn_id);
@@ -1017,6 +1021,7 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
             BOOST_LOG_TRIVIAL(info) << "Add new lan dev: " << data.lanDevInfo.name;
             flush_logs();
         } else {
+            sendDeviceListUpdateEvent(serialNum, connectId);
             userObj = it->second;
         }
         userObj->set_online_state(true);
@@ -1053,7 +1058,7 @@ void DeviceObjectOpr::onConnectWanDevInfoUpdate(ComWanDevInfoUpdateEvent &event)
                 update = true;
             }
             if (update) {
-                sendDeviceListUpdateEvent(data.wanDevInfo.serialNumber, -1);
+                sendDeviceListUpdateEvent(data.wanDevInfo.serialNumber, -1, true);
             }
         }
     }
