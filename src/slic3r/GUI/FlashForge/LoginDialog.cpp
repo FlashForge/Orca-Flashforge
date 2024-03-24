@@ -809,6 +809,7 @@ void LoginDialog::onAgreeCheckBoxChangedPage1(wxCommandEvent& event)
         wxString verifycode = m_verifycode_ctrl_page1->GetValue();
         bool agree = m_page1_checkBox->GetValue();
         m_page1_checkBox->SetValue(agree);
+        m_get_code_button->SetMinSize(wxSize(FromDIP(89), FromDIP(40)));
         if (!username.IsEmpty() && !verifycode.IsEmpty() && agree)
         {
             m_login_button_page1->Enable();
@@ -857,6 +858,7 @@ void LoginDialog::onAgreeCheckBoxChangedPage2(wxCommandEvent& event)
 
 void LoginDialog::onPage1Login(wxMouseEvent& event)
 {
+    m_get_code_button->SetMinSize(wxSize(FromDIP(89), FromDIP(40)));
     wxString usrname = m_username_ctrl_page1->GetValue();
     wxString verify_code = m_verifycode_ctrl_page1->GetValue();
     com_token_data_t token_data;
