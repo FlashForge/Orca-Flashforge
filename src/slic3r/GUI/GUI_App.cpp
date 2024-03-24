@@ -4368,6 +4368,12 @@ void GUI_App::downloadUrlPic(const std::string &url)
         MultiComUtils::asyncCall(this, [=]() {
             return MultiComUtils::downloadFile(url, m_usr_pic_data, 15000);
         });
+    } else {
+        wxImage image;
+        std::string name = "login_default_usr_pic";
+        if (image.LoadFile(Slic3r::GUI::from_u8(Slic3r::var(name + ".png")), wxBITMAP_TYPE_PNG)) {
+            m_usr_pic_image = image;
+        }
     }
 }
 
