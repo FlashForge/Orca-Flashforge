@@ -105,7 +105,7 @@ private:
     wxStaticText*  m_result_text;
     FFButton*      m_result_btn;
 
-    wxWebRequest   m_web_request;
+    //wxWebRequest   m_web_request;
     int            m_result_code;
     bool           m_unbind_flag;
 
@@ -113,6 +113,7 @@ private:
     //DeviceObject                     *m_device_info {nullptr};
     BindInfo                *m_bind_info{nullptr};
     std::shared_ptr<BindJob>          m_bind_job;
+    std::vector<char>        m_pic_data;
 
 public:
     BindMachineDialog();
@@ -149,13 +150,14 @@ private:
     FFButton*      m_unbind_btn;
     FFButton*      m_cancel_btn;
 
-    wxWebRequest   m_web_request;
+    //wxWebRequest   m_web_request;
     int            m_result_code;
 
     MachineObject *                   m_machine_info{nullptr};
     //DeviceObject                     *m_device_info {nullptr};
     BindInfo                  *m_unbind_info{nullptr};
     std::shared_ptr<UnbindJob>        m_unbind_job;
+    std::vector<char>          m_pic_data;
 
 public:
     UnBindMachineDialog();

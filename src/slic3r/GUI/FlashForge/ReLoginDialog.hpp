@@ -67,7 +67,7 @@ private:
     wxBitmap m_usr_pic;
     //Label* m_usr_name{nullptr};
     wxStaticText *m_usr_name{nullptr};
-    wxWebRequest m_web_request;
+    //wxWebRequest m_web_request;
     RoundImage  *m_user_panel;
 
     wxStaticBitmap*  m_usr_pic_staticbitmap;
@@ -76,6 +76,7 @@ private:
     wxButton* m_login_out_button {nullptr};
 
     wxWebView * m_user_pic_view {nullptr};
+    std::vector<char> m_pic_data;
 
 };
 } // namespace GUI

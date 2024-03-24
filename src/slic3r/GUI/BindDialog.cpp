@@ -328,7 +328,7 @@ BindMachineDialog::BindMachineDialog()
     Layout();
     Fit();
     Centre(wxBOTH);
-
+    #if 0
     Bind(wxEVT_WEBREQUEST_STATE, [this](wxWebRequestEvent& evt) {
          switch (evt.GetState()) {
          case wxWebRequest::State_Completed: {
@@ -350,7 +350,7 @@ BindMachineDialog::BindMachineDialog()
          }
          }
          });
-
+    #endif
     Bind(wxEVT_SHOW, &BindMachineDialog::on_show, this);
     Bind(wxEVT_CLOSE_WINDOW, &BindMachineDialog::on_close, this);
     m_bind_btn->Bind(wxEVT_BUTTON, &BindMachineDialog::on_bind_printer, this);
@@ -383,9 +383,9 @@ void BindMachineDialog::on_destroy()
         m_bind_job->cancel();
         m_bind_job->join();
     }
-    if (m_web_request.IsOk()) {
-        m_web_request.Cancel();
-    }
+    //if (m_web_request.IsOk()) {
+    //    m_web_request.Cancel();
+    //}
 }
 
 void BindMachineDialog::on_result_ok(wxCommandEvent& event)
@@ -531,6 +531,50 @@ void BindMachineDialog::on_show(wxShowEvent &event)
                     m_web_request.Start();
                 }
             }
+            #else
+            #if 1
+            wxImage image = wxGetApp().getUsrPic();
+            if (image.IsOk()) {
+                image.Rescale(FromDIP(80), FromDIP(80));
+                m_user_panel->SetImage(image);
+                Layout();
+            } else {
+                Bind(COM_ASYNC_CALL_FINISH_EVENT, [&](ComAsyncCallFinishEvent &event) {
+                    // event.Skip();
+                    if (event.ret == COM_OK) {
+                        if (!m_pic_data.empty()) {
+                            // translate pic data from vector to wxImage object
+                            wxMemoryInputStream stream(m_pic_data.data(), m_pic_data.size());
+                            wxImage             image(stream, wxBITMAP_TYPE_ANY);
+                            if (!image.IsOk()) {
+                                BOOST_LOG_TRIVIAL(error) << "download unbind image is not ok";
+                                return;
+                            }
+                            wxGetApp().setUsrPic(image);
+                            image.Rescale(FromDIP(80), FromDIP(80));
+                            m_user_panel->SetImage(image);
+                            Layout();
+                        }
+                    } else {
+                        BOOST_LOG_TRIVIAL(error) << "download unbind image failed";
+                    }
+                });
+                if (!user_info.headImgUrl.empty()) {
+                    m_pic_data.clear();
+                    MultiComUtils::asyncCall(this, [=]() { 
+                        return MultiComUtils::downloadFile(user_info.headImgUrl, m_pic_data, 15000); });
+                } else {
+                    wxImage     tmpimage;
+                    std::string name = "login_default_usr_pic";
+                    if (tmpimage.LoadFile(Slic3r::GUI::from_u8(Slic3r::var(name + ".png")), wxBITMAP_TYPE_PNG)) {
+                        wxGetApp().setUsrPic(tmpimage);
+                        tmpimage.Rescale(FromDIP(80), FromDIP(80));
+                        m_user_panel->SetImage(tmpimage);
+                        Layout();
+                    }
+                }
+            }
+            #endif
             #endif
             m_user_sizer->Layout();
         }
@@ -640,6 +684,7 @@ UnBindMachineDialog::UnBindMachineDialog()
     Fit();
     Centre(wxBOTH);
 
+    #if 0
     Bind(wxEVT_WEBREQUEST_STATE, [this](wxWebRequestEvent& evt) {
          switch (evt.GetState()) {
          case wxWebRequest::State_Completed: {
@@ -661,7 +706,7 @@ UnBindMachineDialog::UnBindMachineDialog()
          }
          }
          });
-
+    #endif
     Bind(wxEVT_SHOW, &UnBindMachineDialog::on_show, this);
     Bind(wxEVT_CLOSE_WINDOW, &UnBindMachineDialog::on_close, this);
     m_unbind_btn->Bind(wxEVT_BUTTON, &UnBindMachineDialog::on_unbind_printer, this);
@@ -692,9 +737,9 @@ void UnBindMachineDialog::on_destroy()
         m_unbind_job->cancel();
         m_unbind_job->join();
     }
-    if (m_web_request.IsOk()) {
-        m_web_request.Cancel();
-    }
+    //if (m_web_request.IsOk()) {
+    //    m_web_request.Cancel();
+    //}
 }
 
 void UnBindMachineDialog::on_result_ok(wxCommandEvent& event)
@@ -818,6 +863,50 @@ void UnBindMachineDialog::on_show(wxShowEvent &event)
                     m_web_request.Start();
                 }
             }
+            #else
+            #if 1
+            wxImage image = wxGetApp().getUsrPic();
+            if (image.IsOk()) {
+                image.Rescale(FromDIP(80), FromDIP(80));
+                m_user_panel->SetImage(image);
+                Layout();
+            } else {
+                Bind(COM_ASYNC_CALL_FINISH_EVENT, [&](ComAsyncCallFinishEvent &event) {
+                    // event.Skip();
+                    if (event.ret == COM_OK) {
+                        if (!m_pic_data.empty()) {
+                            // translate pic data from vector to wxImage object
+                            wxMemoryInputStream stream(m_pic_data.data(), m_pic_data.size());
+                            wxImage             image(stream, wxBITMAP_TYPE_ANY);                            
+                            if (!image.IsOk()) {
+                                BOOST_LOG_TRIVIAL(error) << "download unbind image is not ok";
+                                return;
+                            }
+                            wxGetApp().setUsrPic(image);
+                            image.Rescale(FromDIP(80), FromDIP(80));
+                            m_user_panel->SetImage(image);
+                            Layout();
+                        }
+                    } else {
+                        BOOST_LOG_TRIVIAL(error) << "download unbind image failed";
+                    }
+                });
+                if (!user_info.headImgUrl.empty()) {
+                    m_pic_data.clear();
+                    MultiComUtils::asyncCall(this, [=]() { 
+                        return MultiComUtils::downloadFile(user_info.headImgUrl, m_pic_data, 15000); });
+                } else {
+                    wxImage     tmpimage;
+                    std::string name = "login_default_usr_pic";
+                    if (tmpimage.LoadFile(Slic3r::GUI::from_u8(Slic3r::var(name + ".png")), wxBITMAP_TYPE_PNG)) {
+                        wxGetApp().setUsrPic(tmpimage);
+                        tmpimage.Rescale(FromDIP(80), FromDIP(80));
+                        m_user_panel->SetImage(tmpimage);
+                        Layout();
+                    }
+                }
+            }
+            #endif
             #endif
             m_user_sizer->Layout();
         }
