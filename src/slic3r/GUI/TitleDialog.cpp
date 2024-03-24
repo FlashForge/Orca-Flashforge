@@ -221,7 +221,7 @@ void TitleDialog::OnSize(wxSizeEvent& event)
 
 #else
 TitleDialog::TitleDialog(wxWindow* parent, const wxString& title, int borderRadius/*=6*/, const wxSize &size/*=wxDefaultSize*/)
-    : DPIDialog(parent, wxID_ANY, title, wxDefaultPosition, size, wxCAPTION | wxCLOST_BOX)
+    : DPIDialog(parent, wxID_ANY, title, wxDefaultPosition, size, wxCAPTION | wxCLOSE_BOX)
     , m_mainSizer(new wxBoxSizer(wxVERTICAL))
 {
     SetBackgroundColour(*wxWHITE);
