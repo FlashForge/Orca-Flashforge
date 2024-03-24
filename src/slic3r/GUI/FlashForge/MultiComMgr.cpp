@@ -252,6 +252,10 @@ void MultiComMgr::onGetWanDev(const GetWanDevEvent &event)
     }
     std::map<std::string, fnet_wan_dev_info_t *> devInfoMap;
     for (int i = 0; i < event.devCnt; ++i) {
+        const char *devId = event.devInfos[i].devId;
+        if (devInfoMap.find(devId) != devInfoMap.end()) {
+            BOOST_LOG_TRIVIAL(fatal) << devId << ", duplicated_devId";
+        }
         devInfoMap.emplace(event.devInfos[i].devId, &event.devInfos[i]);
     }
     for (auto &comPtr : m_comPtrs) {
