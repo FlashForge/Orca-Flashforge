@@ -483,21 +483,29 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
 //****error tips ***
     m_error_label_panel = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(200), FromDIP(50)), wxBORDER_NONE);
     m_error_label_panel->SetBackgroundColour(wxColour(250, 207, 202));
-    m_error_label_panel->SetMinSize(wxSize(FromDIP(200),FromDIP(50)));
+    m_error_label_panel->SetMinSize(wxSize(FromDIP(0),FromDIP(0)));
 
-    m_error_label = new wxStaticText(m_error_label_panel,wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize);
-    m_error_label->SetLabel(_L("Verify code is incorrect"));
-    m_error_label->SetFont((wxFont(wxFontInfo(16))));
+    m_error_label = new Label(m_error_label_panel, _L("Verify code is incorrect"));
     m_error_label->SetBackgroundColour(wxColour(250, 207, 202));
     m_error_label->SetForegroundColour(wxColour(234, 53, 34));
-    m_error_label->SetWindowStyle(wxALIGN_CENTER_VERTICAL | wxALIGN_CENTER_HORIZONTAL);
-    m_error_label->SetMinSize(wxSize(348,55));
+    m_error_label->SetMinSize(wxSize(FromDIP(190), FromDIP(45)));
 
     wxBoxSizer *error_label_sizer = new wxBoxSizer(wxHORIZONTAL);
-    error_label_sizer->Add(m_error_label, 0, wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
+    error_label_sizer->AddStretchSpacer();
+    error_label_sizer->Add(m_error_label, 0, wxEXPAND | wxALL);
+    error_label_sizer->AddStretchSpacer();
     m_error_label_panel->SetSizer(error_label_sizer);
     error_label_sizer->Fit(m_error_label_panel);
     m_error_label_panel->Show(false);
+
+    page1Sizer->Add(m_error_label_panel, 0, wxALL |wxCENTER);
+
+    // 添加空白间距
+    m_panel_separotor_login = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+    m_panel_separotor_login->SetBackgroundColour(wxColour(255, 255, 255));
+    m_panel_separotor_login->SetMinSize(wxSize(-1, FromDIP(45)));
+
+    page1Sizer->Add(m_panel_separotor_login);
 
     //login button
     m_login_button_page1 = new FFButton(parent, wxID_ANY,_L("Login"));
@@ -521,7 +529,7 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     m_login_button_page1->Disable();
     m_login_button_page1->SetMinSize(wxSize(FromDIP(77),FromDIP(33)));
 
-    page1Sizer->Add(m_login_button_page1, 0, wxALIGN_CENTER_HORIZONTAL| wxUP, FromDIP(36));
+    page1Sizer->Add(m_login_button_page1, 0, wxALIGN_CENTER_HORIZONTAL);
     page1Sizer->AddSpacer(FromDIP(18));
 
     //check box
@@ -917,20 +925,12 @@ void LoginDialog::page1ShowErrorLabel(const wxString& labelInfo)
     m_timer.Bind(wxEVT_TIMER, &LoginDialog::OnTimer, this);
     m_error_label->SetLabel(labelInfo);
 
-    wxPoint pt;
-    //获取登录按钮中心位置x坐标，然后减去错误码一半长度，即为x坐标
-    wxPoint loginX = m_login_button_page1->GetPosition();
-    int login_size_x = m_login_button_page1->GetSize().x;
-    int error_label_width = m_error_label_panel->GetSize().x;
-    pt.x = m_login_button_page1->GetPosition().x + m_login_button_page1->GetSize().x / 2 - m_error_label_panel->GetSize().x / 2;
-    pt.y  = m_verifycode_ctrl_page1->GetPosition().y + m_verifycode_ctrl_page1->GetSize().y + FromDIP(10);   
-    m_error_label_panel->SetPosition(pt);
-    m_error_label_panel->SetMinSize(wxSize(FromDIP(200),FromDIP(50)));
-    m_error_label_panel->Show(true);
-    m_error_label_panel->Layout();
+    m_panel_separotor_login->Hide();
     m_error_label_panel->Refresh();
     m_error_label->Show(true);
-    m_error_label->Refresh();
+    m_error_label_panel->SetMinSize(wxSize(FromDIP(190),FromDIP(45)));
+    m_error_label_panel->Show(true);
+    Layout();
     startTimer();
 }
 
@@ -1042,6 +1042,12 @@ void LoginDialog::page2ShowErrorLabel(const wxString& labelInfo)
 void LoginDialog::OnTimer(wxTimerEvent& event)
 {
     event.Skip();
+    if (m_panel_separotor_login) {
+        if (!m_panel_separotor_login->IsShown()) {
+            m_panel_separotor_login->Show();
+        }
+    }
+
     if (m_error_label_panel) {
         if (m_error_label_panel->IsShown()) {
             m_error_label_panel->Show(false);
