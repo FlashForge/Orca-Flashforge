@@ -119,6 +119,7 @@ public:
     void reInitUI();
     void setDevProductAuthority(const fnet_dev_product_t &data);
     void reInitProductState();
+    std::string getCurDevSerialNumber();
 
     wxBoxSizer *create_monitoring_page();
     wxBoxSizer* create_machine_control_title();
@@ -264,6 +265,7 @@ protected:
 
     double m_right_target_temp;
     double m_plat_target_temp;
+    std::string m_cur_serial_number;
 };
 
 

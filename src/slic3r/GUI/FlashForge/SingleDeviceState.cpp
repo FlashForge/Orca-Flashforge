@@ -579,6 +579,11 @@ void SingleDeviceState::setCurId(int curId)
         setPageOffline();
         return;
     }
+    if (data.connectMode == 0) {
+        m_cur_serial_number = data.lanDevInfo.serialNumber;
+    } else if (data.connectMode == 1) {
+        m_cur_serial_number = data.wanDevInfo.serialNumber;
+    }
     onDevStateChanged(data.devDetail->status, data);
     fillValue(data);
     Layout();
@@ -668,7 +673,7 @@ void SingleDeviceState::setDevProductAuthority(const fnet_dev_product_t &data)
    }
 }
 
-void SingleDeviceState::reInitProductState() 
+void SingleDeviceState::reInitProductState()
 { 
     m_lamp_control_button->SetIcon("device_lamp_control");
     m_filter_button->SetIcon("device_filter");
@@ -676,6 +681,11 @@ void SingleDeviceState::reInitProductState()
     m_filter_button->SetBorderColor(wxColour(255, 255, 255));
     m_lamp_control_button->Enable(true); 
     m_filter_button->Enable(true);
+}
+
+std::string SingleDeviceState::getCurDevSerialNumber() 
+{
+    return m_cur_serial_number;
 }
 
 wxBoxSizer* SingleDeviceState::create_monitoring_page()
