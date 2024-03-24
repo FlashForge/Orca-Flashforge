@@ -112,7 +112,8 @@ private:
 
     //wxStaticText* m_error_label {nullptr};
     wxPanel* m_error_label_panel {nullptr};
-    Label        *m_error_label{nullptr};
+    //Label        *m_error_label{nullptr};
+    FFButton *m_error_label{nullptr};
 
     FFButton* m_login_button_page1 {nullptr};
     CountdownButton* m_get_code_button {nullptr};
@@ -122,8 +123,11 @@ private:
     wxPanel* m_panel_checkbox_page1 {nullptr};
     wxPanel *m_panel_separotor_login{nullptr};
 
-    wxStaticText* m_error_label_page2 {nullptr};
+    //wxStaticText* m_error_label_page2 {nullptr};
     wxPanel* m_error_label_page2_panel {nullptr};
+    FFButton     *m_error_label_page2{nullptr};
+    wxPanel  *m_panel_separotor_login2{nullptr};
+
     FFButton* m_login_button_page2 {nullptr};
     wxPanel* m_panel_checkbox_page2 {nullptr};
 

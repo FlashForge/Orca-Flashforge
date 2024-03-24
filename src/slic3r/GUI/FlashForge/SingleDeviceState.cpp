@@ -550,7 +550,12 @@ void SingleDeviceState::setCurId(int curId)
     m_idle_tempMixDevice->reInitProductState();
 
     //query device data by id
-    const com_dev_data_t &data = MultiComMgr::inst()->devData(m_cur_id);
+    bool  valid = false;
+    const com_dev_data_t &data  = MultiComMgr::inst()->devData(m_cur_id, &valid);
+    if (!valid) {
+        setPageOffline();
+        return;
+    }
     onDevStateChanged(data.devDetail->status, data);
     fillValue(data);
     Layout();
