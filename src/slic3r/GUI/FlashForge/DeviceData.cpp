@@ -857,6 +857,7 @@ void DeviceObjectOpr::onConnectExit(ComConnectionExitEvent &event)
                         }
                     } else if (event.ret == COM_ERROR) {
                         devObj->set_connected_ready(false); // connect finished, and failed.
+                        wxGetApp().mainframe->jump_to_monitor_exit(devObj->get_dev_id());
                     } else {
                         // do nothing, this device still belongs to other device. (Including exit successfully)
                     }

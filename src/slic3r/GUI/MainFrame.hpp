@@ -306,6 +306,7 @@ public:
     //BBS: jump to monitor
     void        jump_to_monitor(const std::string &dev_id = "");
     void        jump_to_monitor(int type, com_id_t conn_id = 0);
+    void        jump_to_monitor_exit(const std::string &dev_id = "");
     //BBS: hint when jump to 3Deditor under preview only mode
     bool        preview_only_hint();
     // Select tab in m_tabpanel
