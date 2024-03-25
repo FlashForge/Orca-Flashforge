@@ -968,6 +968,9 @@ void DeviceListPanel::connectEvent()
     wxGetApp().getDeviceObjectOpr()->Bind(EVT_DEVICE_LIST_UPDATED, &DeviceListPanel::onDeviceListUpdated, this);
     m_filter_popup->Bind(wxEVT_SHOW, &DeviceListPanel::onPopupShow, this);
     m_refresh_timer.Bind(wxEVT_TIMER, &DeviceListPanel::onRefreshTimeout, this);
+    Bind(wxEVT_PAINT, [=](auto& e) {
+        e.Skip();
+        });
 }
 
 void DeviceListPanel::initLocalDevice(std::map<std::string, DeviceInfoItemPanel::DeviceInfo>& deviceInfoMap)
@@ -1612,12 +1615,12 @@ void DeviceListPanel::updateDeviceList()
             if (info_iter == m_device_map.end()) {
                 DeviceInfoItemPanel* info_item = new DeviceInfoItemPanel(m_device_panel, dev_info, this);
                 m_device_map.emplace(std::make_pair(it, info_item));
-                refresh_flag = true;
             } else {
                 auto _dev_info = info_iter->second->deviceInfo();
                 copyDeviceInfo(_dev_info, dev_info);
                 info_iter->second->updateInfo(_dev_info);
             }
+            refresh_flag = true;
         }
     }
     //std::sort(m_device_map.begin(), m_device_map.end(), deviceKeySortFunc);
