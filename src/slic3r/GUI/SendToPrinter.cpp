@@ -1725,7 +1725,7 @@ void SendToPrinterDialog::on_multi_send_completed(wxCommandEvent& event)
             m_progressInfoLbl->SetLabel(_L("Send completed, automatically redirected to device status"));
             m_progressInfoLbl->SetForegroundColour(wxColour("#333333"));
             m_send_error = false;
-            m_sendBook->SetSelection(0);
+            //m_sendBook->SetSelection(0);
             m_redirect_timer->StartOnce(3000);
         } else {
             if (iter->second == Result_Fail_Busy) {
