@@ -162,6 +162,15 @@ wxString FFUtils::trimString(wxDC &dc, wxString &str, int width)
     return clipText;
 }
 
+std::string FFUtils::flashforgeWebsite()
+{
+    std::string code = Slic3r::GUI::wxGetApp().app_config->get("language");
+    if (code == "zh_CN") {
+        return "https://www.sz3dp.com";
+    }
+    return "https://www.flashforge.com";
+}
+
 wxString FFUtils::privacyPolicy()
 {
     std::string code = Slic3r::GUI::wxGetApp().app_config->get("language");

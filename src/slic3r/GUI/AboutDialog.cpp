@@ -1,4 +1,5 @@
 #include "AboutDialog.hpp"
+#include <wx/clipbrd.h>
 #include "I18N.hpp"
 
 #include "libslic3r/Utils.hpp"
@@ -7,8 +8,7 @@
 #include "MainFrame.hpp"
 #include "format.hpp"
 #include "Widgets/Button.hpp"
-
-#include <wx/clipbrd.h>
+#include "FFUtils.hpp"
 
 namespace Slic3r {
 namespace GUI {
@@ -338,9 +338,9 @@ AboutDialog::AboutDialog()
               (boost::format(
               "<html>"
               "<body>"
-              "<p style=\"text-align:left\"><a  href=\"https://github.com/FlashForge/Orca-Flashforge\">https://github.com/FlashForge/Orca-Flashforge</ a></p>"
+              "<p style=\"text-align:left\"><a  href=\"%1%\">%1%</ a></p>"
               "</body>"
-              "</html>")
+              "</html>") % FFUtils::flashforgeWebsite()
             ).str());
           m_html->SetPage(text);
           copyright_ver_sizer->Add(m_html, 0, wxEXPAND, 0);

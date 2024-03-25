@@ -25,6 +25,7 @@ public:
 
 	static wxString trimString(wxDC &dc, wxString &str, int width);
 
+	static std::string flashforgeWebsite();
 	static wxString privacyPolicy();
 	static wxString userAgreement();
 	static wxString userRegister();
