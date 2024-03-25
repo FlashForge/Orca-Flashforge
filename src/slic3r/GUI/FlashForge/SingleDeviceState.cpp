@@ -800,17 +800,27 @@ wxBoxSizer* SingleDeviceState::create_machine_control_title()
         m_panel_top_right_info->SetBackgroundColour(wxColour(240,240,240));
 
         //显示报错信息
-        m_staticText_device_info = new Label(m_panel_top_right_info, ("error Info"), wxALIGN_CENTER);
-        m_staticText_device_info->Wrap(-1);
-        //m_staticText_device_info->SetFont(wxFont(wxFontInfo(16)));
-        m_staticText_device_info->SetBackgroundColour(wxColour(246,203,198));
-        m_staticText_device_info->SetForegroundColour(wxColour(251, 71, 71));
+        //m_staticText_device_info = new Label(m_panel_top_right_info, ("error Info"), wxALIGN_CENTER);
+        //m_staticText_device_info->Wrap(-1);
+        ////m_staticText_device_info->SetFont(wxFont(wxFontInfo(16)));
+        //m_staticText_device_info->SetBackgroundColour(wxColour(246,203,198));
+        //m_staticText_device_info->SetForegroundColour(wxColour(251, 71, 71));
 
-        bSizer_h_title->Add(m_staticText_device_info, wxSizerFlags(1).Expand());
+        //bSizer_h_title->Add(m_staticText_device_info, wxSizerFlags(1).Expand());
+        //bSizer_h_title->AddSpacer(FromDIP(6));
+
+        m_staticText_device_info = new FFButton(m_panel_top_right_info, wxID_ANY, ("error Info"), 0);
+        m_staticText_device_info->Enable(false);
+        //m_staticText_device_info->SetBackgroundColour(*wxWHITE);
+        m_staticText_device_info->SetBGDisableColor(wxColour("#F6CBC6"));
+        m_staticText_device_info->SetFontDisableColor(wxColour("#FB4747"));
+        m_staticText_device_info->SetMinSize(wxSize(FromDIP(394), FromDIP(56)));
+
+        bSizer_h_title->Add(m_staticText_device_info, 0, wxALL | wxEXPAND);
         bSizer_h_title->AddSpacer(FromDIP(6));
 
         //显示清除按钮
-        m_clear_button = new Button(m_panel_top_right_info, _L("clear"), "", 0, FromDIP(18));
+        m_clear_button = new Button(m_panel_top_right_info, _L("clear"), "", 0, FromDIP(20));
         m_clear_button->SetPureText(true);
         //m_clear_button->SetFont(wxFont(wxFontInfo(16)));
         m_clear_button->SetBorderWidth(1);
@@ -827,7 +837,7 @@ wxBoxSizer* SingleDeviceState::create_machine_control_title()
             Layout();
         });
 
-        bSizer_h_title->Add(m_clear_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        bSizer_h_title->Add(m_clear_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(0));
 
         m_panel_top_right_info->SetSizer(bSizer_h_title);
         m_panel_top_right_info->Layout();
@@ -2192,6 +2202,7 @@ void SingleDeviceState::setTipMessage(const std::string& title, const std::strin
    m_staticText_device_tip->SetLabel(title); 
    m_staticText_device_tip->SetForegroundColour(wxColour(titleColor));
    m_staticText_device_info->SetLabel(info);
+   m_staticText_device_info->SetMinSize(wxSize(FromDIP(394), FromDIP(56)));
    if (!showInfo) {
         m_staticText_device_info->Hide();
         m_clear_button->Hide();

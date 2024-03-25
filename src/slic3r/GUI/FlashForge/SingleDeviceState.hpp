@@ -182,7 +182,8 @@ protected:
     Label*   m_staticText_device_name;
     Label*   m_staticText_device_position;
     Label*   m_staticText_device_tip;
-    Label*   m_staticText_device_info;
+    //Label*   m_staticText_device_info;
+    FFButton *m_staticText_device_info{nullptr};
     Button*  m_clear_button;
 
     wxBitmap    m_material_weight_pic;
