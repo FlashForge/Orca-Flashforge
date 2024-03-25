@@ -1063,16 +1063,16 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         bSizer_control_file_info->AddSpacer(FromDIP(40));
 
         //显示倒计时
-        m_staticText_count_time = new Label(m_panel_control_file_info, ("00:33:22"));
+        m_staticText_count_time = new Label(m_panel_control_file_info, ::Label::Body_14,("00:33:22"));
         m_staticText_count_time->Wrap(-1);
-        m_staticText_count_time->SetFont(wxFont(wxFontInfo(16)));
+        //m_staticText_count_time->SetFont(wxFont(wxFontInfo(16)));
         m_staticText_count_time->SetForegroundColour(wxColour(50,141,251));
 
         bSizer_control_file_info->Add(m_staticText_count_time, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
         bSizer_control_file_info->AddSpacer(FromDIP(10));
 
         //显示剩余时间标签
-        m_staticText_time_label = new Label(m_panel_control_file_info, _L("Remaining Time"));
+        m_staticText_time_label = new Label(m_panel_control_file_info, ::Label::Body_12, _L("Remaining Time"));
         m_staticText_time_label->Wrap(-1);
         //m_staticText_time_label->SetFont(wxFont(wxFontInfo(10)));
         m_staticText_time_label->SetForegroundColour(wxColour(153,153,153));
