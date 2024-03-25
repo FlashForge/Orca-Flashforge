@@ -184,9 +184,9 @@ wxString FFUtils::userRegister()
 {
     std::string code = Slic3r::GUI::wxGetApp().app_config->get("language");
     if (code == "zh_CN") {
-        return "https://auth.flashforge.com/en/signUp/?channel=Orca";
+        return "https://auth.flashforge.com/zh/signUp/?channel=Orca";
     }
-    return "https://auth.flashforge.com/en/userAgreement";
+    return "https://auth.flashforge.com/en/signUp/?channel=Orca";
 }
 
 wxString FFUtils::passwordForget()

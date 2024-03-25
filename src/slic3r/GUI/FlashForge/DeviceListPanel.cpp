@@ -1642,10 +1642,13 @@ bool DeviceListPanel::getDeviceInfo(DeviceInfoItemPanel::DeviceInfo& info, int c
             std::string dev_id = data.lanDevInfo.serialNumber;
             info.lanFlag = true;
             info.conn_id = conn_id;
-            info.name = data.devDetail->name;
-            info.pid = data.lanDevInfo.pid;
-            info.placement = data.devDetail->location;
-            info.status = data.devDetail->status;
+            if (data.devDetail){
+                info.placement = data.devDetail->location;
+                info.status    = data.devDetail->status;
+                info.name      = data.devDetail->name;
+            } else
+                info.name = data.lanDevInfo.name;
+            info.pid = data.lanDevInfo.pid;            
         } else if (COM_CONNECT_WAN == data.connectMode && valid && data.devDetail) {
             std::string dev_id = data.wanDevInfo.serialNumber;
             info.lanFlag = false;

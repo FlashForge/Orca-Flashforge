@@ -8,6 +8,7 @@
 #include "slic3r/GUI/MainFrame.hpp"
 #include "slic3r/GUI/format.hpp"
 #include "slic3r/GUI/Widgets/Button.hpp"
+#include "slic3r/GUI/FFUtils.hpp"
 #include "MultiComUtils.hpp"
 #include "MultiComMgr.hpp"
 
@@ -562,10 +563,14 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     m_service_link_page1->SetForegroundColour(wxColour(50,141,251));
     m_service_link_page1->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
         event.Skip();
+        #if 0
         wxString url = "http://dev.auth.flashforge.shop/en/userAgreement";
         if (m_cur_language.compare("zh_CN") == 0) {
             url = "http://dev.auth.flashforge.shop/userAgreement";
         }
+        #else
+        wxString url = FFUtils::userAgreement();
+        #endif
         wxLaunchDefaultBrowser(url);
     });
     m_service_link_page1->Show(true);
@@ -574,10 +579,14 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     m_privacy_policy_page1->SetForegroundColour(wxColour(50,141,251));
     m_privacy_policy_page1->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e){
         e.Skip();
+        #if 0
         wxString url = "http://dev.auth.flashforge.shop/en/privacyPolicy";
         if (m_cur_language.compare("zh_CN") == 0) {
             url = "http://dev.auth.flashforge.shop/privacyPolicy";
         }
+        #else
+        wxString url = FFUtils::privacyPolicy();
+        #endif
         wxLaunchDefaultBrowser(url);
     });
     m_privacy_policy_page1->Show(true);
@@ -646,10 +655,14 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     register_link->SetForegroundColour(wxColour(50,141,251));
     register_link->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
         event.Skip();
-        wxString url = "http://dev.auth.flashforge.shop/en/signUp?channel=Orca";
+        #if 0
+        wxString url = "https://auth.flashforge.com/en/signUp/?channel=Orca";
         if (m_cur_language.compare("zh_CN") == 0) {
-            url = "http://dev.auth.flashforge.shop/zh/signUp?channel=Orca";
+            url = "https://auth.flashforge.com/zh/signUp/?channel=Orca";
         }
+        #else
+        wxString url = FFUtils::userRegister();
+        #endif
         wxLaunchDefaultBrowser(url);
     });
 
@@ -657,10 +670,14 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     forget_password_link->SetForegroundColour(wxColour(50,141,251));
     forget_password_link->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
         event.Skip();
-        wxString url = "http://dev.auth.flashforge.shop/en/resetPassword?channel=Orca";
+        #if 0
+        wxString url = "https://auth.flashforge.com/en/resetPassword/?channel=Orca";
         if (m_cur_language.compare("zh_CN") == 0) {
-            url = "http://dev.auth.flashforge.shop/zh/resetPassword?channel=Orca";
+            url = "https://auth.flashforge.com/zh/resetPassword/?channel=Orca";
         }
+        #else
+        wxString url = FFUtils::passwordForget();
+        #endif
         wxLaunchDefaultBrowser(url);
     });
 
@@ -734,10 +751,14 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     m_service_link_page2->SetForegroundColour(wxColour(50,141,251));
     m_service_link_page2->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
         event.Skip();
+        #if 0
         wxString url = "http://dev.auth.flashforge.shop/en/userAgreement";
         if (m_cur_language.compare("zh_CN") == 0) {
             url = "http://dev.auth.flashforge.shop/userAgreement";
         }
+        #else
+        wxString url = FFUtils::userAgreement();
+        #endif
         wxLaunchDefaultBrowser(url);
     });
 
@@ -746,10 +767,14 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     m_privacy_policy_page2->SetForegroundColour(wxColour(50,141,251));
     m_privacy_policy_page2->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
         event.Skip();
+        #if 0
         wxString url = "http://dev.auth.flashforge.shop/en/privacyPolicy";
         if (m_cur_language.compare("zh_CN") == 0) {
             url = "http://dev.auth.flashforge.shop/privacyPolicy";
         }
+        #else
+        wxString url = FFUtils::privacyPolicy();
+        #endif
         wxLaunchDefaultBrowser(url);
     });
 
