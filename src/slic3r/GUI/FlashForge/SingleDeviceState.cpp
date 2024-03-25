@@ -405,21 +405,22 @@ void DeviceDetail::create_panel(wxWindow* parent)
 
         wxBoxSizer *bSizer_first_row = new wxBoxSizer(wxVERTICAL);
         auto m_panel_first_row = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, -1), wxTAB_TRAVERSAL);
-        m_device_material = new IconText(m_panel_first_row, wxString("device_material"), 19, wxString("PLA-12345678901234567890"), 12);
+        m_device_material = new IconText(m_panel_first_row, wxString("device_material"), 20, wxString("PLA-12345678901234567890"), 12);
         bSizer_first_row->Add(m_device_material, 0, wxEXPAND | wxALL, 0);
-        bSizer_first_row->AddSpacer(FromDIP(25));
+        bSizer_first_row->AddSpacer(FromDIP(30));
 
-        m_device_initial_speed = new IconText(m_panel_first_row, wxString("device_initial_speed"), 27, wxString("1000000mm/s"), 12);
+        m_device_initial_speed = new IconText(m_panel_first_row, wxString("device_initial_speed"), 20, wxString("1000000mm/s"), 12);
         bSizer_first_row->Add(m_device_initial_speed, 0, wxEXPAND | wxALL, 0);
-        bSizer_first_row->AddSpacer(FromDIP(25));
+        bSizer_first_row->AddSpacer(FromDIP(30));
 
-        m_device_speed = new IconBottonText(m_panel_first_row, wxString("device_speed"), 27, wxString("90"), 12);
+        m_device_speed = new IconBottonText(m_panel_first_row, wxString("device_speed"), 20, wxString("90"), 12);
         m_device_speed->setLimit(10, 150);
         m_device_speed->setAdjustValue(10);
         bSizer_first_row->Add(m_device_speed, 0, wxEXPAND | wxALL, 0);
-        bSizer_first_row->AddSpacer(FromDIP(25));
+        bSizer_first_row->AddSpacer(FromDIP(30));
 
-        m_device_z_axis = new IconBottonText(m_panel_first_row, wxString("device_z_axis"), 27, wxString("0.002"), 12,wxString("device_z_dec"), wxString("push_button_arrow_dec_normal"));
+        m_device_z_axis = new IconBottonText(m_panel_first_row, wxString("device_z_axis"), 20, wxString("0.002"), 12,
+                                             wxString("device_z_dec"), wxString("push_button_arrow_dec_normal"));
         m_device_z_axis->setLimit(-5, 5);
         m_device_z_axis->setAdjustValue(0.025);
         m_device_z_axis->setPoint(3);
@@ -437,21 +438,21 @@ void DeviceDetail::create_panel(wxWindow* parent)
         wxBoxSizer *bSizer_second_row  = new wxBoxSizer(wxVERTICAL);
         auto m_panel_second_row = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, -1), wxTAB_TRAVERSAL);
 
-        m_device_layer = new IconText(m_panel_second_row, wxString("device_layer"), 27, wxString("1000000/15000000"), 12);
+        m_device_layer = new IconText(m_panel_second_row, wxString("device_layer"), 20, wxString("1000000/15000000"), 12);
         bSizer_second_row->Add(m_device_layer, 0, wxEXPAND | wxALL, 0);
-        bSizer_second_row->AddSpacer(FromDIP(25));
+        bSizer_second_row->AddSpacer(FromDIP(30));
 
-        m_device_fill_rate = new IconText(m_panel_second_row, wxString("device_fill_rate"), 27, wxString("200%"), 12);
+        m_device_fill_rate = new IconText(m_panel_second_row, wxString("device_fill_rate"), 20, wxString("200%"), 12);
         bSizer_second_row->Add(m_device_fill_rate, 0, wxEXPAND | wxALL, 0);
-        bSizer_second_row->AddSpacer(FromDIP(25));
+        bSizer_second_row->AddSpacer(FromDIP(30));
 
-        m_device_nozzle_fan = new IconBottonText(m_panel_second_row, wxString("device_nozzle_fan"), 22, wxString("50"), 12);
+        m_device_nozzle_fan = new IconBottonText(m_panel_second_row, wxString("device_nozzle_fan"), 20, wxString("50"), 12);
         m_device_nozzle_fan->setLimit(0, 100);
         m_device_nozzle_fan->setAdjustValue(10);
         bSizer_second_row->Add(m_device_nozzle_fan, 0, wxEXPAND | wxALL, 0);
-        bSizer_second_row->AddSpacer(FromDIP(25));
+        bSizer_second_row->AddSpacer(FromDIP(30));
 
-        m_device_cooling_fan = new IconBottonText(m_panel_second_row, wxString("device_cooling_fan"), 22, wxString("100"), 12);
+        m_device_cooling_fan = new IconBottonText(m_panel_second_row, wxString("device_cooling_fan"), 20, wxString("100"), 12);
         m_device_cooling_fan->setLimit(0, 100);
         m_device_cooling_fan->setAdjustValue(10);
         bSizer_second_row->Add(m_device_cooling_fan, 0, wxEXPAND | wxALL, 0);
@@ -470,7 +471,7 @@ void DeviceDetail::create_panel(wxWindow* parent)
         bSizer_h->Add(m_panel_separotor1);
 
         sizer->Add(bSizer_h, 0, wxEXPAND | wxALL, 0);
-        sizer->AddSpacer(FromDIP(22));
+        sizer->AddSpacer(FromDIP(26));
 
         parent->SetSizer(sizer);
         parent->Layout();
@@ -1113,15 +1114,12 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         //***添加右侧材料
         static Slic3r::GUI::BitmapCache cache;
         m_material_weight_pic = create_scaled_bitmap("device_material_weight", this, 16);
-        //m_material_pic = create_scaled_bitmap("monitor_item_prediction_0", this, 60);
         
         m_material_weight_staticbitmap = new wxStaticBitmap(m_panel_control_material, wxID_ANY,m_material_weight_pic);
-//        m_material_weight_staticbitmap->SetMinSize(wxSize(8,8));
         m_material_staticbitmap = new wxStaticBitmap(m_panel_control_material, wxID_ANY,m_material_pic);
-        //m_material_staticbitmap->SetMinSize(wxSize(47,50));
+
 
         m_material_weight_label = new Label(m_panel_control_material,("234g"));
-        //m_material_weight_label->SetMaxSize(wxSize(FromDIP(38),-1));
         
         wxBoxSizer *hbox = new wxBoxSizer(wxHORIZONTAL);
         hbox->SetMinSize(wxSize(60,-1));
@@ -1132,7 +1130,7 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         bSizer_control_material->Add(hbox, 0, /*wxALIGN_CENTER*/ wxRIGHT | wxEXPAND | wxALL, 0);
         //bSizer_control_material->AddStretchSpacer();
         bSizer_control_material->AddSpacer(FromDIP(70));
-        bSizer_control_material->Add(m_material_staticbitmap,0, /*wxALIGN_CENTER*/wxRIGHT | wxEXPAND | wxALL,0);
+        bSizer_control_material->Add(m_material_staticbitmap, 0, /*wxALIGN_CENTER*/ wxRIGHT | wxALL, 0);
         //bSizer_control_material->AddSpacer(FromDIP(6));
 
         m_panel_control_material->SetSizer(bSizer_control_material);
@@ -2051,8 +2049,6 @@ void SingleDeviceState::onDevStateChanged(std::string devState, const com_dev_da
     setDevProductAuthority(*data.devProduct);
     //if (m_cur_dev_state != state) {
         m_cur_dev_state = state;
-        //m_file_pic_url.clear();
-        //m_material_staticbitmap->SetBitmap(create_scaled_bitmap("monitor_item_prediction_0", this, 60));
 
         double total_weight = data.devDetail->estimatedRightWeight; //材料重量
         char   weight[64];
