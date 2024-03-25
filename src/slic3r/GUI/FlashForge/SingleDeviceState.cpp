@@ -10,7 +10,7 @@
 #include "slic3r/GUI/GUI_App.hpp"
 #include "slic3r/GUI/Plater.hpp"
 #include "slic3r/GUI/FFUtils.hpp"
-
+#include <wx/dcgraph.h>
 using namespace std::literals;
 using json   = nlohmann::json;
 namespace pt = boost::property_tree;
@@ -42,6 +42,66 @@ const wxString    TEMP_CONFIRM = _L("confirm");
 const int TEXT_LENGTH = 20;
 const int MATERIAL_PIC_WIDTH  = 80;
 const int MATERIAL_PIC_HEIGHT = 80;
+
+MaterialImagePanel::MaterialImagePanel(wxWindow *parent, const wxSize &size /*=wxDefaultSize*/)
+    : wxPanel(parent, wxID_ANY, wxDefaultPosition, size)
+{
+    Bind(wxEVT_PAINT, &MaterialImagePanel::OnPaint, this);
+    // Bind(wxEVT_SIZE, &RoundImagePanel::OnSize, this);
+}
+
+void MaterialImagePanel::SetImage(const wxImage &image)
+{
+    m_image = image;
+    Refresh();
+}
+
+void MaterialImagePanel::OnSize(wxSizeEvent &event) {}
+
+void MaterialImagePanel::OnPaint(wxPaintEvent &event)
+{
+    if (!m_image.IsOk()) {
+        event.Skip();
+        return;
+    }
+
+    wxSize  size = GetSize();
+    wxImage img  = m_image;
+    img.Rescale(size.x, size.y);
+    if (!img.HasAlpha()) {
+        img.InitAlpha();
+    }
+
+    wxPaintDC dc(this);
+    wxBitmap  bmp(size.x, size.y);
+    {
+        wxMemoryDC memdc;
+        memdc.SelectObject(bmp);
+        memdc.Blit({0, 0}, size, &dc, {0, 0});
+        wxGCDC dc2(memdc);
+        dc2.SetFont(GetFont());
+        CreateRegion(dc2);
+        memdc.SelectObject(wxNullBitmap);
+    }
+    wxImage ref_img = bmp.ConvertToImage();
+    for (int y = 0; y < img.GetHeight(); ++y) {
+        for (int x = 0; x < img.GetWidth(); ++x) {
+            img.SetAlpha(x, y, ref_img.GetRed(x, y));
+        }
+    }
+    dc.DrawBitmap(wxBitmap(img), 0, 0);
+}
+
+void MaterialImagePanel::CreateRegion(wxDC &dc)
+{
+    wxSize sz = GetSize();
+    dc.SetBrush(*wxBLACK_BRUSH);
+    dc.DrawRectangle(0, 0, sz.x, sz.y);
+    dc.SetPen(*wxTRANSPARENT_PEN);
+    dc.SetBrush(*wxRED);
+    dc.DrawRoundedRectangle(0, 0, sz.x, sz.y,10);
+
+}
 
 MaterialPanel::MaterialPanel(wxWindow* parent)
     : wxPanel(parent, wxID_ANY,wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL)
@@ -1116,8 +1176,9 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         m_material_weight_pic = create_scaled_bitmap("device_material_weight", this, 16);
         
         m_material_weight_staticbitmap = new wxStaticBitmap(m_panel_control_material, wxID_ANY,m_material_weight_pic);
-        m_material_staticbitmap = new wxStaticBitmap(m_panel_control_material, wxID_ANY,m_material_pic);
+        //m_material_staticbitmap = new wxStaticBitmap(m_panel_control_material, wxID_ANY,m_material_pic);
 
+        m_material_picture = new MaterialImagePanel(m_panel_control_material);
 
         m_material_weight_label = new Label(m_panel_control_material,("234g"));
         
@@ -1130,7 +1191,7 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         bSizer_control_material->Add(hbox, 0, /*wxALIGN_CENTER*/ wxRIGHT | wxEXPAND | wxALL, 0);
         //bSizer_control_material->AddStretchSpacer();
         bSizer_control_material->AddSpacer(FromDIP(70));
-        bSizer_control_material->Add(m_material_staticbitmap, 0, /*wxALIGN_CENTER*/ wxRIGHT | wxALL, 0);
+        bSizer_control_material->Add(m_material_picture, 0, /*wxALIGN_CENTER*/ wxRIGHT | wxALL, 0);
         //bSizer_control_material->AddSpacer(FromDIP(6));
 
         m_panel_control_material->SetSizer(bSizer_control_material);
@@ -2282,10 +2343,18 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
                     }
                     if (m_last_pic_data != m_pic_data) {
                         m_last_pic_data = m_pic_data;
-                        delete m_bitmap;
-                        m_bitmap = nullptr;
-                        m_bitmap = new wxBitmap(image);
-                        m_material_staticbitmap->SetBitmap(*m_bitmap);
+                        //delete m_bitmap;
+                        //m_bitmap = nullptr;
+                        //m_bitmap = new wxBitmap(image);
+                        //m_material_staticbitmap->SetBitmap(*m_bitmap);
+                        if (m_material_image) {
+                            delete m_material_image;
+                            m_material_image = nullptr;
+                        }
+                        m_material_image = new wxImage(image);
+                        m_material_picture->SetMinSize(wxSize(FromDIP(80), FromDIP(80)));
+                        m_material_picture->SetImage(*m_material_image);
+
                         Layout();
                     } 
                 }

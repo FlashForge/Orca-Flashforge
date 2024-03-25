@@ -27,6 +27,22 @@ namespace GUI {
 
 wxDECLARE_EVENT(EVT_SWITCH_TO_FILETER, wxCommandEvent);
 
+class MaterialImagePanel : public wxPanel
+{
+public:
+    MaterialImagePanel(wxWindow *parent, const wxSize &size = wxDefaultSize);
+
+    void SetImage(const wxImage &image);
+
+private:
+    void OnPaint(wxPaintEvent &event);
+    void OnSize(wxSizeEvent &event);
+    void CreateRegion(wxDC &dc);
+
+private:
+    wxImage m_image{wxNullImage};
+};
+
 class MaterialPanel : public wxPanel
 {
 public:
@@ -190,6 +206,8 @@ protected:
     wxBitmap    m_material_pic;
     wxStaticBitmap*  m_material_weight_staticbitmap;
     wxStaticBitmap*  m_material_staticbitmap;
+    MaterialImagePanel *m_material_picture{nullptr};
+    wxImage            *m_material_image{nullptr};
 
     wxPanel*    m_panel_idle;
     wxBitmap    m_idle_device_pic;
