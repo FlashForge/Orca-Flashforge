@@ -1200,12 +1200,12 @@ void SendToPrinterDialog::update_user_machine_list()
                 if (COM_CONNECT_LAN == data.connectMode) {
                     dev_id = data.lanDevInfo.serialNumber;
                     mdata.pid = data.lanDevInfo.pid;
-                    mdata.name = wxString::FromUTF8(data.lanDevInfo.name);
+                    mdata.name = wxString::FromUTF8(data.devDetail->name);
                     status = data.devDetail->status;
                 } else if (COM_CONNECT_WAN == data.connectMode) {
                     dev_id = data.wanDevInfo.serialNumber;
                     mdata.pid = data.devDetail->pid;
-                    mdata.name = wxString::FromUTF8(data.wanDevInfo.name);
+                    mdata.name = wxString::FromUTF8(data.devDetail->name);
                     status = data.wanDevInfo.status;
                 }
                 if (!status.empty() && status != "offline") {
@@ -1772,7 +1772,7 @@ void SendToPrinterDialog::on_multi_send_completed(wxCommandEvent& event)
                 if (res != m_machineListMap.end()) {
                     name = res->second.name;
                 } else {
-                    name = wxString::FromUTF8((COM_CONNECT_LAN == data.connectMode) ? data.lanDevInfo.name : data.wanDevInfo.name);
+                    name = wxString::FromUTF8((COM_CONNECT_LAN == data.connectMode) ? data.devDetail->name : data.wanDevInfo.name);
                 }
             } else {
                 for (const auto& it : m_machineListMap) {

@@ -1642,7 +1642,7 @@ bool DeviceListPanel::getDeviceInfo(DeviceInfoItemPanel::DeviceInfo& info, int c
             std::string dev_id = data.lanDevInfo.serialNumber;
             info.lanFlag = true;
             info.conn_id = conn_id;
-            info.name = data.lanDevInfo.name;        
+            info.name = data.devDetail->name;
             info.pid = data.lanDevInfo.pid;
             info.placement = data.devDetail->location;
             info.status = data.devDetail->status;
