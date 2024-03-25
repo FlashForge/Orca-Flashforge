@@ -446,6 +446,7 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     m_get_code_button->SetBGColor(wxColour(50,141,251));
     m_get_code_button->Bind(wxEVT_LEFT_UP, [this](wxMouseEvent& event){
         event.Skip();
+        m_get_code_button->SetMinSize(wxSize(FromDIP(89), FromDIP(40)));
         wxString usrname_value = m_username_ctrl_page1->GetValue();
         double num;
         if(usrname_value.ToDouble(&num)){
