@@ -861,6 +861,23 @@ void LoginDialog::onPage1Login(wxMouseEvent& event)
 {
     m_get_code_button->SetMinSize(wxSize(FromDIP(89), FromDIP(40)));
     wxString usrname = m_username_ctrl_page1->GetValue();
+    wxString usrname_value = m_username_ctrl_page1->GetValue();
+    double   num;
+    if (usrname_value.ToDouble(&num)) {
+        // 纯数字
+        wxRegEx regex(wxT("^1[34578]\\d{9}$"));
+        if (regex.IsValid() && regex.Compile(wxT("^1[34578]\\d{9}$"), wxRE_ADVANCED)) {
+          if (regex.Matches(usrname_value)) {
+                ;
+          } else {
+             page1ShowErrorLabel(_L("Mobile Phone Number Error"));
+              return;
+          }
+        }
+    } else {
+            page1ShowErrorLabel(_L("Mobile Phone Number Error"));
+            return;
+    }
     wxString verify_code = m_verifycode_ctrl_page1->GetValue();
     com_token_data_t token_data;
     std::string message;
