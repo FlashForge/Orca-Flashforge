@@ -247,8 +247,8 @@ protected:
 //
     double m_last_speed = 0.00;
     double m_last_z_axis_compensation = 0.00;
-    double m_last_cooling_fan_speed   = 0.00;
-    double m_last_chamber_fan_speed   = 0.00;
+    double m_last_cooling_fan_speed   = 120.00;
+    double m_last_chamber_fan_speed   = 120.00;
     std::string m_camera_stream_url;
     int         m_pid = 0x0023;
 
