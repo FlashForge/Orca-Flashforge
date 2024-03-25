@@ -25,6 +25,8 @@
 namespace Slic3r { 
 namespace GUI {
 
+wxDECLARE_EVENT(EVT_SWITCH_TO_FILETER, wxCommandEvent);
+
 class MaterialPanel : public wxPanel
 {
 public:
@@ -86,6 +88,7 @@ public:
     void setFillRate(double fillRate);
     void setCoolingFanSpeed(double fanSpeed);
     void setChamberFanSpeed(double fanSpeed);
+    void switchPage();
 
 private:
     IconText       *m_device_material{nullptr};
@@ -116,6 +119,7 @@ public:
     void reInitUI();
     void setDevProductAuthority(const fnet_dev_product_t &data);
     void reInitProductState();
+    std::string getCurDevSerialNumber();
 
     wxBoxSizer *create_monitoring_page();
     wxBoxSizer* create_machine_control_title();
@@ -134,6 +138,7 @@ public:
     void on_navigated(wxWebViewEvent &event);
     void onConnectWanDevInfoUpdate(ComWanDevInfoUpdateEvent &event);
     void onComDevDetailUpdate(ComDevDetailUpdateEvent &event);
+    void onComConnectReady(ComConnectionReadyEvent& event);
     void onConnectExit(ComConnectionExitEvent &event);
     void onTargetTempModify(wxCommandEvent &event);
     void onModifyTempClicked(wxCommandEvent &event);
@@ -153,7 +158,7 @@ private:
 protected:
 //data
 
-    int m_cur_id = -1;
+    int m_cur_id = -2;
 
 //UI
     wxPanel*  m_panel_monitoring_title;
@@ -177,7 +182,8 @@ protected:
     Label*   m_staticText_device_name;
     Label*   m_staticText_device_position;
     Label*   m_staticText_device_tip;
-    Label*   m_staticText_device_info;
+    //Label*   m_staticText_device_info;
+    FFButton *m_staticText_device_info{nullptr};
     Button*  m_clear_button;
 
     wxBitmap    m_material_weight_pic;
@@ -240,10 +246,10 @@ protected:
 
     TempMixDevice* m_idle_tempMixDevice;//空闲状态，温度设备控件
 //
-    double m_last_speed = 0.00;
-    double m_last_z_axis_compensation = 0.00;
-    double m_last_cooling_fan_speed   = 0.00;
-    double m_last_chamber_fan_speed   = 0.00;
+    double m_last_speed = 0.00001;
+    double m_last_z_axis_compensation = 0.00001;
+    double m_last_cooling_fan_speed   = 0.00001;
+    double m_last_chamber_fan_speed   = 0.00001;
     std::string m_camera_stream_url;
     int         m_pid = 0x0023;
 
@@ -261,6 +267,7 @@ protected:
 
     double m_right_target_temp;
     double m_plat_target_temp;
+    std::string m_cur_serial_number;
 };
 
 

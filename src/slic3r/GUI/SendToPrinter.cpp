@@ -1200,12 +1200,12 @@ void SendToPrinterDialog::update_user_machine_list()
                 if (COM_CONNECT_LAN == data.connectMode) {
                     dev_id = data.lanDevInfo.serialNumber;
                     mdata.pid = data.lanDevInfo.pid;
-                    mdata.name = wxString::FromUTF8(data.lanDevInfo.name);
+                    mdata.name = wxString::FromUTF8(data.devDetail->name);
                     status = data.devDetail->status;
                 } else if (COM_CONNECT_WAN == data.connectMode) {
                     dev_id = data.wanDevInfo.serialNumber;
                     mdata.pid = data.devDetail->pid;
-                    mdata.name = wxString::FromUTF8(data.wanDevInfo.name);
+                    mdata.name = wxString::FromUTF8(data.devDetail->name);
                     status = data.wanDevInfo.status;
                 }
                 if (!status.empty() && status != "offline") {
@@ -1710,6 +1710,9 @@ void SendToPrinterDialog::on_multi_send_completed(wxCommandEvent& event)
         BOOST_LOG_TRIVIAL(error) << "SendToPrinterDialog: result is empty";
         return;
     }
+    if (m_msg_window && m_msg_window->IsShown()) {
+        m_msg_window->EndModal(wxID_NO);
+    }
     BOOST_LOG_TRIVIAL(info) << "SendToPrinterDialog: receive multi send completed 2";
     m_progressCancelBtn->Show(false);
     m_progressBar->SetValue(100);
@@ -1722,6 +1725,7 @@ void SendToPrinterDialog::on_multi_send_completed(wxCommandEvent& event)
             m_progressInfoLbl->SetLabel(_L("Send completed, automatically redirected to device status"));
             m_progressInfoLbl->SetForegroundColour(wxColour("#333333"));
             m_send_error = false;
+            m_sendBook->SetSelection(0);
             m_redirect_timer->StartOnce(3000);
         } else {
             if (iter->second == Result_Fail_Busy) {
@@ -1768,7 +1772,7 @@ void SendToPrinterDialog::on_multi_send_completed(wxCommandEvent& event)
                 if (res != m_machineListMap.end()) {
                     name = res->second.name;
                 } else {
-                    name = wxString::FromUTF8((COM_CONNECT_LAN == data.connectMode) ? data.lanDevInfo.name : data.wanDevInfo.name);
+                    name = wxString::FromUTF8((COM_CONNECT_LAN == data.connectMode) ? data.devDetail->name : data.wanDevInfo.name);
                 }
             } else {
                 for (const auto& it : m_machineListMap) {
@@ -1789,13 +1793,13 @@ void SendToPrinterDialog::on_multi_send_completed(wxCommandEvent& event)
         dlg.ShowModal();
         if (failList.empty()) {
             m_send_error = false;
-            if (m_msg_window) {
-                m_msg_window->EndModal(0);
-                //m_need_redirect = true;
-            } else {
-                //redirect_window();
+            //if (m_msg_window) {
+                //m_msg_window->EndModal(0);
+            //    m_need_redirect = true;
+            //} else {
+            //    redirect_window();
                 //wxGetApp().mainframe->select_tab(size_t(MainFrame::tpMonitor));
-            }
+            //}
             redirect_window();
         } else {
             m_sendBook->SetSelection(0);

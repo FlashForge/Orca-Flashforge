@@ -1612,12 +1612,12 @@ void DeviceListPanel::updateDeviceList()
             if (info_iter == m_device_map.end()) {
                 DeviceInfoItemPanel* info_item = new DeviceInfoItemPanel(m_device_panel, dev_info, this);
                 m_device_map.emplace(std::make_pair(it, info_item));
-                refresh_flag = true;
             } else {
                 auto _dev_info = info_iter->second->deviceInfo();
                 copyDeviceInfo(_dev_info, dev_info);
                 info_iter->second->updateInfo(_dev_info);
             }
+            refresh_flag = true;
         }
     }
     //std::sort(m_device_map.begin(), m_device_map.end(), deviceKeySortFunc);
@@ -1642,7 +1642,7 @@ bool DeviceListPanel::getDeviceInfo(DeviceInfoItemPanel::DeviceInfo& info, int c
             std::string dev_id = data.lanDevInfo.serialNumber;
             info.lanFlag = true;
             info.conn_id = conn_id;
-            info.name = data.lanDevInfo.name;        
+            info.name = data.devDetail->name;
             info.pid = data.lanDevInfo.pid;
             info.placement = data.devDetail->location;
             info.status = data.devDetail->status;

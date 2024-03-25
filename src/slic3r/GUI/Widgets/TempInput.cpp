@@ -529,7 +529,7 @@ void TempInput::render(wxDC &dc)
 
     // label
     auto text = wxWindow::GetLabel();
-    dc.SetFont(::Label::Body_16);
+    dc.SetFont(::Label::Body_14);
     labelSize = dc.GetMultiLineTextExtent(wxWindow::GetLabel());
     
     if (!IsEnabled()) {
@@ -862,6 +862,16 @@ void IconBottonText::setText(wxString text)
     Refresh();
 }
 
+void IconBottonText::setCurValue(double value) 
+{
+    m_cur_value = value;
+}
+
+void IconBottonText::setPoint(int value) 
+{
+    m_point = value;
+}
+
 void IconBottonText::onTextChange(wxCommandEvent &event) 
 {
     long value;
@@ -876,7 +886,7 @@ void IconBottonText::onTextChange(wxCommandEvent &event)
     }
 }
 
-void IconBottonText::onTextFocusOut(wxFocusEvent &event) 
+void IconBottonText::checkValue() 
 {
     wxString text = m_text_ctrl->GetValue();
     long     value;
@@ -898,11 +908,20 @@ void IconBottonText::onTextFocusOut(wxFocusEvent &event)
             m_text_ctrl->ChangeValue(str_max);
         }
     } else {
-        //输入不合法
-        wxString str_min = wxString::Format("%.0f", m_min);
-        m_text_ctrl->ChangeValue(str_min);
+        // 输入不合法
+        if (m_point == 3) {
+            wxString str_last = wxString::Format("%.3f", m_cur_value);
+            m_text_ctrl->ChangeValue(str_last);
+        } else {
+            wxString str_last = wxString::Format("%.0f", m_cur_value);
+            m_text_ctrl->ChangeValue(str_last);
+        }
     }
-    
+}
+
+void IconBottonText::onTextFocusOut(wxFocusEvent &event) 
+{
+    checkValue();
     event.Skip();
 }
 

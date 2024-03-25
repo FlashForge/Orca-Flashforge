@@ -17,6 +17,7 @@ namespace pt = boost::property_tree;
 
 namespace Slic3r {
 namespace GUI {
+wxDEFINE_EVENT(EVT_SWITCH_TO_FILETER, wxCommandEvent);
 
 const std::string CLOSE = "close";
 const std::string OPEN  = "open";
@@ -39,7 +40,7 @@ const wxString    TEMP_CANCEL  = _L("cancel");
 const wxString    TEMP_CONFIRM = _L("confirm");
 
 const int TEXT_LENGTH = 20;
-const int MATERIAL_PIC_WIDTH  = 86;
+const int MATERIAL_PIC_WIDTH  = 80;
 const int MATERIAL_PIC_HEIGHT = 80;
 
 MaterialPanel::MaterialPanel(wxWindow* parent)
@@ -356,6 +357,7 @@ void DeviceDetail::create_panel(wxWindow* parent)
             double z_axis;
             double nozzle_fan;
             double cooling_fan;
+            switchPage();
             if (m_device_speed) {
                 wxString str_speed = m_device_speed->getTextValue();
                 str_speed.ToDouble(&speed);
@@ -420,6 +422,7 @@ void DeviceDetail::create_panel(wxWindow* parent)
         m_device_z_axis = new IconBottonText(m_panel_first_row, wxString("device_z_axis"), 27, wxString("0.002"), 12,wxString("device_z_dec"), wxString("push_button_arrow_dec_normal"));
         m_device_z_axis->setLimit(-5, 5);
         m_device_z_axis->setAdjustValue(0.025);
+        m_device_z_axis->setPoint(3);
         bSizer_first_row->Add(m_device_z_axis, 0, wxEXPAND | wxALL, 0);
         bSizer_first_row->AddStretchSpacer();
 
@@ -474,6 +477,22 @@ void DeviceDetail::create_panel(wxWindow* parent)
         parent->Fit(); 
 }
 
+void DeviceDetail::switchPage() 
+{
+    if (m_device_speed) {
+        m_device_speed->checkValue();
+    }
+    if (m_device_z_axis) {
+        m_device_z_axis->checkValue();
+    }
+    if (m_device_nozzle_fan) {
+        m_device_nozzle_fan->checkValue();
+    }
+    if (m_device_cooling_fan) {
+        m_device_cooling_fan->checkValue();
+    }
+}
+
 void DeviceDetail::setMaterialName(wxString materialName) 
 {
     m_device_material->setText(materialName);
@@ -489,12 +508,14 @@ void DeviceDetail::setSpeed(double speed)
 { 
     auto aspeed = static_cast<int>(speed);
     m_device_speed->setText(wxString::Format("%d", aspeed));
+    m_device_speed->setCurValue(aspeed);
 }
 
 void DeviceDetail::setZAxis(double value) 
 {
     auto aValue = wxString::Format("%.3f", value);
     m_device_z_axis->setText(aValue);
+    m_device_z_axis->setCurValue(value);
 }
 
 void DeviceDetail::setLayer(int printLayer, int targetLayer)
@@ -516,12 +537,14 @@ void DeviceDetail::setCoolingFanSpeed(double fanSpeed)
 { 
     auto aFanSpeed = static_cast<int>(fanSpeed);
     m_device_nozzle_fan->setText(wxString::Format("%d", aFanSpeed));
+    m_device_nozzle_fan->setCurValue(aFanSpeed);
 }
 
 void DeviceDetail::setChamberFanSpeed(double fanSpeed) 
 { 
      auto aFanSpeed = static_cast<int>(fanSpeed);
     m_device_cooling_fan->setText(wxString::Format("%d", aFanSpeed));
+     m_device_cooling_fan->setCurValue(aFanSpeed);
 }
 
 SingleDeviceState::SingleDeviceState(wxWindow* parent, wxWindowID id, const wxPoint& pos, 
@@ -550,7 +573,17 @@ void SingleDeviceState::setCurId(int curId)
     m_idle_tempMixDevice->reInitProductState();
 
     //query device data by id
-    const com_dev_data_t &data = MultiComMgr::inst()->devData(m_cur_id);
+    bool  valid = false;
+    const com_dev_data_t &data  = MultiComMgr::inst()->devData(m_cur_id, &valid);
+    if (!valid) {
+        setPageOffline();
+        return;
+    }
+    if (data.connectMode == 0) {
+        m_cur_serial_number = data.lanDevInfo.serialNumber;
+    } else if (data.connectMode == 1) {
+        m_cur_serial_number = data.wanDevInfo.serialNumber;
+    }
     onDevStateChanged(data.devDetail->status, data);
     fillValue(data);
     Layout();
@@ -598,10 +631,10 @@ void SingleDeviceState::reInit()
 
 void SingleDeviceState::reInitData() 
 { 
-   m_last_speed               = 0.00;
-   m_last_z_axis_compensation = 0.00;
-   m_last_cooling_fan_speed   = 0.00;
-   m_last_chamber_fan_speed   = 0.00;
+   m_last_speed               = 0.00001;
+   m_last_z_axis_compensation = 0.00001;
+   m_last_cooling_fan_speed   = 0.00001;
+   m_last_chamber_fan_speed   = 0.00001;
    m_right_target_temp        = 0.00;
    m_plat_target_temp         = 0.00;
    m_camera_stream_url.clear();
@@ -640,7 +673,7 @@ void SingleDeviceState::setDevProductAuthority(const fnet_dev_product_t &data)
    }
 }
 
-void SingleDeviceState::reInitProductState() 
+void SingleDeviceState::reInitProductState()
 { 
     m_lamp_control_button->SetIcon("device_lamp_control");
     m_filter_button->SetIcon("device_filter");
@@ -648,6 +681,11 @@ void SingleDeviceState::reInitProductState()
     m_filter_button->SetBorderColor(wxColour(255, 255, 255));
     m_lamp_control_button->Enable(true); 
     m_filter_button->Enable(true);
+}
+
+std::string SingleDeviceState::getCurDevSerialNumber() 
+{
+    return m_cur_serial_number;
 }
 
 wxBoxSizer* SingleDeviceState::create_monitoring_page()
@@ -762,17 +800,27 @@ wxBoxSizer* SingleDeviceState::create_machine_control_title()
         m_panel_top_right_info->SetBackgroundColour(wxColour(240,240,240));
 
         //显示报错信息
-        m_staticText_device_info = new Label(m_panel_top_right_info, ("error Info"), wxALIGN_CENTER);
-        m_staticText_device_info->Wrap(-1);
-        //m_staticText_device_info->SetFont(wxFont(wxFontInfo(16)));
-        m_staticText_device_info->SetBackgroundColour(wxColour(246,203,198));
-        m_staticText_device_info->SetForegroundColour(wxColour(251, 71, 71));
+        //m_staticText_device_info = new Label(m_panel_top_right_info, ("error Info"), wxALIGN_CENTER);
+        //m_staticText_device_info->Wrap(-1);
+        ////m_staticText_device_info->SetFont(wxFont(wxFontInfo(16)));
+        //m_staticText_device_info->SetBackgroundColour(wxColour(246,203,198));
+        //m_staticText_device_info->SetForegroundColour(wxColour(251, 71, 71));
 
-        bSizer_h_title->Add(m_staticText_device_info, wxSizerFlags(1).Expand());
+        //bSizer_h_title->Add(m_staticText_device_info, wxSizerFlags(1).Expand());
+        //bSizer_h_title->AddSpacer(FromDIP(6));
+
+        m_staticText_device_info = new FFButton(m_panel_top_right_info, wxID_ANY, ("error Info"), 0);
+        m_staticText_device_info->Enable(false);
+        //m_staticText_device_info->SetBackgroundColour(*wxWHITE);
+        m_staticText_device_info->SetBGDisableColor(wxColour("#F6CBC6"));
+        m_staticText_device_info->SetFontDisableColor(wxColour("#FB4747"));
+        m_staticText_device_info->SetMinSize(wxSize(FromDIP(394), FromDIP(56)));
+
+        bSizer_h_title->Add(m_staticText_device_info, 0, wxALL | wxEXPAND);
         bSizer_h_title->AddSpacer(FromDIP(6));
 
         //显示清除按钮
-        m_clear_button = new Button(m_panel_top_right_info, _L("clear"), "", 0, FromDIP(18));
+        m_clear_button = new Button(m_panel_top_right_info, _L("clear"), "", 0, FromDIP(20));
         m_clear_button->SetPureText(true);
         //m_clear_button->SetFont(wxFont(wxFontInfo(16)));
         m_clear_button->SetBorderWidth(1);
@@ -789,7 +837,7 @@ wxBoxSizer* SingleDeviceState::create_machine_control_title()
             Layout();
         });
 
-        bSizer_h_title->Add(m_clear_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
+        bSizer_h_title->Add(m_clear_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(0));
 
         m_panel_top_right_info->SetSizer(bSizer_h_title);
         m_panel_top_right_info->Layout();
@@ -1015,18 +1063,18 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         bSizer_control_file_info->AddSpacer(FromDIP(40));
 
         //显示倒计时
-        m_staticText_count_time = new Label(m_panel_control_file_info, ("00:33:22"));
+        m_staticText_count_time = new Label(m_panel_control_file_info, ::Label::Body_14,("00:33:22"));
         m_staticText_count_time->Wrap(-1);
-        m_staticText_count_time->SetFont(wxFont(wxFontInfo(16)));
+        //m_staticText_count_time->SetFont(wxFont(wxFontInfo(16)));
         m_staticText_count_time->SetForegroundColour(wxColour(50,141,251));
 
         bSizer_control_file_info->Add(m_staticText_count_time, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
         bSizer_control_file_info->AddSpacer(FromDIP(10));
 
         //显示剩余时间标签
-        m_staticText_time_label = new Label(m_panel_control_file_info, _L("Remaining Time"));
+        m_staticText_time_label = new Label(m_panel_control_file_info, ::Label::Body_12, _L("Remaining Time"));
         m_staticText_time_label->Wrap(-1);
-        m_staticText_time_label->SetFont(wxFont(wxFontInfo(10)));
+        //m_staticText_time_label->SetFont(wxFont(wxFontInfo(10)));
         m_staticText_time_label->SetForegroundColour(wxColour(153,153,153));
 
         bSizer_control_file_info->Add(m_staticText_time_label, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
@@ -1350,6 +1398,10 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
 
 //添加设备详情
         m_busy_device_detial = new DeviceDetail(parent);
+        m_busy_device_detial->Bind(EVT_SWITCH_TO_FILETER, [this](wxCommandEvent &event) {
+         event.Skip();
+            m_busy_device_detial->switchPage();
+        });
         busySizer->Add(m_busy_device_detial, 0, wxALL | wxEXPAND , 0);
         m_busy_device_detial->Hide();
 //添加循环过滤
@@ -1769,7 +1821,9 @@ void SingleDeviceState::connectEvent()
    MultiComMgr::inst()->Bind(COM_WAN_DEV_INFO_UPDATE_EVENT, &SingleDeviceState::onConnectWanDevInfoUpdate, this);
    //局域网数据更新
    MultiComMgr::inst()->Bind(COM_DEV_DETAIL_UPDATE_EVENT, &SingleDeviceState::onComDevDetailUpdate, this);
-   //局域网连接断开
+   //局域网连接更新
+   MultiComMgr::inst()->Bind(COM_CONNECTION_READY_EVENT, &SingleDeviceState::onComConnectReady, this);
+   //连接断开
    MultiComMgr::inst()->Bind(COM_CONNECTION_EXIT_EVENT, &SingleDeviceState::onConnectExit, this);
 #if 0
 //local file list
@@ -1805,6 +1859,8 @@ void SingleDeviceState::connectEvent()
    });
 
    m_filter_button->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e){
+       wxCommandEvent *event = new wxCommandEvent(EVT_SWITCH_TO_FILETER);
+       wxQueueEvent(m_busy_device_detial, event);
         if(m_busy_circula_filter){
             m_busy_circula_filter->Show();
             m_busy_circula_filter->Show(m_busy_circula_filter->IsShown());
@@ -1889,7 +1945,17 @@ void SingleDeviceState::onConnectWanDevInfoUpdate(ComWanDevInfoUpdateEvent &even
         } else {
             fillValue(data);
         }
-   }
+        return;
+    }
+    
+    if (-1 == m_cur_id) {
+        const com_dev_data_t &data = MultiComMgr::inst()->devData(event.id);
+        if (data.wanDevInfo.serialNumber.compare(m_cur_serial_number) == 0) {
+            m_cur_id = event.id;
+            setCurId(m_cur_id);
+        }
+        return;
+    }
 }
 
 void SingleDeviceState::onComDevDetailUpdate(ComDevDetailUpdateEvent &event) 
@@ -1900,29 +1966,20 @@ void SingleDeviceState::onComDevDetailUpdate(ComDevDetailUpdateEvent &event)
         bool  valid = false;
         const com_dev_data_t& data  = MultiComMgr::inst()->devData(m_cur_id, &valid);
         fillValue(data);
- /*       std::string status = data.devDetail->status;
-        if (m_cur_printing_ctrl == 1) {
-            m_cur_printing_ctrl = 0;
-            if (status == PAUSE) {
-                m_print_button->SetLabel(_L("continue print"));
-                m_print_button->SetIcon("device_continue_print");
-                m_print_button->Refresh();
-            }
-        } else if (m_cur_printing_ctrl == 2) {
-            m_cur_printing_ctrl = 0;
-            if (status == "printing") {
-                m_print_button->SetLabel(_L("pause print"));
-                m_print_button->SetIcon("device_pause_print");
-                m_print_button->Refresh();
-            }
-        } else if (m_cur_printing_ctrl == 3) {
-            m_cur_printing_ctrl = 0;
-            if (status == "ready") {
-                m_machine_ctrl_panel->Hide();
-                m_machine_idle_panel->Show();
-                Layout();
-            }            
-        }*/
+   }
+}
+
+void SingleDeviceState::onComConnectReady(ComConnectionReadyEvent &event) 
+{
+   event.Skip();
+   if (-1 == m_cur_id) {
+        const com_dev_data_t &data  = MultiComMgr::inst()->devData(event.id);
+        std::string           lan_serial_number = data.lanDevInfo.serialNumber;
+        if (lan_serial_number.compare(m_cur_serial_number) == 0) {
+            m_cur_id = event.id;
+            setCurId(m_cur_id);
+        }
+        return;
    }
 }
 
@@ -2145,6 +2202,7 @@ void SingleDeviceState::setTipMessage(const std::string& title, const std::strin
    m_staticText_device_tip->SetLabel(title); 
    m_staticText_device_tip->SetForegroundColour(wxColour(titleColor));
    m_staticText_device_info->SetLabel(info);
+   m_staticText_device_info->SetMinSize(wxSize(FromDIP(394), FromDIP(56)));
    if (!showInfo) {
         m_staticText_device_info->Hide();
         m_clear_button->Hide();
