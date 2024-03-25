@@ -1008,6 +1008,9 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
         DeviceObject *userObj = nullptr;
         auto it = m_local_devices.find(serialNum);
         if (it == m_local_devices.end()) {
+            if (devObj->get_lan_dev_info() == nullptr) {
+                devObj->set_lan_dev_info(data.lanDevInfo);
+            }
             userObj = new DeviceObject(*devObj->get_lan_dev_info());
             userObj->set_user_access_code(devObj->get_user_access_code(true));
             id_connect_mode mode;

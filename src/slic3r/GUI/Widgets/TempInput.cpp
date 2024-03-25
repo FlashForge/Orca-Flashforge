@@ -529,7 +529,7 @@ void TempInput::render(wxDC &dc)
 
     // label
     auto text = wxWindow::GetLabel();
-    dc.SetFont(::Label::Body_16);
+    dc.SetFont(::Label::Body_14);
     labelSize = dc.GetMultiLineTextExtent(wxWindow::GetLabel());
     
     if (!IsEnabled()) {
