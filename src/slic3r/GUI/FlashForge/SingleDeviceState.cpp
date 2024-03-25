@@ -631,10 +631,10 @@ void SingleDeviceState::reInit()
 
 void SingleDeviceState::reInitData() 
 { 
-   m_last_speed               = 0.00;
-   m_last_z_axis_compensation = 0.00;
-   m_last_cooling_fan_speed   = 120.00;
-   m_last_chamber_fan_speed   = 120.00;
+   m_last_speed               = 0.00001;
+   m_last_z_axis_compensation = 0.00001;
+   m_last_cooling_fan_speed   = 0.00001;
+   m_last_chamber_fan_speed   = 0.00001;
    m_right_target_temp        = 0.00;
    m_plat_target_temp         = 0.00;
    m_camera_stream_url.clear();
@@ -1074,7 +1074,7 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         //显示剩余时间标签
         m_staticText_time_label = new Label(m_panel_control_file_info, _L("Remaining Time"));
         m_staticText_time_label->Wrap(-1);
-        m_staticText_time_label->SetFont(wxFont(wxFontInfo(10)));
+        //m_staticText_time_label->SetFont(wxFont(wxFontInfo(10)));
         m_staticText_time_label->SetForegroundColour(wxColour(153,153,153));
 
         bSizer_control_file_info->Add(m_staticText_time_label, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
