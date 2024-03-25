@@ -24,6 +24,11 @@ public:
 	static std::string truncateString(const std::string &s, size_t length);
 
 	static wxString trimString(wxDC &dc, wxString &str, int width);
+
+	static wxString privacyPolicy();
+	static wxString userAgreement();
+	static wxString userRegister();
+	static wxString passwordForget();
 };
 
 }

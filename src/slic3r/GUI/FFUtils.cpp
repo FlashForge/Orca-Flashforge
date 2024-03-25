@@ -1,5 +1,6 @@
 #include "FFUtils.hpp"
 #include "slic3r/GUI/I18N.hpp"
+#include "GUI_App.hpp"
 
 namespace Slic3r::GUI
 {
@@ -159,6 +160,42 @@ wxString FFUtils::trimString(wxDC &dc, wxString &str, int width)
         }
     }
     return clipText;
+}
+
+wxString FFUtils::privacyPolicy()
+{
+    std::string code = Slic3r::GUI::wxGetApp().app_config->get("language");
+    if (code == "zh_CN") {
+        return "https://auth.flashforge.com/privacyPolicy";
+    }
+    return "https://auth.flashforge.com/en/privacyPolicy";
+}
+
+wxString FFUtils::userAgreement()
+{
+    std::string code = Slic3r::GUI::wxGetApp().app_config->get("language");
+    if (code == "zh_CN") {
+        return "https://auth.flashforge.com/userAgreement";
+    }
+    return "https://auth.flashforge.com/en/userAgreement";
+}
+
+wxString FFUtils::userRegister()
+{
+    std::string code = Slic3r::GUI::wxGetApp().app_config->get("language");
+    if (code == "zh_CN") {
+        return "https://auth.flashforge.com/en/signUp/?channel=Orca";
+    }
+    return "https://auth.flashforge.com/en/userAgreement";
+}
+
+wxString FFUtils::passwordForget()
+{
+    std::string code = Slic3r::GUI::wxGetApp().app_config->get("language");
+    if (code == "zh_CN") {
+        return "https://auth.flashforge.com/zh/resetPassword/?channel=Orca";
+    }
+    return "https://auth.flashforge.com/en/resetPassword/?channel=Orca";
 }
 
 } // end namespace

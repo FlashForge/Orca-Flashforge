@@ -58,19 +58,16 @@ wxString get_fail_reason(int code)
         return _L("Unknown Failure");
 }
 
-BindMachineDialog::LinkLabel::LinkLabel(wxWindow *parent, const wxString &text, const wxString& cn_link, const wxString& other_link)
+BindMachineDialog::LinkLabel::LinkLabel(wxWindow *parent, const wxString &text, const wxString& link)
     : Label(parent, text)
-    , m_cn_link(cn_link)
-    , m_other_link(other_link)
+    , m_link(link)
 {
     //SetFont(Label::Head_13);
     SetMaxSize(wxSize(FromDIP(450), -1));
     Wrap(FromDIP(450));
     SetForegroundColour(wxColour("#328DFB"));
     Bind(wxEVT_LEFT_DOWN, [this](auto& e) {
-        std::string country_code = Slic3r::GUI::wxGetApp().app_config->get("language");
-        wxString url = (country_code == "zh_CN") ? m_cn_link : m_other_link;
-        wxLaunchDefaultBrowser(url);
+        wxLaunchDefaultBrowser(m_link);
     });
     Bind(wxEVT_ENTER_WINDOW, [this](auto& e) {
         SetForegroundColour(wxColour("#95C5FF"));
@@ -223,10 +220,8 @@ BindMachineDialog::BindMachineDialog()
     st_privacy_title->SetFont(GetFont());
     st_privacy_title->SetForegroundColour(wxColour("#333333"));
 
-    m_terms_title = new LinkLabel(m_panel_agreement, _L("Terms and Conditions"), "http://dev.auth.flashforge.shop/userAgreement",
-        "http://dev.auth.flashforge.shop/en/userAgreement");
-    m_privacy_title = new LinkLabel(m_panel_agreement, _L("Privacy Policy"), "http://dev.auth.flashforge.shop/privacyPolicy",
-        "http://dev.auth.flashforge.shop/en/privacyPolicy");
+    m_terms_title = new LinkLabel(m_panel_agreement, _L("Terms and Conditions"), FFUtils::userAgreement());
+    m_privacy_title = new LinkLabel(m_panel_agreement, _L("Privacy Policy"), FFUtils::privacyPolicy());
 
     auto st_and_title = new Label(m_panel_agreement, _L("and"));
     st_and_title->SetFont(GetFont());

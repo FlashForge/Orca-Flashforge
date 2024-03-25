@@ -74,11 +74,10 @@ private:
     class LinkLabel : public Label
     {
     public:
-        LinkLabel(wxWindow *parent, const wxString &text, const wxString& cn_link, const wxString& other_link);
+        LinkLabel(wxWindow *parent, const wxString &text, const wxString& link);
 
     private:
-        wxString m_cn_link;
-        wxString m_other_link;
+        wxString m_link;
     };
 
 private:
