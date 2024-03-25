@@ -40,7 +40,7 @@ const wxString    TEMP_CANCEL  = _L("cancel");
 const wxString    TEMP_CONFIRM = _L("confirm");
 
 const int TEXT_LENGTH = 20;
-const int MATERIAL_PIC_WIDTH  = 86;
+const int MATERIAL_PIC_WIDTH  = 80;
 const int MATERIAL_PIC_HEIGHT = 80;
 
 MaterialPanel::MaterialPanel(wxWindow* parent)
