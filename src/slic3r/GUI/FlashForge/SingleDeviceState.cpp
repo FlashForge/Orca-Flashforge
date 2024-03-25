@@ -1811,7 +1811,9 @@ void SingleDeviceState::connectEvent()
    MultiComMgr::inst()->Bind(COM_WAN_DEV_INFO_UPDATE_EVENT, &SingleDeviceState::onConnectWanDevInfoUpdate, this);
    //局域网数据更新
    MultiComMgr::inst()->Bind(COM_DEV_DETAIL_UPDATE_EVENT, &SingleDeviceState::onComDevDetailUpdate, this);
-   //局域网连接断开
+   //局域网连接更新
+   MultiComMgr::inst()->Bind(COM_CONNECTION_READY_EVENT, &SingleDeviceState::onComConnectReady, this);
+   //连接断开
    MultiComMgr::inst()->Bind(COM_CONNECTION_EXIT_EVENT, &SingleDeviceState::onConnectExit, this);
 #if 0
 //local file list
@@ -1933,7 +1935,17 @@ void SingleDeviceState::onConnectWanDevInfoUpdate(ComWanDevInfoUpdateEvent &even
         } else {
             fillValue(data);
         }
-   }
+        return;
+    }
+    
+    if (-1 == m_cur_id) {
+        const com_dev_data_t &data = MultiComMgr::inst()->devData(event.id);
+        if (data.wanDevInfo.serialNumber.compare(m_cur_serial_number) == 0) {
+            m_cur_id = event.id;
+            setCurId(m_cur_id);
+        }
+        return;
+    }
 }
 
 void SingleDeviceState::onComDevDetailUpdate(ComDevDetailUpdateEvent &event) 
@@ -1944,29 +1956,20 @@ void SingleDeviceState::onComDevDetailUpdate(ComDevDetailUpdateEvent &event)
         bool  valid = false;
         const com_dev_data_t& data  = MultiComMgr::inst()->devData(m_cur_id, &valid);
         fillValue(data);
- /*       std::string status = data.devDetail->status;
-        if (m_cur_printing_ctrl == 1) {
-            m_cur_printing_ctrl = 0;
-            if (status == PAUSE) {
-                m_print_button->SetLabel(_L("continue print"));
-                m_print_button->SetIcon("device_continue_print");
-                m_print_button->Refresh();
-            }
-        } else if (m_cur_printing_ctrl == 2) {
-            m_cur_printing_ctrl = 0;
-            if (status == "printing") {
-                m_print_button->SetLabel(_L("pause print"));
-                m_print_button->SetIcon("device_pause_print");
-                m_print_button->Refresh();
-            }
-        } else if (m_cur_printing_ctrl == 3) {
-            m_cur_printing_ctrl = 0;
-            if (status == "ready") {
-                m_machine_ctrl_panel->Hide();
-                m_machine_idle_panel->Show();
-                Layout();
-            }            
-        }*/
+   }
+}
+
+void SingleDeviceState::onComConnectReady(ComConnectionReadyEvent &event) 
+{
+   event.Skip();
+   if (-1 == m_cur_id) {
+        const com_dev_data_t &data  = MultiComMgr::inst()->devData(event.id);
+        std::string           lan_serial_number = data.lanDevInfo.serialNumber;
+        if (lan_serial_number.compare(m_cur_serial_number) == 0) {
+            m_cur_id = event.id;
+            setCurId(m_cur_id);
+        }
+        return;
    }
 }
 
