@@ -912,7 +912,18 @@ void LoginDialog::page1ShowErrorLabel(const wxString& labelInfo)
 {
     m_timer.Bind(wxEVT_TIMER, &LoginDialog::OnTimer, this);
     m_error_label->SetLabel(labelInfo);
-    m_error_label->SetMinSize(wxSize(FromDIP(380), FromDIP(45)));
+
+    wxGCDC dc(this);
+    int sw = dc.GetTextExtent(labelInfo).x;
+    if (sw >= 380) {
+        sw = 380;
+    } else if (sw < 340) {
+        sw += 40;
+    }
+    if (sw >= 380) {
+        sw = 380;
+    }
+    m_error_label->SetMinSize(wxSize(FromDIP(sw), FromDIP(45)));
 
     m_panel_separotor_login->Hide();
     m_error_label->Show(true);
@@ -1007,8 +1018,19 @@ void LoginDialog::page2ShowErrorLabel(const wxString& labelInfo)
 {
     m_timer.Bind(wxEVT_TIMER, &LoginDialog::OnTimer, this);
     m_error_label_page2->SetLabel(labelInfo);
+    
+    wxGCDC dc(this);
+    int sw = dc.GetTextExtent(labelInfo).x;
+    if (sw >= 380) {
+        sw = 380;
+    } else if (sw < 340) {
+        sw += 40;
+    }
+    if (sw >= 380) {
+        sw = 380;
+    }
 
-    m_error_label_page2->SetMinSize(wxSize(FromDIP(380), FromDIP(45)));
+    m_error_label_page2->SetMinSize(wxSize(FromDIP(sw), FromDIP(45)));
     m_panel_separotor_login2->Hide();
     m_error_label_page2->Show(true);
     Layout();
