@@ -633,8 +633,8 @@ void SingleDeviceState::reInitData()
 { 
    m_last_speed               = 0.00;
    m_last_z_axis_compensation = 0.00;
-   m_last_cooling_fan_speed   = 0.00;
-   m_last_chamber_fan_speed   = 0.00;
+   m_last_cooling_fan_speed   = 120.00;
+   m_last_chamber_fan_speed   = 120.00;
    m_right_target_temp        = 0.00;
    m_plat_target_temp         = 0.00;
    m_camera_stream_url.clear();
