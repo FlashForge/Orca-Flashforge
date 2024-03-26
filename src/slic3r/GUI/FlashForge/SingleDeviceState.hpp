@@ -203,9 +203,7 @@ protected:
     Button*  m_clear_button;
 
     wxBitmap    m_material_weight_pic;
-    wxBitmap    m_material_pic;
     wxStaticBitmap*  m_material_weight_staticbitmap;
-    wxStaticBitmap*  m_material_staticbitmap;
     MaterialImagePanel *m_material_picture{nullptr};
     wxImage            *m_material_image{nullptr};
 

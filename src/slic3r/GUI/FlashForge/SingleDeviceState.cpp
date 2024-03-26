@@ -66,6 +66,7 @@ void MaterialImagePanel::OnPaint(wxPaintEvent &event)
     }
 
     wxSize  size = GetSize();
+
     wxImage img  = m_image;
     img.Rescale(size.x, size.y);
     if (!img.HasAlpha()) {
@@ -1176,23 +1177,21 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         m_material_weight_pic = create_scaled_bitmap("device_material_weight", this, 16);
         
         m_material_weight_staticbitmap = new wxStaticBitmap(m_panel_control_material, wxID_ANY,m_material_weight_pic);
-        //m_material_staticbitmap = new wxStaticBitmap(m_panel_control_material, wxID_ANY,m_material_pic);
 
         m_material_picture = new MaterialImagePanel(m_panel_control_material);
+        m_material_picture->SetMinSize(wxSize(FromDIP(80), FromDIP(80)));
 
         m_material_weight_label = new Label(m_panel_control_material,("234g"));
         
         wxBoxSizer *hbox = new wxBoxSizer(wxHORIZONTAL);
         hbox->SetMinSize(wxSize(60,-1));
-        hbox->Add(m_material_weight_staticbitmap,0, wxALIGN_CENTER | wxEXPAND | wxALL,0);
+        hbox->Add(m_material_weight_staticbitmap,0, wxALIGN_CENTER| wxALL,0);
         hbox->AddSpacer(FromDIP(5));
-        hbox->Add(m_material_weight_label, wxALIGN_CENTER | wxEXPAND | wxALL,0);
+        hbox->Add(m_material_weight_label, wxALIGN_CENTER| wxALL,0);
 
-        bSizer_control_material->Add(hbox, 0, /*wxALIGN_CENTER*/ wxRIGHT | wxEXPAND | wxALL, 0);
-        //bSizer_control_material->AddStretchSpacer();
-        bSizer_control_material->AddSpacer(FromDIP(70));
-        bSizer_control_material->Add(m_material_picture, 0, /*wxALIGN_CENTER*/ wxRIGHT | wxALL, 0);
-        //bSizer_control_material->AddSpacer(FromDIP(6));
+        bSizer_control_material->Add(hbox, 0, /*wxALIGN_CENTER*/ wxRIGHT | wxALL, 0);
+        bSizer_control_material->AddStretchSpacer();
+        bSizer_control_material->Add(m_material_picture, 0, /*wxALIGN_CENTER*/ wxRIGHT, 0);
 
         m_panel_control_material->SetSizer(bSizer_control_material);
         m_panel_control_material->Layout();
@@ -2343,19 +2342,12 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
                     }
                     if (m_last_pic_data != m_pic_data) {
                         m_last_pic_data = m_pic_data;
-                        //delete m_bitmap;
-                        //m_bitmap = nullptr;
-                        //m_bitmap = new wxBitmap(image);
-                        //m_material_staticbitmap->SetBitmap(*m_bitmap);
                         if (m_material_image) {
                             delete m_material_image;
                             m_material_image = nullptr;
                         }
                         m_material_image = new wxImage(image);
-                        m_material_picture->SetMinSize(wxSize(FromDIP(80), FromDIP(80)));
                         m_material_picture->SetImage(*m_material_image);
-
-                        Layout();
                     } 
                 }
             } else {
@@ -2366,7 +2358,6 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
             return MultiComUtils::downloadFile(m_file_pic_url, m_pic_data, 15000); 
         });     
    }
-   //m_material_staticbitmap->SetBitmap(create_scaled_bitmap(filePic, this, 60));
 
    double printProgress = data.devDetail->printProgress; // 打印进度
    m_progress_bar->SetProgress(printProgress * 100);
@@ -2463,10 +2454,12 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
    std::string machineType = data.devDetail->pid == 0x0024 ? "Adventurer 5M Pro" :(data.devDetail->pid == 0x0023 ? "Adventurer 5M" : "Unknow");
    std::string nozzleModel = data.devDetail->nozzleModel;//喷嘴型号
    std::string measure     = data.devDetail->measure;//打印尺寸
+   measure.append("mm");
    std::string firmwareVersion = data.devDetail->firmwareVersion;//固件版本
    std::string serialNubmer = data.connectMode == 0 ? data.lanDevInfo.serialNumber : data.wanDevInfo.serialNumber; //序列号
    double cumulativeFilament = data.devDetail->cumulativeFilament; //丝料统计
    wxString strCumulativeFilament = wxString::Format("%.2f", cumulativeFilament);
+   strCumulativeFilament.append("m");
 
    m_idle_tempMixDevice->modifyDeviceInfo(machineType, nozzleModel, measure, firmwareVersion, serialNubmer, strCumulativeFilament);
 }
