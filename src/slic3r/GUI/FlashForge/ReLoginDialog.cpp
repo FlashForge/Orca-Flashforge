@@ -218,7 +218,7 @@ ReLoginDialog::ReLoginDialog() : TitleDialog(static_cast<wxWindow *>(wxGetApp().
     m_re_login_button->SetBGColor(wxColour(50,141,251));
     m_re_login_button->Bind(wxEVT_LEFT_UP,&ReLoginDialog::onRelogin2BtnClicked, this);
     m_re_login_button->SetMinSize(wxSize(FromDIP(170),FromDIP(35)));
-    m_re_login_button->SetFont((wxFont(wxFontInfo(16))));
+    //m_re_login_button->SetFont((wxFont(wxFontInfo(16))));
 
     m_sizer_main->Add(m_re_login_button, 0, wxALIGN_CENTER, 0);
 
@@ -233,7 +233,7 @@ ReLoginDialog::ReLoginDialog() : TitleDialog(static_cast<wxWindow *>(wxGetApp().
     m_login_out_button->SetForegroundColour(wxColour(50,141,251));
     m_login_out_button->SetBackgroundColour(wxColour(255,255,255)); 
     m_login_out_button->SetWindowStyleFlag(wxBORDER_NONE); 
-    m_login_out_button->SetFont((wxFont(wxFontInfo(16))));
+    //m_login_out_button->SetFont((wxFont(wxFontInfo(16))));
     m_login_out_button->Bind(wxEVT_BUTTON,&ReLoginDialog::onLoginoutBtnClicked, this);
 
     m_sizer_main->Add(m_login_out_button, 0, wxALIGN_CENTER, 0);
