@@ -497,8 +497,7 @@ void MonitorPanel::show_status(int status)
 #if !BBL_RELEASE_TO_PUBLIC
     m_upgrade_panel->update(nullptr);
 #endif
-
-Freeze();
+//Freeze();
     // update panels
     if (m_side_tools) {
         int  h                = m_side_tools->getConnectInfoHeight();
@@ -549,7 +548,7 @@ Freeze();
         m_tabpanel->Layout();
     }
     Layout();
-Thaw();
+//Thaw();
 }
 
 } // GUI
