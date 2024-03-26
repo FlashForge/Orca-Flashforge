@@ -1135,6 +1135,7 @@ void TempMixDevice::setCurId(int curId)
     }
     m_cur_id = curId;
     m_panel_circula_filter->setCurId(curId);
+    reInitPage();
 }
 
 void TempMixDevice::reInitProductState() 
@@ -1143,6 +1144,22 @@ void TempMixDevice::reInitProductState()
     m_idle_filter_button->SetIcon("device_filter");
     m_idle_lamp_control_button->Enable(true);
     m_idle_filter_button->Enable(true);
+}
+
+void TempMixDevice::reInitPage() 
+{
+    if (m_panel_idle_device_info) {
+        m_panel_idle_device_info->Hide();
+    }
+    if (m_panel_circula_filter) {
+        m_panel_circula_filter->Hide();
+    }
+    if (m_idle_device_info_button) {
+        m_idle_device_info_button->SetBackgroundColor(wxColour(255, 255, 255));
+    }
+    if (m_idle_filter_button) {
+        m_idle_filter_button->SetBackgroundColor(wxColour(255, 255, 255));
+    }
 }
 
 void TempMixDevice::setDevProductAuthority(const fnet_dev_product_t &data) 
