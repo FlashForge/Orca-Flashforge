@@ -10,6 +10,7 @@
 //#include "DeviceData.hpp"
 #include "slic3r/GUI/Monitor.hpp"
 #include "slic3r/GUI/MainFrame.hpp"
+#include "slic3r/GUI/FFUtils.hpp"
 
 namespace Slic3r {
 namespace GUI {
@@ -145,7 +146,11 @@ FilterPopupWindow::FilterItem::FilterItem(wxWindow* parent, const wxString& text
     m_main_sizer = new wxBoxSizer(wxHORIZONTAL);
     SetSizer(m_main_sizer);
 
-    m_text = new wxStaticText(this, wxID_ANY, text);
+    wxScreenDC dc;
+    dc.SetFont(GetFont());
+    wxString str = FFUtils::trimString(dc, text, FromDIP(170));
+    m_text = new wxStaticText(this, wxID_ANY, str);
+    
     m_main_sizer->AddSpacer(FromDIP(15));
     m_main_sizer->Add(m_text, 1, wxALIGN_CENTER_VERTICAL | wxTOP | wxBOTTOM, FromDIP(5));
     m_main_sizer->AddSpacer(FromDIP(15));
@@ -350,6 +355,7 @@ void FilterPopupWindow::StatusItem::setStatus(const std::string& status)
 {
     wxColour color;
     m_text->SetLabel(FFUtils::convertStatus(m_status, color));
+    m_text->Fit();
     Layout();
     Fit();
 }
@@ -677,11 +683,17 @@ DeviceInfoItemPanel::DeviceInfoItemPanel(wxWindow *parent, const DeviceInfo& inf
 
 void DeviceInfoItemPanel::updateInfo(const DeviceInfo& info)
 {
-    m_name_text->SetLabel(wxString::FromUTF8(info.name));
+    int width = GetSize().x - FromDIP(10) * 2;
+    wxScreenDC dc;
+    dc.SetFont(GetFont());
+    wxString name = FFUtils::trimString(dc, wxString::FromUTF8(info.name), width);
+    m_name_text->SetLabel(name);
     //if (info.placement.empty()) {
     //    m_placement_text->SetLabel(_L("Default"));
     //} else {
-    m_placement_text->SetLabel(wxString::FromUTF8(info.placement));
+    wxString placement = FFUtils::trimString(dc, wxString::FromUTF8(info.placement), width);
+    m_placement_text->SetLabel(placement);
+    //m_placement_text->SetToolTip(FFUtils::trimString(wxPaintDC(m_placement_text), wxString::FromUTF8(info.placement), m_placement_text->GetSizer()->~wxClientDataContainer));
     //}
     if (info.pid != m_info.pid) {
         m_icon->SetBitmap(machineBitmap(info.pid));
@@ -1625,10 +1637,10 @@ void DeviceListPanel::updateDeviceList()
         m_filter_placement_default = true;
         m_filter_status_default = true;
         m_simple_book->ChangeSelection(m_device_map.empty() ? 0 : 1);
-        updateFilterMap();
         //updateDeviceWindowSize();
         updateDeviceSizer();
     }
+    updateFilterMap();
     updateStaticMap();
     m_device_data_cached.clear();
 }
@@ -1666,6 +1678,8 @@ bool DeviceListPanel::getDeviceInfo(DeviceInfoItemPanel::DeviceInfo& info, int c
 void DeviceListPanel::updateDeviceInfo(const std::string& dev_id, const DeviceInfoItemPanel::DeviceInfo& info)
 {
     bool status_changed = false;
+    bool placement_changed = false;
+    bool type_changed = false;
     auto iter = m_device_map.find(dev_id);
     if (iter != m_device_map.end()) {
         auto dev_info = iter->second->deviceInfo();        
@@ -1673,13 +1687,25 @@ void DeviceListPanel::updateDeviceInfo(const std::string& dev_id, const DeviceIn
             if (dev_info.status != info.status) {
                 status_changed = true;
             }
-            if (status_changed || dev_info.conn_id != info.conn_id || dev_info.lanFlag != info.lanFlag
-                || dev_info.name != info.name || dev_info.pid != info.pid || dev_info.placement != info.placement) {
+            if (dev_info.placement != info.placement) {
+                placement_changed = true;
+            }
+            if (dev_info.pid != info.pid) {
+                type_changed = true;
+            }
+            if (status_changed || placement_changed || type_changed
+                || dev_info.conn_id != info.conn_id || dev_info.lanFlag != info.lanFlag || dev_info.name != info.name) {
                 iter->second->updateInfo(info);
+            }
+            if (placement_changed) {
+                updatePlacementMap();
+            }
+            if (type_changed) {
+                updateTypeMap();
             }
             if (status_changed) {
                 updateStatusMap();
-                updateStaticMap();
+                updateStaticMap();                
                 if (m_static_btn->GetValue()) {
                     updateDeviceSizer();
                 }

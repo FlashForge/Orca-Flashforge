@@ -21,6 +21,7 @@
 #include <miniz.h>
 #include "BitmapCache.hpp"
 #include "Jobs/ExportSliceJob.hpp"
+#include "FFUtils.hpp"
 
 namespace Slic3r {
 namespace GUI {
@@ -598,9 +599,12 @@ void MachineItem::build()
         m_thumbnailPanel->set_thumbnail(iter->second);
     }
 
-    m_nameLbl = new wxStaticText(this, wxID_ANY, m_data.name);
-    m_nameLbl->SetMaxSize(wxSize(FromDIP(200), -1));
-    m_nameLbl->Wrap(FromDIP(200));
+    wxScreenDC dc;
+    dc.SetFont(GetFont());
+    wxString str = FFUtils::trimString(dc, m_data.name, FromDIP(150));
+    m_nameLbl = new wxStaticText(this, wxID_ANY, str);
+    m_nameLbl->Fit();
+    //m_nameLbl->Wrap(FromDIP(200));
     
     m_mainSizer = new wxBoxSizer(wxHORIZONTAL);
     m_mainSizer->Add(m_checkBox, 0, wxALIGN_CENTER_VERTICAL);
