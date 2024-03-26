@@ -88,7 +88,7 @@ RoundImagePanel::RoundImagePanel(wxWindow *parent, const wxSize& size/*=wxDefaul
     //Bind(wxEVT_SIZE, &RoundImagePanel::OnSize, this);
 }
 
-void RoundImagePanel::SetImage(const wxImage& image)
+void RoundImagePanel::SetImage(const wxImage &image)
 {
     m_image = image;
     Refresh();
