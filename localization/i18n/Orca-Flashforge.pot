@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-03-22 09:17+0800\n"
+"POT-Creation-Date: 2024-03-26 13:38+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -642,9 +642,6 @@ msgstr ""
 msgid "Loading a mode view"
 msgstr ""
 
-msgid "The current account has been logged out!"
-msgstr ""
-
 msgid "Choose one file (3mf):"
 msgstr ""
 
@@ -677,6 +674,9 @@ msgstr ""
 msgid ""
 "The version of Orca-Flashforge is too low and needs to be updated to the "
 "latest version before it can be used normally"
+msgstr ""
+
+msgid "The current account has been logged out!"
 msgstr ""
 
 msgid "Unable to connect to the Internet!"
@@ -5408,7 +5408,7 @@ msgstr ""
 msgid "Read and accept"
 msgstr ""
 
-msgid "Terms and Conditions"
+msgid "Term of Service"
 msgstr ""
 
 msgid "Privacy Policy"
@@ -10789,6 +10789,9 @@ msgid "Register"
 msgstr ""
 
 msgid "Forget Password"
+msgstr ""
+
+msgid "《Term of Service》"
 msgstr ""
 
 msgid "User not registered"

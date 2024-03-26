@@ -220,7 +220,7 @@ BindMachineDialog::BindMachineDialog()
     st_privacy_title->SetFont(GetFont());
     st_privacy_title->SetForegroundColour(wxColour("#333333"));
 
-    m_terms_title = new LinkLabel(m_panel_agreement, _L("Terms and Conditions"), FFUtils::userAgreement());
+    m_terms_title   = new LinkLabel(m_panel_agreement, _L("Term of Service"), FFUtils::userAgreement());
     m_privacy_title = new LinkLabel(m_panel_agreement, _L("Privacy Policy"), FFUtils::privacyPolicy());
 
     auto st_and_title = new Label(m_panel_agreement, _L("and"));

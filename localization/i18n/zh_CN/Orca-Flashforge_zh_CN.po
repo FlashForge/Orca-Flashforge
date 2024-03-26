@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Slic3rPE\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-03-22 09:17+0800\n"
-"PO-Revision-Date: 2024-03-25 10:20+0800\n"
+"POT-Creation-Date: 2024-03-26 13:38+0800\n"
+"PO-Revision-Date: 2024-03-26 13:42+0800\n"
 "Last-Translator: SoftFever <softfeverever@gmail.com>\n"
 "Language-Team: \n"
 "Language: zh_CN\n"
@@ -651,9 +651,6 @@ msgstr "加载当前预设"
 msgid "Loading a mode view"
 msgstr "加载模式视图"
 
-msgid "The current account has been logged out!"
-msgstr "当前账户已登出！"
-
 msgid "Choose one file (3mf):"
 msgstr "选择一个文件（3mf）："
 
@@ -687,6 +684,9 @@ msgid ""
 "The version of Orca-Flashforge is too low and needs to be updated to the "
 "latest version before it can be used normally"
 msgstr "Orca-Flashforge版本过低，需要更新到最新版本方可正常使用"
+
+msgid "The current account has been logged out!"
+msgstr "当前账户已登出！"
 
 msgid "Unable to connect to the Internet!"
 msgstr "无法连接到互联网！"
@@ -5542,11 +5542,11 @@ msgstr "你想将这台设备登记到此账户吗?"
 msgid "Read and accept"
 msgstr "我已阅读并接受"
 
-msgid "Terms and Conditions"
-msgstr "用户使用协议"
+msgid "Term of Service"
+msgstr "《服务条款》"
 
 msgid "Privacy Policy"
-msgstr "隐私协议"
+msgstr "《隐私政策》"
 
 msgid "and"
 msgstr "和"
@@ -11271,13 +11271,16 @@ msgid "《Term of Sevrvice》"
 msgstr "《服务条款》"
 
 msgid "《Privacy Policy》"
-msgstr "《隐私协议》"
+msgstr "《隐私政策》"
 
 msgid "Register"
 msgstr "注册"
 
 msgid "Forget Password"
 msgstr "忘记密码"
+
+msgid "《Term of Service》"
+msgstr "《服务条款》"
 
 msgid "User not registered"
 msgstr "该账号未注册"
@@ -11742,6 +11745,9 @@ msgid ""
 "clogging when printing lower temperature filament with a higher enclosure "
 "temperature. More info about this in the Wiki."
 msgstr ""
+
+#~ msgid "Terms and Conditions"
+#~ msgstr "用户使用协议"
 
 #, fuzzy
 #~| msgid "Cancel print"

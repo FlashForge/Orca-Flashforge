@@ -559,7 +559,7 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     m_protocol_page1 = new  wxStaticText(m_panel_checkbox_page1, wxID_ANY,_L("Read and Agree to Accept"));
     //m_protocol_page1->SetFont((wxFont(wxFontInfo(14))));
 
-    m_service_link_page1 = new wxStaticText(m_panel_checkbox_page1, wxID_ANY,  _L("《Term of Sevrvice》"));
+    m_service_link_page1 = new wxStaticText(m_panel_checkbox_page1, wxID_ANY,  _L("《Term of Service》"));
     m_service_link_page1->SetForegroundColour(wxColour(50,141,251));
     m_service_link_page1->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
         event.Skip();
@@ -747,7 +747,7 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     m_protocol_page2 = new  wxStaticText(m_panel_checkbox_page2, wxID_ANY,_L("Read and Agree to Accept"));
     //m_protocol_page2->SetFont((wxFont(wxFontInfo(14))));
     //Service Item
-    m_service_link_page2 = new wxStaticText(m_panel_checkbox_page2, wxID_ANY,  _L("《Term of Sevrvice》"));
+    m_service_link_page2 = new wxStaticText(m_panel_checkbox_page2, wxID_ANY,  _L("《Term of Service》"));
     m_service_link_page2->SetForegroundColour(wxColour(50,141,251));
     m_service_link_page2->Bind(wxEVT_LEFT_DOWN,[this](wxMouseEvent& event){
         event.Skip();
