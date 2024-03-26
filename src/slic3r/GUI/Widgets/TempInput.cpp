@@ -189,6 +189,7 @@ void TempInput::Create(wxWindow *parent, wxString text, wxString label, wxString
         SetFinish();
     });
     text_ctrl->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent &e) {
+        e.Skip();
         OnEdit();
         auto temp = text_ctrl->GetValue();
         if (temp.ToStdString().empty()) return;
@@ -197,7 +198,9 @@ void TempInput::Create(wxWindow *parent, wxString text, wxString label, wxString
 
         auto tempint = std::stoi(temp.ToStdString());
         if (tempint > max_temp) {
-            Warning(true, WARNING_TOO_HIGH);
+            tempint = max_temp;
+            //Warning(true, WARNING_TOO_HIGH);
+            Warning(false, WARNING_TOO_LOW);
             return;
         } else {
             Warning(false, WARNING_TOO_LOW);
@@ -1195,10 +1198,28 @@ void TempMixDevice::lostFocusmodifyTemp()
         m_top_btn->SetTagTemp(m_right_target_temp, true);
         top_temp = m_right_target_temp;
     }
+    if (top_temp > 280) {
+        top_temp = 280;
+        m_top_btn->SetTagTemp(top_temp, true);
+        m_right_target_temp = top_temp;
+    } else if (top_temp < 0) {
+        top_temp = 0;
+        m_top_btn->SetTagTemp(top_temp, true);
+        m_right_target_temp = top_temp;
+    }
     bool bBottom = m_bottom_btn->GetTagTemp().ToDouble(&bottom_temp);
     if (!bBottom || bottom_temp < 0) {
         m_bottom_btn->SetTagTemp(m_plat_target_temp, true);
         bottom_temp = m_plat_target_temp;
+    }
+    if (bottom_temp > 110) {
+        bottom_temp = 110;
+        m_bottom_btn->SetTagTemp(bottom_temp, true);
+        m_plat_target_temp = bottom_temp;
+    } else if (bottom_temp < 0) {
+        bottom_temp = 0;
+        m_bottom_btn->SetTagTemp(bottom_temp, true);
+        m_plat_target_temp = bottom_temp;
     }
     bool bMid = m_mid_btn->GetTagTemp().ToDouble(&mid_temp);
     Slic3r::GUI::ComTempCtrl *tempCtrl = new Slic3r::GUI::ComTempCtrl(bottom_temp, top_temp, 0, mid_temp);

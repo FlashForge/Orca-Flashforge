@@ -797,12 +797,12 @@ void SingleDeviceState::lostFocusmodifyTemp()
     }
     if (top_temp > 280) {
         top_temp = 280;
-        m_tempCtrl_top->SetTagTemp(m_right_target_temp, true);
-        top_temp = m_right_target_temp;
+        m_tempCtrl_top->SetTagTemp(top_temp, true);
+        m_right_target_temp = top_temp;
     } else if (top_temp < 0) {
         top_temp = 0;
-        m_tempCtrl_top->SetTagTemp(m_right_target_temp, true);
-        top_temp = m_right_target_temp;
+        m_tempCtrl_top->SetTagTemp(top_temp, true);
+        m_right_target_temp = top_temp;
     }
     bool bBottom = m_tempCtrl_bottom->GetTagTemp().ToDouble(&bottom_temp);
     if (!bBottom) {
@@ -811,12 +811,12 @@ void SingleDeviceState::lostFocusmodifyTemp()
     }
     if (bottom_temp > 110) {
         bottom_temp = 110;
-        m_tempCtrl_top->SetTagTemp(m_plat_target_temp, true);
-        bottom_temp = m_plat_target_temp;
+        m_tempCtrl_top->SetTagTemp(bottom_temp, true);
+        m_plat_target_temp = bottom_temp;
     } else if (bottom_temp < 0) {
         bottom_temp = 0;
-        m_tempCtrl_top->SetTagTemp(m_plat_target_temp, true);
-        bottom_temp = m_plat_target_temp;
+        m_tempCtrl_top->SetTagTemp(bottom_temp, true);
+        m_plat_target_temp = bottom_temp;
     }
     bool  bMid = m_tempCtrl_mid->GetTagTemp().ToDouble(&mid_temp);
     ComTempCtrl *tempCtrl = new ComTempCtrl(bottom_temp, top_temp, 0, mid_temp);
