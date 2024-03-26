@@ -2141,7 +2141,8 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
    wxString modify_plat_temp    = wxString::Format("%d", aPlatTemp);
    wxString modify_chamber_temp = wxString::Format("%d", aChamberTemp);
 
-   m_idle_tempMixDevice->modifyTemp(modify_nozzle_temp, modify_plat_temp, modify_chamber_temp);
+   m_idle_tempMixDevice->modifyTemp(modify_nozzle_temp, modify_plat_temp, modify_chamber_temp, rightTargetTemp, platTargetTemp,
+                                    chamberTargetTemp);
    std::string lightStatus = data.devDetail->lightStatus; // 灯状态
    if (data.devProduct->lightCtrlState == 1 && lightStatus.compare(CLOSE) == 0) {
         m_lamp_control_button->SetIcon("device_lamp_control");

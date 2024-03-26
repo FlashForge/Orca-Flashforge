@@ -10,6 +10,9 @@
 #include "FFButton.hpp"
 #include "slic3r/GUI/TitleDialog.hpp"
 #include "slic3r/GUI/FlashForge/FlashNetwork.h"
+#include "slic3r/GUI/FlashForge/MultiComMgr.hpp"
+#include "slic3r/GUI/FlashForge/MultiComUtils.hpp"
+#include "slic3r/GUI/FlashForge/ComCommand.hpp"
 
 wxDECLARE_EVENT(wxCUSTOMEVT_SET_TEMP_FINISH, wxCommandEvent);
 
@@ -269,6 +272,7 @@ public:
     void reInitProductState();
     void reInitPage();
     void setDevProductAuthority(const fnet_dev_product_t &data);
+    void lostFocusmodifyTemp();
 
     void create_panel(wxWindow* parent,bool idle, wxString nozzleTemp,wxString platformTemp,wxString cavityTemp);
 
@@ -282,7 +286,7 @@ public:
 
     void setDeviceInfoBtnIcon(const wxString &icon);
 
-    void modifyTemp(wxString nozzleTemp = "--", wxString platformTemp = "--", wxString cavityTemp = "--");
+    void modifyTemp(wxString nozzleTemp = "--", wxString platformTemp = "--", wxString cavityTemp = "--", int topTemp = 0, int bottomTemp = 0,int chamberTemp = 0);
     void modifyDeviceInfo(wxString machineType, wxString sprayNozzle,wxString printSize,wxString version,wxString number,wxString material);
     void modifyDeviceLampState(bool bOpen);
     void modifyDeviceFilterState(bool internalOpen, bool externalOpen);
@@ -297,13 +301,13 @@ private:
 
     StartFiltering* m_panel_circula_filter; //空闲状态，过滤按钮
 
-    IconText *m_temp_ctrl_top{nullptr};
-    IconText *m_temp_ctrl_bottom{nullptr};
-    IconText *m_temp_ctrl_mid{nullptr};
+    TempInput *m_top_btn{nullptr};
+    TempInput *m_bottom_btn{nullptr};
+    TempInput *m_mid_btn{nullptr};
 
-    TempButton *m_top_btn{nullptr};
-    TempButton *m_bottom_btn{nullptr};
-    TempButton *m_mid_btn{nullptr};
+    //TempButton *m_top_btn{nullptr};
+    //TempButton *m_bottom_btn{nullptr};
+    //TempButton *m_mid_btn{nullptr};
 
     Label *m_machine_type_data{nullptr};
     Label *m_spray_nozzle_data{nullptr};
@@ -313,6 +317,9 @@ private:
     Label *m_private_material_data{nullptr};
 
     int m_cur_id = -1;
+
+    double m_right_target_temp = 0.00;
+    double m_plat_target_temp = 0.00;
 
 };
 

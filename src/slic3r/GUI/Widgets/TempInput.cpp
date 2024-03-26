@@ -169,7 +169,7 @@ void TempInput::Create(wxWindow *parent, wxString text, wxString label, wxString
         OnEdit();
         auto temp = text_ctrl->GetValue();
         if (temp.ToStdString().empty()) {
-            text_ctrl->SetValue(wxString("_"));
+            text_ctrl->SetValue(wxString("--"));
             return;
         }
 
@@ -554,6 +554,10 @@ void TempInput::render(wxDC &dc)
     }
 
     dc.SetTextForeground(StateColor::darkModeColorFor("#328DFB"));
+    if (text.compare("--") == 0) {
+        dc.SetTextForeground(StateColor::darkModeColorFor("#999999"));
+    }
+
     dc.DrawText(text, pt);
 
     // separator
@@ -1181,6 +1185,26 @@ void TempMixDevice::setDevProductAuthority(const fnet_dev_product_t &data)
     }
 }
 
+void TempMixDevice::lostFocusmodifyTemp()
+{
+    double top_temp;
+    double bottom_temp;
+    double mid_temp;
+    bool   bTop = m_top_btn->GetTagTemp().ToDouble(&top_temp);
+    if (!bTop || top_temp < 0) {
+        m_top_btn->SetTagTemp(m_right_target_temp, true);
+        top_temp = m_right_target_temp;
+    }
+    bool bBottom = m_bottom_btn->GetTagTemp().ToDouble(&bottom_temp);
+    if (!bBottom || bottom_temp < 0) {
+        m_bottom_btn->SetTagTemp(m_plat_target_temp, true);
+        bottom_temp = m_plat_target_temp;
+    }
+    bool bMid = m_mid_btn->GetTagTemp().ToDouble(&mid_temp);
+    Slic3r::GUI::ComTempCtrl *tempCtrl = new Slic3r::GUI::ComTempCtrl(bottom_temp, top_temp, 0, mid_temp);
+    Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, tempCtrl);
+}
+
 
 void TempMixDevice::create_panel(wxWindow* parent,bool idle, wxString nozzleTemp,wxString platformTemp,wxString cavityTemp)
 {
@@ -1196,18 +1220,37 @@ void TempMixDevice::create_panel(wxWindow* parent,bool idle, wxString nozzleTemp
     wxString temperatureString = "100";
     temperatureString.Append(wxString::FromUTF8("\xE2\x84\x83"));
     //m_temp_ctrl_top = new IconText(m_panel_temperature, wxString("device_top_temperature"), 20, temperatureString, 18);
-    m_top_btn = new TempButton(m_panel_temperature, temperatureString, "device_top_temperature", 0, 16);
-    m_top_btn->SetTextColorNormal(wxColor("#328DFB"));
+    //m_top_btn = new TempButton(m_panel_temperature, temperatureString, "device_top_temperature", 0, 16);
+    wxWindowID top_id = wxWindow::NewControlId();
+    m_top_btn = new TempInput(m_panel_temperature, top_id, wxString("--"), wxString("--"), wxString("device_top_temperature"),
+                                   wxString("device_top_temperature"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER); 
+    m_top_btn->SetMinTemp(20);
+    m_top_btn->SetMaxTemp(120);
+    m_top_btn->SetMinSize((wxSize(FromDIP(106), FromDIP(29))));
     m_top_btn->SetBorderWidth(0);
-    m_top_btn->Bind(wxEVT_ENTER_WINDOW, [this](wxMouseEvent &event) { event.Skip(false); });
-    m_top_btn->Bind(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent &event) { event.Skip(false); });
-    m_top_btn->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &event) { event.Skip(false); });
-    m_top_btn->Bind(wxEVT_LEFT_UP, [this](wxMouseEvent &event) { event.Skip(false); });
-    //tempCtrl_top->SetMinSize((wxSize(FromDIP(108), -1)));
-    //bSizer_temperature->Add(tempCtrl_top,0, wxALIGN_CENTER | wxALL | wxEXPAND, FromDIP(9));
+    StateColor tempinput_text_colour(std::make_pair(wxColour(51, 51, 51), (int) StateColor::Disabled),
+                                     std::make_pair(wxColour(48, 58, 60), (int) StateColor::Normal));
+    m_top_btn->SetTextColor(tempinput_text_colour);
+    StateColor tempinput_border_colour(std::make_pair(*wxWHITE, (int) StateColor::Disabled),
+                                       std::make_pair(wxColour(0, 150, 136), (int) StateColor::Focused),
+                                       std::make_pair(wxColour(0, 150, 136), (int) StateColor::Hovered),
+                                       std::make_pair(*wxWHITE, (int) StateColor::Normal));
+    m_top_btn->SetBorderColor(tempinput_border_colour);
+    //m_top_btn->Bind(wxEVT_ENTER_WINDOW, [this](wxMouseEvent &event) { event.Skip(false); });
+    //m_top_btn->Bind(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent &event) { event.Skip(false); });
+    //m_top_btn->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &event) { event.Skip(false); });
+    //m_top_btn->Bind(wxEVT_LEFT_UP, [this](wxMouseEvent &event) { event.Skip(false); });
+    m_top_btn->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent &event) { 
+        event.Skip();
+        lostFocusmodifyTemp();
+    });
+    m_top_btn->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent &event) {
+        event.Skip();
+        lostFocusmodifyTemp();
+    });
+    
 
     bSizer_temperature->Add(m_top_btn, 1, wxALIGN_CENTER | wxEXPAND);
-    //bSizer_temperature->Add(m_temp_ctrl_top, wxSizerFlags(1).Expand());
 
     auto m_panel_temperature_separotor0 = new wxPanel(m_panel_temperature, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(6), -1),wxTAB_TRAVERSAL);
     m_panel_temperature_separotor0->SetBackgroundColour(wxColour(240,240,240));
@@ -1217,15 +1260,30 @@ void TempMixDevice::create_panel(wxWindow* parent,bool idle, wxString nozzleTemp
     wxString temperatureString_1 = "100";
     temperatureString_1.Append(wxString::FromUTF8("\xE2\x84\x83"));
     //m_temp_ctrl_bottom = new IconText(m_panel_temperature, wxString("device_bottom_temperature"), 20, temperatureString_1, 18);
-    m_bottom_btn = new TempButton(m_panel_temperature, temperatureString_1, "device_bottom_temperature", 0, 16);
-    m_bottom_btn->SetTextColorNormal(wxColor("#328DFB"));
+    //m_bottom_btn = new TempButton(m_panel_temperature, temperatureString_1, "device_bottom_temperature", 0, 16);
+    wxWindowID bottom_id = wxWindow::NewControlId();
+    m_bottom_btn = new TempInput(m_panel_temperature, bottom_id, wxString("--"), wxString("--"),
+                                         wxString("device_bottom_temperature"), wxString("device_bottom_temperature"), wxDefaultPosition,
+                                         wxDefaultSize, wxALIGN_CENTER);
+
+    //m_bottom_btn->Bind(wxEVT_ENTER_WINDOW, [this](wxMouseEvent &event) { event.Skip(false); });
+    //m_bottom_btn->Bind(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent &event) { event.Skip(false); });
+    //m_bottom_btn->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &event) { event.Skip(false); });
+    //m_bottom_btn->Bind(wxEVT_LEFT_UP, [this](wxMouseEvent &event) { event.Skip(false); });
+    m_bottom_btn->SetMinTemp(20);
+    m_bottom_btn->SetMaxTemp(120);
+    m_bottom_btn->SetMinSize((wxSize(FromDIP(106), FromDIP(29))));
     m_bottom_btn->SetBorderWidth(0);
-    m_bottom_btn->Bind(wxEVT_ENTER_WINDOW, [this](wxMouseEvent &event) { event.Skip(false); });
-    m_bottom_btn->Bind(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent &event) { event.Skip(false); });
-    m_bottom_btn->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &event) { event.Skip(false); });
-    m_bottom_btn->Bind(wxEVT_LEFT_UP, [this](wxMouseEvent &event) { event.Skip(false); });
-    //tempCtrl_bottom->SetMinSize((wxSize(FromDIP(108), -1)));
-    //bSizer_temperature->Add(tempCtrl_bottom,0, wxALIGN_CENTER | wxALL | wxEXPAND, FromDIP(9));
+    m_bottom_btn->SetBorderColor(tempinput_border_colour);
+    m_bottom_btn->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent &event) {
+        event.Skip();
+        lostFocusmodifyTemp();
+    });
+    m_bottom_btn->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent &event) {
+        event.Skip();
+        lostFocusmodifyTemp();
+    });
+
     bSizer_temperature->Add(m_bottom_btn, wxSizerFlags(1).Expand());
 
     auto m_panel_temperature_separotor1 = new wxPanel(m_panel_temperature, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(6), -1),wxTAB_TRAVERSAL);
@@ -1236,15 +1294,25 @@ void TempMixDevice::create_panel(wxWindow* parent,bool idle, wxString nozzleTemp
     wxString temperatureString_2 = "100"; 
     temperatureString_2.Append(wxString::FromUTF8("\xE2\x84\x83"));
     //m_temp_ctrl_mid = new IconText(m_panel_temperature, wxString("device_mid_temperature"), 20, temperatureString_2, 18);
-    m_mid_btn = new TempButton(m_panel_temperature, temperatureString_2, "device_mid_temperature", 0, 16);
-    m_mid_btn->SetTextColorNormal(wxColor("#328DFB"));
-    m_mid_btn->SetBorderWidth(0);
+    //m_mid_btn = new TempButton(m_panel_temperature, temperatureString_2, "device_mid_temperature", 0, 16);
+    wxWindowID bottom_mid = wxWindow::NewControlId();
+    m_mid_btn = new TempInput(m_panel_temperature, bottom_mid, wxString("--"), wxString("--"),
+                                          wxString("device_mid_temperature"), wxString("device_mid_temperature"), wxDefaultPosition, wxDefaultSize,
+                                          wxALIGN_CENTER);
+    
+
     m_mid_btn->Bind(wxEVT_ENTER_WINDOW, [this](wxMouseEvent &event) { event.Skip(false); });
     m_mid_btn->Bind(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent &event) { event.Skip(false); });
     m_mid_btn->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &event) { event.Skip(false); });
     m_mid_btn->Bind(wxEVT_LEFT_UP, [this](wxMouseEvent &event) { event.Skip(false); });
-    //tempCtrl_mid->SetMinSize((wxSize(FromDIP(108), -1)));
-    //bSizer_temperature->Add(tempCtrl_mid,0, wxALIGN_CENTER | wxALL | wxEXPAND, FromDIP(9));
+    m_mid_btn->SetMinTemp(20);
+    m_mid_btn->SetMaxTemp(120);
+    m_mid_btn->SetMinSize((wxSize(FromDIP(106), FromDIP(29))));
+    m_mid_btn->SetBorderWidth(0);
+    m_mid_btn->SetReadOnly(true);
+    m_mid_btn->SetTextBindInput();
+    m_mid_btn->SetBorderColor(tempinput_border_colour);
+
     bSizer_temperature->Add(m_mid_btn, wxSizerFlags(1).Expand());
 
     m_panel_temperature->SetSizer(bSizer_temperature);
@@ -1591,23 +1659,35 @@ void TempMixDevice::setDeviceInfoBtnIcon(const wxString &icon)
     m_idle_device_info_button->SetIcon(icon);
 }
 
-void TempMixDevice::modifyTemp(wxString nozzleTemp, wxString platformTemp, wxString cavityTemp) 
+void TempMixDevice::modifyTemp(
+    wxString nozzleTemp, wxString platformTemp, wxString cavityTemp, int topTemp, int bottomTemp, int chamberTemp)
 {
     if (nozzleTemp.compare("/") == 0 && platformTemp.compare("/") == 0 && cavityTemp.compare("/") == 0) {
-        m_top_btn->SetTextColorNormal(wxColor("#999999"));
-        m_bottom_btn->SetTextColorNormal(wxColor("#999999"));
-        m_mid_btn->SetTextColorNormal(wxColor("#999999"));
+        m_top_btn->Enable(false);
+        m_bottom_btn->Enable(false);
+        m_mid_btn->Enable(false);
+        m_top_btn->SetTagTemp("--");
+        m_bottom_btn->SetTagTemp("--");
+        m_mid_btn->SetTagTemp("--");
+        m_top_btn->SetCurrTemp("--");
+        m_bottom_btn->SetCurrTemp("--");
+        m_mid_btn->SetCurrTemp("--");
+    } else {
+        m_top_btn->Enable(true);
+        m_bottom_btn->Enable(true);
+        m_mid_btn->Enable(true);
         m_top_btn->SetLabel(nozzleTemp);
         m_bottom_btn->SetLabel(platformTemp);
         m_mid_btn->SetLabel(cavityTemp);
-    } else {
-        m_top_btn->SetTextColorNormal(wxColor("#328DFB"));
-        m_bottom_btn->SetTextColorNormal(wxColor("#328DFB"));
-        m_mid_btn->SetTextColorNormal(wxColor("#328DFB"));
-        wxString degreeSymbol = wxString::FromUTF8("\xE2\x84\x83");
-        m_top_btn->SetLabel(nozzleTemp.Append(degreeSymbol));
-        m_bottom_btn->SetLabel(platformTemp.Append(degreeSymbol));
-        m_mid_btn->SetLabel(cavityTemp.Append(degreeSymbol));
+        if (m_right_target_temp != topTemp && !m_top_btn->HasFocus()) {
+            m_right_target_temp = topTemp;
+            m_top_btn->SetTagTemp(topTemp, true);
+        }
+        if (m_plat_target_temp != bottomTemp && !m_bottom_btn->HasFocus()) {
+            m_plat_target_temp = bottomTemp;
+            m_bottom_btn->SetTagTemp(bottomTemp, true);
+        }
+        m_mid_btn->SetTagTemp(chamberTemp, true);
     }
 }
 
