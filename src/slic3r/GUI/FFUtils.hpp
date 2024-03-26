@@ -23,7 +23,7 @@ public:
 
 	static std::string truncateString(const std::string &s, size_t length);
 
-	static wxString trimString(wxDC &dc, wxString &str, int width);
+	static wxString trimString(wxDC &dc, const wxString &str, int width);
 
 	static std::string flashforgeWebsite();
 	static wxString privacyPolicy();

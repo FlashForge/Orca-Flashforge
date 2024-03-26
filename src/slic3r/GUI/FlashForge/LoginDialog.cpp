@@ -884,6 +884,8 @@ void LoginDialog::onAgreeCheckBoxChangedPage2(wxCommandEvent& event)
 
 void LoginDialog::onPage1Login(wxMouseEvent& event)
 {
+    event.Skip();
+    m_login_button_page1->Enable(false);
     m_get_code_button->SetMinSize(wxSize(FromDIP(89), FromDIP(40)));
     wxString usrname = m_username_ctrl_page1->GetValue();
     wxString usrname_value = m_username_ctrl_page1->GetValue();
@@ -947,7 +949,6 @@ void LoginDialog::onPage1Login(wxMouseEvent& event)
              }
         }
     }
-    event.Skip();
 }
 
 void LoginDialog::page1ShowErrorLabel(const wxString& labelInfo)
@@ -976,6 +977,7 @@ void LoginDialog::page1ShowErrorLabel(const wxString& labelInfo)
 void LoginDialog::onPage2Login(wxMouseEvent& event)
 {
     event.Skip();
+    m_login_button_page2->Enable(false);
     wxString usrname = m_username_ctrl_page2->GetValue();
     wxString password = m_password_ctrl_page2->GetValue();
     double num;
@@ -1108,12 +1110,14 @@ void LoginDialog::OnTimer(wxTimerEvent& event)
     if (m_error_label) {
         if (m_error_label->IsShown()) {
             m_error_label->Show(false);
+            m_login_button_page1->Enable(true);
         }
     }
 
     if (m_error_label_page2) {
         if (m_error_label_page2->IsShown()) {
             m_error_label_page2->Show(false);
+            m_login_button_page2->Enable(true);
         }
     }
 

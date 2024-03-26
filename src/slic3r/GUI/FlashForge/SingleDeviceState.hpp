@@ -133,6 +133,7 @@ public:
     void reInit();
     void reInitData();
     void reInitUI();
+    void reInitMaterialPic();
     void setDevProductAuthority(const fnet_dev_product_t &data);
     void reInitProductState();
     std::string getCurDevSerialNumber();

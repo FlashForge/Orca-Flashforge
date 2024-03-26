@@ -10,6 +10,7 @@
 //#include "DeviceData.hpp"
 #include "slic3r/GUI/Monitor.hpp"
 #include "slic3r/GUI/MainFrame.hpp"
+#include "slic3r/GUI/FFUtils.hpp"
 
 namespace Slic3r {
 namespace GUI {
@@ -145,7 +146,9 @@ FilterPopupWindow::FilterItem::FilterItem(wxWindow* parent, const wxString& text
     m_main_sizer = new wxBoxSizer(wxHORIZONTAL);
     SetSizer(m_main_sizer);
 
-    m_text = new wxStaticText(this, wxID_ANY, text);
+    m_text = new wxStaticText(this, wxID_ANY, wxEmptyString);
+    setText(text);
+        
     m_main_sizer->AddSpacer(FromDIP(15));
     m_main_sizer->Add(m_text, 1, wxALIGN_CENTER_VERTICAL | wxTOP | wxBOTTOM, FromDIP(5));
     m_main_sizer->AddSpacer(FromDIP(15));
@@ -165,6 +168,25 @@ FilterPopupWindow::FilterItem::FilterItem(wxWindow* parent, const wxString& text
 FilterPopupWindow::FilterItem::~FilterItem()
 {
     leaveWindow();
+}
+
+void FilterPopupWindow::FilterItem::setText(const wxString& text)
+{
+    wxScreenDC dc;
+    dc.SetFont(GetFont());
+    wxString str = FFUtils::trimString(dc, text, FromDIP(170));
+    m_text->SetLabel(str);
+
+    int width = dc.GetTextExtent(str).x ;
+    m_text->SetMinSize(wxSize(width, FromDIP(30)));
+    updateMinSize();
+    Layout();
+}
+
+void FilterPopupWindow::FilterItem::updateMinSize()
+{
+    int min_width = m_text->GetMinSize().x + FromDIP(30);
+    SetMinSize(wxSize(min_width, FromDIP(30)));
 }
 
 void FilterPopupWindow::FilterItem::setSelect(bool select)
@@ -349,7 +371,7 @@ void FilterPopupWindow::StatusItem::mouseUpEvent()
 void FilterPopupWindow::StatusItem::setStatus(const std::string& status)
 {
     wxColour color;
-    m_text->SetLabel(FFUtils::convertStatus(m_status, color));
+    setText(FFUtils::convertStatus(m_status, color));
     Layout();
     Fit();
 }
@@ -363,11 +385,12 @@ FilterPopupWindow::DeviceTypeItem::DeviceTypeItem(wxWindow* parent, unsigned sho
     m_main_sizer->Clear();
     m_check_box = new FFCheckBox(this);
     m_check_box->SetValue(checked);
-    m_text->SetLabel(FFUtils::getPrinterName(m_pid));
+    setText(FFUtils::getPrinterName(m_pid));
     m_main_sizer->AddSpacer(FromDIP(15));
     m_main_sizer->Add(m_check_box, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT | wxTOP | wxBOTTOM, FromDIP(5));
     m_main_sizer->Add(m_text, 1, wxALIGN_CENTER_VERTICAL | wxTOP | wxBOTTOM, FromDIP(5));
     m_main_sizer->AddSpacer(FromDIP(15));
+
     Layout();
     Fit();
     m_check_box->Bind(wxEVT_ENTER_WINDOW, &DeviceTypeItem::onEnter, this);
@@ -403,6 +426,12 @@ void FilterPopupWindow::DeviceTypeItem::mouseDownEvent()
     sendEvent("", m_pid);
 }
 
+void FilterPopupWindow::DeviceTypeItem::updateMinSize()
+{
+    int min_width = m_check_box->GetSize().x + m_text->GetMinSize().x + FromDIP(35);
+    SetMinSize(wxSize(min_width, -1));
+}
+
 
 FilterPopupWindow::FilterPopupWindow(wxWindow* parent)
     : PopupWindow(parent, wxBORDER_NONE | wxPU_CONTAINS_CONTROLS | wxFRAME_SHAPED)
@@ -429,7 +458,7 @@ void FilterPopupWindow::Create()
     int max_width = 0;
     int height = m_items.size() * FromDIP(30);
     for (auto btn : m_items) {
-        max_width = std::max(btn->GetSize().x, max_width);
+        max_width = std::max(btn->GetMinSize().x, max_width);
     }
 
     for (auto btn : m_items) {
@@ -677,11 +706,17 @@ DeviceInfoItemPanel::DeviceInfoItemPanel(wxWindow *parent, const DeviceInfo& inf
 
 void DeviceInfoItemPanel::updateInfo(const DeviceInfo& info)
 {
-    m_name_text->SetLabel(wxString::FromUTF8(info.name));
+    int width = GetSize().x - FromDIP(10) * 2;
+    wxScreenDC dc;
+    dc.SetFont(GetFont());
+    wxString name = FFUtils::trimString(dc, wxString::FromUTF8(info.name), width);
+    m_name_text->SetLabel(name);
     //if (info.placement.empty()) {
     //    m_placement_text->SetLabel(_L("Default"));
     //} else {
-    m_placement_text->SetLabel(wxString::FromUTF8(info.placement));
+    wxString placement = FFUtils::trimString(dc, wxString::FromUTF8(info.placement), width);
+    m_placement_text->SetLabel(placement);
+    //m_placement_text->SetToolTip(FFUtils::trimString(wxPaintDC(m_placement_text), wxString::FromUTF8(info.placement), m_placement_text->GetSizer()->~wxClientDataContainer));
     //}
     if (info.pid != m_info.pid) {
         m_icon->SetBitmap(machineBitmap(info.pid));
@@ -1625,10 +1660,10 @@ void DeviceListPanel::updateDeviceList()
         m_filter_placement_default = true;
         m_filter_status_default = true;
         m_simple_book->ChangeSelection(m_device_map.empty() ? 0 : 1);
-        updateFilterMap();
         //updateDeviceWindowSize();
         updateDeviceSizer();
     }
+    updateFilterMap();
     updateStaticMap();
     m_device_data_cached.clear();
 }
@@ -1666,6 +1701,8 @@ bool DeviceListPanel::getDeviceInfo(DeviceInfoItemPanel::DeviceInfo& info, int c
 void DeviceListPanel::updateDeviceInfo(const std::string& dev_id, const DeviceInfoItemPanel::DeviceInfo& info)
 {
     bool status_changed = false;
+    bool placement_changed = false;
+    bool type_changed = false;
     auto iter = m_device_map.find(dev_id);
     if (iter != m_device_map.end()) {
         auto dev_info = iter->second->deviceInfo();        
@@ -1673,13 +1710,25 @@ void DeviceListPanel::updateDeviceInfo(const std::string& dev_id, const DeviceIn
             if (dev_info.status != info.status) {
                 status_changed = true;
             }
-            if (status_changed || dev_info.conn_id != info.conn_id || dev_info.lanFlag != info.lanFlag
-                || dev_info.name != info.name || dev_info.pid != info.pid || dev_info.placement != info.placement) {
+            if (dev_info.placement != info.placement) {
+                placement_changed = true;
+            }
+            if (dev_info.pid != info.pid) {
+                type_changed = true;
+            }
+            if (status_changed || placement_changed || type_changed
+                || dev_info.conn_id != info.conn_id || dev_info.lanFlag != info.lanFlag || dev_info.name != info.name) {
                 iter->second->updateInfo(info);
+            }
+            if (placement_changed) {
+                updatePlacementMap();
+            }
+            if (type_changed) {
+                updateTypeMap();
             }
             if (status_changed) {
                 updateStatusMap();
-                updateStaticMap();
+                updateStaticMap();                
                 if (m_static_btn->GetValue()) {
                     updateDeviceSizer();
                 }

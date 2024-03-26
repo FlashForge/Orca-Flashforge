@@ -146,7 +146,7 @@ std::string FFUtils::truncateString(const std::string &s, size_t length)
     }
 }
 
-wxString FFUtils::trimString(wxDC &dc, wxString &str, int width)
+wxString FFUtils::trimString(wxDC &dc, const wxString &str, int width)
 {
     wxString clipText = str;
     int      clipw    = 0;

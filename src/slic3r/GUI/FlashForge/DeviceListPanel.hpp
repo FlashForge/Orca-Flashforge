@@ -74,10 +74,12 @@ public:
         bool isPointIn(const wxPoint& pnt);
         void leaveWindow();
         void sendEvent(const wxString& str_data, int int_data);
+        void setText(const wxString& text);
         virtual wxPoint convertEventPoint(wxMouseEvent& event);
         virtual void updateChildrenBackground(const wxColour& color);
         virtual void mouseDownEvent() {};
         virtual void mouseUpEvent();
+        virtual void updateMinSize();
 
     protected:
         bool            m_hoverFlag {false};
@@ -118,6 +120,7 @@ public:
         void updateChildrenBackground(const wxColour& color) override;
         void mouseUpEvent() override {};
         void mouseDownEvent() override;
+        void updateMinSize() override;
 
     private:
         unsigned short  m_pid;

@@ -646,6 +646,7 @@ void SingleDeviceState::setCurId(int curId)
     } else if (data.connectMode == 1) {
         m_cur_serial_number = data.wanDevInfo.serialNumber;
     }
+    reInitMaterialPic();
     onDevStateChanged(data.devDetail->status, data);
     fillValue(data);
     Layout();
@@ -716,6 +717,22 @@ void SingleDeviceState::reInitUI()
    m_idle_tempMixDevice->setState(0);
    m_cur_printing_ctrl = 0;
    Layout();
+}
+
+void SingleDeviceState::reInitMaterialPic() 
+{
+   if (m_material_picture) {
+     if (m_material_image) {
+            delete m_material_image;
+            m_material_image = nullptr;
+     }
+     m_file_pic_url.clear();
+     m_last_pic_data.clear();
+     std::string name = "monitor_item_prediction_0";
+     wxImage     image;
+     m_material_image = new wxImage(image);
+     m_material_picture->SetImage(*m_material_image);
+   }
 }
 
 void SingleDeviceState::setDevProductAuthority(const fnet_dev_product_t &data) 
@@ -1319,8 +1336,6 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         wxWindowID top_id = wxWindow::NewControlId();
         m_tempCtrl_top = new TempInput(m_panel_control_temperature, top_id, wxString("--"), wxString("--"), wxString("device_top_temperature"), wxString("device_top_temperature"), wxDefaultPosition,
                                         wxDefaultSize, wxALIGN_CENTER);
-        m_tempCtrl_top->SetTagTemp(20);
-        m_tempCtrl_top->SetCurrTemp(60);
         m_tempCtrl_top->SetMinTemp(20);
         m_tempCtrl_top->SetMaxTemp(120);
         m_tempCtrl_top->SetMinSize((wxSize(FromDIP(106), FromDIP(29))));
@@ -2096,9 +2111,21 @@ void SingleDeviceState::onModifyTempClicked(wxCommandEvent &event)
     double top_temp;
     double bottom_temp;
     double mid_temp; 
-    m_tempCtrl_top->GetTagTemp().ToDouble(&top_temp);
-    m_tempCtrl_bottom->GetTagTemp().ToDouble(&bottom_temp);
-    m_tempCtrl_mid->GetTagTemp().ToDouble(&mid_temp);
+    bool bTop = m_tempCtrl_top->GetTagTemp().ToDouble(&top_temp);
+    if (!bTop) {
+       m_tempCtrl_top->Unbind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);
+       m_tempCtrl_top->SetTagTemp(m_right_target_temp, true);
+       top_temp = m_right_target_temp;
+       m_tempCtrl_top->Bind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this); 
+    }
+    bool bBottom = m_tempCtrl_bottom->GetTagTemp().ToDouble(&bottom_temp);
+    if (!bBottom) {
+       m_tempCtrl_bottom->Unbind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);
+       m_tempCtrl_bottom->SetTagTemp(m_plat_target_temp, true);
+       bottom_temp = m_plat_target_temp;
+       m_tempCtrl_bottom->Bind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);
+    }
+    bool bMid = m_tempCtrl_mid->GetTagTemp().ToDouble(&mid_temp);
     ComTempCtrl* tempCtrl = new ComTempCtrl(bottom_temp, top_temp, 0, mid_temp);
     Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, tempCtrl);
 }
