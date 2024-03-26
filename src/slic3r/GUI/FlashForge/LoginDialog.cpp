@@ -226,6 +226,7 @@ void LoginDialog::initBindEvent()
         m_page2_checkBox->Refresh();
         m_protocol_page2->Refresh();
         m_service_link_page2->Refresh();
+        m_st_and_title2->Refresh();
         m_privacy_policy_page2->Refresh();
         m_title_1_underline->Hide();
 
@@ -591,11 +592,14 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
     });
     m_privacy_policy_page1->Show(true);
 
+    m_st_and_title1 = new wxStaticText(m_panel_checkbox_page1, wxID_ANY, _L("and"));
+
     //left gaption
     wrapSizer_1->Add(m_page1_checkBox);
     wrapSizer_1->AddSpacer(FromDIP(6));
     wrapSizer_1->Add(m_protocol_page1);
     wrapSizer_1->Add(m_service_link_page1);
+    wrapSizer_1->Add(m_st_and_title1);
     wrapSizer_1->Add(m_privacy_policy_page1);
 
     checkbox_sizer->Add(wrapSizer_1, wxSizerFlags(1).Expand());
@@ -778,6 +782,8 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
         wxLaunchDefaultBrowser(url);
     });
 
+    m_st_and_title2 = new wxStaticText(m_panel_checkbox_page2, wxID_ANY, _L("and"));
+
     //left gaption
     wrapSizer->Add(m_page2_checkBox);
     wrapSizer->AddSpacer(FromDIP(6));
@@ -787,6 +793,7 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
     wrapSizer->Add(to_txt);
     wrapSizer->Add(accept_txt);*/
     wrapSizer->Add(m_service_link_page2);
+    wrapSizer->Add(m_st_and_title2);
     wrapSizer->Add(m_privacy_policy_page2);
 
     checkbox_sizer->Add(wrapSizer, wxSizerFlags(1).Expand());

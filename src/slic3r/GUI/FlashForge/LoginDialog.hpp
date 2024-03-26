@@ -119,6 +119,7 @@ private:
     CountdownButton* m_get_code_button {nullptr};
     wxStaticText* m_protocol_page1{nullptr};
     wxStaticText* m_service_link_page1 {nullptr};
+    wxStaticText    *m_st_and_title1{nullptr};
     wxStaticText* m_privacy_policy_page1 {nullptr};
     wxPanel* m_panel_checkbox_page1 {nullptr};
     wxPanel *m_panel_separotor_login{nullptr};
@@ -133,6 +134,7 @@ private:
 
     wxStaticText* m_protocol_page2{nullptr};
     wxStaticText* m_service_link_page2 {nullptr};
+    wxStaticText *m_st_and_title2{nullptr};
     wxStaticText* m_privacy_policy_page2 {nullptr};
     
     wxPanel* m_title_1_underline {nullptr};
