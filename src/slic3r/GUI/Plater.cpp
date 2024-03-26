@@ -3579,7 +3579,7 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
 
             // BBS
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ":" << __LINE__ << boost::format("import 3mf IMPORT_LOAD_MODEL_OBJECTS \n");
-            wxString msg = wxString::Format("Loading file: %s", from_path(real_filename));
+            wxString msg = wxString::Format(_("Loading file: %s"), from_path(real_filename));
             model_idx++;
             dlg_cont = dlg.Update(progress_percent, msg);
             if (!dlg_cont) {

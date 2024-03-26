@@ -186,6 +186,9 @@ void FilterPopupWindow::FilterItem::setText(const wxString& text)
 void FilterPopupWindow::FilterItem::updateMinSize()
 {
     int min_width = m_text->GetMinSize().x + FromDIP(30);
+    if (min_width < FromDIP(80)) {
+        min_width = FromDIP(80);
+    }
     SetMinSize(wxSize(min_width, FromDIP(30)));
 }
 

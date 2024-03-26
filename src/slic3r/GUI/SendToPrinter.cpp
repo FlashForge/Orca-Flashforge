@@ -597,10 +597,11 @@ void MachineItem::build()
     if (iter != m_machineBitmapMap.end()) {
         m_thumbnailPanel->set_thumbnail(iter->second);
     }
-
+    
     m_nameLbl = new wxStaticText(this, wxID_ANY, m_data.name);
     m_nameLbl->SetMaxSize(wxSize(FromDIP(200), -1));
     m_nameLbl->Wrap(FromDIP(200));
+    m_nameLbl->Fit();
     
     m_mainSizer = new wxBoxSizer(wxHORIZONTAL);
     m_mainSizer->Add(m_checkBox, 0, wxALIGN_CENTER_VERTICAL);
