@@ -45,7 +45,24 @@ private:
 };
 
 
-wxDECLARE_EVENT(EVT_FILTER_ITEM_CLICKED, wxCommandEvent);
+class FilterItemEvent : public wxCommandEvent
+{
+public:
+    FilterItemEvent(wxEventType type, wxWindow* obj, const std::string& full, const std::string& trimmed, int int_value)
+        : wxCommandEvent(type), filterObject(obj), fullStringValue(full), trimmedStringValue(trimmed), intValue(int_value) {}
+
+    FilterItemEvent *Clone() const {
+        return new FilterItemEvent(GetEventType(), filterObject, fullStringValue, trimmedStringValue, intValue);
+    }
+
+    wxWindow*       filterObject {nullptr};
+    std::string     fullStringValue;
+    std::string     trimmedStringValue;
+    int             intValue;
+};
+
+
+wxDECLARE_EVENT(EVT_FILTER_ITEM_CLICKED, FilterItemEvent);
 class FilterPopupWindow : public PopupWindow
 {
 public:
@@ -73,7 +90,7 @@ public:
         void onMouseCaptureLost(wxMouseCaptureLostEvent& event);
         bool isPointIn(const wxPoint& pnt);
         void leaveWindow();
-        void sendEvent(const wxString& str_data, int int_data);
+        void sendEvent(const wxString& full_data, const wxString& trim_data, int int_data);
         void setText(const wxString& text);
         virtual wxPoint convertEventPoint(wxMouseEvent& event);
         virtual void updateChildrenBackground(const wxColour& color);
@@ -90,6 +107,7 @@ public:
         bool            m_validFlag {true};
         wxBoxSizer*     m_main_sizer {nullptr};
         wxStaticText*   m_text {nullptr};
+        wxString        m_text_value;
     };
 
     class StatusItem final : public FilterItem
@@ -296,7 +314,7 @@ private:
     void onComDevDetailUpdate(ComDevDetailUpdateEvent& event);
     void onComWanDeviceInfoUpdate(ComWanDevInfoUpdateEvent& event);
     void onPopupShow(wxShowEvent& event);
-    void onFilterItemClicked(wxCommandEvent& event);
+    void onFilterItemClicked(FilterItemEvent& event);
     void onRefreshTimeout(wxTimerEvent& event);
 
 private:
@@ -363,6 +381,7 @@ private:
     DeviceTypeItemMap   m_type_item_map;
     bool                m_filter_placement_default {true};
     std::string         m_filter_placement;
+    std::string         m_filter_placement_trimmed;
     bool                m_filter_status_default {true};
     std::string         m_filter_status;
     std::set<unsigned short> m_filter_types;

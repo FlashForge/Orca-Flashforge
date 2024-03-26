@@ -132,7 +132,7 @@ bool DropDownButton::isPointIn(const wxPoint& pnt)
 }
 
 
-wxDEFINE_EVENT(EVT_FILTER_ITEM_CLICKED, wxCommandEvent);
+wxDEFINE_EVENT(EVT_FILTER_ITEM_CLICKED, FilterItemEvent);
 FilterPopupWindow::FilterItem::FilterItem(wxWindow* parent, const wxString& text, bool top_corner_round/*=false*/, bool bottom_corner_round/*=false*/)
     : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxNO_BORDER)
     , m_topCornerRound(top_corner_round)
@@ -172,6 +172,7 @@ FilterPopupWindow::FilterItem::~FilterItem()
 
 void FilterPopupWindow::FilterItem::setText(const wxString& text)
 {
+    m_text_value = text;
     wxScreenDC dc;
     dc.SetFont(GetFont());
     wxString str = FFUtils::trimString(dc, text, FromDIP(170));
@@ -337,12 +338,9 @@ void FilterPopupWindow::FilterItem::leaveWindow()
     Refresh();
 }
 
-void FilterPopupWindow::FilterItem::sendEvent(const wxString& str_data, int int_data)
+void FilterPopupWindow::FilterItem::sendEvent(const wxString& full_data, const wxString& trim_data, int int_data)
 {
-    wxCommandEvent event(EVT_FILTER_ITEM_CLICKED);
-    event.SetEventObject(this);
-    event.SetString(str_data);
-    event.SetInt(int_data);
+    FilterItemEvent event(EVT_FILTER_ITEM_CLICKED, this, full_data.ToStdString(), trim_data.ToStdString(), int_data);
     wxPostEvent(this, event);
 }
 
@@ -353,7 +351,7 @@ bool FilterPopupWindow::FilterItem::isPointIn(const wxPoint& pnt)
 
 void FilterPopupWindow::FilterItem::mouseUpEvent()
 {
-    sendEvent(m_text->GetLabel(), 0);
+    sendEvent(m_text_value, m_text->GetLabel(), 0);
 }
 
 
@@ -368,7 +366,7 @@ FilterPopupWindow::StatusItem::StatusItem(wxWindow* parent, const std::string& s
 
 void FilterPopupWindow::StatusItem::mouseUpEvent()
 {
-    sendEvent(m_status, 0);
+    sendEvent(m_status, m_text->GetLabel(), 0);
 }
 
 void FilterPopupWindow::StatusItem::setStatus(const std::string& status)
@@ -426,7 +424,7 @@ void FilterPopupWindow::DeviceTypeItem::updateChildrenBackground(const wxColour&
 void FilterPopupWindow::DeviceTypeItem::mouseDownEvent()
 {
     m_check_box->SetValue(!m_check_box->GetValue());
-    sendEvent("", m_pid);
+    sendEvent("", "", m_pid);
 }
 
 void FilterPopupWindow::DeviceTypeItem::updateMinSize()
@@ -1166,6 +1164,7 @@ void DeviceListPanel::updatePlacementMap()
     for (const auto& iter : m_placement_item_map) {
         backMap.emplace(std::make_pair(iter.first, iter.second));
     }
+    bool default_exist = false;
     m_placement_item_map.clear();
     for (auto& iter : m_device_map) {
         std::string placement = iter.second->deviceInfo().placement;
@@ -1179,12 +1178,22 @@ void DeviceListPanel::updatePlacementMap()
             item->Bind(EVT_FILTER_ITEM_CLICKED, &DeviceListPanel::onFilterItemClicked, this);
             m_placement_item_map.emplace(std::make_pair(placement, item));
         }
+        if (m_filter_placement == placement) {
+            default_exist = true;
+        }
     }
     for (auto& iter : backMap) {
         if (iter.second) {
             iter.second->Destroy();
             iter.second = nullptr;
         }
+    }
+    if (!default_exist) {
+        m_filter_placement_default = true;
+        m_filter_placement = "";
+        m_filter_placement_trimmed = "";
+        updateFilterTitle();
+        filterDeviceList();
     }
     backMap.clear();
 }
@@ -1194,6 +1203,7 @@ void DeviceListPanel::updateStatusMap()
     for (auto& iter : m_status_item_map) {
         iter.second->setValid(false);
     }
+    bool default_exist = false;
     for (auto& iter : m_device_map) {
         std::string status = iter.second->deviceInfo().status;
         auto status_iter = m_status_item_map.find(status);
@@ -1206,6 +1216,14 @@ void DeviceListPanel::updateStatusMap()
         } else {
             status_iter->second->setValid(true);
         }
+        if (m_filter_status == status) {
+            default_exist = true;
+        }
+    }
+    if (!default_exist) {
+        m_filter_status_default = true;
+        m_filter_status = "";
+        filterDeviceList();
     }
 }
 
@@ -1240,7 +1258,7 @@ void DeviceListPanel::updateFilterTitle()
     if (m_filter_placement_default) {
         m_placement_btn->setText(_L("All"));
     } else {
-        m_placement_btn->setText(m_filter_placement);
+        m_placement_btn->setText(m_filter_placement_trimmed);
     }
     Layout();
 }
@@ -1351,29 +1369,31 @@ void DeviceListPanel::onPopupShow(wxShowEvent& event)
     }
 }
 
-void DeviceListPanel::onFilterItemClicked(wxCommandEvent& event)
+void DeviceListPanel::onFilterItemClicked(FilterItemEvent& event)
 {
     if (Filter_Popup_Type_Placement == m_filter_popup_type) {
-        if (event.GetEventObject() == m_default_filter_item) {
+        if (event.filterObject == m_default_filter_item) {
             m_filter_placement_default = true;
             m_filter_placement = "";
+            m_filter_placement_trimmed = "";
         } else {
             m_filter_placement_default = false;
-            m_filter_placement = event.GetString().ToStdString();
+            m_filter_placement = event.fullStringValue;
+            m_filter_placement_trimmed = event.trimmedStringValue;
         }
         m_filter_popup->Dismiss();
     } else if (Filter_Popup_Type_Status == m_filter_popup_type) {
-        if (event.GetEventObject() == m_default_filter_item) {
+        if (event.filterObject == m_default_filter_item) {
             m_filter_status_default = true;
             m_filter_status = "";
         } else {
             m_filter_status_default = false;
-            m_filter_status = event.GetString().ToStdString();
+            m_filter_status = event.fullStringValue;
         }
         m_filter_popup->Dismiss();
     } else if (Filter_Popup_Type_Device_Type == m_filter_popup_type) {
-        unsigned short pid = (unsigned short)event.GetInt();
-        FilterPopupWindow::DeviceTypeItem* item = (FilterPopupWindow::DeviceTypeItem*)event.GetEventObject();
+        unsigned short pid = (unsigned short)event.intValue;
+        FilterPopupWindow::DeviceTypeItem* item = (FilterPopupWindow::DeviceTypeItem*)event.filterObject;
         if (item) {
             bool check = item->isChecked();
             auto iter = m_filter_types.find(pid);
