@@ -146,11 +146,9 @@ FilterPopupWindow::FilterItem::FilterItem(wxWindow* parent, const wxString& text
     m_main_sizer = new wxBoxSizer(wxHORIZONTAL);
     SetSizer(m_main_sizer);
 
-    wxScreenDC dc;
-    dc.SetFont(GetFont());
-    wxString str = FFUtils::trimString(dc, text, FromDIP(170));
-    m_text = new wxStaticText(this, wxID_ANY, str);
-    
+    m_text = new wxStaticText(this, wxID_ANY, wxEmptyString);
+    setText(text);
+        
     m_main_sizer->AddSpacer(FromDIP(15));
     m_main_sizer->Add(m_text, 1, wxALIGN_CENTER_VERTICAL | wxTOP | wxBOTTOM, FromDIP(5));
     m_main_sizer->AddSpacer(FromDIP(15));
@@ -170,6 +168,25 @@ FilterPopupWindow::FilterItem::FilterItem(wxWindow* parent, const wxString& text
 FilterPopupWindow::FilterItem::~FilterItem()
 {
     leaveWindow();
+}
+
+void FilterPopupWindow::FilterItem::setText(const wxString& text)
+{
+    wxScreenDC dc;
+    dc.SetFont(GetFont());
+    wxString str = FFUtils::trimString(dc, text, FromDIP(170));
+    m_text->SetLabel(str);
+
+    int width = dc.GetTextExtent(str).x ;
+    m_text->SetMinSize(wxSize(width, FromDIP(30)));
+    updateMinSize();
+    Layout();
+}
+
+void FilterPopupWindow::FilterItem::updateMinSize()
+{
+    int min_width = m_text->GetMinSize().x + FromDIP(30);
+    SetMinSize(wxSize(min_width, FromDIP(30)));
 }
 
 void FilterPopupWindow::FilterItem::setSelect(bool select)
@@ -354,8 +371,7 @@ void FilterPopupWindow::StatusItem::mouseUpEvent()
 void FilterPopupWindow::StatusItem::setStatus(const std::string& status)
 {
     wxColour color;
-    m_text->SetLabel(FFUtils::convertStatus(m_status, color));
-    m_text->Fit();
+    setText(FFUtils::convertStatus(m_status, color));
     Layout();
     Fit();
 }
@@ -369,11 +385,12 @@ FilterPopupWindow::DeviceTypeItem::DeviceTypeItem(wxWindow* parent, unsigned sho
     m_main_sizer->Clear();
     m_check_box = new FFCheckBox(this);
     m_check_box->SetValue(checked);
-    m_text->SetLabel(FFUtils::getPrinterName(m_pid));
+    setText(FFUtils::getPrinterName(m_pid));
     m_main_sizer->AddSpacer(FromDIP(15));
     m_main_sizer->Add(m_check_box, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT | wxTOP | wxBOTTOM, FromDIP(5));
     m_main_sizer->Add(m_text, 1, wxALIGN_CENTER_VERTICAL | wxTOP | wxBOTTOM, FromDIP(5));
     m_main_sizer->AddSpacer(FromDIP(15));
+
     Layout();
     Fit();
     m_check_box->Bind(wxEVT_ENTER_WINDOW, &DeviceTypeItem::onEnter, this);
@@ -409,6 +426,12 @@ void FilterPopupWindow::DeviceTypeItem::mouseDownEvent()
     sendEvent("", m_pid);
 }
 
+void FilterPopupWindow::DeviceTypeItem::updateMinSize()
+{
+    int min_width = m_check_box->GetSize().x + m_text->GetMinSize().x + FromDIP(35);
+    SetMinSize(wxSize(min_width, -1));
+}
+
 
 FilterPopupWindow::FilterPopupWindow(wxWindow* parent)
     : PopupWindow(parent, wxBORDER_NONE | wxPU_CONTAINS_CONTROLS | wxFRAME_SHAPED)
@@ -435,7 +458,7 @@ void FilterPopupWindow::Create()
     int max_width = 0;
     int height = m_items.size() * FromDIP(30);
     for (auto btn : m_items) {
-        max_width = std::max(btn->GetSize().x, max_width);
+        max_width = std::max(btn->GetMinSize().x, max_width);
     }
 
     for (auto btn : m_items) {
