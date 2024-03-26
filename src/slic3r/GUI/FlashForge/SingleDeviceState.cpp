@@ -785,6 +785,44 @@ std::string SingleDeviceState::getCurDevSerialNumber()
     return m_cur_serial_number;
 }
 
+void SingleDeviceState::lostFocusmodifyTemp() 
+{
+    double top_temp;
+    double bottom_temp;
+    double mid_temp;
+    bool   bTop = m_tempCtrl_top->GetTagTemp().ToDouble(&top_temp);
+    if (!bTop) {
+        m_tempCtrl_top->SetTagTemp(m_right_target_temp, true);
+        top_temp = m_right_target_temp;
+    }
+    if (top_temp > 280) {
+        top_temp = 280;
+        m_tempCtrl_top->SetTagTemp(m_right_target_temp, true);
+        top_temp = m_right_target_temp;
+    } else if (top_temp < 0) {
+        top_temp = 0;
+        m_tempCtrl_top->SetTagTemp(m_right_target_temp, true);
+        top_temp = m_right_target_temp;
+    }
+    bool bBottom = m_tempCtrl_bottom->GetTagTemp().ToDouble(&bottom_temp);
+    if (!bBottom) {
+        m_tempCtrl_bottom->SetTagTemp(m_plat_target_temp, true);
+        bottom_temp = m_plat_target_temp;
+    }
+    if (bottom_temp > 110) {
+        bottom_temp = 110;
+        m_tempCtrl_top->SetTagTemp(m_plat_target_temp, true);
+        bottom_temp = m_plat_target_temp;
+    } else if (bottom_temp < 0) {
+        bottom_temp = 0;
+        m_tempCtrl_top->SetTagTemp(m_plat_target_temp, true);
+        bottom_temp = m_plat_target_temp;
+    }
+    bool  bMid = m_tempCtrl_mid->GetTagTemp().ToDouble(&mid_temp);
+    ComTempCtrl *tempCtrl = new ComTempCtrl(bottom_temp, top_temp, 0, mid_temp);
+    Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, tempCtrl);
+}
+
 wxBoxSizer* SingleDeviceState::create_monitoring_page()
 {
         wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
@@ -1363,7 +1401,15 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         StateColor tempinput_border_colour(std::make_pair(*wxWHITE, (int)StateColor::Disabled), std::make_pair(wxColour(0, 150, 136), (int)StateColor::Focused),
                                         std::make_pair(wxColour(0, 150, 136), (int)StateColor::Hovered),std::make_pair(*wxWHITE, (int)StateColor::Normal));
         m_tempCtrl_top->SetBorderColor(tempinput_border_colour);
-        m_tempCtrl_top->Bind(wxEVT_TEXT,&SingleDeviceState::onTargetTempModify, this);  
+        m_tempCtrl_top->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent &event) {
+            event.Skip();
+            lostFocusmodifyTemp();
+        });
+        m_tempCtrl_top->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent &event) {
+            event.Skip();
+            lostFocusmodifyTemp();
+        });
+        //m_tempCtrl_top->Bind(wxEVT_TEXT,&SingleDeviceState::onTargetTempModify, this);  
 
         //bSizer_control_temperature->Add(m_tempCtrl_top, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
         bSizer_control_temperature->Add(m_tempCtrl_top, wxSizerFlags(1).Expand());
@@ -1387,7 +1433,15 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         //StateColor tempinput_border_colour(std::make_pair(*wxWHITE, (int)StateColor::Disabled), std::make_pair(wxColour(0, 150, 136), (int)StateColor::Focused),
         //                                std::make_pair(wxColour(0, 150, 136), (int)StateColor::Hovered),std::make_pair(*wxWHITE, (int)StateColor::Normal));
         m_tempCtrl_bottom->SetBorderColor(tempinput_border_colour);
-        m_tempCtrl_bottom->Bind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);  
+        m_tempCtrl_bottom->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent &event) {
+            event.Skip();
+            lostFocusmodifyTemp();
+        });
+        m_tempCtrl_bottom->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent &event) {
+            event.Skip();
+            lostFocusmodifyTemp();
+        });
+        //m_tempCtrl_bottom->Bind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);  
         //bSizer_control_temperature->Add(m_tempCtrl_bottom, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
         bSizer_control_temperature->Add(m_tempCtrl_bottom, wxSizerFlags(1).Expand());
 
@@ -1412,7 +1466,15 @@ void SingleDeviceState::setupLayoutBusyPage(wxBoxSizer* busySizer,wxPanel* paren
         //StateColor tempinput_border_colour(std::make_pair(*wxWHITE, (int)StateColor::Disabled), std::make_pair(wxColour(0, 150, 136), (int)StateColor::Focused),
         //                                std::make_pair(wxColour(0, 150, 136), (int)StateColor::Hovered),std::make_pair(*wxWHITE, (int)StateColor::Normal));
         m_tempCtrl_mid->SetBorderColor(tempinput_border_colour);
-        m_tempCtrl_mid->Bind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);  
+        //m_tempCtrl_mid->Bind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);
+        m_tempCtrl_mid->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent &event) {
+            event.Skip();
+            lostFocusmodifyTemp();
+        });
+        m_tempCtrl_mid->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent &event) {
+            event.Skip();
+            lostFocusmodifyTemp();
+        });
         //bSizer_control_temperature->Add(m_tempCtrl_mid, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
         bSizer_control_temperature->Add(m_tempCtrl_mid, wxSizerFlags(1).Expand());
 
@@ -2110,29 +2172,29 @@ void SingleDeviceState::fillValue(const com_dev_data_t &data)
    m_progress_bar->SetProgress(printProgress * 100);
 
    double rightTemp = data.devDetail->rightTemp; // 右喷头温度
-   m_tempCtrl_top->Unbind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);  
+   //m_tempCtrl_top->Unbind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);  
    m_tempCtrl_top->SetCurrTemp(rightTemp,true);
    double rightTargetTemp = data.devDetail->rightTargetTemp; // 右喷头目标温度
    if (m_right_target_temp != rightTargetTemp) {
         m_right_target_temp = rightTargetTemp;
         m_tempCtrl_top->SetTagTemp(rightTargetTemp, true);
    }
-   m_tempCtrl_top->Bind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);  
+   //m_tempCtrl_top->Bind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);  
    double platTemp = data.devDetail->platTemp; // 平台温度
-   m_tempCtrl_bottom->Unbind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this); 
+   //m_tempCtrl_bottom->Unbind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this); 
    m_tempCtrl_bottom->SetCurrTemp(platTemp, true);
    double platTargetTemp = data.devDetail->platTargetTemp; // 平台目标温度
    if (m_plat_target_temp != platTargetTemp) {
         m_plat_target_temp = platTargetTemp;
         m_tempCtrl_bottom->SetTagTemp(platTargetTemp, true);
    }
-   m_tempCtrl_bottom->Bind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);  
+   //m_tempCtrl_bottom->Bind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);  
    double chamberTemp = data.devDetail->chamberTemp; // 腔体温度
-   m_tempCtrl_mid->Unbind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this); 
+   //m_tempCtrl_mid->Unbind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this); 
    m_tempCtrl_mid->SetCurrTemp(chamberTemp, true);
    double chamberTargetTemp = data.devDetail->chamberTargetTemp; // 腔体目标物温度
    m_tempCtrl_mid->SetTagTemp(chamberTargetTemp, true);
-   m_tempCtrl_mid->Bind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);  
+   //m_tempCtrl_mid->Bind(wxEVT_TEXT, &SingleDeviceState::onTargetTempModify, this);  
 
    auto aRightTemp = static_cast<int>(rightTemp);
    auto aPlatTemp  = static_cast<int>(platTemp);

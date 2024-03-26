@@ -138,6 +138,7 @@ public:
     void setDevProductAuthority(const fnet_dev_product_t &data);
     void reInitProductState();
     std::string getCurDevSerialNumber();
+    void lostFocusmodifyTemp();
 
     wxBoxSizer *create_monitoring_page();
     wxBoxSizer* create_machine_control_title();
