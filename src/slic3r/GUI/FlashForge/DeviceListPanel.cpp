@@ -1656,16 +1656,16 @@ void DeviceListPanel::updateDeviceList()
         }
     }
     //std::sort(m_device_map.begin(), m_device_map.end(), deviceKeySortFunc);
+    updateFilterMap();
+    updateStaticMap();
+    m_device_data_cached.clear();
     if (refresh_flag) {
         m_filter_placement_default = true;
         m_filter_status_default = true;
         m_simple_book->ChangeSelection(m_device_map.empty() ? 0 : 1);
         //updateDeviceWindowSize();
         updateDeviceSizer();
-    }
-    updateFilterMap();
-    updateStaticMap();
-    m_device_data_cached.clear();
+    }    
 }
 
 bool DeviceListPanel::getDeviceInfo(DeviceInfoItemPanel::DeviceInfo& info, int conn_id)
