@@ -329,7 +329,8 @@ void MachineObjectPanel::on_mouse_left_up(wxMouseEvent &evt)
             } else if (is_wan_offline_lan_unbind(obj)) {
                 if (obj) {
                     if (obj->is_lan_mode_printer()) {
-                        ConnectPrinterDialog dlg(wxGetApp().mainframe, wxID_ANY, _L("Input access code"));
+                        //ConnectPrinterDialog dlg(wxGetApp().mainframe, wxID_ANY, _L("Input access code"));
+                        ConnectPrinterDialog dlg;
                         dlg.set_device_object(obj);
                         if (dlg.ShowModal() == wxID_OK) {
                             wxGetApp().mainframe->jump_to_monitor(obj->get_dev_id());
@@ -716,7 +717,8 @@ void SelectMachinePopup::update_other_devices()
         op->Bind(EVT_CONNECT_LAN_PRINT, [this, deviceObj](wxCommandEvent &e) {
             if (deviceObj) {
                 if (deviceObj->is_lan_mode_printer()) {
-                    ConnectPrinterDialog dlg(wxGetApp().mainframe, wxID_ANY, _L("Input access code"));
+                    //ConnectPrinterDialog dlg(wxGetApp().mainframe, wxID_ANY, _L("Input access code"));
+                    ConnectPrinterDialog dlg;
                     dlg.set_device_object(deviceObj);
                     if (dlg.ShowModal() == wxID_OK) {
                         wxGetApp().mainframe->jump_to_monitor(deviceObj->get_dev_id());
@@ -890,7 +892,8 @@ void SelectMachinePopup::update_user_devices()
         op->Bind(EVT_CONNECT_LAN_PRINT, [this, devObj](wxCommandEvent &e) {
             if (devObj) {
                 if (devObj->is_lan_mode_printer()) {
-                    ConnectPrinterDialog dlg(wxGetApp().mainframe, wxID_ANY, _L("Input access code"));
+                    //ConnectPrinterDialog dlg(wxGetApp().mainframe, wxID_ANY, _L("Input access code"));
+                    ConnectPrinterDialog dlg;
                     dlg.set_device_object(devObj);
                     if (dlg.ShowModal() == wxID_OK) {
                         wxGetApp().mainframe->jump_to_monitor(devObj->get_dev_id());
@@ -1567,7 +1570,8 @@ void SelectMachineDialog::init_bind()
 
             DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
             if (!dev) return;
-            ConnectPrinterDialog dlg(wxGetApp().mainframe, wxID_ANY, _L("Input access code"));
+            //ConnectPrinterDialog dlg(wxGetApp().mainframe, wxID_ANY, _L("Input access code"));
+            ConnectPrinterDialog dlg;
             dlg.go_connect_printer(false);
             if (dev->get_selected_machine()) {
                 dlg.set_machine_object(dev->get_selected_machine());
@@ -3149,7 +3153,8 @@ void SelectMachineDialog::on_selection_changed(wxCommandEvent &event)
 
             //check lan mode machine
             if (m_list[i]->is_lan_mode_printer() && !m_list[i]->has_access_right()) {
-                ConnectPrinterDialog dlg(wxGetApp().mainframe, wxID_ANY, _L("Input access code"));
+                //ConnectPrinterDialog dlg(wxGetApp().mainframe, wxID_ANY, _L("Input access code"));
+                ConnectPrinterDialog dlg;
                 dlg.set_machine_object(m_list[i]);
                 auto res = dlg.ShowModal();
                 m_printer_last_select = "";

@@ -20,10 +20,11 @@
 #include "Widgets/TextInput.hpp"
 #include "Widgets/Label.hpp"
 #include "DeviceManager.hpp"
+#include "TitleDialog.hpp"
 
 namespace Slic3r { namespace GUI {
 class DeviceObject;
-class ConnectPrinterDialog : public DPIDialog
+class ConnectPrinterDialog : public TitleDialog
 {
 private:
 protected:
@@ -40,14 +41,14 @@ protected:
     wxPanel        *m_error_panel;
 
 public:
-    ConnectPrinterDialog(wxWindow       *parent,
-                         wxWindowID      id       = wxID_ANY,
-                         const wxString &title    = wxEmptyString,
-                         bool            err_hint = false,
-                         const wxPoint  &pos      = wxDefaultPosition,
-                         const wxSize   &size     = wxDefaultSize,
-                         long            style    = wxCLOSE_BOX | wxCAPTION);
-
+    //ConnectPrinterDialog(wxWindow       *parent,
+    //                     wxWindowID      id       = wxID_ANY,
+    //                     const wxString &title    = wxEmptyString,
+    //                     bool            err_hint = false,
+    //                     const wxPoint  &pos      = wxDefaultPosition,
+    //                     const wxSize   &size     = wxDefaultSize,
+    //                     long            style    = wxCLOSE_BOX | wxCAPTION);
+    ConnectPrinterDialog(bool err_hint = false);
     ~ConnectPrinterDialog();
 
     void go_connect_printer(bool need) {m_need_connect = need;};
@@ -57,6 +58,7 @@ public:
     void on_input_enter(wxCommandEvent& evt);
     void on_button_confirm(wxCommandEvent &event); 
     void on_dpi_changed(const wxRect &suggested_rect) override;
+    void on_show(wxShowEvent &event);
 };
 }} // namespace Slic3r::GUI
 
