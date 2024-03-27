@@ -231,13 +231,14 @@ void FilterPopupWindow::FilterItem::onPaint(wxPaintEvent& event)
         dc.SetBrush(wxColour("#dddddd"));
         dc.DrawRectangle(0, 0, sz.x, sz.y);
     }
-    wxColour color("#ffffff");
+    wxColour color("#ffffff"), fcolor("#333333");
     if (m_pressFlag) {
         color = wxColour("#328DFB");
     } else if (m_hoverFlag) {
         color = wxColour("#D9EAFF");
     } else if (m_selectFlag) {
         color = wxColour("#328DFB");
+        fcolor = wxColour("#ffffff");
     }
     dc.SetBrush(color);
     if (!m_topCornerRound && !m_bottomCornerRound) {
@@ -252,6 +253,7 @@ void FilterPopupWindow::FilterItem::onPaint(wxPaintEvent& event)
         dc.DrawRectangle(0, 0, sz.x, 6);
     }
     updateChildrenBackground(color);
+    m_text->SetForegroundColour(fcolor);
     //m_text->SetBackgroundColour(color);
     //m_check_box->SetBackgroundColour(color);
 }
