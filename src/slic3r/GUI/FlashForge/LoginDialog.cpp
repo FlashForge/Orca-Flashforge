@@ -910,7 +910,8 @@ void LoginDialog::onPage1Login(wxMouseEvent& event)
     }
     ComErrno login_result = MultiComUtils::getTokenBySMSCode(usrname.ToStdString(), verify_code.ToStdString(), language, token_data,message);
     if(login_result == ComErrno::COM_OK){
-        ComErrno add_dev_result = Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data.accessToken);
+        int  retryTimes = 0;
+        ComErrno add_dev_result = retryAddWanDev(token_data.accessToken, retryTimes);
         if (add_dev_result == COM_OK) {
              m_usr_name = usrname.ToStdString();
              LoginDialog::m_token_data = token_data;
@@ -1017,7 +1018,8 @@ void LoginDialog::onPage2Login(wxMouseEvent& event)
     std::string finalPassword(charData);
     ComErrno    login_result = MultiComUtils::getTokenByPassword(usrname.ToStdString(), finalPassword, language, token_data, message);
     if (login_result == ComErrno::COM_OK) {
-        ComErrno add_dev_result =  Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data.accessToken);
+        int      retryTimes     = 0;
+        ComErrno add_dev_result = retryAddWanDev(token_data.accessToken, retryTimes);
         if (add_dev_result == COM_OK) {
             m_usr_name = usrname.ToStdString();
             LoginDialog::m_token_data = token_data;
@@ -1142,6 +1144,25 @@ ComErrno LoginDialog::getSmsCode()
     if (send_result == COM_OK) {
         return COM_OK;
     }
+}
+
+ComErrno LoginDialog::retryAddWanDev(const std::string &accessToken, int& retryTimes)
+{
+    ++retryTimes;
+    if (retryTimes > 3) {
+        return COM_ERROR;
+    }
+    //auto addDev = [&](const std::string &accessToken) -> ComErrno {
+    //    Sleep(200);
+    //    return Slic3r::GUI::MultiComMgr::inst()->addWanDev(accessToken); 
+    //};
+    Sleep(200);
+    ComErrno add_dev_result = Slic3r::GUI::MultiComMgr::inst()->addWanDev(accessToken); 
+
+    if (add_dev_result == COM_OK) {
+        return COM_OK;
+    } 
+     return  retryAddWanDev(accessToken, retryTimes);
 }
 
 }

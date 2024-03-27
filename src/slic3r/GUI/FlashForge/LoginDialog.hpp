@@ -89,6 +89,7 @@ private:
     void OnTimer(wxTimerEvent& event);
 
     ComErrno getSmsCode();
+    ComErrno retryAddWanDev(const std::string &accessToken,int& retryTimes);
 
 private:
     com_clinet_token_data_t m_client_SMS_token;
