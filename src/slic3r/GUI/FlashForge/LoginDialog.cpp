@@ -690,7 +690,8 @@ void LoginDialog::setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent)
 
     regist_forget_hor_sizer->Add(usr_name_space1, 0, wxEXPAND|wxLeft, 0);
     regist_forget_hor_sizer->Add(register_link, 0, wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL, 0);
-    regist_forget_hor_sizer->AddStretchSpacer(1);
+    //regist_forget_hor_sizer->AddStretchSpacer();
+    regist_forget_hor_sizer->AddSpacer(FromDIP(110));
     regist_forget_hor_sizer->Add(forget_password_link, 0, wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL, 0);
     regist_forget_hor_sizer->Add(usr_name_space2, 0, wxEXPAND ,0);
 
