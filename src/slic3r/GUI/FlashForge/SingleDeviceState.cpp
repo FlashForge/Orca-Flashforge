@@ -811,11 +811,11 @@ void SingleDeviceState::lostFocusmodifyTemp()
     }
     if (bottom_temp > 110) {
         bottom_temp = 110;
-        m_tempCtrl_top->SetTagTemp(bottom_temp, true);
+        m_tempCtrl_bottom->SetTagTemp(bottom_temp, true);
         m_plat_target_temp = bottom_temp;
     } else if (bottom_temp < 0) {
         bottom_temp = 0;
-        m_tempCtrl_top->SetTagTemp(bottom_temp, true);
+        m_tempCtrl_bottom->SetTagTemp(bottom_temp, true);
         m_plat_target_temp = bottom_temp;
     }
     bool  bMid = m_tempCtrl_mid->GetTagTemp().ToDouble(&mid_temp);
