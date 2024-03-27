@@ -850,7 +850,8 @@ void DeviceObjectOpr::onConnectExit(ComConnectionExitEvent &event)
                     // first bind
                     if (event.ret == COM_VERIFY_LAN_DEV_FAILED) {
                         // popop input access code dialog again.
-                        ConnectPrinterDialog dlg(wxGetApp().mainframe, wxID_ANY, _L("Input access code"), true);
+                        //ConnectPrinterDialog dlg(wxGetApp().mainframe, wxID_ANY, _L("Input access code"), true);
+                        ConnectPrinterDialog dlg(true);
                         dlg.SetFocus();
                         dlg.set_device_object(devObj);
                         if (dlg.ShowModal() == wxID_OK) {
