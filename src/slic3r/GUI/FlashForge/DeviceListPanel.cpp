@@ -1063,6 +1063,7 @@ void DeviceListPanel::initWlanDevice(std::map<std::string, DeviceInfoItemPanel::
 
 void DeviceListPanel::initDeviceList()
 {
+    m_last_priority_id = 0;
     std::map<std::string, DeviceInfoItemPanel::DeviceInfo> devList;
     initLocalDevice(devList);
     initWlanDevice(devList);  
@@ -1082,7 +1083,7 @@ void DeviceListPanel::initDeviceList()
     });
     //m_device_map
     for (const auto& iter : devKeyList) {
-        DeviceKey key(m_last_priority_id, iter, devList[iter].name);
+        DeviceKey key(generateNewPriorityId(), iter, devList[iter].name);
         DeviceInfoItemPanel* item = new DeviceInfoItemPanel(m_device_panel, devList[iter], this);
         item->Show(false);
         m_device_map.emplace(std::make_pair(key, item));
