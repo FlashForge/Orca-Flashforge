@@ -474,22 +474,10 @@ void LoginDialog::setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent)
         m_get_code_button->SetState(true);
         m_get_code_button->startTimer();
         m_get_code_button->Enable(false);
-        if (m_first_call_client_token) {
-            ComErrno get_result = MultiComUtils::getClientToken(m_client_SMS_token);
-            if (get_result == ComErrno::COM_ERROR) {
-                page1ShowErrorLabel(_L("Server connection exception"));
-                BOOST_LOG_TRIVIAL(warning) << boost::format("MultiComUtils::getClientToken Failed!");
-                return;
-            } else if (get_result == ComErrno::COM_OK) {
-                m_first_call_client_token = false;
-            }
-        }
-        std::string message;
-        ComErrno send_result = MultiComUtils::sendSMSCode(
-            m_client_SMS_token.accessToken, m_username_ctrl_page1->GetValue().ToStdString(), "en", message);
-        if(send_result == ComErrno::COM_ERROR){
-            BOOST_LOG_TRIVIAL(warning) << boost::format("MultiComUtils::sendSMSCode Failed!");
-        }
+
+        MultiComUtils::asyncCall(this, [&]() {
+            return getSmsCode();
+        });  
     });
 
 
@@ -922,7 +910,8 @@ void LoginDialog::onPage1Login(wxMouseEvent& event)
     }
     ComErrno login_result = MultiComUtils::getTokenBySMSCode(usrname.ToStdString(), verify_code.ToStdString(), language, token_data,message);
     if(login_result == ComErrno::COM_OK){
-        ComErrno add_dev_result = Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data.accessToken);
+        int  retryTimes = 0;
+        ComErrno add_dev_result = retryAddWanDev(token_data.accessToken, retryTimes);
         if (add_dev_result == COM_OK) {
              m_usr_name = usrname.ToStdString();
              LoginDialog::m_token_data = token_data;
@@ -1029,7 +1018,8 @@ void LoginDialog::onPage2Login(wxMouseEvent& event)
     std::string finalPassword(charData);
     ComErrno    login_result = MultiComUtils::getTokenByPassword(usrname.ToStdString(), finalPassword, language, token_data, message);
     if (login_result == ComErrno::COM_OK) {
-        ComErrno add_dev_result =  Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data.accessToken);
+        int      retryTimes     = 0;
+        ComErrno add_dev_result = retryAddWanDev(token_data.accessToken, retryTimes);
         if (add_dev_result == COM_OK) {
             m_usr_name = usrname.ToStdString();
             LoginDialog::m_token_data = token_data;
@@ -1132,6 +1122,48 @@ void LoginDialog::OnTimer(wxTimerEvent& event)
     m_timer.Stop();
 }
 
+ComErrno LoginDialog::getSmsCode()
+{
+    if (m_first_call_client_token) {
+        ComErrno get_result = MultiComUtils::getClientToken(m_client_SMS_token);
+        if (get_result == ComErrno::COM_ERROR) {
+            page1ShowErrorLabel(_L("Server connection exception"));
+            BOOST_LOG_TRIVIAL(warning) << boost::format("MultiComUtils::getClientToken Failed!");
+            return COM_ERROR;
+        } else if (get_result == ComErrno::COM_OK) {
+            m_first_call_client_token = false;
+        }
+    }
+    // std::string message;
+    ComErrno send_result = MultiComUtils::sendSMSCode(m_client_SMS_token.accessToken, m_username_ctrl_page1->GetValue().ToStdString(), "en",m_sms_info);
+    if (send_result == ComErrno::COM_ERROR) {
+        BOOST_LOG_TRIVIAL(warning) << boost::format("MultiComUtils::sendSMSCode Failed!");
+        BOOST_LOG_TRIVIAL(error) << m_sms_info;
+        return COM_ERROR;
+    }
+    if (send_result == COM_OK) {
+        return COM_OK;
+    }
+}
+
+ComErrno LoginDialog::retryAddWanDev(const std::string &accessToken, int& retryTimes)
+{
+    ++retryTimes;
+    if (retryTimes > 3) {
+        return COM_ERROR;
+    }
+    //auto addDev = [&](const std::string &accessToken) -> ComErrno {
+    //    Sleep(200);
+    //    return Slic3r::GUI::MultiComMgr::inst()->addWanDev(accessToken); 
+    //};
+    Sleep(200);
+    ComErrno add_dev_result = Slic3r::GUI::MultiComMgr::inst()->addWanDev(accessToken); 
+
+    if (add_dev_result == COM_OK) {
+        return COM_OK;
+    } 
+     return  retryAddWanDev(accessToken, retryTimes);
+}
 
 }
 }
