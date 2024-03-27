@@ -88,6 +88,8 @@ private:
     inline void startTimer(){ m_timer.Start(2000);}
     void OnTimer(wxTimerEvent& event);
 
+    ComErrno getSmsCode();
+
 private:
     com_clinet_token_data_t m_client_SMS_token;
 
@@ -157,6 +159,7 @@ private:
 
     static std::string m_usr_name;
     std::string        m_cur_language;
+    std::string        m_sms_info;
 
 };
 } // namespace GUI
