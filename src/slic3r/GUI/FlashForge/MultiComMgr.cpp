@@ -34,7 +34,7 @@ bool MultiComMgr::initalize(const std::string &dllPath, const std::string &logFi
     fnet_log_settings_t logSettings;
     logSettings.fileDir = logFileDir.c_str();
     logSettings.expireHours = 72;
-    logSettings.level = FNET_LOG_LEVEL_DEBUG;
+    logSettings.level = FNET_LOG_LEVEL_INFO; //FNET_LOG_LEVEL_DEBUG;
 
     m_networkIntfc.reset(new fnet::FlashNetworkIntfc(dllPath.c_str(), serverSettings, logSettings));
     if (!m_networkIntfc->isOk()) {
