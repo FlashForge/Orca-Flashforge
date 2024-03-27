@@ -47,20 +47,20 @@
   }
   #point {
     position: absolute;
-    top: 70%;
+    top: 65%;
     color: #ffffff;
     text-align: center;
     width: 100%;
-    font-size: 0.5rem;
+    font-size: 0.2rem;
   }
 
   #point1 {
     position: absolute;
-    top: 70%;
+    top: 65%;
     color: #ffffff;
     text-align: center;
     width: 100%;
-    font-size: 0.5rem;
+    font-size: 0.2rem;
   }
 
   .video-loader {
@@ -126,6 +126,7 @@
       // let zanting = document.getElementById("zanting")
       let video = document.getElementById("video")
       video.style.display = "none"
+      var loader = document.getElementById('videoLoader');
 
       let imgs = document.querySelectorAll('img')
       let zting = document.querySelector('#zanting')
@@ -140,14 +141,28 @@
                   var element = document.getElementById('url-studio')
                   var content = element.innerHTML
 
+                  var element1 = document.getElementById("url-studio-r");
+                  var content1 = element1.innerHTML;
+
                   if (content.endsWith("action=stream")) {
                       if (video.style.display === 'none') {
+                        if (lang1 === 'zh_CN') {
+                          point.style.display = 'none'
+                        } else if (lang1 === 'en') {
+                          point1.style.display = 'none'
+                        }
+                        loader.style.display = 'none';
                         videoStreamImg.src = 'hei.svg'
                         var zanting = document.getElementById("zanting")
                         zanting.style.display = 'block'
                         videoStreamImg.style.backgroundImage = 'url("hei.svg")'
                         streamPaused = false;
                       } else {
+                        if (lang1 === 'zh_CN') {
+                          point.style.display = 'none'
+                        } else if (lang1 === 'en') {
+                          point1.style.display = 'none'
+                        }
                         video.style.display = 'none'
                         videoStreamImg.style.display = 'block'
                         videoStreamImg.src = 'hei.svg'
@@ -157,6 +172,12 @@
                         streamPaused = false;
                       }
                   } else if (content.endsWith(".m3u8")) {
+                      if (lang1 === 'zh_CN') {
+                        point.style.display = 'none'
+                      } else if (lang1 === 'en') {
+                        point1.style.display = 'none'
+                      }
+                      loader.style.display = 'none';
                       videoStreamImg.style.display = "none"
                       video.src = ''
 	                    video.style.backgroundImage = "url('hei.svg')"

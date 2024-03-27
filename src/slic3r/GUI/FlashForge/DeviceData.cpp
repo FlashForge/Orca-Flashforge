@@ -359,8 +359,10 @@ void DeviceObjectOpr::update_scan_machine()
     MultiComUtils::getLanDevList(devInfos);
     update_scan_list(devInfos);
     for (auto &elem : devInfos) {
-        //if (elem.connectMode == 1)
-        //    continue;
+        #if 0
+        if (elem.connectMode == 1 && elem.bindStatus == 1)
+            continue;
+        #endif
         bool          newObj = false;
         string        dev_id = elem.serialNumber;
         DeviceObject *devObj = nullptr;
@@ -720,6 +722,10 @@ void DeviceObjectOpr::update_scan_list(const std::vector<fnet_lan_dev_info> &inf
 {
     map<std::string, fnet_lan_dev_info> lan_map;
     for (auto info : infos){
+#if 0
+        if (info.connectMode == 1 && info.bindStatus == 1)
+            continue;
+#endif
         lan_map.emplace(make_pair(info.serialNumber, info));
     }
     for (auto it = m_scan_devices.begin(); it != m_scan_devices.end(); ++it) {
