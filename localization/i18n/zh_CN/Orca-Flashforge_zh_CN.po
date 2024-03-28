@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Slic3rPE\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-03-26 13:38+0800\n"
-"PO-Revision-Date: 2024-03-27 16:39+0800\n"
+"POT-Creation-Date: 2024-03-28 09:56+0800\n"
+"PO-Revision-Date: 2024-03-28 10:04+0800\n"
 "Last-Translator: SoftFever <softfeverever@gmail.com>\n"
 "Language-Team: \n"
 "Language: zh_CN\n"
@@ -5218,9 +5218,6 @@ msgstr "直接切换到“%1%”"
 
 msgid "Task canceled"
 msgstr "任务已取消"
-
-msgid "Input access code"
-msgstr "输入访问码"
 
 msgid "Please login first."
 msgstr "请先登录。"
@@ -11258,16 +11255,13 @@ msgstr "手机号/邮箱"
 msgid "Mobile Phone Number Error"
 msgstr "手机号码错误"
 
-msgid "Server connection exception"
-msgstr "服务器连接异常"
-
 msgid "Verify code is incorrect"
 msgstr "验证码错误"
 
 msgid "Read and Agree to Accept"
 msgstr "已认真阅读并同意接受"
 
-msgid "《Term of Sevrvice》"
+msgid "《Term of Service》"
 msgstr "《服务条款》"
 
 msgid "《Privacy Policy》"
@@ -11279,8 +11273,8 @@ msgstr "注册"
 msgid "Forget Password"
 msgstr "忘记密码"
 
-msgid "《Term of Service》"
-msgstr "《服务条款》"
+msgid "Server connection exception"
+msgstr "服务器连接异常"
 
 msgid "User not registered"
 msgstr "该账号未注册"
@@ -11366,39 +11360,6 @@ msgstr "当前设备无打印项目"
 msgid "Local File List"
 msgstr "本地文件列表"
 
-msgid "Spray Nozzle"
-msgstr "喷嘴型号"
-
-msgid "Print Size"
-msgstr "打印尺寸"
-
-msgid "Firmware Version"
-msgstr "固件版本"
-
-msgid "Serial Number"
-msgstr "序列号"
-
-msgid "Private Material Statistics"
-msgstr "丝料统计"
-
-msgid "Adventurer 5M"
-msgstr ""
-
-msgid "0.4mm"
-msgstr ""
-
-msgid "220*220*220mm"
-msgstr ""
-
-msgid "2.1.4-2.1.6"
-msgstr ""
-
-msgid "ABCDEFG"
-msgstr ""
-
-msgid "1600.9 m"
-msgstr ""
-
 msgid "idle"
 msgstr "空闲"
 
@@ -11432,11 +11393,32 @@ msgstr "加热中"
 msgid "printing"
 msgstr "打印中"
 
+msgid "h "
+msgstr "时 "
+
+msgid "min "
+msgstr "分 "
+
 msgid "The maximum temperature cannot exceed"
 msgstr ""
 
 msgid "The minmum temperature should not be less than "
 msgstr ""
+
+msgid "Spray Nozzle"
+msgstr "喷嘴型号"
+
+msgid "Print Size"
+msgstr "打印尺寸"
+
+msgid "Firmware Version"
+msgstr "固件版本"
+
+msgid "Serial Number"
+msgstr "序列号"
+
+msgid "Private Material Statistics"
+msgstr "丝料统计"
 
 msgid "Paused"
 msgstr "暂停"
@@ -11745,6 +11727,12 @@ msgid ""
 "clogging when printing lower temperature filament with a higher enclosure "
 "temperature. More info about this in the Wiki."
 msgstr ""
+
+#~ msgid "Input access code"
+#~ msgstr "输入访问码"
+
+#~ msgid "《Term of Sevrvice》"
+#~ msgstr "《服务条款》"
 
 #~ msgid "Terms and Conditions"
 #~ msgstr "用户使用协议"

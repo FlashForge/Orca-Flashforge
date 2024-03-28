@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-03-26 13:38+0800\n"
+"POT-Creation-Date: 2024-03-28 09:56+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -5094,9 +5094,6 @@ msgid "Simply switch to \"%1%\""
 msgstr ""
 
 msgid "Task canceled"
-msgstr ""
-
-msgid "Input access code"
 msgstr ""
 
 msgid "Please login first."
@@ -10770,16 +10767,13 @@ msgstr ""
 msgid "Mobile Phone Number Error"
 msgstr ""
 
-msgid "Server connection exception"
-msgstr ""
-
 msgid "Verify code is incorrect"
 msgstr ""
 
 msgid "Read and Agree to Accept"
 msgstr ""
 
-msgid "《Term of Sevrvice》"
+msgid "《Term of Service》"
 msgstr ""
 
 msgid "《Privacy Policy》"
@@ -10791,7 +10785,7 @@ msgstr ""
 msgid "Forget Password"
 msgstr ""
 
-msgid "《Term of Service》"
+msgid "Server connection exception"
 msgstr ""
 
 msgid "User not registered"
@@ -10878,39 +10872,6 @@ msgstr ""
 msgid "Local File List"
 msgstr ""
 
-msgid "Spray Nozzle"
-msgstr ""
-
-msgid "Print Size"
-msgstr ""
-
-msgid "Firmware Version"
-msgstr ""
-
-msgid "Serial Number"
-msgstr ""
-
-msgid "Private Material Statistics"
-msgstr ""
-
-msgid "Adventurer 5M"
-msgstr ""
-
-msgid "0.4mm"
-msgstr ""
-
-msgid "220*220*220mm"
-msgstr ""
-
-msgid "2.1.4-2.1.6"
-msgstr ""
-
-msgid "ABCDEFG"
-msgstr ""
-
-msgid "1600.9 m"
-msgstr ""
-
 msgid "idle"
 msgstr ""
 
@@ -10944,10 +10905,31 @@ msgstr ""
 msgid "printing"
 msgstr ""
 
+msgid "h "
+msgstr ""
+
+msgid "min "
+msgstr ""
+
 msgid "The maximum temperature cannot exceed"
 msgstr ""
 
 msgid "The minmum temperature should not be less than "
+msgstr ""
+
+msgid "Spray Nozzle"
+msgstr ""
+
+msgid "Print Size"
+msgstr ""
+
+msgid "Firmware Version"
+msgstr ""
+
+msgid "Serial Number"
+msgstr ""
+
+msgid "Private Material Statistics"
 msgstr ""
 
 msgid "Paused"

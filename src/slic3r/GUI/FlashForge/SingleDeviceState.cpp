@@ -2088,7 +2088,7 @@ std::string SingleDeviceState::convertSecondsToHMS(int totalSeconds)
    int secs             = remainingSeconds % 60; 
 
    std::ostringstream stream;  
-   stream << std::setfill('0') << std::setw(2) << hours << ":" << std::setfill('0') << std::setw(2) << minutes << ":" << std::setfill('0')<< std::setw(2) << secs;  
+   stream << std::setfill('0') << std::setw(1) << hours << _L("h ") << std::setfill('0') << std::setw(2) << minutes << _L("min ");  
    return stream.str();  
 }
 
