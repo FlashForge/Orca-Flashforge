@@ -3,6 +3,7 @@
 #include <wx/dcgraph.h>
 #include <slic3r/GUI/I18N.hpp>
 #include <slic3r/GUI/Widgets/Label.hpp>
+#include "slic3r/GUI/Widgets/FFButton.hpp"
 #include "libslic3r/AppConfig.hpp"
 #include "FlashForge/DeviceData.hpp"
 
@@ -164,10 +165,12 @@ ConnectPrinterDialog::ConnectPrinterDialog(bool err_hint /*= false*/)
 
     sizer_connect->Add(FromDIP(20), 0);
 
-    m_button_confirm = new Button(this, _L(""), "access_code_confirm");
+    m_button_confirm = new FFPushButton(this, wxID_ANY, "access_code_confirm_normal", "access_code_confirm_hover", "access_code_confirm_press", "access_code_confirm_normal",30);
 
-    StateColor btn_text(std::pair<wxColour, int>(wxColour(255, 255, 255), StateColor::Normal));
-    m_button_confirm->SetBorderColor(btn_text);
+    m_button_confirm->SetBackgroundColour(wxColour(255, 255, 255));
+    //StateColor btn_text(std::pair<wxColour, int>(wxColour(255, 255, 255), StateColor::Normal));
+    //m_button_confirm->SetBorderColor(btn_text);
+    m_button_confirm->SetMinSize(wxSize(FromDIP(30),FromDIP(30)));
 
     sizer_connect->Add(m_button_confirm, 0, wxALL | wxALIGN_CENTER_VERTICAL, 0);
 
@@ -230,7 +233,7 @@ ConnectPrinterDialog::ConnectPrinterDialog(bool err_hint /*= false*/)
     CentreOnParent();
     Bind(wxEVT_SHOW, &ConnectPrinterDialog::on_show, this);
     m_textCtrl_code->Bind(wxEVT_TEXT, &ConnectPrinterDialog::on_input_enter, this);
-    m_button_confirm->Bind(wxEVT_BUTTON, &ConnectPrinterDialog::on_button_confirm, this);
+    m_button_confirm->Bind(wxEVT_LEFT_DOWN, &ConnectPrinterDialog::on_button_confirm, this);
     wxGetApp().UpdateDlgDarkUI(this);
 }
 
@@ -262,7 +265,7 @@ void ConnectPrinterDialog::on_input_enter(wxCommandEvent& evt)
 }
 
 
-void ConnectPrinterDialog::on_button_confirm(wxCommandEvent &event) 
+void ConnectPrinterDialog::on_button_confirm(wxMouseEvent &event)
 {
     wxString code = m_textCtrl_code->GetTextCtrl()->GetValue();
     for (char c : code) {
@@ -279,6 +282,7 @@ void ConnectPrinterDialog::on_button_confirm(wxCommandEvent &event)
         }
     }
     EndModal(wxID_OK);
+    event.Skip();
 }
 
 void ConnectPrinterDialog::on_dpi_changed(const wxRect &suggested_rect)
@@ -286,8 +290,8 @@ void ConnectPrinterDialog::on_dpi_changed(const wxRect &suggested_rect)
     m_textCtrl_code->GetTextCtrl()->SetSize(wxSize(-1, FromDIP(22)));
     m_textCtrl_code->GetTextCtrl()->SetMinSize(wxSize(-1, FromDIP(22)));
 
-    m_button_confirm->SetCornerRadius(FromDIP(12));
-    m_button_confirm->Rescale();
+    //m_button_confirm->SetCornerRadius(FromDIP(12));
+    //m_button_confirm->Rescale();
     
     Layout();
     this->Refresh();

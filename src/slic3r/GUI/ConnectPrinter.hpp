@@ -22,6 +22,7 @@
 #include "DeviceManager.hpp"
 #include "TitleDialog.hpp"
 
+class FFPushButton;
 namespace Slic3r { namespace GUI {
 class DeviceObject;
 class ConnectPrinterDialog : public TitleDialog
@@ -31,7 +32,8 @@ protected:
     bool            m_need_connect{true};
     wxStaticText *  m_staticText_connection_code;
     TextInput *     m_textCtrl_code;
-    Button *        m_button_confirm;
+    //Button *        m_button_confirm;
+    FFPushButton   *m_button_confirm{nullptr};
     wxStaticText*   m_staticText_hints;
     Label*          m_label_error_info;
 
@@ -56,7 +58,7 @@ public:
     void set_machine_object(MachineObject* obj);
     void set_device_object(DeviceObject* devObj);
     void on_input_enter(wxCommandEvent& evt);
-    void on_button_confirm(wxCommandEvent &event); 
+    void on_button_confirm(wxMouseEvent &event); 
     void on_dpi_changed(const wxRect &suggested_rect) override;
     void on_show(wxShowEvent &event);
 };
