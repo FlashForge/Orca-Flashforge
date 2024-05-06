@@ -269,7 +269,8 @@ public:
 private:
     class GCodeOutputStream {
     public:
-        GCodeOutputStream(FILE *f, GCodeProcessor &processor) : f(f), m_processor(processor) {}
+        GCodeOutputStream(FILE *f, GCodeProcessor &processor) : f(f), m_processor(processor)
+            , m_insertPos(-1), m_commentPos(-1){}
         ~GCodeOutputStream() { this->close(); }
 
         bool is_open() const { return f; }
@@ -289,10 +290,15 @@ private:
 
         // Formats and write into a file the given data.
         void write_format(const char* format, ...);
+        void setInsertPos() { m_insertPos = m_cache.size(); }
+        void setCommentPos() { m_commentPos = m_cache.size(); }
+        void writeCache();
 
     private:
         FILE *f = nullptr;
         GCodeProcessor &m_processor;
+        std::vector<std::string> m_cache;
+        int m_insertPos, m_commentPos;
     };
     void            _do_export(Print &print, GCodeOutputStream &file, ThumbnailsGeneratorCallback thumbnail_cb);
 

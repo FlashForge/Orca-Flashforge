@@ -23,7 +23,10 @@ deps/build*/*
 install_*
 build_*/
 SVG
-src/OrcaSlicer-doc/
+src/FlashSlicer-doc/
 .idea/
 /.cache/
 *.mo
+/usr/
+/deps/
+/OrcaSlicer-deps/

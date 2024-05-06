@@ -305,7 +305,7 @@ void set_log_path_and_level(const std::string& file, unsigned int level)
 	}
 #endif
 
-	//BBS log file at C:\\Users\\[yourname]\\AppData\\Roaming\\OrcaSlicer\\log\\[log_filename].log
+	//BBS log file at C:\\Users\\[yourname]\\AppData\\Roaming\\Orca-Flashforge\\log\\[log_filename].log
 	auto log_folder = boost::filesystem::path(g_data_dir) / "log";
 	if (!boost::filesystem::exists(log_folder)) {
 		boost::filesystem::create_directory(log_folder);
@@ -1107,15 +1107,9 @@ std::string string_printf(const char *format, ...)
     return buffer;
 }
 
-std::string header_slic3r_generated()
-{
-	return std::string(SLIC3R_APP_NAME " " SoftFever_VERSION);
-}
+std::string header_slic3r_generated() { return std::string(SLIC3R_APP_NAME " " Orca_Flashforge_VERSION); }
 
-std::string header_gcodeviewer_generated()
-{
-	return std::string(GCODEVIEWER_APP_NAME " " SoftFever_VERSION);
-}
+std::string header_gcodeviewer_generated() { return std::string(GCODEVIEWER_APP_NAME " " Orca_Flashforge_VERSION); }
 
 unsigned get_current_pid()
 {

@@ -38,17 +38,21 @@
 #include "Widgets/ComboBox.hpp"
 #include "Widgets/ScrolledWindow.hpp"
 #include "Widgets/PopupWindow.hpp"
+#include "FlashForge/MultiComUtils.hpp"
+#include "FlashForge/MultiComEvent.hpp"
 #include <wx/simplebook.h>
 #include <wx/hashmap.h>
+#include "slic3r/GUI/Widgets/FFPopupWindow.hpp"
 
 namespace Slic3r { namespace GUI {
 
 enum PrinterState {
-    OFFLINE,
+    OFFLINE_LAN,
+    OFFLINE_WAN,
     IDLE,
     BUSY,
-    LOCK,
-    IN_LAN
+    ONLINE_LAN,
+    ONLINE_WAN
 };
 
 enum PrinterBindState {
@@ -110,6 +114,7 @@ private:
     wxArrayString m_ipAddressValues;
 };
 
+class DeviceObject;
 class MachineObjectPanel : public wxPanel
 {
 private:
@@ -117,6 +122,7 @@ private:
     bool        m_show_edit{false};
     bool        m_show_bind{false};
     bool        m_hover {false};
+    bool        m_press_flag{false};
     bool        m_is_macos_special_version{false};
 
 
@@ -127,13 +133,15 @@ private:
     ScalableBitmap m_edit_name_img;
     ScalableBitmap m_select_unbind_img;
 
-    ScalableBitmap m_printer_status_offline;
+    ScalableBitmap m_printer_status_offline_lan;
+    ScalableBitmap m_printer_status_offline_wan;
     ScalableBitmap m_printer_status_busy;
     ScalableBitmap m_printer_status_idle;
-    ScalableBitmap m_printer_status_lock;
-    ScalableBitmap m_printer_in_lan;
+    ScalableBitmap m_printer_online_lan;
+    ScalableBitmap m_printer_online_wan;
 
     MachineObject *m_info;
+    DeviceObject  *m_devInfo;
 
 protected:
     wxStaticBitmap *m_bitmap_info;
@@ -149,11 +157,17 @@ public:
     
     ~MachineObjectPanel();
 
-    void show_bind_dialog();
     void set_printer_state(PrinterState state);
     void show_printer_bind(bool show, PrinterBindState state);
     void show_edit_printer_name(bool show);
     void update_machine_info(MachineObject *info, bool is_my_devices = false);
+    void update_device_info(DeviceObject *info, bool is_my_devices = false);
+    DeviceObject *device_info();
+
+    void SetHover(bool hover);
+    void SetPressed(bool pressed, bool hit);
+    bool IsPressed() const { return m_press_flag; }
+    
 protected:
     void OnPaint(wxPaintEvent &event);
     void render(wxDC &dc);
@@ -161,10 +175,13 @@ protected:
     void on_mouse_enter(wxMouseEvent &evt);
     void on_mouse_leave(wxMouseEvent &evt);
     void on_mouse_left_up(wxMouseEvent &evt);
+
+private:
+    bool is_wan_offline_lan_unbind(DeviceObject* &obj);
 };
 
-#define SELECT_MACHINE_POPUP_SIZE wxSize(FromDIP(216), FromDIP(364))
-#define SELECT_MACHINE_LIST_SIZE wxSize(FromDIP(212), FromDIP(360))  
+#define SELECT_MACHINE_POPUP_SIZE wxSize(FromDIP(216), FromDIP(674))
+#define SELECT_MACHINE_LIST_SIZE wxSize(FromDIP(212), FromDIP(1920))
 #define SELECT_MACHINE_ITEM_SIZE wxSize(FromDIP(182), FromDIP(35))
 #define SELECT_MACHINE_GREY900 wxColour(38, 46, 48)
 #define SELECT_MACHINE_GREY600 wxColour(144,144,144)
@@ -182,7 +199,10 @@ public:
 
 
 class ThumbnailPanel;
-
+class DeviceObject;
+class DeviceListUpdateEvent;
+class MachineListUpdateEvent;
+#ifdef __WINDOWS__
 class SelectMachinePopup : public PopupWindow
 {
 public:
@@ -196,14 +216,14 @@ public:
     virtual bool Show(bool show = true) wxOVERRIDE;
 
     void update_machine_list(wxCommandEvent &event);
-    void start_ssdp(bool on_off);
     bool was_dismiss() { return m_dismiss; }
-
+public:
+#ifdef __APPLE__
+    static bool                       m_wan_bind_enable;
+#endif
 private:
     int                               m_my_devices_count{0};
     int                               m_other_devices_count{0};
-    wxWindow*                         m_placeholder_panel{nullptr};
-    wxHyperlinkCtrl*                  m_hyperlink{nullptr};
     wxBoxSizer *                      m_sizer_body{nullptr};
     wxBoxSizer *                      m_sizer_my_devices{nullptr};
     wxBoxSizer *                      m_sizer_other_devices{nullptr};
@@ -217,20 +237,90 @@ private:
     boost::thread*                    get_print_info_thread{ nullptr };
     std::string                       m_print_info;
     bool                              m_dismiss { false };
-
-    std::map<std::string, MachineObject*> m_bind_machine_list; 
-    std::map<std::string, MachineObject*> m_free_machine_list;
+    bool                              m_updateConnect { false };
+    
+    std::map<std::string, DeviceObject *> m_bind_machine_list;
+    std::map<std::string, DeviceObject*>  m_free_device_list;
 
 private:
     void OnLeftUp(wxMouseEvent &event);
+    void on_dclick_up(wxMouseEvent &event);
     void on_timer(wxTimerEvent &event);
 
-	void      update_other_devices();
+    void      update_other_devices();
     void      update_user_devices();
     bool      search_for_printer(MachineObject* obj);
     void      on_dissmiss_win(wxCommandEvent &event);
     wxWindow *create_title_panel(wxString text);
+    void      on_connect_exit(ComConnectionExitEvent &event);
+    void      on_connect_ready(ComConnectionReadyEvent &event);
+    void      on_devList_Updated(DeviceListUpdateEvent &event);
 };
+#else if __APPLE__
+class SelectMachinePopup : public FFPopupWindow
+{
+public:
+    SelectMachinePopup(wxWindow *parent);
+    ~SelectMachinePopup();
+
+    // PopupWindow virtual methods are all overridden to log them
+    virtual void Popup(wxWindow *focus = NULL) wxOVERRIDE;
+    void OnDismiss() override;
+    //virtual bool ProcessLeftDown(wxMouseEvent &event) wxOVERRIDE;
+    //virtual bool Show(bool show = true) wxOVERRIDE;
+
+    void update_machine_list(wxCommandEvent &event);
+    bool was_dismiss() { return m_dismiss; }
+    
+private:
+    void ProcessLeftDown(const wxPoint& pnt) override;
+    void ProcessLeftUp(const wxPoint& pnt) override;
+    void ProcessMotion(const wxPoint& pnt) override;
+    bool ShowDevList(bool show = true);
+public:
+#ifdef __APPLE__
+    static bool                       m_wan_bind_enable;
+#endif
+private:
+    int                               m_my_devices_count{0};
+    int                               m_other_devices_count{0};
+    wxBoxSizer *                      m_sizer_body{nullptr};
+    wxBoxSizer *                      m_sizer_my_devices{nullptr};
+    wxBoxSizer *                      m_sizer_other_devices{nullptr};
+    wxBoxSizer *                      m_sizer_search_bar{nullptr};
+    wxSearchCtrl*                     m_search_bar{nullptr};
+    wxScrolledWindow *                m_scrolledWindow{nullptr};
+    wxWindow *                        m_panel_body{nullptr};
+    wxTimer *                         m_refresh_timer{nullptr};
+    std::vector<MachinePanel*>        m_user_list_machine_panel;
+    std::vector<MachinePanel*>        m_other_list_machine_panel;
+    boost::thread*                    get_print_info_thread{ nullptr };
+    std::string                       m_print_info;
+    bool                              m_dismiss { false };
+    bool                              m_updateConnect { false };
+#if 0
+    bool m_left_down{false};
+    wxPoint m_mouse_pos;
+    wxPoint m_scroll_pos_start;
+#endif
+    std::map<std::string, DeviceObject *> m_bind_machine_list;
+    std::map<std::string, DeviceObject*>  m_free_device_list;
+
+private:
+    void OnLeftUp(wxMouseEvent &event);
+    void on_dclick_up(wxMouseEvent &event);
+    void on_timer(wxTimerEvent &event);
+
+	void      update_other_devices();
+    void      update_user_devices();    
+    bool      search_for_printer(MachineObject* obj);
+    void      on_dissmiss_win(wxCommandEvent &event);
+    wxWindow *create_title_panel(wxString text);
+    void      on_connect_exit(ComConnectionExitEvent &event);
+    void      on_connect_ready(ComConnectionReadyEvent &event);
+    void      on_devList_Updated(DeviceListUpdateEvent &event);
+};
+#endif
 
 #define SELECT_MACHINE_DIALOG_BUTTON_SIZE wxSize(FromDIP(68), FromDIP(23))
 #define SELECT_MACHINE_DIALOG_SIMBOOK_SIZE wxSize(FromDIP(370), FromDIP(64))
@@ -437,7 +527,6 @@ public:
     void Enable_Send_Button(bool en);
     void on_dpi_changed(const wxRect& suggested_rect) override;
     void update_user_machine_list();
-    void update_lan_machine_list();
     void stripWhiteSpace(std::string& str);
     void update_ams_status_msg(wxString msg, bool is_warning = false);
     void update_priner_status_msg(wxString msg, bool is_warning = false);

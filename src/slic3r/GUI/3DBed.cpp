@@ -362,6 +362,7 @@ void Bed3D::render_internal(GLCanvas3D& canvas, bool bottom, float scale_factor,
 BoundingBoxf3 Bed3D::calc_extended_bounding_box(bool consider_model_offset) const
 {
     BoundingBoxf3 out { m_build_volume.bounding_volume() };
+    const Vec3d bCenter = out.center();
 
     const Vec3d size = out.size();
     // ensures that the bounding box is set as defined or the following calls to merge() will not work as intented
@@ -375,7 +376,13 @@ BoundingBoxf3 Bed3D::calc_extended_bounding_box(bool consider_model_offset) cons
     Vec3d offset{ m_position.x(), m_position.y(), 0.f };
     //out.merge(m_axes.get_origin() + offset + m_axes.get_total_length() * Vec3d::Ones());
     out.merge(Vec3d(0.f, 0.f, GROUND_Z) + offset + m_axes.get_total_length() * Vec3d::Ones());
-    out.merge(out.min + Vec3d(-Axes::DefaultTipRadius, -Axes::DefaultTipRadius, out.max.z()));
+    //to fix separation between bed and grid when coordinate system is on bed center
+    Vec3d axisTipOffset(0, 0, out.max.z());
+    if (bCenter.x() - Axes::DefaultTipRadius < out.min.x()
+        && bCenter.y() - Axes::DefaultTipRadius < out.min.y()){
+        axisTipOffset = Vec3d(-Axes::DefaultTipRadius, -Axes::DefaultTipRadius, out.max.z());
+    }
+    out.merge(out.min + axisTipOffset);
     //BBS: add part plate related logic.
     if (consider_model_offset) {
         // extend to contain model, if any

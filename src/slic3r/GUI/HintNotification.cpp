@@ -798,6 +798,7 @@ void NotificationManager::HintNotification::count_lines()
 
 void NotificationManager::HintNotification::init()
 {
+//    return;
 	// Do not init closing notification
 	if (is_finished())
 		return;
@@ -1083,9 +1084,9 @@ void NotificationManager::HintNotification::render_documentation_button(ImGuiWra
 		ImGui::PushStyleColor(ImGuiCol_PopupBg, ImGuiWrapper::COL_WINDOW_BACKGROUND);
 		ImGui::PushStyleColor(ImGuiCol_Border, { 0,0,0,0 });
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 8 * scale, 1 * scale });
-		ImGui::BeginTooltip();
-		imgui.text(_u8L("Open Documentation in web browser."));
-		ImGui::EndTooltip();
+//		ImGui::BeginTooltip();
+//		imgui.text(_u8L("Open Documentation in web browser."));
+//		ImGui::EndTooltip();
 		ImGui::PopStyleColor(2);
 		ImGui::PopStyleVar();
 		if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
@@ -1105,7 +1106,7 @@ void NotificationManager::HintNotification::open_documentation()
 {
 	if (!m_documentation_link.empty())
 	{
-		launch_browser_if_allowed(m_documentation_link);
+//		launch_browser_if_allowed(m_documentation_link);
 	}
 }
 void NotificationManager::HintNotification::retrieve_data(bool new_hint/* = true*/)

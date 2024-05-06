@@ -26,11 +26,12 @@ private:
     bool        m_hover{ false };
 
     PrinterState       m_state;
-    ScalableBitmap m_printer_status_offline;
+    ScalableBitmap m_printer_status_offline_lan;
+    ScalableBitmap m_printer_status_offline_wan;
     ScalableBitmap m_printer_status_busy;
     ScalableBitmap m_printer_status_idle;
-    ScalableBitmap m_printer_status_lock;
-    ScalableBitmap m_printer_in_lan;
+    ScalableBitmap m_printer_online_lan;
+    ScalableBitmap m_printer_online_wan;
     MachineObject* m_info;
 
 public:

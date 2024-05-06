@@ -39,12 +39,12 @@ MObjectPanel::MObjectPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, 
     Bind(wxEVT_PAINT, &MObjectPanel::OnPaint, this);
     SetBackgroundColour(StateColor::darkModeColorFor(*wxWHITE));
 
-
-    m_printer_status_offline = ScalableBitmap(this, "printer_status_offline", 12);
-    m_printer_status_busy = ScalableBitmap(this, "printer_status_busy", 12);
-    m_printer_status_idle = ScalableBitmap(this, "printer_status_idle", 12);
-    m_printer_status_lock = ScalableBitmap(this, "printer_status_lock", 16);
-    m_printer_in_lan = ScalableBitmap(this, "printer_in_lan", 16);
+    m_printer_status_offline_lan = ScalableBitmap(this, "printer_status_offline_lan", 16);
+    m_printer_status_offline_wan = ScalableBitmap(this, "printer_status_offline_wan", 16);
+    m_printer_status_busy        = ScalableBitmap(this, "printer_status_busy", 12);
+    m_printer_status_idle        = ScalableBitmap(this, "printer_status_idle", 12);
+    m_printer_online_lan         = ScalableBitmap(this, "printer_online_lan", 16);
+    m_printer_online_wan         = ScalableBitmap(this, "printer_online_wan", 16);
 
     Bind(wxEVT_ENTER_WINDOW, &MObjectPanel::on_mouse_enter, this);
     Bind(wxEVT_LEAVE_WINDOW, &MObjectPanel::on_mouse_leave, this);
@@ -94,12 +94,13 @@ void MObjectPanel::doRender(wxDC& dc)
     wxSize size = GetSize();
     dc.SetPen(*wxTRANSPARENT_PEN);
 
-    auto dwbitmap = m_printer_status_offline;
+    auto dwbitmap = m_printer_status_offline_lan;
     if (m_state == PrinterState::IDLE) { dwbitmap = m_printer_status_idle; }
     if (m_state == PrinterState::BUSY) { dwbitmap = m_printer_status_busy; }
-    if (m_state == PrinterState::OFFLINE) { dwbitmap = m_printer_status_offline; }
-    if (m_state == PrinterState::LOCK) { dwbitmap = m_printer_status_lock; }
-    if (m_state == PrinterState::IN_LAN) { dwbitmap = m_printer_in_lan; }
+    if (m_state == PrinterState::OFFLINE_LAN) { dwbitmap = m_printer_status_offline_lan; }
+    if (m_state == PrinterState::OFFLINE_WAN) { dwbitmap = m_printer_status_offline_wan; }
+    if (m_state == PrinterState::ONLINE_LAN) { dwbitmap = m_printer_online_lan; }
+    if (m_state == PrinterState::ONLINE_WAN) { dwbitmap = m_printer_online_wan; }
 
     // dc.DrawCircle(left, size.y / 2, 3);
     dc.DrawBitmap(dwbitmap.bmp(), wxPoint(left, (size.y - dwbitmap.GetBmpSize().y) / 2));
@@ -112,7 +113,7 @@ void MObjectPanel::doRender(wxDC& dc)
     if (m_info) {
         dev_name = from_u8(m_info->dev_name);
 
-        if (m_state == PrinterState::IN_LAN) {
+        if (m_state == PrinterState::ONLINE_LAN) {
             dev_name += _L("(LAN)");
         }
     }
@@ -363,18 +364,18 @@ void SelectMObjectPopup::update_user_devices()
             }
             else {
                 if (mobj->has_access_right() && mobj->is_avaliable()) {
-                    op->set_printer_state(PrinterState::IN_LAN);
+                    op->set_printer_state(PrinterState::ONLINE_LAN);
                     op->SetToolTip(_L("Online"));
                 }
                 else {
-                    op->set_printer_state(PrinterState::LOCK);
+                    op->set_printer_state(PrinterState::OFFLINE_LAN);
                 }
             }
         }
         else {
             if (!mobj->is_online()) {
                 op->SetToolTip(_L("Offline"));
-                op->set_printer_state(PrinterState::OFFLINE);
+                op->set_printer_state(PrinterState::OFFLINE_WAN);
             }
             else {
                 if (mobj->is_in_printing()) {
@@ -383,7 +384,7 @@ void SelectMObjectPopup::update_user_devices()
                 }
                 else {
                     op->SetToolTip(_L("Online"));
-                    op->set_printer_state(PrinterState::IDLE);
+                    op->set_printer_state(PrinterState::ONLINE_WAN);
                 }
             }
         }

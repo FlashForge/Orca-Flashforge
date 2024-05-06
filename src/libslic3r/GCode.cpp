@@ -1881,7 +1881,7 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
     // if thumbnail type of BTT_TFT, insert above header
     // if not, it is inserted under the header in its normal spot
     const GCodeThumbnailsFormat m_gcode_thumbnail_format = print.full_print_config().opt_enum<GCodeThumbnailsFormat>("thumbnails_format");
-    if (m_gcode_thumbnail_format == GCodeThumbnailsFormat::BTT_TFT)
+    // if (m_gcode_thumbnail_format == GCodeThumbnailsFormat::BTT_TFT)
         GCodeThumbnails::export_thumbnails_to_file(
             thumbnail_cb, print.get_plate_index(), print.full_print_config().option<ConfigOptionPoints>("thumbnails")->values,
             m_gcode_thumbnail_format,
@@ -1920,7 +1920,8 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
     }
 
     file.write_format("; HEADER_BLOCK_END\n\n");
-
+    
+    file.setInsertPos();
     
       // BBS: write global config at the beginning of gcode file because printer
       // need these config information
@@ -2571,6 +2572,8 @@ this->placeholder_parser().set("z_offset", new ConfigOptionFloat(m_config.z_offs
 
     print.throw_if_canceled();
 
+    file.setCommentPos();
+
     // Get filament stats.
     file.write(DoExport::update_print_stats_and_format_filament_stats(
     	// Const inputs
@@ -2614,6 +2617,7 @@ this->placeholder_parser().set("z_offset", new ConfigOptionFloat(m_config.z_offs
 
     }
     file.write("\n");
+    file.writeCache();
 
     print.throw_if_canceled();
 }
@@ -4446,7 +4450,8 @@ void GCode::GCodeOutputStream::write(const char *what)
     if (what != nullptr) {
         const char* gcode = what;
         // writes string to file
-        fwrite(gcode, 1, ::strlen(gcode), this->f);
+        //fwrite(gcode, 1, ::strlen(gcode), this->f);
+        m_cache.push_back(what);
         //FIXME don't allocate a string, maybe process a batch of lines?
         m_processor.process_buffer(std::string(gcode));
     }
@@ -4454,8 +4459,10 @@ void GCode::GCodeOutputStream::write(const char *what)
 
 void GCode::GCodeOutputStream::writeln(const std::string &what)
 {
-    if (! what.empty())
-        this->write(what.back() == '\n' ? what : what + '\n');
+    if (!what.empty()) {
+        //this->write(what.back() == '\n' ? what : what + '\n');
+        m_cache.push_back(what.back() == '\n' ? what : what + '\n');
+    }
 }
 
 void GCode::GCodeOutputStream::write_format(const char* format, ...)
@@ -4481,13 +4488,34 @@ void GCode::GCodeOutputStream::write_format(const char* format, ...)
     bool buffer_dynamic = buflen > 1024;
     char *bufptr = buffer_dynamic ? (char*)malloc(buflen) : buffer;
     int res = ::vsnprintf(bufptr, buflen, format, args);
-    if (res > 0)
-        this->write(bufptr);
+    if (res > 0){
+        //this->write(bufptr);
+        m_cache.push_back(bufptr);
+    }
 
     if (buffer_dynamic)
         free(bufptr);
 
     va_end(args);
+}
+
+void GCode::GCodeOutputStream::writeCache()
+{
+    if (m_insertPos != -1 && m_commentPos != -1) {
+        for (int i = 0; i < m_insertPos; ++i) {
+            fwrite(m_cache[i].c_str(), 1, m_cache[i].size(), this->f);
+        }
+        for (int i = m_commentPos; i < m_cache.size(); ++i) {
+            fwrite(m_cache[i].c_str(), 1, m_cache[i].size(), this->f);
+        }
+        for (int i = m_insertPos; i < m_commentPos; ++i) {
+            fwrite(m_cache[i].c_str(), 1, m_cache[i].size(), this->f);
+        }
+    } else {
+        for (auto &line : m_cache) {
+            fwrite(line.c_str(), 1, line.size(), this->f);
+        }
+    }
 }
 
 static std::map<int, std::string> overhang_speed_key_map =

@@ -8,6 +8,7 @@
 #include "Thread.hpp"
 #include "format.hpp"
 #include "nlohmann/json.hpp"
+#include "../slic3r/Utils/Http.hpp"
 
 #include <utility>
 #include <vector>
@@ -38,24 +39,31 @@ using namespace nlohmann;
 
 namespace Slic3r {
 
-static const std::string VERSION_CHECK_URL = "https://api.github.com/repos/softfever/OrcaSlicer/releases/latest";
+static const std::string VERSION_CHECK_URL = "http://update.cn.sz3dp.com:20080/3dapp/public/Orca-Flashforge/appInfo.json";
 static const std::string MODELS_STR = "models";
 
 const std::string AppConfig::SECTION_FILAMENTS = "filaments";
 const std::string AppConfig::SECTION_MATERIALS = "sla_materials";
+const std::string AppConfig::SECTION_LOCAL_MACHINES = "local_machines";
+
+
+AppConfig::~AppConfig()
+{
+    m_local_machines.clear();
+}
 
 std::string AppConfig::get_language_code()
 {
     std::string get_lang = get("language");
-    if (get_lang.empty()) return "";
+    if (get_lang.empty())
+        return "";
 
-    if (get_lang == "zh_CN")
-    {
+    if (get_lang == "zh_CN") {
         get_lang = "zh-cn";
-    }
-    else
-    {
-        if (get_lang.length() >= 2) { get_lang = get_lang.substr(0, 2); }
+    } else {
+        if (get_lang.length() >= 2) {
+            get_lang = get_lang.substr(0, 2);
+        }
     }
 
     return get_lang;
@@ -358,6 +366,7 @@ void AppConfig::set_defaults()
     if (get("print", "timelapse").empty()) {
         set_str("print", "timelapse", "1");
     }
+    set_version_check_url();
 
     // Remove legacy window positions/sizes
     erase("app", "main_frame_maximized");
@@ -366,6 +375,45 @@ void AppConfig::set_defaults()
     erase("app", "object_settings_maximized");
     erase("app", "object_settings_pos");
     erase("app", "object_settings_size");
+}
+
+void AppConfig::set_version_check_url()
+{
+    std::string url1 = "http://update.cn.sz3dp.com:20080/3dapp/public/Orca-Flashforge/appInfo.json";
+    std::string url2 = "http://www.ishare3d.com/3dapp/public/Orca-Flashforge/appInfo.json";
+
+    auto start1 = std::chrono::steady_clock::now();
+    double t1 = -1, t2 = -1;
+    Http::Ptr p1 = Http::get(url1)
+        .timeout_connect(5)
+        .on_complete([&](std::string body, unsigned status) {
+            auto end = std::chrono::steady_clock::now();
+            std::chrono::duration<double> elapsed = end - start1;
+            t1 = elapsed.count();
+        })
+        .perform();
+
+    auto start2 = std::chrono::steady_clock::now();
+    Http::Ptr p2 = Http::get(url2)
+        .timeout_connect(5)
+        .on_complete([&](std::string body, unsigned status) {
+            auto end = std::chrono::steady_clock::now();
+            std::chrono::duration<double> elapsed = end - start2;
+            t2 = elapsed.count();
+        })
+        .perform();
+
+    p1->joinThread();
+    p2->joinThread();
+
+    std::string quickerUrl = url1;
+    if (t1 != -1 && t2 != -1 && t1 > t2)
+        quickerUrl = url2;
+    /*
+    * avoid when change server address,can not show software update
+    */
+    //if (get("version_check_url").empty())
+        set("version_check_url", quickerUrl);
 }
 
 #ifdef WIN32
@@ -553,8 +601,21 @@ std::string AppConfig::load()
                     m_printer_cali_infos.emplace_back(cali_info);
                 }
             } else if (it.key() == "orca_presets") {
-                for (auto& j_model : it.value()) {
+                for (auto &j_model : it.value()) {
                     m_printer_settings[j_model["machine"].get<std::string>()] = j_model;
+                }
+            } else if (it.key() == SECTION_LOCAL_MACHINES) {
+                for (auto& j_machine : it.value()) {
+                    MacInfoMap info;
+                    info.emplace(std::make_pair("dev_id", j_machine["dev_id"].get<std::string>()));
+                    info.emplace(std::make_pair("dev_name", j_machine["dev_name"].get<std::string>()));
+                    if (j_machine.find("dev_placement") != j_machine.end()) {
+                        info.emplace(std::make_pair("dev_placement", j_machine["dev_placement"].get<std::string>()));
+                    }
+                    if (j_machine.find("dev_pid") != j_machine.end()) {
+                        info.emplace(std::make_pair("dev_pid", j_machine["dev_pid"].get<std::string>()));
+                    }
+                    m_local_machines.push_back(info);
                 }
             } else {
                 if (it.value().is_object()) {
@@ -730,6 +791,24 @@ void AppConfig::save()
     // write machine settings
     for (const auto& preset : m_printer_settings) {
         j["orca_presets"].push_back(preset.second);
+    }
+    
+    // write binding machines
+    for (const auto &mac : m_local_machines) {
+        json j_mac;
+        auto it = mac.find("dev_id");
+        if (it != mac.end())
+            j_mac["dev_id"] = it->second;
+        it = mac.find("dev_name");
+        if (it != mac.end())
+            j_mac["dev_name"] = it->second;
+        it = mac.find("dev_placement");
+        if (it != mac.end())
+            j_mac["dev_placement"] = it->second;
+        it = mac.find("dev_pid");
+        if (it != mac.end())
+            j_mac["dev_pid"] = it->second;
+        j[SECTION_LOCAL_MACHINES].push_back(j_mac);
     }
     boost::nowide::ofstream c;
     c.open(path_pid, std::ios::out | std::ios::trunc);
@@ -1210,6 +1289,54 @@ bool AppConfig::is_engineering_region(){
         ||sel == ENV_PRE_HOST)
         return true;
     return false;
+}
+
+void AppConfig::get_local_mahcines(LocalMacInfo& local_machines)
+{
+    local_machines.assign(m_local_machines.begin(), m_local_machines.end());
+}
+
+void AppConfig::save_bind_machine_to_config(const std::string& dev_id, const std::string& dev_name, const std::string& placement, const unsigned short& pid)
+{
+    bool update = false;
+    std::string pid_str = std::to_string(pid);
+    for (auto& mac : m_local_machines) {
+        auto it = mac.find("dev_id");
+        if (it != mac.end() && it->second == dev_id) {
+            mac["dev_name"] = dev_name;
+            mac["dev_placement"] = placement;
+            mac["dev_pid"] = pid_str;
+            update = true;
+            break;
+        }
+    }
+
+    if (!update) {
+        MacInfoMap macInfo;
+        macInfo.emplace(std::make_pair("dev_id", dev_id));
+        macInfo.emplace(std::make_pair("dev_name", dev_name));
+        macInfo.emplace(std::make_pair("dev_placement", placement));
+        macInfo.emplace(std::make_pair("dev_pid", pid_str));
+        m_local_machines.emplace_back(macInfo);
+    }
+    m_dirty = true;
+}
+
+void AppConfig::erase_local_machine(const std::string &dev_id, const std::string &dev_name)
+{
+    auto it_mac = m_local_machines.begin();
+    for (; it_mac != m_local_machines.end(); ++it_mac) {
+        const MacInfoMap &macInfo = *it_mac;
+        auto        it_id   = macInfo.find("dev_id");
+        auto        it_name = macInfo.find("dev_name");
+        if (it_id != macInfo.end() && it_name != macInfo.end()) {
+            if (it_id->second == dev_id && it_name->second == dev_name) {
+                m_local_machines.erase(it_mac);
+                m_dirty = true;
+                break;
+            }
+        }
+    }
 }
 
 

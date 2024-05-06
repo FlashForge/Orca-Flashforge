@@ -300,7 +300,6 @@ public:
     void bbl_close_preview_only_notification();
 
     //BBS--PluginInstallHint
-    void bbl_show_plugin_install_notification(const std::string &text);
     void bbl_close_plugin_install_notification();
 
 	//BBS--Objects Info

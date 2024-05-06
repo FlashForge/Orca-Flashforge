@@ -335,10 +335,25 @@ VendorType PresetBundle::get_current_vendor_type()
     }
     if (!vendor_name.empty())
     {
-        if(vendor_name.compare("BBL") == 0)
+        if(vendor_name.compare("Flashforge") == 0) {
             t = VendorType::Marlin_BBL;
+        }
     }
     return t;
+}
+
+bool PresetBundle::is_flashforge_vendor()
+{
+    auto config = &printers.get_edited_preset().config;
+    std::string vendor_name;
+    for (const auto& vendor_profile : vendors) {
+        for (const auto& vendor_model : vendor_profile.second.models)
+            if (vendor_model.name == config->opt_string("printer_model")) {
+                vendor_name = vendor_profile.first;
+                break;
+            }
+    }
+    return (vendor_name == "Flashforge");
 }
 
 //BBS: load project embedded presets

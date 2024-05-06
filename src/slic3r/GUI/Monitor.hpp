@@ -2,6 +2,7 @@
 #define slic3r_Monitor_hpp_
 
 #include "Tabbook.hpp"
+#include <ctime>
 #include <wx/notebook.h>
 #include <wx/scrolwin.h>
 #include <wx/sizer.h>
@@ -47,6 +48,7 @@
 #include "slic3r/GUI/UpgradePanel.hpp"
 #include "slic3r/GUI/HMSPanel.hpp"
 #include "slic3r/GUI/AmsWidgets.hpp"
+#include "slic3r/GUI/FlashForge/SingleDeviceState.hpp"
 #include "Widgets/SideTools.hpp"
 #include "SelectMachine.hpp"
 
@@ -54,6 +56,7 @@ namespace Slic3r {
 namespace GUI {
 
 class MediaFilePanel;
+class DeviceListPanel;
 
 class AddMachinePanel : public wxPanel
 {
@@ -72,6 +75,8 @@ public:
 	void msw_rescale();
 };
 
+wxDECLARE_EVENT(EVT_SWITCH_TO_DEVICE_LIST, wxCommandEvent);
+wxDECLARE_EVENT(EVT_SWITCH_TO_DEVICE_STATUS, wxCommandEvent);
 class MonitorPanel : public wxPanel
 {
 private:
@@ -79,10 +84,12 @@ private:
     wxSizer*        m_main_sizer{ nullptr };
     
     AddMachinePanel*    m_status_add_machine_panel;
+	DeviceListPanel* 	m_device_list_panel;
     StatusPanel*        m_status_info_panel;
-    MediaFilePanel*     m_media_file_panel;
-    UpgradePanel*       m_upgrade_panel;
-    HMSPanel*           m_hms_panel;
+    SingleDeviceState*  m_status_info_panel_page;
+    //MediaFilePanel*     m_media_file_panel;
+    //UpgradePanel*       m_upgrade_panel;
+    //HMSPanel*           m_hms_panel;
 
 	/* side tools */
     SideTools*      m_side_tools{nullptr};
@@ -93,18 +100,12 @@ private:
     wxBoxSizer *    m_side_tools_sizer;
     SelectMachinePopup m_select_machine;
 
-	/* images */
-    wxBitmap m_signal_strong_img;
-    wxBitmap m_signal_middle_img;
-    wxBitmap m_signal_weak_img;
-    wxBitmap m_signal_no_img;
-    wxBitmap m_printer_img;
-    wxBitmap m_arrow_img;
-
     int last_wifi_signal = -1;
     int last_status;
     bool m_initialized { false };
     wxTimer* m_refresh_timer = nullptr;
+    time_t m_connect_fail_time1;
+    time_t   m_connect_fail_time0;
 
 public:
     MonitorPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
@@ -119,6 +120,7 @@ public:
         PT_MAX_NUM = 5
     };
     
+    void OnActivate();
 	void init_bitmap();
     void init_timer();
     void init_tabpanel();
@@ -130,7 +132,7 @@ public:
     void msw_rescale();
 
     StatusPanel* get_status_panel() {return m_status_info_panel;};
-	void select_machine(std::string machine_sn);
+	void select_machine(const std::string &machine_sn);
     void on_update_all(wxMouseEvent &event);
     void on_timer(wxTimerEvent& event);
     void on_select_printer(wxCommandEvent& event);
