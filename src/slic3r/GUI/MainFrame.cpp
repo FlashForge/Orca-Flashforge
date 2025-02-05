@@ -162,7 +162,7 @@ static wxIcon main_frame_icon(GUI_App::EAppMode app_mode)
     }
     return wxIcon(path, wxBITMAP_TYPE_ICO);
 #else // _WIN32
-    return wxIcon(Slic3r::var("OrcaSlicer_128px.png"), wxBITMAP_TYPE_PNG);
+    return wxIcon(Slic3r::var("Orca-Flashforge_128px.png"), wxBITMAP_TYPE_PNG);
 #endif // _WIN32
 }
 
@@ -260,7 +260,7 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
     default:
     case GUI_App::EAppMode::Editor:
         m_taskbar_icon = std::make_unique<OrcaSlicerTaskBarIcon>(wxTBI_DOCK);
-        m_taskbar_icon->SetIcon(wxIcon(Slic3r::var("OrcaSlicer-mac_256px.ico"), wxBITMAP_TYPE_ICO), "OrcaSlicer");
+        m_taskbar_icon->SetIcon(wxIcon(Slic3r::var("Orca-Flashforge-mac_256px.ico"), wxBITMAP_TYPE_ICO), "Orca-Flashforge");
         break;
     case GUI_App::EAppMode::GCodeViewer:
         break;
@@ -397,6 +397,20 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
     sizer->SetSizeHints(this);
 
 #ifdef WIN32
+    auto setMaxSize = [this]() {
+        wxDisplay display(this);
+        auto      size = display.GetClientArea().GetSize();
+        HWND      hWnd = GetHandle();
+        RECT      borderThickness;
+        SetRectEmpty(&borderThickness);
+        AdjustWindowRectEx(&borderThickness, GetWindowLongPtr(hWnd, GWL_STYLE), FALSE, 0);
+        SetMaxSize(size + wxSize{-borderThickness.left + borderThickness.right, -borderThickness.top + borderThickness.bottom});
+    };
+    this->Bind(wxEVT_DPI_CHANGED, [setMaxSize](auto& e) {
+        setMaxSize();
+        e.Skip();
+    });
+    setMaxSize();
     // SetMaximize causes the window to overlap the taskbar, due to the fact this window has wxMAXIMIZE_BOX off
     // https://forums.wxwidgets.org/viewtopic.php?t=50634
     // Fix it here
@@ -924,7 +938,8 @@ void MainFrame::show_publish_button(bool show)
 
 void MainFrame::show_calibration_button(bool show)
 {
-// #ifdef __APPLE__
+    return;
+    // #ifdef __APPLE__
 //     bool shown = m_menubar->FindMenu(_L("Calibration")) != wxNOT_FOUND;
 //     if (shown == show)
 //         ;
@@ -989,6 +1004,30 @@ void MainFrame::init_tabpanel() {
     m_tabpanel->Hide();
     m_settings_dialog.set_tabpanel(m_tabpanel);
 
+    m_tabpanel->Bind(wxEVT_NOTEBOOK_PAGE_CHANGING, [this](wxBookCtrlEvent &e) {
+      int old_sel = e.GetOldSelection();
+      int new_sel = e.GetSelection();
+      if (wxGetApp().preset_bundle && wxGetApp().preset_bundle->is_bbl_vendor() && new_sel == tpMonitor) {
+          /*if (!wxGetApp().getAgent()) {
+              e.Veto();
+              BOOST_LOG_TRIVIAL(info) << boost::format("skipped tab switch from %1% to %2%, lack of network plugins") % old_sel % new_sel;
+              if (m_plater) {
+                  wxCommandEvent *evt = new wxCommandEvent(EVT_INSTALL_PLUGIN_HINT);
+                  wxQueueEvent(m_plater, evt);
+              }
+          }*/
+      } else {
+          if (new_sel == tpMonitor && wxGetApp().preset_bundle != nullptr) {
+              auto     cfg = wxGetApp().preset_bundle->printers.get_edited_preset().config;
+              wxString url = cfg.opt_string("print_host_webui").empty() ? cfg.opt_string("print_host") : cfg.opt_string("print_host_webui");
+              if (url.empty()) {
+                  wxString url = wxString::Format("file://%s/web/orca/missing_connection.html", from_u8(resources_dir()));
+                  m_printer_view->load_url(url);
+              }
+          }
+      }
+    });
+
 #ifdef __WXMSW__
     m_tabpanel->Bind(wxEVT_BOOKCTRL_PAGE_CHANGED, [this](wxBookCtrlEvent& e) {
 #else
@@ -1011,8 +1050,9 @@ void MainFrame::init_tabpanel() {
         }
         //else if (panel == m_param_panel)
         //    m_param_panel->OnActivate();
-        else if (panel == m_monitor) {
+        else if (panel == m_monitor && m_monitor) {
             //monitor
+            m_monitor->OnActivate();
         }
 #ifndef __APPLE__
         if (sel == tp3DEditor) {
@@ -1082,9 +1122,9 @@ void MainFrame::init_tabpanel() {
     m_project->SetBackgroundColour(*wxWHITE);
     m_tabpanel->AddPage(m_project, _L("Project"), std::string("tab_auxiliary_avtice"), std::string("tab_auxiliary_avtice"), false);
 
-    m_calibration = new CalibrationPanel(m_tabpanel, wxID_ANY, wxDefaultPosition, wxDefaultSize);
+/*    m_calibration = new CalibrationPanel(m_tabpanel, wxID_ANY, wxDefaultPosition, wxDefaultSize);
     m_calibration->SetBackgroundColour(*wxWHITE);
-    m_tabpanel->AddPage(m_calibration, _L("Calibration"), std::string("tab_monitor_active"), std::string("tab_monitor_active"), false);
+    m_tabpanel->AddPage(m_calibration, _L("Calibration"), std::string("tab_monitor_active"), std::string("tab_monitor_active"));*/
 
     if (m_plater) {
         // load initial config
@@ -1109,23 +1149,20 @@ void MainFrame::show_device(bool bBBLPrinter) {
   }
   if (bBBLPrinter) {
     if (m_tabpanel->GetPage(tpMonitor) != m_monitor) {
-      m_printer_view->Hide();
+            m_printer_view->Show(false);
             m_monitor->Show(true);
-      m_tabpanel->RemovePage(tpMonitor);
-      m_tabpanel->InsertPage(tpMonitor, m_monitor, _L("Device"),
-                             std::string("tab_monitor_active"),
-                             std::string("tab_monitor_active"));
-      //m_tabpanel->SetSelection(tp3DEditor);
+            m_tabpanel->RemovePage(tpMonitor);
+            m_tabpanel->InsertPage(tpMonitor, m_monitor, _L("Device"), std::string("tab_monitor_active"), std::string("tab_monitor_active"));
+            // m_tabpanel->SetSelection(tp3DEditor);
     }
   } else {
     if (m_tabpanel->GetPage(tpMonitor) != m_printer_view) {
-      m_printer_view->Show();
+            m_printer_view->Show();
             m_monitor->Show(false);
-      m_tabpanel->RemovePage(tpMonitor);
-      m_tabpanel->InsertPage(tpMonitor, m_printer_view, _L("Device"),
-                          std::string("tab_monitor_active"),
-                          std::string("tab_monitor_active"));
-      //m_tabpanel->SetSelection(tp3DEditor);
+            m_tabpanel->RemovePage(tpMonitor);
+            m_tabpanel->InsertPage(tpMonitor, m_printer_view, _L("Device"), std::string("tab_monitor_active"),
+                                   std::string("tab_monitor_active"));
+            // m_tabpanel->SetSelection(tp3DEditor);
     }
   }
 
@@ -1478,16 +1515,16 @@ bool MainFrame::can_reslice() const
 
 wxBoxSizer* MainFrame::create_side_tools()
 {
-    int em = em_unit();
+    int         em    = em_unit();
     wxBoxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
 
     m_slice_select = eSlicePlate;
     m_print_select = ePrintPlate;
 
     // m_publish_btn = new Button(this, _L("Upload"), "bar_publish", 0, FromDIP(16));
-    m_slice_btn = new SideButton(this, _L("Slice plate"), "");
+    m_slice_btn        = new SideButton(this, _L("Slice plate"), "");
     m_slice_option_btn = new SideButton(this, "", "sidebutton_dropdown", 0, FromDIP(14));
-    m_print_btn = new SideButton(this, _L("Print plate"), "");
+    m_print_btn        = new SideButton(this, _L("Print plate"), "");
     m_print_option_btn = new SideButton(this, "", "sidebutton_dropdown", 0, FromDIP(14));
 
     update_side_button_style();
@@ -1520,208 +1557,250 @@ wxBoxSizer* MainFrame::create_side_tools()
     //     });
     // });
 
-    m_slice_btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent& event)
-        {
-            //this->m_plater->select_view_3D("Preview");
-            m_plater->update(false, true);
-            if (m_slice_select == eSliceAll)
-                wxPostEvent(m_plater, SimpleEvent(EVT_GLTOOLBAR_SLICE_ALL));
-            else
-                wxPostEvent(m_plater, SimpleEvent(EVT_GLTOOLBAR_SLICE_PLATE));
+    m_slice_btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent& event) {
+        // this->m_plater->select_view_3D("Preview");
+        m_plater->update(false, true);
+        if (m_slice_select == eSliceAll)
+            wxPostEvent(m_plater, SimpleEvent(EVT_GLTOOLBAR_SLICE_ALL));
+        else
+            wxPostEvent(m_plater, SimpleEvent(EVT_GLTOOLBAR_SLICE_PLATE));
 
-            this->m_tabpanel->SetSelection(tpPreview);
+        this->m_tabpanel->SetSelection(tpPreview);
+    });
+
+    m_print_btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent& event) {
+        // this->m_plater->select_view_3D("Preview");
+        if (m_print_select == ePrintAll || m_print_select == ePrintPlate) {
+            m_plater->apply_background_progress();
+            // check valid of print
+            m_print_enable = get_enable_print_status();
+            m_print_btn->Enable(m_print_enable);
+            if (m_print_enable) {
+                if (m_print_select == ePrintAll)
+                    wxPostEvent(m_plater, SimpleEvent(EVT_GLTOOLBAR_PRINT_ALL));
+                if (m_print_select == ePrintPlate)
+                    wxPostEvent(m_plater, SimpleEvent(EVT_GLTOOLBAR_PRINT_PLATE));
+            }
+        } else if (m_print_select == eExportGcode)
+            wxPostEvent(m_plater, SimpleEvent(EVT_GLTOOLBAR_EXPORT_GCODE));
+        else if (m_print_select == eSendGcode)
+            wxPostEvent(m_plater, SimpleEvent(EVT_GLTOOLBAR_SEND_GCODE));
+        else if (m_print_select == eUploadGcode)
+            wxPostEvent(m_plater, SimpleEvent(EVT_GLTOOLBAR_UPLOAD_GCODE));
+        else if (m_print_select == eExportSlicedFile)
+            wxPostEvent(m_plater, SimpleEvent(EVT_GLTOOLBAR_EXPORT_SLICED_FILE));
+        else if (m_print_select == eExportAllSlicedFile)
+            wxPostEvent(m_plater, SimpleEvent(EVT_GLTOOLBAR_EXPORT_ALL_SLICED_FILE));
+        else if (m_print_select == eSendToPrinter)
+            wxPostEvent(m_plater, SimpleEvent(EVT_GLTOOLBAR_SEND_TO_PRINTER));
+        else if (m_print_select == eSendToPrinterAll)
+            wxPostEvent(m_plater, SimpleEvent(EVT_GLTOOLBAR_SEND_TO_PRINTER_ALL));
+    });
+
+    m_slice_option_btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent& event) {
+        SidePopup*  p             = new SidePopup(this);
+        SideButton* slice_all_btn = new SideButton(p, _L("Slice all"), "");
+        slice_all_btn->SetCornerRadius(0);
+        SideButton* slice_plate_btn = new SideButton(p, _L("Slice plate"), "");
+        slice_plate_btn->SetCornerRadius(0);
+
+        slice_all_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
+            m_slice_btn->SetLabel(_L("Slice all"));
+            m_slice_select = eSliceAll;
+            m_slice_enable = get_enable_slice_status();
+            m_slice_btn->Enable(m_slice_enable);
+            this->Layout();
+            p->Dismiss();
         });
 
-    m_print_btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent& event)
-        {
-            //this->m_plater->select_view_3D("Preview");
-            if (m_print_select == ePrintAll || m_print_select == ePrintPlate)
-            {
-                m_plater->apply_background_progress();
-                // check valid of print
+        slice_plate_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
+            m_slice_btn->SetLabel(_L("Slice plate"));
+            m_slice_select = eSlicePlate;
+            m_slice_enable = get_enable_slice_status();
+            m_slice_btn->Enable(m_slice_enable);
+            this->Layout();
+            p->Dismiss();
+        });
+        p->append_button(slice_all_btn);
+        p->append_button(slice_plate_btn);
+        p->Popup(m_slice_btn);
+    });
+
+    m_print_option_btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent& event) {
+        SidePopup* p = new SidePopup(this);
+
+        if (wxGetApp().preset_bundle && !wxGetApp().preset_bundle->is_bbl_vendor()) {
+            // ThirdParty Buttons
+            SideButton* export_gcode_btn = new SideButton(p, _L("Export G-code file"), "");
+            export_gcode_btn->SetCornerRadius(0);
+            export_gcode_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
+                m_print_btn->SetLabel(_L("Export G-code file"));
+                m_print_select = eExportGcode;
                 m_print_enable = get_enable_print_status();
                 m_print_btn->Enable(m_print_enable);
-                if (m_print_enable) {
-                    if (m_print_select == ePrintAll)
-                        wxPostEvent(m_plater, SimpleEvent(EVT_GLTOOLBAR_PRINT_ALL));
-                    if (m_print_select == ePrintPlate)
-                        wxPostEvent(m_plater, SimpleEvent(EVT_GLTOOLBAR_PRINT_PLATE));
-                }
-            }
-            else if (m_print_select == eExportGcode)
-                wxPostEvent(m_plater, SimpleEvent(EVT_GLTOOLBAR_EXPORT_GCODE));
-            else if (m_print_select == eSendGcode)
-                wxPostEvent(m_plater, SimpleEvent(EVT_GLTOOLBAR_SEND_GCODE));
-            else if (m_print_select == eUploadGcode)
-                wxPostEvent(m_plater, SimpleEvent(EVT_GLTOOLBAR_UPLOAD_GCODE));
-            else if (m_print_select == eExportSlicedFile)
-                wxPostEvent(m_plater, SimpleEvent(EVT_GLTOOLBAR_EXPORT_SLICED_FILE));
-            else if (m_print_select == eExportAllSlicedFile)
-                wxPostEvent(m_plater, SimpleEvent(EVT_GLTOOLBAR_EXPORT_ALL_SLICED_FILE));
-            else if (m_print_select == eSendToPrinter)
-                wxPostEvent(m_plater, SimpleEvent(EVT_GLTOOLBAR_SEND_TO_PRINTER));
-            else if (m_print_select == eSendToPrinterAll)
-                wxPostEvent(m_plater, SimpleEvent(EVT_GLTOOLBAR_SEND_TO_PRINTER_ALL));
-        });
-
-    m_slice_option_btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent& event)
-        {
-            SidePopup* p = new SidePopup(this);
-            SideButton* slice_all_btn = new SideButton(p, _L("Slice all"), "");
-            slice_all_btn->SetCornerRadius(0);
-            SideButton* slice_plate_btn = new SideButton(p, _L("Slice plate"), "");
-            slice_plate_btn->SetCornerRadius(0);
-
-            slice_all_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
-                m_slice_btn->SetLabel(_L("Slice all"));
-                m_slice_select = eSliceAll;
-                m_slice_enable = get_enable_slice_status();
-                m_slice_btn->Enable(m_slice_enable);
                 this->Layout();
                 p->Dismiss();
-                });
+            });
 
-            slice_plate_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
-                m_slice_btn->SetLabel(_L("Slice plate"));
-                m_slice_select = eSlicePlate;
-                m_slice_enable = get_enable_slice_status();
-                m_slice_btn->Enable(m_slice_enable);
+            // upload and print
+            SideButton* send_gcode_btn = new SideButton(p, _L("Print"), "");
+            send_gcode_btn->SetCornerRadius(0);
+            send_gcode_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
+                m_print_btn->SetLabel(_L("Print"));
+                m_print_select = eSendGcode;
+                m_print_enable = get_enable_print_status();
+                m_print_btn->Enable(m_print_enable);
                 this->Layout();
                 p->Dismiss();
-                });
-            p->append_button(slice_all_btn);
-            p->append_button(slice_plate_btn);
-            p->Popup(m_slice_btn);
+            });
+
+            p->append_button(send_gcode_btn);
+            p->append_button(export_gcode_btn);
+        } else if (wxGetApp().preset_bundle && wxGetApp().preset_bundle->is_flashforge_vendor()) {
+            // Orca-Flashforge Buttons
+            SideButton* print_plate_btn = new SideButton(p, _L("Print plate"), "");
+            print_plate_btn->SetCornerRadius(0);
+
+            SideButton* send_to_printer_btn = new SideButton(p, _L("Send"), "");
+            send_to_printer_btn->SetCornerRadius(0);
+
+            SideButton* export_sliced_file_btn = new SideButton(p, _L("Export plate sliced file"), "");
+            export_sliced_file_btn->SetCornerRadius(0);
+
+            print_plate_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
+                m_print_btn->SetLabel(_L("Print plate"));
+                m_print_select = ePrintPlate;
+                m_print_enable = get_enable_print_status();
+                m_print_btn->Enable(m_print_enable);
+                this->Layout();
+                p->Dismiss();
+            });
+
+            send_to_printer_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
+                m_print_btn->SetLabel(_L("Send"));
+                m_print_select = eSendToPrinter;
+                m_print_enable = get_enable_print_status();
+                m_print_btn->Enable(m_print_enable);
+                this->Layout();
+                p->Dismiss();
+            });
+
+            export_sliced_file_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
+                m_print_btn->SetLabel(_L("Export plate sliced file"));
+                m_print_select = eExportSlicedFile;
+                m_print_enable = get_enable_print_status();
+                m_print_btn->Enable(m_print_enable);
+                this->Layout();
+                p->Dismiss();
+            });
+
+            SideButton* export_gcode_btn = new SideButton(p, _L("Export G-code file"), "");
+            export_gcode_btn->SetCornerRadius(0);
+            export_gcode_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
+                m_print_btn->SetLabel(_L("Export G-code file"));
+                m_print_select = eExportGcode;
+                m_print_enable = get_enable_print_status();
+                m_print_btn->Enable(m_print_enable);
+                this->Layout();
+                p->Dismiss();
+            });
+            p->append_button(print_plate_btn);
+            p->append_button(send_to_printer_btn);
+            p->append_button(export_sliced_file_btn);
+            p->append_button(export_gcode_btn);
+        } else {
+            // Orca-Flashforge Buttons
+            SideButton* print_plate_btn = new SideButton(p, _L("Print plate"), "");
+            print_plate_btn->SetCornerRadius(0);
+
+            SideButton* send_to_printer_btn = new SideButton(p, _L("Send"), "");
+            send_to_printer_btn->SetCornerRadius(0);
+
+            SideButton* export_sliced_file_btn = new SideButton(p, _L("Export plate sliced file"), "");
+            export_sliced_file_btn->SetCornerRadius(0);
+
+            SideButton* export_all_sliced_file_btn = new SideButton(p, _L("Export all sliced file"), "");
+            export_all_sliced_file_btn->SetCornerRadius(0);
+
+            print_plate_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
+                m_print_btn->SetLabel(_L("Print plate"));
+                m_print_select = ePrintPlate;
+                m_print_enable = get_enable_print_status();
+                m_print_btn->Enable(m_print_enable);
+                this->Layout();
+                p->Dismiss();
+            });
+
+            SideButton* print_all_btn = new SideButton(p, _L("Print all"), "");
+            print_all_btn->SetCornerRadius(0);
+            print_all_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
+                m_print_btn->SetLabel(_L("Print all"));
+                m_print_select = ePrintAll;
+                m_print_enable = get_enable_print_status();
+                m_print_btn->Enable(m_print_enable);
+                this->Layout();
+                p->Dismiss();
+            });
+
+            send_to_printer_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
+                m_print_btn->SetLabel(_L("Send"));
+                m_print_select = eSendToPrinter;
+                m_print_enable = get_enable_print_status();
+                m_print_btn->Enable(m_print_enable);
+                this->Layout();
+                p->Dismiss();
+            });
+
+            SideButton* send_to_printer_all_btn = new SideButton(p, _L("Send all"), "");
+            send_to_printer_all_btn->SetCornerRadius(0);
+            send_to_printer_all_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
+                m_print_btn->SetLabel(_L("Send all"));
+                m_print_select = eSendToPrinterAll;
+                m_print_enable = get_enable_print_status();
+                m_print_btn->Enable(m_print_enable);
+                this->Layout();
+                p->Dismiss();
+            });
+
+            export_sliced_file_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
+                m_print_btn->SetLabel(_L("Export plate sliced file"));
+                m_print_select = eExportSlicedFile;
+                m_print_enable = get_enable_print_status();
+                m_print_btn->Enable(m_print_enable);
+                this->Layout();
+                p->Dismiss();
+            });
+
+            export_all_sliced_file_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
+                m_print_btn->SetLabel(_L("Export all sliced file"));
+                m_print_select = eExportAllSlicedFile;
+                m_print_enable = get_enable_print_status();
+                m_print_btn->Enable(m_print_enable);
+                this->Layout();
+                p->Dismiss();
+            });
+
+            SideButton* export_gcode_btn = new SideButton(p, _L("Export G-code file"), "");
+            export_gcode_btn->SetCornerRadius(0);
+            export_gcode_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
+                m_print_btn->SetLabel(_L("Export G-code file"));
+                m_print_select = eExportGcode;
+                m_print_enable = get_enable_print_status();
+                m_print_btn->Enable(m_print_enable);
+                this->Layout();
+                p->Dismiss();
+            });
+            p->append_button(print_plate_btn);
+            p->append_button(print_all_btn);
+            p->append_button(send_to_printer_btn);
+            p->append_button(send_to_printer_all_btn);
+            p->append_button(export_sliced_file_btn);
+            p->append_button(export_all_sliced_file_btn);
+            p->append_button(export_gcode_btn);
         }
-    );
 
-    m_print_option_btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent& event)
-        {
-            SidePopup* p = new SidePopup(this);
-
-            if (wxGetApp().preset_bundle
-                && !wxGetApp().preset_bundle->use_bbl_network()) {
-                // ThirdParty Buttons
-                SideButton* export_gcode_btn = new SideButton(p, _L("Export G-code file"), "");
-                export_gcode_btn->SetCornerRadius(0);
-                export_gcode_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
-                    m_print_btn->SetLabel(_L("Export G-code file"));
-                    m_print_select = eExportGcode;
-                    m_print_enable = get_enable_print_status();
-                    m_print_btn->Enable(m_print_enable);
-                    this->Layout();
-                    p->Dismiss();
-                    });
-
-                // upload and print
-                SideButton* send_gcode_btn = new SideButton(p, _L("Print"), "");
-                send_gcode_btn->SetCornerRadius(0);
-                send_gcode_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
-                    m_print_btn->SetLabel(_L("Print"));
-                    m_print_select = eSendGcode;
-                    m_print_enable = get_enable_print_status();
-                    m_print_btn->Enable(m_print_enable);
-                    this->Layout();
-                    p->Dismiss();
-                    });
-
-                p->append_button(send_gcode_btn);
-                p->append_button(export_gcode_btn);
-            }
-            else {
-                //Orca Slicer Buttons
-                SideButton* print_plate_btn = new SideButton(p, _L("Print plate"), "");
-                print_plate_btn->SetCornerRadius(0);
-
-                SideButton* send_to_printer_btn = new SideButton(p, _L("Send"), "");
-                send_to_printer_btn->SetCornerRadius(0);
-
-                SideButton* export_sliced_file_btn = new SideButton(p, _L("Export plate sliced file"), "");
-                export_sliced_file_btn->SetCornerRadius(0);
-
-                SideButton* export_all_sliced_file_btn = new SideButton(p, _L("Export all sliced file"), "");
-                export_all_sliced_file_btn->SetCornerRadius(0);
-
-                print_plate_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
-                    m_print_btn->SetLabel(_L("Print plate"));
-                    m_print_select = ePrintPlate;
-                    m_print_enable = get_enable_print_status();
-                    m_print_btn->Enable(m_print_enable);
-                    this->Layout();
-                    p->Dismiss();
-                    });
-
-                SideButton* print_all_btn = new SideButton(p, _L("Print all"), "");
-                print_all_btn->SetCornerRadius(0);
-                print_all_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
-                    m_print_btn->SetLabel(_L("Print all"));
-                    m_print_select = ePrintAll;
-                    m_print_enable = get_enable_print_status();
-                    m_print_btn->Enable(m_print_enable);
-                    this->Layout();
-                    p->Dismiss();
-                    });
-
-                send_to_printer_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
-                    m_print_btn->SetLabel(_L("Send"));
-                    m_print_select = eSendToPrinter;
-                    m_print_enable = get_enable_print_status();
-                    m_print_btn->Enable(m_print_enable);
-                    this->Layout();
-                    p->Dismiss();
-                    });
-
-                SideButton* send_to_printer_all_btn = new SideButton(p, _L("Send all"), "");
-                send_to_printer_all_btn->SetCornerRadius(0);
-                send_to_printer_all_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
-                    m_print_btn->SetLabel(_L("Send all"));
-                    m_print_select = eSendToPrinterAll;
-                    m_print_enable = get_enable_print_status();
-                    m_print_btn->Enable(m_print_enable);
-                    this->Layout();
-                    p->Dismiss();
-                    });
-
-                export_sliced_file_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
-                    m_print_btn->SetLabel(_L("Export plate sliced file"));
-                    m_print_select = eExportSlicedFile;
-                    m_print_enable = get_enable_print_status();
-                    m_print_btn->Enable(m_print_enable);
-                    this->Layout();
-                    p->Dismiss();
-                    });
-
-                export_all_sliced_file_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
-                    m_print_btn->SetLabel(_L("Export all sliced file"));
-                    m_print_select = eExportAllSlicedFile;
-                    m_print_enable = get_enable_print_status();
-                    m_print_btn->Enable(m_print_enable);
-                    this->Layout();
-                    p->Dismiss();
-                    });
-
-                SideButton* export_gcode_btn = new SideButton(p, _L("Export G-code file"), "");
-                export_gcode_btn->SetCornerRadius(0);
-                export_gcode_btn->Bind(wxEVT_BUTTON, [this, p](wxCommandEvent&) {
-                    m_print_btn->SetLabel(_L("Export G-code file"));
-                    m_print_select = eExportGcode;
-                    m_print_enable = get_enable_print_status();
-                    m_print_btn->Enable(m_print_enable);
-                    this->Layout();
-                    p->Dismiss();
-                    });
-                p->append_button(print_plate_btn);
-                p->append_button(print_all_btn);
-                p->append_button(send_to_printer_btn);
-                p->append_button(send_to_printer_all_btn);
-                p->append_button(export_sliced_file_btn);
-                p->append_button(export_all_sliced_file_btn);
-                p->append_button(export_gcode_btn);
-            }
-
-            p->Popup(m_print_btn);
-        }
-    );
+        p->Popup(m_print_btn);
+    });
 
     /*
     Button * aux_btn = new Button(this, _L("Auxiliary"));
@@ -1978,7 +2057,7 @@ void MainFrame::on_dpi_changed(const wxRect& suggested_rect)
     m_param_panel->msw_rescale();
     m_project->msw_rescale();
     m_monitor->msw_rescale();
-    m_calibration->msw_rescale();
+    //m_calibration->msw_rescale();
 
     // BBS
 #if 0
@@ -2037,7 +2116,7 @@ void MainFrame::on_sys_color_changed()
     // update Plater
     wxGetApp().plater()->sys_color_changed();
     m_monitor->on_sys_color_changed();
-    m_calibration->on_sys_color_changed();
+    //m_calibration->on_sys_color_changed();
     // update Tabs
     for (auto tab : wxGetApp().tabs_list)
         tab->sys_color_changed();
@@ -2083,7 +2162,7 @@ static wxMenu* generate_help_menu()
         });
 
     // Report a bug
-    //append_menu_item(helpMenu, wxID_ANY, _L("Report Bug(TODO)"), _L("Report a bug of OrcaSlicer"),
+    //append_menu_item(helpMenu, wxID_ANY, _L("Report Bug(TODO)"), _L("Report a bug of Orca-Flashforge"),
     //    [](wxCommandEvent&) {
     //        //TODO
     //    });
@@ -3281,10 +3360,25 @@ void MainFrame::select_tab(wxPanel* panel)
 }
 
 //BBS
-void MainFrame::jump_to_monitor(std::string dev_id)
+void MainFrame::jump_to_monitor(const std::string &dev_id)
 {
     m_tabpanel->SetSelection(tpMonitor);
     ((MonitorPanel*)m_monitor)->select_machine(dev_id);
+}
+
+void MainFrame::jump_to_monitor(int type, com_id_t conn_id/*=0*/)
+{
+    m_tabpanel->SetSelection(tpMonitor);
+    wxCommandEvent event(type, m_monitor->GetId());
+    event.SetEventObject(m_monitor);
+    event.SetInt(conn_id);
+    wxPostEvent(m_monitor, event);
+}
+
+void MainFrame::jump_to_monitor_exit(const std::string &dev_id /*= ""*/) 
+{
+    m_tabpanel->SetSelection(tpMonitor);
+    ((MonitorPanel *) m_monitor)->update_all();
 }
 
 //BBS GUI refactor: remove unused layout new/dlg
@@ -3330,6 +3424,7 @@ void MainFrame::request_select_tab(TabPosition pos)
 }
 
 int MainFrame::get_calibration_curr_tab() {
+    return -1;
     if (m_calibration)
         return m_calibration->get_tabpanel()->GetSelection();
     return -1;
@@ -3734,7 +3829,7 @@ SettingsDialog::SettingsDialog(MainFrame* mainframe)
         SetIcon(wxIcon(szExeFileName, wxBITMAP_TYPE_ICO));
     }
 #else
-    SetIcon(wxIcon(var("OrcaSlicer_128px.png"), wxBITMAP_TYPE_PNG));
+    SetIcon(wxIcon(var("Orca-Flashforge_128px.png"), wxBITMAP_TYPE_PNG));
 #endif // _WIN32
 
     //just hide the Frame on closing

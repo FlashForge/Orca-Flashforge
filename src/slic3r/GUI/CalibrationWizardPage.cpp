@@ -389,9 +389,9 @@ CaliPageCaption::CaliPageCaption(wxWindow* parent, CalibMode cali_mode,
 
     caption_sizer->AddStretchSpacer();
 
-    m_wiki_url = get_calibration_wiki_page(cali_mode);
-    create_wiki(this);
-    caption_sizer->Add(m_wiki_text, 0);
+    //m_wiki_url = get_calibration_wiki_page(cali_mode);
+    //create_wiki(this);
+    //caption_sizer->Add(m_wiki_text, 0);
 
     top_sizer->Add(caption_sizer, 1, wxEXPAND);
     top_sizer->AddSpacer(FromDIP(35));

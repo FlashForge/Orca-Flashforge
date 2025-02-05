@@ -1,4 +1,6 @@
-[![Build all](https://github.com/SoftFever/OrcaSlicer/actions/workflows/build_all.yml/badge.svg?branch=main)](https://github.com/SoftFever/OrcaSlicer/actions/workflows/build_all.yml)
+# Orca-Flashforge
+Orca-Flashforge is an open source slicer for FDM printers.
+
 # Orca Slicer     
 Orca Slicer is an open source slicer for FDM printers.   
 
@@ -39,7 +41,7 @@ Explore the latest developments in Orca Slicer with our nightly builds. Feedback
 
 **Mac**:
 1. Download the DMG for your computer: `arm64` version for Apple Silicon and `x86_64` for Intel CPU.  
-2. Drag OrcaSlicer.app to Application folder. 
+2. Drag Orca-Flashforge.app to Application folder. 
 3. *If you want to run a build from a PR, you also need following instructions below*  
     <details quarantine>
     - Option 1 (You only need to do this once. After that the app can be opened normally.):
@@ -47,9 +49,9 @@ Explore the latest developments in Orca Slicer with our nightly builds. Feedback
       - Step 2: A warning window will pop up, click _Open_  
       
     - Option 2:  
-      Execute this command in terminal: `xattr -dr com.apple.quarantine /Applications/OrcaSlicer.app`
+      Execute this command in terminal: `xattr -dr com.apple.quarantine /Applications/Orca-Flashforge.app`
       ```console
-          softfever@mac:~$ xattr -dr com.apple.quarantine /Applications/OrcaSlicer.app
+          softfever@mac:~$ xattr -dr com.apple.quarantine /Applications/Orca-Flashforge.app
       ```
     - Option 3:  
         - Step 1: open the app, a warning window will pop up  
@@ -67,7 +69,7 @@ Explore the latest developments in Orca Slicer with our nightly builds. Feedback
   - Tools needed: Visual Studio 2019, Cmake, git, git-lfs, Strawberry Perl.
       - You will require cmake version 3.14 or later, which is available [on their website](https://cmake.org/download/).
       - Strawberry Perl is [available on their github repository](https://github.com/StrawberryPerl/Perl-Dist-Strawberry/releases/).
-  - Run `build_release.bat` in `x64 Native Tools Command Prompt for VS 2019`
+  - Run `build_release.bat` in `x64 Native Tools Command Prompt for VS 2022`
   - Note: Don't forget to run `git lfs pull` after cloning the repository to download tools on Windows
 
 - Mac 64-bit  
@@ -100,10 +102,8 @@ If you're running Klipper, it's recommended to add the following configuration t
 resolution: 0.1
 ```
 
-# Supports
-**Orca Slicer** is an open-source project, and I'm deeply grateful to all my sponsors and backers.   
-Their generous support enables me to purchase filaments and other essential 3D printing materials for the project.   
-Thank you! :)
+# License
+Orca-Flashforge is licensed under the GNU Affero General Public License, version 3. Orca-Flashforge is based on Orca Slicer by SoftFever.
 
 ### Sponsors:  
 <table>
@@ -151,7 +151,7 @@ Slic3r is licensed under the GNU Affero General Public License, version 3. Slic3
 
 The GNU Affero General Public License, version 3 ensures that if you use any part of this software in any way (even behind a web server), your software must be released under the same license.
 
-Orca Slicer includes a pressure advance calibration pattern test adapted from Andrew Ellis' generator, which is licensed under GNU General Public License, version 3. Ellis' generator is itself adapted from a generator developed by Sineos for Marlin, which is licensed under GNU General Public License, version 3.
+Orca-Flashforge includes a pressure advance calibration pattern test adapted from Andrew Ellis' generator, which is licensed under GNU General Public License, version 3. Ellis' generator is itself adapted from a generator developed by Sineos for Marlin, which is licensed under GNU General Public License, version 3.
 
-The bambu networking plugin is based on non-free libraries from Bambulab. It is optional to the Orca Slicer and provides extended functionalities for Bambulab printer users.
+The flashforge networking plugin is based on non-free libraries from FlashForge. It is optional to the Orca-Flashforge and provides extended functionalities for FlashForge printer users.
 

@@ -23,6 +23,14 @@ set(SLIC3R_GUI_SOURCES
     GUI/Widgets/Button.hpp
     GUI/Widgets/CheckBox.cpp
     GUI/Widgets/CheckBox.hpp
+    GUI/Widgets/FFCheckBox.cpp
+    GUI/Widgets/FFCheckBox.hpp
+    GUI/Widgets/FFButton.hpp
+    GUI/Widgets/FFButton.cpp
+    GUI/Widgets/FFToggleButton.hpp
+    GUI/Widgets/FFToggleButton.cpp
+    GUI/Widgets/FFPopupWindow.hpp
+    GUI/Widgets/FFPopupWindow.cpp
     GUI/Widgets/RadioBox.hpp
     GUI/Widgets/RadioBox.cpp
     GUI/Widgets/ProgressDialog.hpp
@@ -164,7 +172,53 @@ set(SLIC3R_GUI_SOURCES
     GUI/GLSelectionRectangle.hpp
     GUI/Gizmos/GizmoObjectManipulation.cpp
     GUI/Gizmos/GizmoObjectManipulation.hpp
-    GUI/GLModel.hpp
+    GUI/FlashForge/ComWanAsyncConn.cpp
+    GUI/FlashForge/ComWanAsyncConn.hpp
+    GUI/FlashForge/ComCommand.cpp
+    GUI/FlashForge/ComCommand.hpp
+    GUI/FlashForge/ComCommandQue.cpp
+    GUI/FlashForge/ComCommandQue.hpp
+	GUI/FlashForge/ComConnection.cpp
+	GUI/FlashForge/ComConnection.hpp
+	GUI/FlashForge/DeviceData.cpp
+	GUI/FlashForge/DeviceData.hpp
+    GUI/FlashForge/DeviceListPanel.cpp
+    GUI/FlashForge/DeviceListPanel.hpp
+    GUI/FlashForge/DeviceFilterPopup.hpp
+    GUI/FlashForge/DeviceFilterPopup.cpp
+    GUI/FlashForge/FlashNetwork.h
+    GUI/FlashForge/FlashNetworkIntfc.cpp
+	GUI/FlashForge/FlashNetworkIntfc.h
+	GUI/FlashForge/FreeInDestructor.h
+	GUI/FlashForge/LoginDialog.cpp
+    GUI/FlashForge/LoginDialog.hpp
+    GUI/FlashForge/MultiComEvent.cpp
+    GUI/FlashForge/MultiComEvent.hpp
+    GUI/FlashForge/MultiComDef.hpp
+    GUI/FlashForge/MultiComMgr.cpp
+    GUI/FlashForge/MultiComMgr.hpp
+    GUI/FlashForge/MultiComUtils.cpp
+    GUI/FlashForge/MultiComUtils.hpp
+    GUI/FlashForge/SingleDeviceState.cpp
+    GUI/FlashForge/SingleDeviceState.hpp
+    GUI/FlashForge/Singleton.hpp
+    GUI/FlashForge/WaitEvent.cpp
+    GUI/FlashForge/WaitEvent.hpp
+    GUI/FlashForge/WanDevMaintainThd.cpp
+    GUI/FlashForge/WanDevMaintainThd.hpp
+	GUI/FlashForge/WanDevSendGcodeThd.cpp
+	GUI/FlashForge/WanDevSendGcodeThd.hpp
+	GUI/FlashForge/WanDevTokenMgr.cpp
+	GUI/FlashForge/WanDevTokenMgr.hpp
+    GUI/FlashForge/ReLoginDialog.cpp
+    GUI/FlashForge/ReLoginDialog.hpp
+    GUI/FlashForge/UserNameCtrl.cpp
+    GUI/FlashForge/UserNameCtrl.hpp
+    GUI/FlashForge/VerifyCodeCtrl.cpp
+    GUI/FlashForge/VerifyCodeCtrl.hpp
+    GUI/FlashForge/PasswordCtrl.cpp
+    GUI/FlashForge/PasswordCtrl.hpp
+	GUI/GLModel.hpp
     GUI/GLModel.cpp
     GUI/GLTexture.hpp
     GUI/GLTexture.cpp
@@ -323,6 +377,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/DeviceManager.cpp
     GUI/HttpServer.hpp
     GUI/HttpServer.cpp
+    GUI/FFUtils.hpp
+    GUI/FFUtils.cpp
     Config/Snapshot.cpp
     Config/Snapshot.hpp
     Config/Version.cpp
@@ -371,6 +427,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/Jobs/SendJob.cpp
     GUI/Jobs/BindJob.hpp
     GUI/Jobs/BindJob.cpp
+    GUI/Jobs/UnbindJob.hpp
+    GUI/Jobs/UnbindJob.cpp
     GUI/Jobs/NotificationProgressIndicator.hpp
     GUI/Jobs/NotificationProgressIndicator.cpp
     GUI/Jobs/ThreadSafeQueue.hpp
@@ -461,6 +519,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/BonjourDialog.cpp
     GUI/BedShapeDialog.hpp
     GUI/BedShapeDialog.cpp
+    GUI/TitleDialog.hpp
+    GUI/TitleDialog.cpp
     GUI/CreatePresetsDialog.hpp
     GUI/CreatePresetsDialog.cpp
     Utils/json_diff.hpp

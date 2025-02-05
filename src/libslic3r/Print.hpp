@@ -933,6 +933,7 @@ public:
 
     //SoftFever
     bool &is_BBL_printer() { return m_isBBLPrinter; }
+    bool &is_flashforge_printer() { return m_isFlashForgePrinter; }
     const bool is_BBL_printer() const { return m_isBBLPrinter; }
     CalibMode& calib_mode() { return m_calib_params.mode; }
     const CalibMode calib_mode() const { return m_calib_params.mode; }
@@ -979,6 +980,7 @@ private:
     
     //SoftFever
     bool m_isBBLPrinter;
+    bool m_isFlashForgePrinter;
 
     // Ordered collections of extrusion paths to build skirt loops and brim.
     ExtrusionEntityCollection               m_skirt;

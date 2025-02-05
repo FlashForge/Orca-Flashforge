@@ -184,6 +184,9 @@ public:
     virtual int SetSelection(size_t n) override
     {
         int ret = DoSetSelection(n, SetSelection_SendEvent);
+        if (n == 3) {
+            int ret = DoSetSelection(n);
+        }
         int new_sel = GetSelection();
         //check the new_sel firstly
         if (new_sel != n) {

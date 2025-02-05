@@ -27,14 +27,17 @@ public:
     void Stop();
 
     void SetIdleImage(wxString const & image);
-
-    wxMediaState GetState() const;
+    //modified by xlm, compile errors
+    //wxMediaState GetState() const;
+    int GetState() const;
 
     wxSize GetVideoSize() const;
 
     int GetLastError() const { return m_error; }
 
-    static constexpr wxMediaState MEDIASTATE_BUFFERING = (wxMediaState) 6;
+    //static constexpr wxMediaState MEDIASTATE_BUFFERING = (wxMediaState) 6;
+
+    static constexpr int MEDIASTATE_BUFFERING = (int) 6;
 
 protected:
     void DoSetSize(int x, int y, int width, int height, int sizeFlags) override;
@@ -46,7 +49,9 @@ protected:
 private:
     void create_player();
     void * m_player = nullptr;
-    wxMediaState m_state = wxMEDIASTATE_STOPPED;
+    //wxMediaState m_state = wxMEDIASTATE_STOPPED;
+    int m_state = wxMEDIASTATE_STOPPED;
+    
     int m_error = 0;
 };
 

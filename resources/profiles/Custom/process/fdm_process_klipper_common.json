@@ -104,6 +104,5 @@
     "enable_arc_fitting": "0",
     "compatible_printers": [
       "MyKlipper 0.4 nozzle"
-    ],
-    "exclude_object": "1"
+    ]
 }

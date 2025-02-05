@@ -24,12 +24,14 @@
 #include <string_view>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/dll/runtime_symbol_info.hpp>
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/nowide/convert.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
+#include <nlohmann/json.hpp>
 
 #include <wx/stdpaths.h>
 #include <wx/imagpng.h>
@@ -45,12 +47,14 @@
 #include <wx/richmsgdlg.h>
 #include <wx/log.h>
 #include <wx/intl.h>
+#include <wx/url.h>
 
 #include <wx/dialog.h>
 #include <wx/textctrl.h>
 #include <wx/splash.h>
 #include <wx/fontutil.h>
 #include <wx/glcanvas.h>
+#include <wx/socket.h>
 
 #include "libslic3r/Utils.hpp"
 #include "libslic3r/Model.hpp"
@@ -75,6 +79,11 @@
 #include "../Utils/Http.hpp"
 #include "../Utils/UndoRedo.hpp"
 #include "slic3r/Config/Snapshot.hpp"
+#include "slic3r/GUI/FlashForge/LoginDialog.hpp"
+#include "slic3r/GUI/FlashForge/ReLoginDialog.hpp"
+#include "slic3r/GUI/FlashForge/MultiComMgr.hpp"
+#include "slic3r/GUI/FlashForge/DeviceData.hpp"
+#include "slic3r/GUI/Widgets/TempInput.hpp"
 #include "Preferences.hpp"
 #include "Tab.hpp"
 #include "SysInfoDialog.hpp"
@@ -142,10 +151,16 @@
 #endif
 
 using namespace std::literals;
+using json = nlohmann::json;
 namespace pt = boost::property_tree;
 
 namespace Slic3r {
 namespace GUI {
+
+wxDEFINE_EVENT(EVT_START_LOGIN, wxCommandEvent);
+wxDEFINE_EVENT(EVT_LOGIN_FAILED, wxCommandEvent);
+wxDEFINE_EVENT(EVT_LOGIN_SUCCEED, wxCommandEvent);
+wxDEFINE_EVENT(EVT_LOGIN_OUT, wxCommandEvent);
 
 class MainFrame;
 
@@ -303,7 +318,7 @@ public:
         memDc.SetTextForeground(StateColor::darkModeColorFor(wxColor(134, 134, 134)));
         memDc.DrawLabel(m_constant_text.version, version_rect, wxALIGN_LEFT | wxALIGN_BOTTOM);
 
-        auto bs_version = wxString::Format("Based on BambuStudio and PrusaSlicer").ToStdString();
+        auto bs_version = wxString::Format(_L("Based on BambuStudio and PrusaSlicer")).ToStdString();
         memDc.SetFont(Label::Body_12);
         wxSize text_rect = memDc.GetTextExtent(bs_version);
         int start_x = (title_rect.GetLeft() + version_rect.GetRight()) / 2 - text_rect.GetWidth()/2;
@@ -318,7 +333,7 @@ public:
         int logo_width = FromDIP(94 * m_scale);
         wxBitmap logo_bmp = *bmp_cache.load_svg("splash_logo", logo_size, logo_size);
         int logo_y = top_margin + title_rect.GetHeight() + logo_margin;
-        memDc.DrawBitmap(logo_bmp, (width - logo_width) / 2, logo_y, true);
+        memDc.DrawBitmap(logo_bmp, (width - logo_size) / 2, logo_y, true);
 
         // calculate position for the dynamic text
         int text_margin = FromDIP(80 * m_scale);
@@ -472,7 +487,7 @@ static const FileWildcards file_wildcards_by_type[FT_SIZE] = {
     /* FT_OBJ */     { "OBJ files"sv,       { ".obj"sv } },
     /* FT_AMF */     { "AMF files"sv,       { ".amf"sv, ".zip.amf"sv, ".xml"sv } },
     /* FT_3MF */     { "3MF files"sv,       { ".3mf"sv } },
-    /* FT_GCODE */   { "G-code files"sv,    { ".gcode"sv, ".3mf"sv } },
+    /* FT_GCODE */   { "G-code files"sv,    { ".gcode"sv } },
 #ifdef __APPLE__
     /* FT_MODEL */   { "Supported files"sv,     { ".3mf"sv, ".stl"sv, ".stp"sv, ".step"sv, ".svg"sv, ".amf"sv, ".obj"sv , ".usd"sv, ".usda"sv, ".usdc"sv, ".usdz"sv, ".abc"sv, ".ply"sv} },
 #else
@@ -700,7 +715,7 @@ static void generic_exception_handle()
         // and terminate the app so it is at least certain to happen now.
         BOOST_LOG_TRIVIAL(error) << boost::format("std::bad_alloc exception: %1%") % ex.what();
         flush_logs();
-        wxString errmsg = wxString::Format(_L("OrcaSlicer will terminate because of running out of memory."
+        wxString errmsg = wxString::Format(_L("Orca-Flashforge will terminate because of running out of memory."
                                               "It may be a bug. It will be appreciated if you report the issue to our team."));
         wxMessageBox(errmsg + "\n\n" + wxString(ex.what()), _L("Fatal error"), wxOK | wxICON_ERROR);
 
@@ -709,13 +724,13 @@ static void generic_exception_handle()
      } catch (const boost::io::bad_format_string& ex) {
      	BOOST_LOG_TRIVIAL(error) << boost::format("Uncaught exception: %1%") % ex.what();
         	flush_logs();
-        wxString errmsg = _L("OrcaSlicer will terminate because of a localization error. "
+        wxString errmsg = _L("Orca-Flashforge will terminate because of a localization error. "
                              "It will be appreciated if you report the specific scenario this issue happened.");
         wxMessageBox(errmsg + "\n\n" + wxString(ex.what()), _L("Critical error"), wxOK | wxICON_ERROR);
         std::terminate();
         //throw;
     } catch (const std::exception& ex) {
-        wxLogError(format_wxstr(_L("OrcaSlicer got an unhandled exception: %1%"), ex.what()));
+        wxLogError(format_wxstr(_L("Orca-Flashforge got an unhandled exception: %1%"), ex.what()));
         BOOST_LOG_TRIVIAL(error) << boost::format("Uncaught exception: %1%") % ex.what();
         flush_logs();
         throw;
@@ -942,6 +957,9 @@ void GUI_App::post_init()
     // This is ugly but I honestly found no better way to do it.
     // Neither wxShowEvent nor wxWindowCreateEvent work reliably.
     if (this->preset_updater) { // G-Code Viewer does not initialize preset_updater.
+        BOOST_LOG_TRIVIAL(info) << "before check_updates";
+        this->check_updates(false);
+        BOOST_LOG_TRIVIAL(info) << "after check_updates";
         CallAfter([this] {
             bool cw_showed = this->config_wizard_startup();
 
@@ -987,11 +1005,13 @@ void GUI_App::post_init()
         });
 
     // update hms info
-    CallAfter([this] {
+/*    CallAfter([this] {
             if (hms_query)
                 hms_query->check_hms_info();
         });
-
+*/
+    std::string functional_config_file = Slic3r::resources_dir() + "/config.json";
+    DeviceManager::load_functional_config(encode_path(functional_config_file.c_str()));
 
     std::string filaments_blacklist_config_file = Slic3r::resources_dir() + "/printers/filaments_blacklist.json";
     DeviceManager::load_filaments_blacklist_config(encode_path(filaments_blacklist_config_file.c_str()));
@@ -1053,9 +1073,10 @@ GUI_App::GUI_App()
 	, m_removable_drive_manager(std::make_unique<RemovableDriveManager>())
 	//, m_other_instance_message_handler(std::make_unique<OtherInstanceMessageHandler>())
 {
-	//app config initializes early becasuse it is used in instance checking in OrcaSlicer.cpp
+	//app config initializes early becasuse it is used in instance checking in Orca-Flashforge.cpp
     this->init_app_config();
     this->init_download_path();
+    this->init_flashnetwork();
 #if wxUSE_WEBVIEW_EDGE
     this->init_webview_runtime();
 #endif
@@ -1065,6 +1086,8 @@ GUI_App::GUI_App()
 
 void GUI_App::shutdown()
 {
+    //temporary solution to exit crash issue
+
     BOOST_LOG_TRIVIAL(info) << "GUI_App::shutdown enter";
 
 	if (m_removable_drive_manager) {
@@ -1076,6 +1099,45 @@ void GUI_App::shutdown()
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": destroy login dialog");
         delete login_dlg;
         login_dlg = nullptr;
+    }
+
+    if(m_login_dlg != nullptr){
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": destroy  flashforge login dialog");
+        delete m_login_dlg;
+        m_login_dlg = nullptr;
+    }
+
+    if(m_re_login_dlg != nullptr){
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": destroy flashforge relogin dialog");
+        delete m_re_login_dlg;
+        m_re_login_dlg = nullptr;
+    }
+    
+    if(m_pic_thread){
+        MultiComUtils::killAsyncCall(m_pic_thread);
+    }
+
+    if (m_is_recreating_gui) return;
+    m_is_closing = true;
+    stop_sync_user_preset();
+
+    if (m_device_manager) {
+        delete m_device_manager;
+        m_device_manager = nullptr;
+    }
+
+    if (m_device_opr) {
+        delete m_device_opr;
+        m_device_opr = nullptr;
+    }
+
+    if (m_agent) {
+        //BBS avoid a crash on mac platform
+#ifdef __WINDOWS__
+        m_agent->start_discovery(false, false);
+#endif
+        delete m_agent;
+        m_agent = nullptr;
     }
 
     if (m_is_recreating_gui) return;
@@ -1501,7 +1563,7 @@ void GUI_App::remove_old_networking_plugins()
 
 int GUI_App::updating_bambu_networking()
 {
-    DownloadProgressDialog dlg(_L("Downloading Bambu Network Plug-in"));
+    DownloadProgressDialog dlg(_L("Downloading FlashForge Network Plug-in"));
     dlg.ShowModal();
     return 0;
 }
@@ -1722,22 +1784,26 @@ void GUI_App::init_networking_callbacks()
 
 GUI_App::~GUI_App()
 {
+    //boost::mutex::scoped_lock lock(m_mutex);
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": enter");
     if (app_config != nullptr) {
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": destroy app_config");
         delete app_config;
+        app_config = nullptr;
     }
 
     if (preset_bundle != nullptr) {
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": destroy preset_bundle");
         delete preset_bundle;
+        preset_bundle = nullptr;
     }
 
     if (preset_updater != nullptr) {
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": destroy preset updater");
         delete preset_updater;
+        preset_updater = nullptr;
     }
-
+    Slic3r::GUI::MultiComMgr::inst()->uninitalize();
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": exit");
 }
 
@@ -1771,9 +1837,9 @@ static boost::optional<Semver> parse_semver_from_ini(std::string path)
     std::stringstream buffer;
     buffer << stream.rdbuf();
     std::string body = buffer.str();
-    size_t start = body.find("OrcaSlicer ");
+    size_t start = body.find("Orca-Flashforge ");
     if (start == std::string::npos) {
-        start = body.find("OrcaSlicer ");
+        start = body.find("Orca-Flashforge ");
         if (start == std::string::npos)
             return boost::none;
     }
@@ -1802,12 +1868,24 @@ void GUI_App::init_download_path()
     }
 }
 
+void GUI_App::init_flashnetwork()
+{
+    wxFileName appFileName(wxStandardPaths::Get().GetExecutablePath());
+    std::string appPathWithSep = appFileName.GetPathWithSep().ToUTF8().data();
+#ifdef _WIN32
+    std::string flashNetworkDllPath = appPathWithSep + "FlashNetwork.dll";
+#elif __APPLE__
+    std::string flashNetworkDllPath = appPathWithSep + "libFlashNetwork.dylib";
+#endif
+    Slic3r::GUI::MultiComMgr::inst()->initalize(flashNetworkDllPath, data_dir() + "/FlashNetwork");
+}
+
 #if wxUSE_WEBVIEW_EDGE
 void GUI_App::init_webview_runtime()
 {
     // Check WebView Runtime
     if (!WebView::CheckWebViewRuntime()) {
-        int nRet = wxMessageBox(_L("Orca Slicer requires the Microsoft WebView2 Runtime to operate certain features.\nClick Yes to install it now."),
+        int nRet = wxMessageBox(_L("Orca-Flashforge requires the Microsoft WebView2 Runtime to operate certain features.\nClick Yes to install it now."),
                                 _L("WebView2 Runtime"), wxYES_NO);
         if (nRet == wxYES) {
             WebView::DownloadAndInstallWebViewRuntime();
@@ -1865,7 +1943,7 @@ void GUI_App::init_app_config()
 #if !BBL_RELEASE_TO_PUBLIC
     set_log_path_and_level(log_filename, 5);
 #else
-    set_log_path_and_level(log_filename, 3);
+    set_log_path_and_level(log_filename, 2);
 #endif
 
     //BBS: remove GCodeViewer as seperate APP logic
@@ -2053,6 +2131,10 @@ int GUI_App::OnExit()
     return wxApp::OnExit();
 }
 
+wxImage GUI_App::getUsrPic() { return m_usr_pic_image; }
+
+void GUI_App::setUsrPic(wxImage image) { m_usr_pic_image = image; }
+
 class wxBoostLog : public wxLog
 {
     void DoLogText(const wxString &msg) override {
@@ -2070,6 +2152,11 @@ class wxBoostLog : public wxLog
 
 bool GUI_App::on_init_inner()
 {
+    if (app_config->get("flashforge_machine_update") != "1.2.0") {
+        updateMachineInfo();
+        app_config->set("flashforge_machine_update", "1.2.0");
+    }
+
     wxLog::SetActiveTarget(new wxBoostLog());
 #if BBL_RELEASE_TO_PUBLIC
     wxLog::SetLogLevel(wxLOG_Message);
@@ -2098,7 +2185,7 @@ bool GUI_App::on_init_inner()
     //BBS set crash log folder
     CBaseException::set_log_folder(data_dir());
 #endif
-
+    m_timer.Bind(wxEVT_TIMER, &GUI_App::onTimer, this);
     wxGetApp().Bind(wxEVT_QUERY_END_SESSION, [this](auto & e) {
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< "received wxEVT_QUERY_END_SESSION";
         if (mainframe) {
@@ -2112,6 +2199,52 @@ bool GUI_App::on_init_inner()
         }
         for (auto d : dialogStack)
             d->EndModal(wxID_ABORT);
+    });
+    Bind(EVT_START_LOGIN, &GUI_App::onAutoStartLogin,this);
+    Bind(EVT_LOGIN_SUCCEED, [this](auto &event) {
+      m_connecting = false;
+        if (m_logout_tip && m_logout_tip->IsShown()) {
+          m_logout_tip->Close();
+        }
+#ifdef __WIN32__
+      if (mainframe) {
+         if (mainframe->topbar()) {
+              mainframe->topbar()->SetTitle(m_cur_title);
+            }
+      }
+#else if __APPLE__
+    if(mainframe){
+        mainframe->SetTitle(m_cur_title);
+    }
+#endif
+    });
+    Bind(EVT_LOGIN_FAILED, [this](auto &event) {
+       if (m_connecting) {
+           if (!m_logout_tip) {
+               m_logout_tip = new ShowTip(_L("Account Auto Connect Failed!"));
+           }
+           m_logout_tip->SetLabel(_L("Account Auto Connect Failed!"));
+           if (m_logout_tip->IsShown()) {
+               m_logout_tip->Refresh();
+           } else {
+               m_logout_tip->ShowModal();
+           }
+           LoginDialog::SetUsrLogin(false);
+       }
+#ifdef __WIN32__
+      if (mainframe) {
+         if (mainframe->topbar()) {
+               mainframe->topbar()->SetTitle(m_cur_title);
+         }
+      }
+#else if __APPLE__
+    if(mainframe){
+        mainframe->SetTitle(m_cur_title);
+    }
+#endif
+        
+        m_connecting    = false;
+        m_login_success = false;
     });
 
     std::map<std::string, std::string> extra_headers = get_extra_header();
@@ -2129,7 +2262,7 @@ bool GUI_App::on_init_inner()
     }
 #endif
 
-    BOOST_LOG_TRIVIAL(info) << boost::format("gui mode, Current OrcaSlicer Version %1%")%SoftFever_VERSION;
+    BOOST_LOG_TRIVIAL(info) << boost::format("gui mode, Current Orca-Flashforge Version %1%") % Orca_Flashforge_VERSION;
     // Enable this to get the default Win32 COMCTRL32 behavior of static boxes.
 //    wxSystemOptions::SetOption("msw.staticbox.optimized-paint", 0);
     // Enable this to disable Windows Vista themes for all wxNotebooks. The themes seem to lead to terrible
@@ -2146,7 +2279,7 @@ bool GUI_App::on_init_inner()
             RichMessageDialog
                 dlg(nullptr,
                     wxString::Format(_L("%s\nDo you want to continue?"), msg),
-                    "OrcaSlicer", wxICON_QUESTION | wxYES_NO);
+                    "Orca-Flashforge", wxICON_QUESTION | wxYES_NO);
             dlg.ShowCheckBox(_L("Remember my choice"));
             if (dlg.ShowModal() != wxID_YES) return false;
 
@@ -2280,7 +2413,7 @@ bool GUI_App::on_init_inner()
                /* wxString tips = wxString::Format(_L("Click to download new version in default browser: %s"), version_info.version_str);
                 DownloadDialog dialog(this->mainframe,
                     tips,
-                    _L("New version of Orca Slicer"),
+                    _L("New version of Orca-Flashforge"),
                     false,
                     wxCENTER | wxICON_INFORMATION);
 
@@ -2327,7 +2460,7 @@ bool GUI_App::on_init_inner()
                 wxString tips = wxString::Format(_L("Click to download new version in default browser: %s"), version_str);
                 DownloadDialog dialog(this->mainframe,
                     tips,
-                    _L("The Orca Slicer needs an upgrade"),
+                    _L("The Orca-Flashforge needs an upgrade"),
                     false,
                     wxCENTER | wxICON_INFORMATION);
                 dialog.SetExtendedMessage(description_text);
@@ -2545,10 +2678,28 @@ bool GUI_App::on_init_inner()
         m_config_corrupted = false;
         show_error(nullptr,
                    _u8L(
-                       "The OrcaSlicer configuration file may be corrupted and cannot be parsed.\nOrcaSlicer has attempted to recreate the "
+                       "The Orca-Flashforge configuration file may be corrupted and cannot be parsed.\Orca-Flashforge has attempted to recreate the "
                        "configuration file.\nPlease note, application settings will be lost, but printer profiles will not be affected."));
     }
+
+    //BBS: delete splash screen
+    delete scrn;
     return true;
+}
+
+void GUI_App::updateMachineInfo() 
+{
+    fs::path   src_path   = (fs::path(resources_dir()) / "profiles/FlashForge/machine").make_preferred();
+    const auto vendor_dir = (boost::filesystem::path(Slic3r::data_dir()) / PRESET_SYSTEM_DIR / "FlashForge/machine").make_preferred();
+    if (fs::exists(vendor_dir)) {
+        fs::remove_all(vendor_dir);
+        fs::create_directories(vendor_dir);
+    }
+    auto file_filter = [](const std::string name) {
+        return boost::iends_with(name, ".stl") || boost::iends_with(name, ".png") || boost::iends_with(name, ".svg") ||
+               boost::iends_with(name, ".jpeg") || boost::iends_with(name, ".jpg") || boost::iends_with(name, ".3mf");
+    };
+    copy_directory_recursively(src_path, vendor_dir, file_filter);
 }
 
 void GUI_App::copy_network_if_available()
@@ -2616,11 +2767,11 @@ void GUI_App::copy_network_if_available()
 
 bool GUI_App::on_init_network(bool try_backup)
 {
-    auto should_load_networking_plugin = app_config->get_bool("installed_networking");
-    if(!should_load_networking_plugin) {
+     auto should_load_networking_plugin = app_config->get_bool("installed_networking");
+    /*if(!should_load_networking_plugin) {
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << "Don't load plugin as installed_networking is false";
         return false;
-    }
+    }*/
     int load_agent_dll = Slic3r::NetworkAgent::initialize_network_module();
     bool create_network_agent = false;
 __retry:
@@ -2700,6 +2851,10 @@ __retry:
 
         if (!m_device_manager)
             m_device_manager = new Slic3r::DeviceManager();
+    }
+
+    if (!m_device_opr) {
+        m_device_opr = new Slic3r::GUI::DeviceObjectOpr();
     }
 
     return true;
@@ -3144,6 +3299,7 @@ void GUI_App::recreate_GUI(const wxString& msg_name)
     update_http_extra_header();
 
     mainframe->shutdown();
+    m_restart_app = true;
 
     ProgressDialog dlg(msg_name, msg_name, 100, nullptr, wxPD_AUTO_HIDE);
     dlg.Pulse();
@@ -3175,8 +3331,8 @@ void GUI_App::recreate_GUI(const wxString& msg_name)
     update_mode();
 
     //check hms info for different language
-    if (hms_query)
-        hms_query->check_hms_info();
+    //if (hms_query)
+        //hms_query->check_hms_info();
 
     //BBS: trigger restore project logic here, and skip confirm
     plater_->trigger_restore_project(1);
@@ -3232,7 +3388,7 @@ void GUI_App::ShowDownNetPluginDlg() {
         });
         if (iter != dialogStack.end())
             return;
-        DownloadProgressDialog dlg(_L("Downloading Bambu Network Plug-in"));
+        DownloadProgressDialog dlg(_L("Downloading FlashForge Network Plug-in"));
         dlg.ShowModal();
     } catch (std::exception &e) {
         ;
@@ -3241,6 +3397,63 @@ void GUI_App::ShowDownNetPluginDlg() {
 
 void GUI_App::ShowUserLogin(bool show)
 {
+    if (show) {
+        if (nullptr == app_config) {
+            return;
+        }
+
+        /*
+        //判断是否国内登录
+        std::string region = app_config->get("region");
+        if(region.compare("China") == 0){
+            //国内登录
+        }
+        else{
+            //国外登录
+            return;
+        }
+        */
+        if (m_connecting) {
+            if (!m_logout_tip) {
+                m_logout_tip = new ShowTip(_L("Account Auto Connecting..."));
+            }
+            m_logout_tip->SetLabel(_L("Account Auto Connecting..."));
+            m_logout_tip->ShowModal();
+            return;
+        }
+        // 判断是否已经成功登录
+        std::string access_token  = app_config->get("access_token");
+        std::string refresh_token = app_config->get("refresh_token");
+        if (!access_token.empty() && !refresh_token.empty() && m_login_success) {
+            if (!m_re_login_dlg) {
+                m_re_login_dlg = new ReLoginDialog();
+            } else {
+                delete m_re_login_dlg;
+                m_re_login_dlg = new ReLoginDialog();
+            }
+            m_re_login_dlg->ShowModal();
+            return;
+        }
+
+        // 正式登录
+        try {
+            if (!m_login_dlg) {
+                m_login_dlg = new LoginDialog();
+            } else {
+                delete m_login_dlg;
+                m_login_dlg = new LoginDialog();
+            }
+            on_connect_event();
+            m_login_dlg->ShowModal();
+        } catch (std::exception& e) {
+            ;
+        }
+    } else {
+        if (m_login_dlg) {
+            m_login_dlg->EndModal(wxID_OK);
+        }
+    }
+#if 0
     // BBS: User Login Dialog
     if (show) {
         try {
@@ -3258,8 +3471,8 @@ void GUI_App::ShowUserLogin(bool show)
         if (login_dlg)
             login_dlg->EndModal(wxID_OK);
     }
+#endif
 }
-
 
 void GUI_App::ShowOnlyFilament() {
     // BBS:Show NewUser Guide
@@ -3455,6 +3668,7 @@ void GUI_App::request_login(bool show_user_info)
 
 void GUI_App::get_login_info()
 {
+    return;
     if (m_agent) {
         if (m_agent->is_user_login()) {
             std::string login_cmd = m_agent->build_login_cmd();
@@ -3574,9 +3788,96 @@ std::string GUI_App::handle_web_request(std::string cmd)
                 }
             }
             else if (command_str.compare("get_login_info") == 0) {
-                CallAfter([this] {
-                        get_login_info();
+                CallAfter([this] 
+                        {
+                        //查看token是否存在，若存在，则直接登录
+                        std::string access_token = app_config->get("access_token");
+                        std::string refresh_token = app_config->get("refresh_token");
+                        std::string usr_name = app_config->get("usr_name");
+                        if (usr_name.empty()) {
+                            usr_name = app_config->get("usr_input_name");
+                        }
+                        std::string usr_uid = app_config->get("usr_uid");
+                        std::string usr_pic = app_config->get("usr_pic");
+                        std::string token_expire_time = app_config->get("token_expire_time");
+                        std::string token_start_time = app_config->get("token_start_time");
+                        if(!access_token.empty() && !refresh_token.empty()){
+                            //判断时间是否过期，当前有效期31天
+                            //判断是否有网络(连接官网)
+                             wxURL url(_T("http://www.flashforge.com/en"));
+                            std::string region = app_config->get("region");
+                             if(region.compare("China") == 0){
+                                url.SetURL(_T("http://www.sz3dp.com/"));
+                             }
+                             if(!url.IsOk()){
+                                return;
+                             }
+                            //未过期，自动登录
+                            //校验token是否有效
+                            ComErrno login_result = MultiComUtils::checkToken(access_token);
+                            //语言切换且切换前已经登录，直接显示登录成功
+                            if (m_restart_app && m_login_success) {
+                                handle_login_result(usr_pic, usr_name);
+                                BOOST_LOG_TRIVIAL(info) << "usr login succeed 444 : GUI_App::handle_web_request";
+                                LoginDialog::SetToken(access_token, refresh_token);
+                                LoginDialog::SetUsrInfo(com_user_profile_t{usr_uid, usr_name, usr_pic});
+                                return;
+                            }
+                            boost::thread get_print_info_thread = Slic3r::create_thread([=] {
+                                m_connecting = true;
+                                wxCommandEvent event(EVT_START_LOGIN);
+                                event.SetEventObject(this);
+                                wxPostEvent(this, event);
+                                com_token_data_t token_data{atoi(token_expire_time.c_str()), access_token, refresh_token, atoll(token_start_time.c_str())};
+                                ComErrno add_dev_result = Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data, 2, 200);
+                                if (login_result == ComErrno::COM_OK && add_dev_result == COM_OK) {
+                                    on_connect_event();
+                                    handle_login_result(usr_pic, usr_name);
+                                    startTimer();
+                                    BOOST_LOG_TRIVIAL(info) << "usr login succeed 555 : GUI_App::handle_web_request";
+                                    LoginDialog::SetToken(access_token, refresh_token);
+                                    LoginDialog::SetUsrInfo(com_user_profile_t{usr_uid, usr_name, usr_pic});
+                                    wxCommandEvent event(EVT_LOGIN_SUCCEED);
+                                    event.SetEventObject(this);
+                                    wxPostEvent(this, event);
+                                    return;
+                                } else if (login_result != ComErrno::COM_OK && add_dev_result == COM_OK) {
+                                    // 尝试更新token值，若还是无效，则清空已有信息
+                                    com_token_data_t token_data{atoi(token_expire_time.c_str()), access_token, refresh_token, atoll(token_start_time.c_str())};
+                                    ComErrno relogin_refresh_token = MultiComUtils::refreshToken(refresh_token, token_data);
+                                    if (relogin_refresh_token == ComErrno::COM_OK) {
+                                        on_connect_event();
+                                        handle_login_result(usr_pic, usr_name);
+                                        startTimer();
+                                        BOOST_LOG_TRIVIAL(info) << "usr login succeed 666 : GUI_App::handle_web_request";
+                                        LoginDialog::SetToken(token_data.accessToken, token_data.refreshToken);
+                                        LoginDialog::SetUsrInfo(com_user_profile_t{usr_uid, usr_name, usr_pic});
+                                        app_config->set("access_token", token_data.accessToken);
+                                        app_config->set("refresh_token", token_data.refreshToken);
+                                        app_config->set("token_expire_time", std::to_string(token_data.expiresIn));
+                                        app_config->set("token_start_time", std::to_string(token_data.startTime));
+                                        wxCommandEvent event(EVT_LOGIN_SUCCEED);
+                                        event.SetEventObject(this);
+                                        wxPostEvent(this, event);
+                                        return;
+                                    } else {
+                                        wxCommandEvent event(EVT_LOGIN_FAILED);
+                                        event.SetEventObject(this);
+                                        wxPostEvent(this, event);
+                                    }
+                                } else {
+                                    // addWanDev接口所在服务器连接失败
+                                    BOOST_LOG_TRIVIAL(warning) << boost::format("Slic3r::GUI::MultiComMgr::inst()->addWanDev Failed!");
+                                    wxCommandEvent event(EVT_LOGIN_FAILED);
+                                    event.SetEventObject(this);
+                                    wxPostEvent(this, event);
+                                }
+                            });
+                        }
+                        //get_login_info();
                     });
+            } else if (command_str.compare("homepage_received_login") == 0) {
+                stopTimer();
             }
             else if (command_str.compare("homepage_login_or_register") == 0) {
                 CallAfter([this] {
@@ -3585,7 +3886,16 @@ std::string GUI_App::handle_web_request(std::string cmd)
             }
             else if (command_str.compare("homepage_logout") == 0) {
                 CallAfter([this] {
-                    wxGetApp().request_user_logout();
+                    //Slic3r::GUI::MultiComMgr::inst()->removeWanDev();
+                    //wxGetApp().handle_login_out();
+                    if(!m_re_login_dlg){
+                        m_re_login_dlg = new ReLoginDialog();
+                    }
+                    else{
+                        delete m_re_login_dlg;
+                        m_re_login_dlg = new ReLoginDialog();
+                    }
+                    m_re_login_dlg->ShowModal();
                 });
             }
             else if (command_str.compare("homepage_modeldepot") == 0) {
@@ -3725,6 +4035,68 @@ std::string GUI_App::handle_web_request(std::string cmd)
     return "";
 }
 
+void GUI_App::handle_login_result(std::string url, std::string name)
+{
+    m_login_success = true;
+    LoginDialog::SetUsrLogin(true);
+    // 原始的JSON字符串
+    std::string jsonStr = R"({"command": "studio_userlogin","data": {"avatar": "default.jpg","name": ""},"sequence_id": "10001"})";
+
+    // 将JSON字符串解析为JSON对象
+    json jsonObj = json::parse(jsonStr);
+
+    // 替换"avatar"的值
+    if(!url.empty()){
+        jsonObj["data"]["avatar"] = url;
+    }
+    if (!name.empty()) {
+        jsonObj["data"]["name"] = name;
+    } else if (name.empty()) {
+        std::string usr_name = app_config->get("usr_name");
+        if (usr_name.empty()) {
+            usr_name = app_config->get("usr_input_name");
+            jsonObj["data"]["name"] = usr_name;
+        }
+    }
+
+    // 将JSON对象转换为字符串
+    std::string newJsonStr = jsonObj.dump();
+
+    wxString strJS = wxString::Format("window.postMessage(%s)", wxString::FromUTF8(newJsonStr));
+    GUI::wxGetApp().run_script(strJS);
+}
+
+void GUI_App::handle_login_out()
+{
+    m_login_success = false;
+    m_usr_pic_data.clear();
+    m_usr_pic_image.Destroy();
+    LoginDialog::SetUsrLogin(false);
+    // 原始的JSON字符串
+    std::string jsonStr = R"({"command":"studio_useroffline","sequence_id":"10001"})";
+    wxString strJS = wxString::Format("window.postMessage(%s)", jsonStr);
+    GUI::wxGetApp().run_script(strJS);
+
+    wxCommandEvent event(EVT_LOGIN_OUT);
+    event.SetEventObject(this);
+    wxPostEvent(this, event);
+}
+
+void GUI_App::onTimer(wxTimerEvent& event) 
+{
+    event.Skip();
+    if (m_login_success) {
+        std::string usr_name = app_config->get("usr_name");
+        std::string usr_pic  = app_config->get("usr_pic");
+        if (usr_pic.empty()) {
+            usr_pic = "default.jpg";
+        }
+        handle_login_result(usr_pic, usr_name);
+    } else {
+        stopTimer();
+    }
+}
+
 void GUI_App::handle_script_message(std::string msg)
 {
     try {
@@ -3825,8 +4197,9 @@ void GUI_App::on_http_error(wxCommandEvent &evt)
 
     // Version limit
     if (code == HttpErrorVersionLimited) {
-        MessageDialog msg_dlg(nullptr, _L("The version of Orca Slicer is too low and needs to be updated to the latest version before it can be used normally"), "", wxAPPLY | wxOK);
+        MessageDialog msg_dlg(nullptr, _L("The version of Orca-Flashforge is too low and needs to be updated to the latest version before it can be used normally"), "", wxAPPLY | wxOK);
         if (msg_dlg.ShowModal() == wxOK) {
+            return;
         }
        
     }
@@ -3863,6 +4236,74 @@ void GUI_App::enable_user_preset_folder(bool enable)
         app_config->set("preset_folder", "");
         GUI::wxGetApp().preset_bundle->update_user_presets_directory(DEFAULT_USER_FOLDER_NAME);
     }
+}
+
+void GUI_App::on_connect_event() 
+{
+    Slic3r::GUI::MultiComMgr::inst()->Unbind(COM_GET_USER_PROFILE_EVENT, &GUI_App::get_usr_profile, this);
+    Slic3r::GUI::MultiComMgr::inst()->Unbind(COM_WAN_DEV_MAINTAIN_EVENT, &GUI_App::wan_dev_maintain, this);
+    Slic3r::GUI::MultiComMgr::inst()->Bind(COM_GET_USER_PROFILE_EVENT, &GUI_App::get_usr_profile,this);
+    Slic3r::GUI::MultiComMgr::inst()->Bind(COM_WAN_DEV_MAINTAIN_EVENT, &GUI_App::wan_dev_maintain,this);
+}
+
+void GUI_App::get_usr_profile(ComGetUserProfileEvent &event) 
+{
+    event.Skip();
+    if (event.ret == ComErrno::COM_OK) {
+        LoginDialog::SetUsrInfo(com_user_profile_t{event.userProfile.uid, event.userProfile.nickname, event.userProfile.headImgUrl});
+        if (app_config) {
+            app_config->set("usr_uid", event.userProfile.uid);
+            app_config->set("usr_pic", event.userProfile.headImgUrl);
+            app_config->set("usr_name", event.userProfile.nickname);
+            handle_login_result(event.userProfile.headImgUrl, event.userProfile.nickname);
+            app_config->save();
+        }
+        //download usr pic
+        downloadUrlPic(event.userProfile.headImgUrl);
+    }
+}
+
+void GUI_App::downloadUrlPic(const std::string &url) 
+{
+    if (!url.empty()) {
+        Slic3r::Http http   = Slic3r::Http::get(url);
+        std::string  suffix = url.substr(url.find_last_of(".") + 1);
+        http.header("accept", "image/" + suffix)
+            .on_complete([this](std::string body, unsigned int status) {
+                wxMemoryInputStream stream(body.data(), body.size());
+                wxImage   image(stream, wxBITMAP_TYPE_ANY);
+                m_usr_pic_image = image;
+                }
+            )
+            .on_error([=](std::string body, std::string error, unsigned status) {
+                BOOST_LOG_TRIVIAL(info) << " GUI_App::downloadUrlPic: status:" << status << " error:" << error;
+            })
+            .perform();
+    } else {
+        wxImage image;
+        std::string name = "login_default_usr_pic";
+        if (image.LoadFile(Slic3r::GUI::from_u8(Slic3r::var(name + ".png")), wxBITMAP_TYPE_PNG)) {
+            m_usr_pic_image = image;
+        }
+    }
+}
+
+void  GUI_App::onAutoStartLogin(wxCommandEvent& event)
+{
+#ifdef __WIN32__
+    if (mainframe) {
+        if (mainframe->topbar()) {
+            m_cur_title = mainframe->topbar()->GetTitle();
+            mainframe->topbar()->SetTitle(_L("Account Auto Connecting..."));
+        }
+    }
+#else if __APPLE__
+    if(mainframe){
+        m_cur_title = mainframe->GetTitle();
+        mainframe->SetTitle(_L("Account Auto Connecting..."));
+    }
+#endif
+    event.Skip();
 }
 
 void GUI_App::on_set_selected_machine(wxCommandEvent &evt)
@@ -3935,6 +4376,32 @@ void GUI_App::on_user_login(wxCommandEvent &evt)
     // check privacy before handle
     check_privacy_version(online_login);
     check_track_enable();
+}
+
+void GUI_App::wan_dev_maintain(ComWanDevMaintainEvent& event)
+{
+    event.Skip();
+    if (event.ret == COM_UNREGISTER_USER || event.ret == COM_REPEAT_LOGIN || !event.login) {
+        // login out
+        handle_login_out();
+        if (app_config) {
+            app_config->set("access_token", "");
+            app_config->set("refresh_token", "");
+            app_config->set("token_expire_time", "");
+            app_config->set("token_start_time", "");
+            app_config->set("usr_name", "");
+            app_config->set("usr_pic", "");
+            app_config->set("usr_uid", "");
+        }
+        if (!m_logout_tip) {
+            m_logout_tip = new ShowTip(_L("The current account has been logged out!"));
+        } else {
+            delete m_logout_tip;
+            m_logout_tip = nullptr;
+            m_logout_tip = new ShowTip(_L("The current account has been logged out!"));
+        }
+        m_logout_tip->ShowModal();
+    }
 }
 
 bool GUI_App::is_studio_active()
@@ -4055,106 +4522,171 @@ Semver get_version(const std::string& str, const std::regex& regexp) {
 
 void GUI_App::check_new_version_sf(bool show_tips, int by_user)
 {
-    AppConfig* app_config = wxGetApp().app_config;
+    auto isHostConnectToInternet = []() {
+        wxString       urls[2] = {"www.baidu.com", "www.google.com"};
+        wxIPV4address  addr;
+        wxSocketClient socket;
+        for (int i = 0; i < 2; ++i) {
+            addr.Hostname(urls[i]);
+            addr.Service(443);
+            if (socket.Connect(addr)) {
+                socket.Close();
+                return true;
+            }
+        }
+        return false;
+    };
+    if (!isHostConnectToInternet()) {
+        if (by_user) {
+            wxMessageBox(_L("Unable to connect to the Internet!"), _L("Info"), wxOK | wxICON_INFORMATION);
+        }
+        return;
+    };
+    AppConfig* app_config        = wxGetApp().app_config;
     bool       check_stable_only = app_config->get_bool("check_stable_update_only");
     auto       version_check_url = app_config->version_check_url(check_stable_only);
     Http::get(version_check_url)
         .on_error([&](std::string body, std::string error, unsigned http_status) {
-          (void)body;
-          BOOST_LOG_TRIVIAL(error) << format("Error getting: `%1%`: HTTP %2%, %3%", "check_new_version_sf", http_status,
-                                             error);
+            (void) body;
+            BOOST_LOG_TRIVIAL(error) << format("Error getting: `%1%`: HTTP %2%, %3%", "check_new_version_sf", http_status, error);
         })
         .timeout_connect(1)
-        .on_complete([this,by_user, check_stable_only](std::string body, unsigned http_status) {
-          // Http response OK
-          if (http_status != 200)
-            return;
-          try {
-            boost::trim(body);
-            // Orca: parse github release, inspired by SS
-            boost::property_tree::ptree root;
-            std::stringstream json_stream(body);
-            boost::property_tree::read_json(json_stream, root);
+        .on_complete([this, by_user, check_stable_only](std::string body, unsigned http_status) {
+            // Http response OK
+            if (http_status != 200)
+                return;
+            try {
+                boost::trim(body);
+                // Orca: parse github release, inspired by SS
+                boost::property_tree::ptree root;
+                std::stringstream           json_stream(body);
+                boost::property_tree::read_json(json_stream, root);
 
-            // at least two number, use '.' as separator. can be followed by -Az23 for prereleased and +Az42 for
-            // metadata
-            std::regex matcher("[0-9]+\\.[0-9]+(\\.[0-9]+)*(-[A-Za-z0-9]+)?(\\+[A-Za-z0-9]+)?");
+                // at least two number, use '.' as separator. can be followed by -Az23 for prereleased and +Az42 for
+                // metadata
+                std::regex matcher("[0-9]+\\.[0-9]+(\\.[0-9]+)*(-[A-Za-z0-9]+)?(\\+[A-Za-z0-9]+)?");
 
-            Semver           current_version = get_version(SoftFever_VERSION, matcher);
-            Semver best_pre(1, 0, 0);
-            Semver best_release(1, 0, 0);
-            std::string best_pre_url;
-            std::string best_release_url;
-            std::string best_release_content;
-            std::string best_pre_content;
-            const std::regex reg_num("([0-9]+)");
-            if (check_stable_only) {
-                std::string tag = root.get<std::string>("tag_name");
-                if (tag[0] == 'v')
-                    tag.erase(0, 1);
-                for (std::regex_iterator it = std::sregex_iterator(tag.begin(), tag.end(), reg_num); it != std::sregex_iterator(); ++it) {}
-                Semver tag_version = get_version(tag, matcher);
-                if (root.get<bool>("prerelease")) {
-                    if (best_pre < tag_version) {
-                        best_pre         = tag_version;
-                        best_pre_url     = root.get<std::string>("html_url");
-                        best_pre_content = root.get<std::string>("body");
-                        best_pre.set_prerelease("Preview");
-                    }
-                } else {
-                    if (best_release < tag_version) {
-                        best_release         = tag_version;
-                        best_release_url     = root.get<std::string>("html_url");
-                        best_release_content = root.get<std::string>("body");
-                    }
-                }
-            } else {
-                for (auto json_version : root) {
-                    std::string tag = json_version.second.get<std::string>("tag_name");
+                Semver current_version = get_version(Orca_Flashforge_VERSION, matcher);
+                // Semver      best_pre(1, 0, 0);
+                // Semver best_release(1, 0, 0);
+                // std::string best_pre_url;
+                // std::string best_release_url;
+                // std::string best_release_content;
+                // std::string best_pre_content;
+                const std::regex reg_num("([0-9]+)");
+                /* if (check_stable_only) {
+                    std::string tag = root.get<std::string>("tag_name");
                     if (tag[0] == 'v')
                         tag.erase(0, 1);
-                    for (std::regex_iterator it = std::sregex_iterator(tag.begin(), tag.end(), reg_num); it != std::sregex_iterator();
-                         ++it) {}
-                    Semver tag_version = get_version(tag, matcher);
-                    if (json_version.second.get<bool>("prerelease")) {
-                        if (best_pre < tag_version) {
-                            best_pre         = tag_version;
-                            best_pre_url     = json_version.second.get<std::string>("html_url");
-                            best_pre_content = json_version.second.get<std::string>("body");
+                    for (std::regex_iterator it = std::sregex_iterator(tag.begin(), tag.end(), reg_num); it != std::sregex_iterator(); ++it)
+                {} Semver tag_version = get_version(tag, matcher); if (root.get<bool>("prerelease")) { if (best_pre < tag_version) { best_pre
+                = tag_version; best_pre_url     = root.get<std::string>("html_url"); best_pre_content = root.get<std::string>("body");
                             best_pre.set_prerelease("Preview");
                         }
                     } else {
                         if (best_release < tag_version) {
                             best_release         = tag_version;
-                            best_release_url     = json_version.second.get<std::string>("html_url");
-                            best_release_content = json_version.second.get<std::string>("body");
+                            best_release_url     = root.get<std::string>("html_url");
+                            best_release_content = root.get<std::string>("body");
+                        }
+                    }
+                } else {
+                    for (auto json_version : root) {
+                        std::string tag = json_version.second.get<std::string>("tag_name");
+                        if (tag[0] == 'v')
+                            tag.erase(0, 1);
+                        for (std::regex_iterator it = std::sregex_iterator(tag.begin(), tag.end(), reg_num); it != std::sregex_iterator();
+                             ++it) {}
+                        Semver tag_version = get_version(tag, matcher);
+                        if (json_version.second.get<bool>("prerelease")) {
+                            if (best_pre < tag_version) {
+                                best_pre         = tag_version;
+                                best_pre_url     = json_version.second.get<std::string>("html_url");
+                                best_pre_content = json_version.second.get<std::string>("body");
+                                best_pre.set_prerelease("Preview");
+                            }
+                        } else {
+                            if (best_release < tag_version) {
+                                best_release         = tag_version;
+                                best_release_url     = json_version.second.get<std::string>("html_url");
+                                best_release_content = json_version.second.get<std::string>("body");
+                            }
                         }
                     }
                 }
-            }
 
-            // if release is more recent than beta, use release anyway
-            if (best_pre < best_release) {
-                best_pre         = best_release;
-                best_pre_url     = best_release_url;
-                best_pre_content = best_release_content;
-            }
-            // if we're the most recent, don't do anything
-            if ((check_stable_only ? best_release : best_pre) <= current_version) {
-                if (by_user != 0)
-                    this->no_new_version();
-                return;
-            }
+                // if release is more recent than beta, use release anyway
+                if (best_pre < best_release) {
+                    best_pre         = best_release;
+                    best_pre_url     = best_release_url;
+                    best_pre_content = best_release_content;
+                }
+                // if we're the most recent, don't do anything
+                if ((check_stable_only ? best_release : best_pre) <= current_version) {
+                    if (by_user != 0)
+                        this->no_new_version();
+                    return;
+                }
 
-            version_info.url           = check_stable_only ? best_release_url : best_pre_url;
-            version_info.version_str   = check_stable_only ? best_release.to_string_sf() : best_pre.to_string();
-            version_info.description   = check_stable_only ? best_release_content : best_pre_content;
-            version_info.force_upgrade = false;
+                version_info.url           = check_stable_only ? best_release_url : best_pre_url;
+                version_info.version_str   = check_stable_only ? best_release.to_string_sf() : best_pre.to_string();
+                version_info.description   = check_stable_only ? best_release_content : best_pre_content;
+                version_info.force_upgrade = false;
+                */
 
-            wxCommandEvent* evt = new wxCommandEvent(EVT_SLIC3R_VERSION_ONLINE);
-            evt->SetString((check_stable_only ? best_release : best_pre).to_string());
-            GUI::wxGetApp().QueueEvent(evt);
-          } catch (...) {}
+                std::string              win64Ver = root.get<std::string>("general.win64Ver");
+                std::string              win64Url = root.get<std::string>("general.win64Url");
+                std::string              mac64Ver = root.get<std::string>("general.mac64Ver");
+                std::string              mac64Url = root.get<std::string>("general.mac64Url");
+                std::vector<std::string> introUrls;
+                auto                     urls = root.get_child("general.introUrl");
+                for (auto it = urls.begin(); it != urls.end(); ++it) {
+                    introUrls.push_back(it->second.get_value<std::string>());
+                }
+                Semver latest_version = get_version(win64Ver, matcher);
+                if (current_version == latest_version) {
+                    if (by_user) {
+                        wxMessageBox(_L("Already the newest version!"), _L("Info"), wxOK | wxICON_INFORMATION);
+                    }
+                } else if (current_version < latest_version) {
+                    wxString    languageCode = current_language_code();
+                    wxString    chinese("zh_CN"), english("en_US");
+                    wxString    language = languageCode.CmpNoCase(chinese) == 0 ? chinese : english;
+                    std::string destUrl;
+                    for (auto& url : introUrls) {
+                        if (url.find(language.ToStdString()) != std::string::npos) {
+                            destUrl = url;
+                            break;
+                        }
+                    }
+                    Http::get(destUrl)
+                        .on_complete([&](std::string body, unsigned status) {
+                            if (body.find("APP_INTRO") != std::string::npos) {
+                                auto pos = body.find(":") + 1;
+                                if (pos != std::string::npos) {
+                                    version_info.description = body.substr(pos);
+                                }
+#ifdef __APPLE__
+                                version_info.url         = mac64Url;
+                                version_info.version_str = mac64Ver;
+#else
+                                version_info.url         = win64Url;
+                                version_info.version_str = win64Ver;
+#endif
+                                version_info.force_upgrade = false;
+                                wxCommandEvent* evt        = new wxCommandEvent(EVT_SLIC3R_VERSION_ONLINE);
+                                // evt->SetString((i_am_pre ? best_pre : best_release).to_string());
+                                evt->SetString(latest_version.to_string());
+                                GUI::wxGetApp().QueueEvent(evt);
+                            }
+                        })
+                        .perform_sync();
+                }
+
+                // wxCommandEvent* evt = new wxCommandEvent(EVT_SLIC3R_VERSION_ONLINE);
+                // evt->SetString((check_stable_only ? best_release : best_pre).to_string());
+                // GUI::wxGetApp().QueueEvent(evt);
+            } catch (...) {}
         })
         .perform();
 }
@@ -4300,7 +4832,7 @@ std::string GUI_App::format_display_version()
 {
     if (!version_display.empty()) return version_display;
 
-    version_display = SoftFever_VERSION;
+    version_display = Orca_Flashforge_VERSION;
     return version_display;
 }
 
@@ -4822,7 +5354,7 @@ bool GUI_App::load_language(wxString language, bool initial)
     	// Get the active language from PrusaSlicer.ini, or empty string if the key does not exist.
         language = app_config->get("language");
         if (! language.empty())
-        	BOOST_LOG_TRIVIAL(info) << boost::format("language provided by OrcaSlicer.conf: %1%") % language;
+        	BOOST_LOG_TRIVIAL(info) << boost::format("language provided by Orca-Flashforge.conf: %1%") % language;
         else {
             // Get the system language.
             const wxLanguage lang_system = wxLanguage(wxLocale::GetSystemLanguage());
@@ -4869,6 +5401,11 @@ bool GUI_App::load_language(wxString language, bool initial)
                 }
             }
         }
+    } else {
+        if (m_logout_tip) {
+            delete m_logout_tip;
+            m_logout_tip = nullptr;
+        }
     }
 
 	const wxLanguageInfo *language_info = language.empty() ? nullptr : wxLocale::FindLanguageInfo(language);
@@ -4879,7 +5416,7 @@ bool GUI_App::load_language(wxString language, bool initial)
 	}
 
 	if (language_info != nullptr && language_info->LayoutDirection == wxLayout_RightToLeft) {
-    	BOOST_LOG_TRIVIAL(trace) << boost::format("The following language code requires right to left layout, which is not supported by OrcaSlicer: %1%") % language_info->CanonicalName.ToUTF8().data();
+    	BOOST_LOG_TRIVIAL(trace) << boost::format("The following language code requires right to left layout, which is not supported by Orca-Flashforge: %1%") % language_info->CanonicalName.ToUTF8().data();
 		language_info = nullptr;
 	}
 
@@ -4964,14 +5501,14 @@ bool GUI_App::load_language(wxString language, bool initial)
 
     if (! wxLocale::IsAvailable(language_info->Language)) {
     	// Loading the language dictionary failed.
-    	wxString message = "Switching Orca Slicer to language " + language_info->CanonicalName + " failed.";
+    	wxString message = "Switching Orca-Flashforge to language " + language_info->CanonicalName + " failed.";
 #if !defined(_WIN32) && !defined(__APPLE__)
         // likely some linux system
         message += "\nYou may need to reconfigure the missing locales, likely by running the \"locale-gen\" and \"dpkg-reconfigure locales\" commands.\n";
 #endif
         if (initial)
         	message + "\n\nApplication will close.";
-        wxMessageBox(message, "Orca Slicer - Switching language failed", wxOK | wxICON_ERROR);
+        wxMessageBox(message, "Orca-Flashforge - Switching language failed", wxOK | wxICON_ERROR);
         if (initial)
 			std::exit(EXIT_FAILURE);
 		else
@@ -5630,7 +6167,7 @@ void GUI_App::OSXStoreOpenFiles(const wxArrayString &fileNames)
         if (is_gcode_file(into_u8(filename)))
             ++ num_gcodes;
     if (fileNames.size() == num_gcodes) {
-        // Opening PrusaSlicer by drag & dropping a G-Code onto OrcaSlicer icon in Finder,
+        // Opening PrusaSlicer by drag & dropping a G-Code onto Orca-Flashforge icon in Finder,
         // just G-codes were passed. Switch to G-code viewer mode.
         m_app_mode = EAppMode::GCodeViewer;
         unlock_lockfile(get_instance_hash_string() + ".lock", data_dir() + "/cache/");
@@ -5893,8 +6430,15 @@ void GUI_App::remove_mall_system_dialog()
 
 void GUI_App::run_script(wxString js)
 {
-    if (mainframe)
-        return mainframe->RunScript(js);
+    if(m_is_recreating_gui){
+        CallAfter([this,js](){
+            if (mainframe)
+                return mainframe->RunScript(js);
+        });
+    }else{
+        if (mainframe)
+            return mainframe->RunScript(js);
+    }
 }
 
 Notebook* GUI_App::tab_panel() const
@@ -5951,6 +6495,7 @@ wxString GUI_App::current_language_code_safe() const
 		{ "uk", 	"uk_UA", },
 		{ "zh", 	"zh_CN", },
 		{ "ru", 	"ru_RU", },
+        { "lt",     "lt_LT"}
 	};
 	wxString language_code = this->current_language_code().BeforeFirst('_');
 	auto it = mapping.find(language_code);
@@ -6299,8 +6844,8 @@ void GUI_App::associate_files(std::wstring extend)
     ::GetModuleFileNameW(nullptr, app_path, sizeof(app_path));
 
     std::wstring prog_path = L"\"" + std::wstring(app_path) + L"\"";
-    std::wstring prog_id = L" Orca.Slicer.1";
-    std::wstring prog_desc = L"OrcaSlicer";
+    std::wstring prog_id = L" Orca.Flashforge.1";
+    std::wstring prog_desc = L"Orca-Flashforge";
     std::wstring prog_command = prog_path + L" \"%1\"";
     std::wstring reg_base = L"Software\\Classes";
     std::wstring reg_extension = reg_base + L"\\." + extend;
@@ -6322,8 +6867,8 @@ void GUI_App::disassociate_files(std::wstring extend)
     ::GetModuleFileNameW(nullptr, app_path, sizeof(app_path));
 
     std::wstring prog_path = L"\"" + std::wstring(app_path) + L"\"";
-    std::wstring prog_id = L" Orca.Slicer.1";
-    std::wstring prog_desc = L"OrcaSlicer";
+    std::wstring prog_id = L" Orca.Flashforge.1";
+    std::wstring prog_desc = L"Orca-Flashforge";
     std::wstring prog_command = prog_path + L" \"%1\"";
     std::wstring reg_base = L"Software\\Classes";
     std::wstring reg_extension = reg_base + L"\\." + extend;

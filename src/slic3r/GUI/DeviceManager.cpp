@@ -2534,6 +2534,84 @@ bool MachineObject::is_info_ready()
     return false;
 }
 
+bool MachineObject::is_function_supported(PrinterFunction func)
+{
+    std::string func_name;
+    switch (func) {
+    case FUNC_MONITORING: func_name = "FUNC_MONITORING"; break;
+    case FUNC_TIMELAPSE: func_name = "FUNC_TIMELAPSE"; break;
+    case FUNC_RECORDING: func_name = "FUNC_RECORDING"; break;
+    case FUNC_FIRSTLAYER_INSPECT: func_name = "FUNC_FIRSTLAYER_INSPECT"; break;
+    case FUNC_AI_MONITORING:
+        parse_version_func();
+        if (!is_support_ai_monitoring)
+            return false;
+        func_name = "FUNC_AI_MONITORING";
+        break;
+    case FUNC_LIDAR_CALIBRATION: func_name = "FUNC_LIDAR_CALIBRATION"; break;
+    case FUNC_BUILDPLATE_MARKER_DETECT:
+        parse_version_func();
+        if (!is_xcam_buildplate_supported)
+            return false;
+        func_name = "FUNC_BUILDPLATE_MARKER_DETECT";
+        break;
+    case FUNC_AUTO_RECOVERY_STEP_LOSS:
+        parse_version_func();
+        if (!xcam_support_recovery_step_loss)
+            return false;
+        func_name = "FUNC_AUTO_RECOVERY_STEP_LOSS";
+        break;
+    case FUNC_FLOW_CALIBRATION: func_name = "FUNC_FLOW_CALIBRATION"; break;
+    case FUNC_AUTO_LEVELING: func_name = "FUNC_AUTO_LEVELING"; break;
+    case FUNC_CHAMBER_TEMP: func_name = "FUNC_CHAMBER_TEMP"; break;
+    case FUNC_CAMERA_VIDEO: func_name = "FUNC_CAMERA_VIDEO"; break;
+    case FUNC_MEDIA_FILE: func_name = "FUNC_MEDIA_FILE"; break;
+    case FUNC_PROMPT_SOUND: func_name = "FUNC_PROMPT_SOUND"; break;
+    case FUNC_REMOTE_TUNNEL:
+        parse_version_func();
+        if (!is_support_remote_tunnel)
+            return false;
+        break;
+    case FUNC_LOCAL_TUNNEL:
+        parse_version_func();
+        if (!local_camera_proto)
+            return false;
+        break;
+    case FUNC_PRINT_WITHOUT_SD: func_name = "FUNC_PRINT_WITHOUT_SD"; break;
+    case FUNC_USE_AMS: func_name = "FUNC_USE_AMS"; break;
+    case FUNC_ALTER_RESOLUTION: func_name = "FUNC_ALTER_RESOLUTION"; break;
+    case FUNC_SEND_TO_SDCARD:
+        parse_version_func();
+        if (!is_support_send_to_sdcard)
+            return false;
+        func_name = "FUNC_SEND_TO_SDCARD";
+        break;
+    case FUNC_AUTO_SWITCH_FILAMENT:
+        parse_version_func();
+        if (!ams_support_auto_switch_filament_flag)
+            return false;
+        func_name = "FUNC_AUTO_SWITCH_FILAMENT";
+        break;
+    case FUNC_VIRTUAL_CAMERA: func_name = "FUNC_VIRTUAL_CAMERA"; break;
+    case FUNC_CHAMBER_FAN: func_name = "FUNC_CHAMBER_FAN"; break;
+    case FUNC_AUX_FAN: func_name = "FUNC_AUX_FAN"; break;
+    case FUNC_EXTRUSION_CALI:
+        if (!ams_support_virtual_tray)
+            return false;
+        func_name = "FUNC_EXTRUSION_CALI";
+        break;
+    case FUNC_PRINT_ALL: func_name = "FUNC_PRINT_ALL"; break;
+    case FUNC_VIRTUAL_TYAY:
+        if (!ams_support_virtual_tray)
+            return false;
+        func_name = "FUNC_VIRTUAL_TYAY";
+        break;
+    case FUNC_FILAMENT_BACKUP: func_name = "FUNC_FILAMENT_BACKUP"; break;
+    case FUNC_MOTOR_NOISE_CALI: func_name = "FUNC_MOTOR_NOISE_CALI"; break;
+    default: return true;
+    }
+    return DeviceManager::is_function_supported(printer_type, func_name);
+}
 
 std::vector<std::string> MachineObject::get_resolution_supported()
 {
@@ -2543,6 +2621,12 @@ std::vector<std::string> MachineObject::get_resolution_supported()
 std::vector<std::string> MachineObject::get_compatible_machine()
 {
     return DeviceManager::get_compatible_machine(printer_type);
+}
+
+bool MachineObject::is_support_print_with_timelapse()
+{
+    // TODO version check, set true by default
+    return true;
 }
 
 bool MachineObject::is_camera_busy_off()
@@ -5402,6 +5486,7 @@ void DeviceManager::load_last_machine()
 }
 
 json DeviceManager::filaments_blacklist = json::object();
+json DeviceManager::function_table      = json::object();
 
 
 
@@ -5441,6 +5526,22 @@ std::string DeviceManager::get_printer_ams_img(std::string type_str)
 {
     return get_value_from_config<std::string>(type_str, "printer_use_ams_image");
 }
+
+bool DeviceManager::is_function_supported(std::string type_str, std::string function_name)
+{
+    if (DeviceManager::function_table.contains("printers")) {
+        for (auto printer : DeviceManager::function_table["printers"]) {
+            if (printer.contains("model_id") && printer["model_id"].get<std::string>() == type_str) {
+                if (printer.contains("func")) {
+                    if (printer["func"].contains(function_name))
+                        return printer["func"][function_name].get<bool>();
+                }
+            }
+        }
+    }
+    return true;
+}
+
 
 bool DeviceManager::get_printer_is_enclosed(std::string type_str) {
     return get_value_from_config<bool>(type_str, "printer_is_enclosed");
@@ -5490,6 +5591,22 @@ std::vector<std::string> DeviceManager::get_compatible_machine(std::string type_
     return compatible_machine;
 }
 
+bool DeviceManager::load_functional_config(std::string config_file)
+{
+    std::ifstream json_file(config_file.c_str());
+    try {
+        if (json_file.is_open()) {
+            json_file >> DeviceManager::function_table;
+            return true;
+        } else {
+            BOOST_LOG_TRIVIAL(error) << "load functional config failed, file = " << config_file;
+        }
+    } catch (...) {
+        BOOST_LOG_TRIVIAL(error) << "load functional config failed, file = " << config_file;
+        return false;
+    }
+    return true;
+}
 
 bool DeviceManager::load_filaments_blacklist_config(std::string config_file)
 {

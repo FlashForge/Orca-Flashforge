@@ -66,6 +66,35 @@ enum PrinterSeries {
 };
 
 enum PrinterFunction {
+    FUNC_MONITORING = 0,
+    FUNC_TIMELAPSE,
+    FUNC_RECORDING,
+    FUNC_FIRSTLAYER_INSPECT,
+    FUNC_AI_MONITORING,
+    FUNC_LIDAR_CALIBRATION,
+    FUNC_BUILDPLATE_MARKER_DETECT,
+    FUNC_AUTO_RECOVERY_STEP_LOSS,
+    FUNC_FLOW_CALIBRATION,
+    FUNC_AUTO_LEVELING,
+    FUNC_CHAMBER_TEMP,
+    FUNC_CAMERA_VIDEO,
+    FUNC_MEDIA_FILE,
+    FUNC_REMOTE_TUNNEL,
+    FUNC_LOCAL_TUNNEL,
+    FUNC_PRINT_WITHOUT_SD,
+    FUNC_VIRTUAL_CAMERA,
+    FUNC_USE_AMS,
+    FUNC_ALTER_RESOLUTION,
+    FUNC_SEND_TO_SDCARD,
+    FUNC_AUTO_SWITCH_FILAMENT,
+    FUNC_CHAMBER_FAN,
+    FUNC_AUX_FAN,
+    FUNC_EXTRUSION_CALI,
+    FUNC_PROMPT_SOUND,
+    FUNC_VIRTUAL_TYAY,
+    FUNC_PRINT_ALL,
+    FUNC_FILAMENT_BACKUP,
+    FUNC_MOTOR_NOISE_CALI,
     FUNC_MAX
 };
 
@@ -485,6 +514,7 @@ public:
     bool  ams_insert_flag { false };
     bool  ams_power_on_flag { false };
     bool  ams_calibrate_remain_flag { false };
+    bool  ams_support_auto_switch_filament_flag{true};
     bool  ams_auto_switch_filament_flag  { false };
     bool  ams_support_use_ams { false };
     bool  ams_support_virtual_tray { true };
@@ -690,6 +720,7 @@ public:
     std::vector<std::string> camera_resolution_supported;
     bool xcam_first_layer_inspector { false };
     int  xcam_first_layer_hold_count = 0;
+    int  local_camera_proto = -1;
     std::string local_rtsp_url;
     std::string tutk_state;
     enum LiveviewLocal {
@@ -707,7 +738,10 @@ public:
     bool xcam_ai_monitoring{ false };
     int  xcam_ai_monitoring_hold_count = 0;
     std::string xcam_ai_monitoring_sensitivity;
+    bool is_xcam_buildplate_supported{true};
+    bool xcam_support_recovery_step_loss{true};
     bool xcam_buildplate_marker_detector{ false };
+    bool is_support_remote_tunnel{false};
     int  xcam_buildplate_marker_hold_count = 0;
     bool xcam_auto_recovery_step_loss{ false };
     bool xcam_allow_prompt_sound{ false };
@@ -916,10 +950,12 @@ public:
     void set_online_state(bool on_off);
     bool is_online() { return m_is_online; }
     bool is_info_ready();
+    bool is_function_supported(PrinterFunction func);
     bool is_camera_busy_off();
 
     std::vector<std::string> get_resolution_supported();
     std::vector<std::string> get_compatible_machine();
+    bool is_support_print_with_timelapse();
 
     /* Msg for display MsgFn */
     typedef std::function<void(std::string topic, std::string payload)> MsgFn;
@@ -1023,9 +1059,11 @@ public:
     static std::string get_printer_ams_img(std::string type_str);
     static PrinterArch get_printer_arch(std::string type_str);
     static std::string get_ftp_folder(std::string type_str);
+    static bool        is_function_supported(std::string type_str, std::string function_name);
     static bool        get_printer_is_enclosed(std::string type_str);
     static std::vector<std::string> get_resolution_supported(std::string type_str);
     static std::vector<std::string> get_compatible_machine(std::string type_str);
+    static bool                     load_functional_config(std::string config_file);
     static bool load_filaments_blacklist_config(std::string config_file);
     static void check_filaments_in_blacklist(std::string tag_vendor, std::string tag_type, bool& in_blacklist, std::string& ac, std::string& info);
     static std::string load_gcode(std::string type_str, std::string gcode_file);

@@ -142,11 +142,16 @@ void wxMediaCtrl2::NotifyStopped()
         wxPostEvent(this, event);
     }
 }
-
+int wxMediaCtrl2::GetState() const
+{
+    return m_state;
+}
+/*
 wxMediaState wxMediaCtrl2::GetState() const
 {
     return m_state;
 }
+ */
 
 wxSize wxMediaCtrl2::GetVideoSize() const
 {

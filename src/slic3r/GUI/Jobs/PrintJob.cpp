@@ -43,6 +43,12 @@ PrintJob::PrintJob(std::string dev_id)
     m_print_job_completed_id = m_plater->get_print_finished_event();
 }
 
+PrintJob::PrintJob(std::shared_ptr<ProgressIndicator> pri, Plater* plater, std::string dev_id)
+    : m_plater(plater), m_dev_id(dev_id), m_is_calibration_task(false) //by ymd
+{
+    m_print_job_completed_id = plater->get_print_finished_event();
+}
+
 void PrintJob::prepare()
 {
     if (job_data.is_from_plater)

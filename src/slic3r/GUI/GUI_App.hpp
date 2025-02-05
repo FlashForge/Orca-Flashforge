@@ -46,7 +46,7 @@ class wxBookCtrlBase;
 // BBS
 class Notebook;
 struct wxLanguageInfo;
-
+class ShowTip;
 
 namespace Slic3r {
 
@@ -60,6 +60,13 @@ class NetworkAgent;
 
 namespace GUI{
 
+wxDECLARE_EVENT(EVT_START_LOGIN, wxCommandEvent);
+wxDECLARE_EVENT(EVT_LOGIN_FAILED, wxCommandEvent);
+wxDECLARE_EVENT(EVT_LOGIN_SUCCEED, wxCommandEvent);
+wxDECLARE_EVENT(EVT_LOGIN_OUT, wxCommandEvent);
+
+struct ComGetUserProfileEvent;
+struct ComWanDevMaintainEvent;
 class RemovableDriveManager;
 class OtherInstanceMessageHandler;
 class MainFrame;
@@ -74,6 +81,10 @@ struct GUI_InitParams;
 class ParamsDialog;
 class HMSQuery;
 class ModelMallDialog;
+class DeviceObjectOpr;
+class LoginDialog;
+class ReLoginDialog;
+class ComAsyncThread;
 
 
 enum FileType
@@ -273,6 +284,7 @@ private:
     //BBS
     bool m_is_closing {false};
     Slic3r::DeviceManager* m_device_manager { nullptr };
+    Slic3r::GUI::DeviceObjectOpr* m_device_opr { nullptr};
     NetworkAgent* m_agent { nullptr };
     std::vector<std::string> need_delete_presets;   // store setting ids of preset
     std::vector<bool> m_create_preset_blocked { false, false, false, false, false, false }; // excceed limit
@@ -283,6 +295,14 @@ private:
 
     // login widget
     ZUserLogin*     login_dlg { nullptr };
+    //FlashForge login
+    LoginDialog*    m_login_dlg {nullptr};
+    ReLoginDialog*  m_re_login_dlg{nullptr};
+    ShowTip        *m_logout_tip{nullptr};
+    bool            m_connecting{false};
+    wxString        m_cur_title;
+    std::shared_ptr<ComAsyncThread> m_pic_thread{nullptr};
+    wxTimer         m_timer;
 
     VersionInfo version_info;
     VersionInfo privacy_version_info;
@@ -299,6 +319,10 @@ private:
     HttpServer       m_http_server;
     bool             m_show_gcode_window{true};
     boost::thread    m_check_network_thread;
+    bool             m_restart_app{false};
+    bool             m_login_success{false};
+    std::vector<char> m_usr_pic_data;
+    wxImage          m_usr_pic_image;
   public:
       //try again when subscription fails
     void            on_start_subscribe_again(std::string dev_id);
@@ -307,6 +331,9 @@ private:
     bool            OnInit() override;
     int             OnExit() override;
     bool            initialized() const { return m_initialized; }
+    wxImage         getUsrPic();
+    void            setUsrPic(wxImage image);
+    
 
     std::map<std::string, bool> test_url_state;
 
@@ -318,12 +345,13 @@ private:
     void show_message_box(std::string msg) { wxMessageBox(msg); }
     EAppMode get_app_mode() const { return m_app_mode; }
     Slic3r::DeviceManager* getDeviceManager() { return m_device_manager; }
+    Slic3r::GUI::DeviceObjectOpr *getDeviceObjectOpr() { return m_device_opr; }
     HMSQuery* get_hms_query() { return hms_query; }
     NetworkAgent* getAgent() { return m_agent; }
     bool is_editor() const { return m_app_mode == EAppMode::Editor; }
     bool is_gcode_viewer() const { return m_app_mode == EAppMode::GCodeViewer; }
     bool is_recreating_gui() const { return m_is_recreating_gui; }
-    std::string logo_name() const { return is_editor() ? "OrcaSlicer" : "OrcaSlicer-gcodeviewer"; }
+    std::string logo_name() const { return is_editor() ? "Orca-Flashforge" : "Orca-Flashforge-gcodeviewer"; }
     
     // SoftFever
     bool show_gcode_window() const { return m_show_gcode_window; }
@@ -347,6 +375,7 @@ private:
     bool            init_opengl();
 
     void            init_download_path();
+    void            init_flashnetwork();
 #if wxUSE_WEBVIEW_EDGE
     void            init_webview_runtime();
 #endif
@@ -432,12 +461,17 @@ private:
     void            request_user_logout();
     int             request_user_unbind(std::string dev_id);
     std::string     handle_web_request(std::string cmd);
+    void            handle_login_result(std::string url, std::string name);
+    void            handle_login_out();
     void            handle_script_message(std::string msg);
     void            request_model_download(wxString url);
     void            download_project(std::string project_id);
     void            request_project_download(std::string project_id);
     void            request_open_project(std::string project_id);
     void            request_remove_project(std::string project_id);
+    void            startTimer() { m_timer.Start(3000); };
+    void            stopTimer() { m_timer.Stop(); };
+    void            onTimer(wxTimerEvent& event);
 
     void            handle_http_error(unsigned int status, std::string body);
     void            on_http_error(wxCommandEvent &evt);
@@ -445,6 +479,11 @@ private:
     void            on_user_login(wxCommandEvent &evt);
     void            on_user_login_handle(wxCommandEvent& evt);
     void            enable_user_preset_folder(bool enable);
+    void            on_connect_event();
+    void            get_usr_profile(ComGetUserProfileEvent &event);
+    void            wan_dev_maintain(ComWanDevMaintainEvent &event);
+    void            downloadUrlPic(const std::string& url);
+    void            onAutoStartLogin(wxCommandEvent& event);
 
     // BBS
     bool            is_studio_active();
@@ -642,6 +681,7 @@ private:
 private:
     int             updating_bambu_networking();
     bool            on_init_inner();
+    void            updateMachineInfo();
     void            copy_network_if_available();
     bool            on_init_network(bool try_backup = false);
     void            init_networking_callbacks();

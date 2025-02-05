@@ -4,19 +4,238 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Printer Connection Required</title>
-<link rel="stylesheet" type="text/css" href="css/home.css" />
-<link rel="stylesheet" type="text/css" href="css/dark.css" />
-<script type="text/javascript" src="../data/text.js"></script>	
+<!-- <link rel="stylesheet" type="text/css" href="css/home.css" />
+<link rel="stylesheet" type="text/css" href="css/dark.css" /> -->
+<!-- <script type="text/javascript" src="../data/text.js"></script>	 -->
 <script type="text/javascript" src="../homepage/js/jquery-3.6.0.min.js"></script>
+<!-- <script type="text/javascript" src="../include/swiper/swiper-bundle.min.js"></script>
 <script type="text/javascript" src="../homepage/js/json2.js"></script>
-<script type="text/javascript" src="../homepage/js/globalapi.js"></script>
-<script type="text/javascript" src="../homepage/js/home.js"></script>
+<script type="text/javascript" src="../include/globalapi.js"></script>	
+<script type="text/javascript" src="js/home.js"></script> -->
+<!-- <script type="text/javascript" src="../include/jquery-2.1.1.min.js"></script> -->
+<script type="text/javascript" src="../include/json2.js"></script>
+<script type="text/javascript" src="../include/globalapi.js"></script>
+<link rel="stylesheet" type="text/css" href="../include/swiper/swiper-bundle.min.css" />
+<script type="text/javascript" src="../include/swiper/swiper-bundle.min.js"></script>
+<script type="text/javascript" src="../data/text.js"></script>
+<script type="text/javascript" src="../orca/js/home.js"></script>	
+
+<script src="js/hls.js"></script>
+<style>
+  body {
+    margin: 0;
+  }
+  #videoStream {
+    width: 100vw;
+    height: 100vh;
+  }
+  video {
+    background-color: black;
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+  }
+  .container {
+    position: relative;
+  }
+  #zanting {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8%;
+  }
+  #point {
+    position: absolute;
+    top: 65%;
+    color: #ffffff;
+    text-align: center;
+    width: 100%;
+    font-size: 0.2rem;
+  }
+
+  #point1 {
+    position: absolute;
+    top: 65%;
+    color: #ffffff;
+    text-align: center;
+    width: 100%;
+    font-size: 0.2rem;
+  }
+
+  .video-loader {
+    display: none; /* 默认隐藏加载动画 */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border: 5px solid rgba(255, 255, 255, 0.3);
+    border-top: 5px solid blue;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin {
+    0% {
+        transform: translate(-50%, -50%) rotate(0deg);
+    }
+    100% {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
+  }
+</style>
 </head>
 <body onLoad="OnInit()">
-    <div class="container">
-        <h1 class="trans">Printer Connection</h1>
+    <div class="container" style="padding: 0; border-radius: 0;">
+        <img
+          id="videoStream" 
+          style="display: block;-webkit-user-select: none;margin: auto;background-color: hsl(0, 0%, 25%);" 
+          alt="Live Stream"
+        >
+        <img id="zanting" src="zanting.svg" alt="" >
+        <video id="video" autoplay></video>
+
+        <div id="url-studio" style="display: none;"></div>
+
+        <div id="url-studio-r" style="display: none;"></div>
+
+        <div id="videoLoader" class="video-loader"></div>
+
+        <div id="point" style="display: none;">当前视频无法播放</div>
+
+        <div id="point1" style="display: none;">The current video cannot be played.</div>
+
+        <!-- <div id="url-studio"></div> -->
+
+        <!-- <div id="url-stro"></div> -->
+
+        <!-- 控制按钮 -->
+        <!-- <button id="toggleButton">暂停</button> -->
+        <!-- <h1 class="trans">Printer Connection</h1>
         <p class="trans">Please set up your printer connection to view the device.</p>
-        <img src="setup_connection.gif" alt="Printer connection setup demonstration" style="max-width: 100%; height: auto; display: block;"/>
+        <img src="setup_connection.gif" alt="Printer connection setup demonstration" style="max-width: 100%; height: auto; display: block;"/> -->
     </div>
+    <script>
+      // var rtsp_address = window.location.search
+      // var urlParams = new URLSearchParams(rtsp_address)
+      // var lang = urlParams.get('lang')
+      let videoStreamImg = document.getElementById("videoStream")
+      videoStreamImg.src = 'hei.svg';
+      videoStreamImg.style.backgroundImage = 'url("hei.svg")'
+      // let zanting = document.getElementById("zanting")
+      let video = document.getElementById("video")
+      video.style.display = "none"
+      var loader = document.getElementById('videoLoader');
+
+      let imgs = document.querySelectorAll('img')
+      let zting = document.querySelector('#zanting')
+
+      let streamPaused = false
+
+      const targetNode = document.getElementById('url-studio')
+
+      const observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+              if (mutation.type === 'childList') {
+                  var element = document.getElementById('url-studio')
+                  var content = element.innerHTML
+
+                  var element1 = document.getElementById("url-studio-r");
+                  var content1 = element1.innerHTML;
+
+                  if (content.endsWith("action=stream")) {
+                      if (video.style.display === 'none') {
+                        if (lang1 === 'zh_CN') {
+                          point.style.display = 'none'
+                        } else if (lang1 === 'en') {
+                          point1.style.display = 'none'
+                        }
+                        loader.style.display = 'none';
+                        videoStreamImg.src = 'hei.svg'
+                        var zanting = document.getElementById("zanting")
+                        zanting.style.display = 'block'
+                        videoStreamImg.style.backgroundImage = 'url("hei.svg")'
+                        streamPaused = false;
+                      } else {
+                        if (lang1 === 'zh_CN') {
+                          point.style.display = 'none'
+                        } else if (lang1 === 'en') {
+                          point1.style.display = 'none'
+                        }
+                        video.style.display = 'none'
+                        videoStreamImg.style.display = 'block'
+                        videoStreamImg.src = 'hei.svg'
+                        var zanting = document.getElementById("zanting")
+                        zanting.style.display = 'block'
+                        videoStreamImg.style.backgroundImage = 'url("hei.svg")'
+                        streamPaused = false;
+                      }
+                  } else if (content.endsWith(".m3u8")) {
+                      if (lang1 === 'zh_CN') {
+                        point.style.display = 'none'
+                      } else if (lang1 === 'en') {
+                        point1.style.display = 'none'
+                      }
+                      loader.style.display = 'none';
+                      videoStreamImg.style.display = "none"
+                      video.src = ''
+	                    video.style.backgroundImage = "url('hei.svg')"
+	                    video.style.backgroundSize = "cover"
+	                    video.style.backgroundRepeat = "no-repeat"
+	                    video.style.backgroundPosition = "center"
+                      var zanting = document.getElementById("zanting")
+                      zanting.style.display = 'block'
+                      streamPaused = false;
+                  } else if (content === '设备离线了') {
+                    if (video.style.display === "block") {
+                        video.src = ''
+                        video.style.backgroundImage = "url('hei.svg')"
+                        video.style.backgroundSize = "cover"
+                        video.style.backgroundRepeat = "no-repeat"
+                        video.style.backgroundPosition = "center"
+                        var zanting = document.getElementById("zanting")
+                        zanting.style.display = 'block'
+                        streamPaused = false;
+                    } else if (videoStreamImg.style.display === "block") {
+                        videoStreamImg.src = ''
+                        // loader.style.display === 'none'
+                        videoStreamImg.src = 'hei.svg'
+                        var zanting = document.getElementById("zanting")
+                        zanting.style.display = 'block'
+                        videoStreamImg.style.backgroundImage = 'url("hei.svg")'
+                        streamPaused = false;
+                    }
+                  }
+              }
+          })
+      })
+
+      const config = { attributes: true, childList: true, subtree: true }
+
+      // observer.observe(targetNode, config)
+
+      observer.disconnect(); // 断开之前的观察者
+      observer.observe(targetNode, config); // 重新开始观察
+
+       
+
+       // 适配设置
+       var docEl = document.documentElement;
+       function setRemUnit () {
+         var rem = docEl.clientWidth / 10; // 可根据不同电脑分辨率进行手动修改
+         console.log(rem)
+         docEl.style.fontSize = rem + 'px'
+       };
+ 
+       setRemUnit();
+ 
+       window.addEventListener('resize', setRemUnit);
+       window.addEventListener('pageshow', function (e) {
+         if (e.persisted) {
+           setRemUnit();
+         }
+       });
+    </script>
 </body>
 </html>

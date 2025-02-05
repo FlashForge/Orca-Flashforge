@@ -465,8 +465,9 @@ ObjectDataViewModel::~ObjectDataViewModel()
 {
     for (auto object : m_objects)
 			delete object;
-    delete m_bitmap_cache;
-    m_bitmap_cache = nullptr;
+    //delete m_bitmap_cache;
+    //m_bitmap_cache = nullptr;
+    m_bitmap_cache->clear();
 }
 
 void ObjectDataViewModel::Init()

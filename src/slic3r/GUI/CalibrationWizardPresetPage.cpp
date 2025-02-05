@@ -507,10 +507,10 @@ void CalibrationPresetPage::create_selection_panel(wxWindow* parent)
     filament_for_text->SetFont(Label::Head_14);
     filament_for_title_sizer->Add(filament_for_text, 0, wxALIGN_CENTER);
     filament_for_title_sizer->AddSpacer(FromDIP(25));
-    m_ams_sync_button = new ScalableButton(parent, wxID_ANY, "ams_fila_sync", wxEmptyString, wxDefaultSize, wxDefaultPosition, wxBU_EXACTFIT | wxNO_BORDER, false, 18);
-    m_ams_sync_button->SetBackgroundColour(*wxWHITE);
-    m_ams_sync_button->SetToolTip(_L("Synchronize filament list from AMS"));
-    filament_for_title_sizer->Add(m_ams_sync_button, 0, wxALIGN_CENTER);
+    //m_ams_sync_button = new ScalableButton(parent, wxID_ANY, "ams_fila_sync", wxEmptyString, wxDefaultSize, wxDefaultPosition, wxBU_EXACTFIT | wxNO_BORDER, false, 18);
+    //m_ams_sync_button->SetBackgroundColour(*wxWHITE);
+    //m_ams_sync_button->SetToolTip(_L("Synchronize filament list from AMS"));
+    //filament_for_title_sizer->Add(m_ams_sync_button, 0, wxALIGN_CENTER);
     panel_sizer->Add(filament_for_title_sizer);
     panel_sizer->AddSpacer(FromDIP(6));
 
@@ -519,9 +519,9 @@ void CalibrationPresetPage::create_selection_panel(wxWindow* parent)
 
     m_ams_radiobox->Bind(wxEVT_RADIOBUTTON, &CalibrationPresetPage::on_choose_ams, this);
     m_ext_spool_radiobox->Bind(wxEVT_RADIOBUTTON, &CalibrationPresetPage::on_choose_ext_spool, this);
-    m_ams_sync_button->Bind(wxEVT_BUTTON, [this](wxCommandEvent& e) {
-        sync_ams_info(curr_obj);
-    });
+    //m_ams_sync_button->Bind(wxEVT_BUTTON, [this](wxCommandEvent& e) {
+    //    sync_ams_info(curr_obj);
+    //});
 
     m_comboBox_nozzle_dia->Bind(wxEVT_COMBOBOX, &CalibrationPresetPage::on_select_nozzle, this);
 
@@ -827,7 +827,7 @@ void CalibrationPresetPage::on_choose_ams(wxCommandEvent& event)
     select_default_compatible_filament();
 
     m_filament_list_panel->Show();
-    m_ams_sync_button->Show();
+    //m_ams_sync_button->Show();
     m_ext_spool_panel->Hide();
     Layout();
 }
@@ -835,7 +835,7 @@ void CalibrationPresetPage::on_choose_ams(wxCommandEvent& event)
 void CalibrationPresetPage::on_choose_ext_spool(wxCommandEvent& event)
 {
     m_filament_list_panel->Hide();
-    m_ams_sync_button->Hide();
+    //m_ams_sync_button->Hide();
     m_ext_spool_panel->Show();
     Layout();
 }

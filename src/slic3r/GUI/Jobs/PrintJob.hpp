@@ -54,6 +54,7 @@ public:
 
     void prepare();
     PrintJob(std::string dev_id = "");
+    PrintJob(std::shared_ptr<ProgressIndicator> pri, Plater* plater, std::string dev_id = "");
 
     std::string m_project_name;
     std::string m_dev_ip;

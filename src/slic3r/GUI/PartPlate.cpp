@@ -476,7 +476,6 @@ void PartPlate::calc_gridlines(const ExPolygon& poly, const BoundingBox& pp_bbox
 		Polyline line;
 		line.append(Point(pp_bbox.min(0), y));
 		line.append(Point(pp_bbox.max(0), y));
-		axes_lines.push_back(line);
 
 		if ( (count % 5) == 0 )
 			axes_lines_bolder.push_back(line);
@@ -624,7 +623,6 @@ void PartPlate::calc_vertex_for_icons(int index, PickingModel &model)
 	poly.contour.append({ scale_(p(0) + PARTPLATE_ICON_GAP_LEFT + PARTPLATE_ICON_SIZE), scale_(p(1) - index * (PARTPLATE_ICON_SIZE + PARTPLATE_ICON_GAP_Y)- PARTPLATE_ICON_GAP_TOP - PARTPLATE_ICON_SIZE) });
 	poly.contour.append({ scale_(p(0) + PARTPLATE_ICON_GAP_LEFT + PARTPLATE_ICON_SIZE), scale_(p(1) - index * (PARTPLATE_ICON_SIZE + PARTPLATE_ICON_GAP_Y)- PARTPLATE_ICON_GAP_TOP)});
 	poly.contour.append({ scale_(p(0) + PARTPLATE_ICON_GAP_LEFT), scale_(p(1) - index * (PARTPLATE_ICON_SIZE + PARTPLATE_ICON_GAP_Y)- PARTPLATE_ICON_GAP_TOP) });
-
 	if (!init_model_from_poly(model.model, poly, GROUND_Z))
 		BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << "Unable to generate geometry buffers for icons\n";
 
@@ -723,7 +721,7 @@ void PartPlate::render_logo_texture(GLTexture &logo_texture, GLModel& logo_buffe
 
 void PartPlate::render_logo(bool bottom, bool render_cali)
 {
-	if (!m_partplate_list->render_bedtype_logo) {
+	if (m_partplate_list->render_bedtype_logo) {
 		// render third-party printer texture logo
 		if (m_partplate_list->m_logo_texture_filename.empty()) {
 			m_partplate_list->m_logo_texture.reset();

@@ -80,7 +80,7 @@ namespace Slic3r {
 
 PlaceholderParser::PlaceholderParser(const DynamicConfig *external_config) : m_external_config(external_config)
 {
-    this->set("version", std::string(SoftFever_VERSION));
+    this->set("version", std::string(Orca_Flashforge_VERSION));
     this->apply_env_variables();
     this->update_timestamp();
 }

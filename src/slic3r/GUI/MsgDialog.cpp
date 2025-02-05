@@ -60,12 +60,13 @@ MsgDialog::MsgDialog(wxWindow *parent, const wxString &title, const wxString &he
     topsizer->Add(LOGO_GAP, 0, 0, wxEXPAND, 0);
 	topsizer->Add(rightsizer, 1, wxTOP | wxEXPAND, BORDER);
 
+    btn_sizer->AddStretchSpacer();
     main_sizer->Add(topsizer, 1, wxEXPAND);
 
     m_dsa_sizer = new wxBoxSizer(wxHORIZONTAL);
     btn_sizer->Add(0, 0, 0, wxLEFT, FromDIP(120));
     btn_sizer->Add(m_dsa_sizer, 0, wxEXPAND,0);
-    btn_sizer->Add(0, 0, 1, wxEXPAND, 5);
+    btn_sizer->Add(0, 0, 1, wxEXPAND, 5);    
     main_sizer->Add(btn_sizer, 0, wxBOTTOM | wxRIGHT | wxEXPAND, BORDER);
 
     apply_style(style);
@@ -230,7 +231,7 @@ void MsgDialog::apply_style(long style)
     logo->SetBitmap( create_scaled_bitmap(style & wxAPPLY        ? "completed" :
                                           style & wxICON_WARNING        ? "obj_warning" :
                                           style & wxICON_INFORMATION    ? "info"        :
-                                          style & wxICON_QUESTION       ? "question"    : "OrcaSlicer", this, 64, style & wxICON_ERROR));
+                                          style & wxICON_QUESTION       ? "question"    : "Orca-Flashforge", this, 64, style & wxICON_ERROR));
 }
 
 void MsgDialog::finalize()
@@ -242,7 +243,7 @@ void MsgDialog::finalize()
 
 
 // Text shown as HTML, so that mouse selection and Ctrl-V to copy will work.
-static void add_msg_content(wxWindow* parent, wxBoxSizer* content_sizer, wxString msg, bool monospaced_font = false, bool is_marked_msg = false)
+static void add_msg_content(wxWindow *parent, wxBoxSizer *content_sizer, wxString msg, bool monospaced_font = false, bool is_marked_msg = false, int btnsWidth = 0)
 {
     wxHtmlWindow* html = new wxHtmlWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHW_SCROLLBAR_AUTO);
     html->SetBackgroundColour(StateColor::darkModeColorFor(*wxWHITE));
@@ -312,9 +313,12 @@ static void add_msg_content(wxWindow* parent, wxBoxSizer* content_sizer, wxStrin
         wrapped_text->Destroy();
         wxClientDC dc(parent);
         wxSize msg_sz = dc.GetMultiLineTextExtent(msg);
-
+        
         page_size = wxSize(std::min(msg_sz.GetX(), 68 * em),
-                           std::min(msg_sz.GetY(), 68 * em));
+                           std::min(msg_sz.GetY(), 68 * em));        
+    }
+    if (page_size.GetX() < btnsWidth) {
+        page_size = wxSize(btnsWidth, page_size.GetY());
     }
     html->SetMinSize(page_size);
 
@@ -332,14 +336,14 @@ static void add_msg_content(wxWindow* parent, wxBoxSizer* content_sizer, wxStrin
 // ErrorDialog
 
 ErrorDialog::ErrorDialog(wxWindow *parent, const wxString &msg, bool monospaced_font)
-    : MsgDialog(parent, wxString::Format(_(L("%s error")), SLIC3R_APP_FULL_NAME), 
+    : MsgDialog(parent, wxString::Format(_(L("error"))), 
                         wxString::Format(_(L("%s has encountered an error")), SLIC3R_APP_FULL_NAME), wxOK)
 	, msg(msg)
 {
     add_msg_content(this, content_sizer, msg, monospaced_font);
 
 	// Use a small bitmap with monospaced font, as the error text will not be wrapped.
-	logo->SetBitmap(create_scaled_bitmap("OrcaSlicer_192px_grayscale.png", this, monospaced_font ? 48 : /*1*/84));
+    logo->SetBitmap(create_scaled_bitmap("Orca-Flashforge_32px.png", this, monospaced_font ? 48 : 32));
 
     SetMaxSize(wxSize(-1, CONTENT_MAX_HEIGHT*wxGetApp().em_unit()));
 
@@ -368,7 +372,13 @@ MessageDialog::MessageDialog(wxWindow* parent,
     long style/* = wxOK*/)
     : MsgDialog(parent, caption.IsEmpty() ? wxString::Format(_L("%s info"), SLIC3R_APP_FULL_NAME) : caption, wxEmptyString, style)
 {
-    add_msg_content(this, content_sizer, message);
+    int                      btnCnt = m_buttons.size();
+    MsgButtonsHash::iterator i = m_buttons.begin();
+    MsgButton               *bd = i->second;    
+    wxSize size = bd->buttondata->button->GetSize();
+    int                      btnsWidth = btnCnt * size.GetX() + BTN_SPACING * (btnCnt + 1);
+    
+    add_msg_content(this, content_sizer, message, false, false, btnsWidth);
     finalize();
     wxGetApp().UpdateDlgDarkUI(this);
 }

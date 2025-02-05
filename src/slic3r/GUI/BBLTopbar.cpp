@@ -450,6 +450,11 @@ void BBLTopbar::SetTitle(wxString title)
     this->Refresh();
 }
 
+wxString BBLTopbar::GetTitle() 
+{ 
+    return m_title_item->GetLabel();
+}
+
 void BBLTopbar::SetMaximizedSize()
 {
     maximize_btn->SetBitmap(maximize_bitmap);

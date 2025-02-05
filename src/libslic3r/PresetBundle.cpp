@@ -338,8 +338,9 @@ VendorType PresetBundle::get_current_vendor_type()
     }
     if (!vendor_name.empty())
     {
-        if(vendor_name.compare("BBL") == 0)
+        if(vendor_name.compare("Flashforge") == 0) {
             t = VendorType::Marlin_BBL;
+        }
     }
     return t;
 }
@@ -349,6 +350,20 @@ bool PresetBundle::use_bbl_network()
     const auto cfg             = printers.get_edited_preset().config;
     const bool use_bbl_network = is_bbl_vendor() && !cfg.opt_bool("bbl_use_printhost");
     return use_bbl_network;
+}
+
+bool PresetBundle::is_flashforge_vendor()
+{
+    auto config = &printers.get_edited_preset().config;
+    std::string vendor_name;
+    for (const auto& vendor_profile : vendors) {
+        for (const auto& vendor_model : vendor_profile.second.models)
+            if (vendor_model.name == config->opt_string("printer_model")) {
+                vendor_name = vendor_profile.first;
+                break;
+            }
+    }
+    return (vendor_name == "Flashforge");
 }
 
 //BBS: load project embedded presets

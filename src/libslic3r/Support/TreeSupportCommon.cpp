@@ -22,8 +22,11 @@ TreeSupportMeshGroupSettings::TreeSupportMeshGroupSettings(const PrintObject &pr
 //    const std::vector<unsigned int>  printing_extruders = print_object.object_extruders();
 
     // Support must be enabled and set to Tree style.
-    assert(config.enable_support || config.enforce_support_layers > 0);
-    assert(is_tree(config.support_type));
+    // modified by xlm
+    // assert(config.support_material || config.support_material_enforce_layers > 0);
+    // assert(config.support_material_style == smsTree || config.support_material_style == smsOrganic);
+    //assert(config.support_material || config.support_material_enforce_layers > 0);
+    //assert(config.support_material_style == smsTree || config.support_material_style == smsOrganic);
 
     // Calculate maximum external perimeter width over all printing regions, taking into account the default layer height.
     coordf_t external_perimeter_width = 0.;
@@ -213,4 +216,4 @@ void tree_supports_show_error(std::string_view message, bool critical)
 #endif // TREE_SUPPORT_SHOW_ERRORS_WIN32
 }
 
-} // namespace Slic3r::FFFTreeSupport
+} // namespace Slic3r::FFFTreeSupport} // namespace Slic3r::FFFTreeSupport

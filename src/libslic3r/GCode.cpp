@@ -1506,6 +1506,13 @@ bool GCode::is_BBL_Printer()
     return false;
 }
 
+bool GCode::is_flashforge_printer() 
+{
+    if (m_curr_print)
+        return m_curr_print->is_flashforge_printer();
+    return false;
+}
+
 void GCode::do_export(Print* print, const char* path, GCodeProcessorResult* result, ThumbnailsGeneratorCallback thumbnail_cb)
 {
     PROFILE_CLEAR();
@@ -2001,7 +2008,7 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
     // if thumbnail type of BTT_TFT, insert above header
     // if not, it is inserted under the header in its normal spot
     const GCodeThumbnailsFormat m_gcode_thumbnail_format = print.full_print_config().opt_enum<GCodeThumbnailsFormat>("thumbnails_format");
-    if (m_gcode_thumbnail_format == GCodeThumbnailsFormat::BTT_TFT)
+    // if (m_gcode_thumbnail_format == GCodeThumbnailsFormat::BTT_TFT)
         GCodeThumbnails::export_thumbnails_to_file(
             thumbnail_cb, print.get_plate_index(), print.full_print_config().option<ConfigOptionPoints>("thumbnails")->values,
             m_gcode_thumbnail_format,
@@ -2058,7 +2065,8 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
     }
 
     file.write_format("; HEADER_BLOCK_END\n\n");
-
+    
+    file.setInsertPos();
     
       // BBS: write global config at the beginning of gcode file because printer
       // need these config information
@@ -2117,8 +2125,13 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
     file.write_format("; EXECUTABLE_BLOCK_START\n");
 
     // SoftFever
-    if( m_enable_exclude_object)
+    if (print.is_flashforge_printer()) {
+        if (config().exclude_object) {
+            file.write(set_object_info(&print));
+        }
+    } else if (m_enable_exclude_object) {
         file.write(set_object_info(&print));
+    }
 
     // adds tags for time estimators
     file.write_format(";%s\n", GCodeProcessor::reserved_tag(GCodeProcessor::ETags::First_Line_M73_Placeholder).c_str());
@@ -2735,6 +2748,8 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
 
     print.throw_if_canceled();
 
+    file.setCommentPos();
+
     // Get filament stats.
     file.write(DoExport::update_print_stats_and_format_filament_stats(
     	// Const inputs
@@ -2783,6 +2798,7 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
 
     }
     file.write("\n");
+    file.writeCache();
 
     print.throw_if_canceled();
 }
@@ -4148,6 +4164,10 @@ LayerResult GCode::process_layer(
                             std::string("; start printing object, unique label id: ") +
                             std::to_string(instance_to_print.label_object_id) + "\n" + "M624 " +
                             _encode_label_ids_to_base64({instance_to_print.label_object_id}) + "\n");
+                        if (is_flashforge_printer() && config().exclude_object) {
+                            m_writer.set_object_start_str(std::string("EXCLUDE_OBJECT_START NAME=") +
+                                                          get_instance_name(&instance_to_print.print_object, inst.id) + "\n");
+                        }
                     } else {
                         const auto gflavor = print.config().gcode_flavor.value;
                         if (gflavor == gcfKlipper) {
@@ -4305,6 +4325,10 @@ LayerResult GCode::process_layer(
                         m_writer.set_object_end_str(std::string("; stop printing object, unique label id: ") +
                                                     std::to_string(instance_to_print.label_object_id) + "\n" +
                                                     "M625\n");
+                        if (is_flashforge_printer() && config().exclude_object) {
+                            m_writer.set_object_end_str(std::string("EXCLUDE_OBJECT_END NAME=") +
+                                                        get_instance_name(&instance_to_print.print_object, inst.id) + "\n");
+                        }
                     } else {
                         const auto gflavor = print.config().gcode_flavor.value;
                         if (gflavor == gcfKlipper) {
@@ -4929,7 +4953,8 @@ void GCode::GCodeOutputStream::write(const char *what)
     if (what != nullptr) {
         const char* gcode = what;
         // writes string to file
-        fwrite(gcode, 1, ::strlen(gcode), this->f);
+        //fwrite(gcode, 1, ::strlen(gcode), this->f);
+        m_cache.push_back(what);
         //FIXME don't allocate a string, maybe process a batch of lines?
         m_processor.process_buffer(std::string(gcode));
     }
@@ -4937,8 +4962,10 @@ void GCode::GCodeOutputStream::write(const char *what)
 
 void GCode::GCodeOutputStream::writeln(const std::string &what)
 {
-    if (! what.empty())
-        this->write(what.back() == '\n' ? what : what + '\n');
+    if (!what.empty()) {
+        //this->write(what.back() == '\n' ? what : what + '\n');
+        m_cache.push_back(what.back() == '\n' ? what : what + '\n');
+    }
 }
 
 void GCode::GCodeOutputStream::write_format(const char* format, ...)
@@ -4964,13 +4991,34 @@ void GCode::GCodeOutputStream::write_format(const char* format, ...)
     bool buffer_dynamic = buflen > 1024;
     char *bufptr = buffer_dynamic ? (char*)malloc(buflen) : buffer;
     int res = ::vsnprintf(bufptr, buflen, format, args);
-    if (res > 0)
-        this->write(bufptr);
+    if (res > 0){
+        //this->write(bufptr);
+        m_cache.push_back(bufptr);
+    }
 
     if (buffer_dynamic)
         free(bufptr);
 
     va_end(args);
+}
+
+void GCode::GCodeOutputStream::writeCache()
+{
+    if (m_insertPos != -1 && m_commentPos != -1) {
+        for (int i = 0; i < m_insertPos; ++i) {
+            fwrite(m_cache[i].c_str(), 1, m_cache[i].size(), this->f);
+        }
+        for (int i = m_commentPos; i < m_cache.size(); ++i) {
+            fwrite(m_cache[i].c_str(), 1, m_cache[i].size(), this->f);
+        }
+        for (int i = m_insertPos; i < m_commentPos; ++i) {
+            fwrite(m_cache[i].c_str(), 1, m_cache[i].size(), this->f);
+        }
+    } else {
+        for (auto &line : m_cache) {
+            fwrite(line.c_str(), 1, line.size(), this->f);
+        }
+    }
 }
 
 static std::map<int, std::string> overhang_speed_key_map =
@@ -6204,9 +6252,14 @@ inline std::string polygon_to_string(const Polygon &polygon, Print *print, bool 
 // this id is used to generate unique object id for each object.
 std::string GCode::set_object_info(Print *print) {
     const auto gflavor = print->config().gcode_flavor.value;
-    if (print->is_BBL_printer() ||
-        (gflavor != gcfKlipper && gflavor != gcfMarlinLegacy && gflavor != gcfMarlinFirmware && gflavor != gcfRepRapFirmware))
-        return "";
+    if (print->is_flashforge_printer()) {
+        ;
+    } else {
+        if (print->is_BBL_printer() ||
+            (gflavor != gcfKlipper && gflavor != gcfMarlinLegacy && gflavor != gcfMarlinFirmware && gflavor != gcfRepRapFirmware))
+            return "";
+    }
+
     std::ostringstream gcode;
     size_t object_id = 0;
     // Orca: check if we are in pa calib mode

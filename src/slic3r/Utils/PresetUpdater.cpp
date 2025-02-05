@@ -639,8 +639,8 @@ void PresetUpdater::priv::sync_resources(std::string http_url, std::map<std::str
 // Orca: sync config update for currect App version
 void PresetUpdater::priv::sync_config()
 {
-    auto cache_profile_path        = cache_path;
-    auto cache_profile_update_file = cache_path / "profiles_update.json";
+    auto        cache_profile_path        = cache_path;
+    auto        cache_profile_update_file = cache_path / "profiles_update.json";
     std::string asset_name;
     if (fs::exists(cache_profile_update_file)) {
         try {
@@ -656,9 +656,9 @@ void PresetUpdater::priv::sync_config()
             BOOST_LOG_TRIVIAL(error) << "[Orca Updater]: unknown failure when reading profiles_update.json in sync_config" << std::endl;
         }
     }
-    AppConfig *app_config = GUI::wxGetApp().app_config;
+    AppConfig* app_config = GUI::wxGetApp().app_config;
 
-    auto profile_update_url = app_config->profile_update_url() + "/" + SoftFever_VERSION;
+    auto profile_update_url = app_config->profile_update_url() + "/" + SLIC3R_VERSION;
     // parse the assets section and get the latest asset by comparing the name
 
     Http::get(profile_update_url)
@@ -755,6 +755,124 @@ void PresetUpdater::priv::sync_config()
         })
         .perform_sync();
 }
+/*void PresetUpdater::priv::sync_config()
+{
+    auto cache_profile_path        = cache_path;
+    auto cache_profile_update_file = cache_path / "profiles_update.json";
+    std::string asset_name;
+    if (fs::exists(cache_profile_update_file)) {
+        try {
+            boost::nowide::ifstream f(cache_profile_update_file.string());
+            json                    data = json::parse(f);
+            if (data.contains("name"))
+                asset_name = data["name"].get<std::string>();
+            f.close();
+        } catch (const std::exception& ex) {
+            BOOST_LOG_TRIVIAL(error) << "[Orca Updater]: failed to read profiles_update.json when sync_config: " << ex.what() << std::endl;
+        } catch (...) {
+            // catch any other errors (that we have no information about)
+            BOOST_LOG_TRIVIAL(error) << "[Orca Updater]: unknown failure when reading profiles_update.json in sync_config" << std::endl;
+        }
+    }
+    AppConfig *app_config = GUI::wxGetApp().app_config;
+
+    auto profile_update_url = app_config->profile_update_url() + "/" + SLIC3R_VERSION;
+    // parse the assets section and get the latest asset by comparing the name
+
+    Http::get(profile_update_url)
+        .on_error([cache_profile_path, cache_profile_update_file](std::string body, std::string error, unsigned http_status) {
+            // Orca: we check the response body to see if it's "Not Found", if so, it means for the current Orca version we don't have OTA
+            // updates, we can delete the cache file
+            if (!body.empty()) {
+                try {
+                    json j = json::parse(body);
+                    if (j.contains("message") && j["message"].get<std::string>() == "Not Found") {
+                        // The current Orca version does not have any OTA updates, delete the cache file
+                        if (fs::exists(cache_profile_path / "profiles"))
+                            fs::remove_all(cache_profile_path / "profiles");
+                        if (fs::exists(cache_profile_update_file))
+                            fs::remove(cache_profile_update_file);
+                    }
+                } catch (...) {}
+            }
+            BOOST_LOG_TRIVIAL(info) << format("Error getting: `%1%`: HTTP %2%, %3%", "sync_config_orca", http_status, error);
+        })
+        .timeout_connect(5)
+        .on_complete([this, asset_name, cache_profile_path, cache_profile_update_file](std::string body, unsigned http_status) {
+            // Http response OK
+            if (http_status != 200)
+                return;
+            try {
+                json j = json::parse(body);
+
+                struct update
+                {
+                    std::string url;
+                    std::string name;
+                    int         ver = -9999;
+                } latest_update;
+
+                if (!(j.contains("message") && j["message"].get<std::string>() == "Not Found")) {
+                    json assets = j.at("assets");
+                    if (assets.is_array()) {
+                        for (auto asset : assets) {
+                            std::string name          = asset["name"].get<std::string>();
+                            int         versionNumber = -1;
+                            std::regex  regexPattern("orcaslicer-profiles_ota_.*\\.([0-9]+)\\.zip$");
+                            std::smatch matches;
+                            if (std::regex_search(name, matches, regexPattern) && matches.size() > 1) {
+                                versionNumber = std::stoi(matches[1].str());
+                            }
+                            if (versionNumber > 0 && versionNumber > latest_update.ver) {
+                                latest_update.url  = asset["browser_download_url"].get<std::string>();
+                                latest_update.name = name;
+                                latest_update.ver  = versionNumber;
+                            }
+                        }
+                    }
+                }
+
+                if (cancel)
+                    return;
+
+                if (latest_update.ver > 0) {
+                    if (latest_update.name == asset_name)
+                        return;
+                    if (fs::exists(cache_profile_path / "profiles"))
+                        fs::remove_all(cache_profile_path / "profiles");
+                    fs::create_directories(cache_profile_path / "profiles");
+                    // download the file
+                    std::string download_url  = latest_update.url;
+                    std::string download_file = (cache_path / (latest_update.name + TMP_EXTENSION)).string();
+                    if (!get_file(download_url, download_file)) {
+                        return;
+                    }
+
+                    // extract the file downloaded
+                    BOOST_LOG_TRIVIAL(info) << "[Orca Updater]start to unzip the downloaded file " << download_file;
+                    if (!extract_file(download_file, cache_profile_path)) {
+                        BOOST_LOG_TRIVIAL(warning) << "[Orca Updater]extract downloaded file"
+                                                   << " failed, path: " << download_file;
+                        return;
+                    }
+                    BOOST_LOG_TRIVIAL(info) << "[Orca Updater]finished unzip the downloaded file " << download_file;
+                    boost::nowide::ofstream f(cache_profile_update_file.string());
+                    json                    data;
+                    data["name"] = latest_update.name;
+                    f << data << std::endl;
+                    f.close();
+                } else {
+                    // The current Orca version does not have any OTA updates, delete the cache file
+                    if (fs::exists(cache_profile_path / "profiles"))
+                        fs::remove_all(cache_profile_path / "profiles");
+                    if (fs::exists(cache_profile_update_file))
+                        fs::remove(cache_profile_update_file);
+                }
+
+            } catch (...) {}
+        })
+        .perform_sync();
+}*/
 
 void PresetUpdater::priv::sync_tooltip(std::string http_url, std::string language)
 {

@@ -3658,7 +3658,7 @@ ExportConfigsDialog::ExportCase ExportConfigsDialog::archive_preset_bundle_to_fi
             std::string   clock = get_curr_timestmp();
             bundle_structure["user_name"]           = "";
             bundle_structure["user_id"]             = "";
-            bundle_structure["version"]             = SoftFever_VERSION;
+            bundle_structure["version"]             = SLIC3R_VERSION;
             bundle_structure["bundle_id"]           = printer_preset_name_ + "_" + clock;
             bundle_structure["bundle_type"] = "printer config bundle";
             bundle_structure["printer_preset_name"] = printer_preset_name_;
@@ -3773,7 +3773,7 @@ ExportConfigsDialog::ExportCase ExportConfigsDialog::archive_filament_bundle_to_
             std::string   clock = get_curr_timestmp();
             bundle_structure["user_name"]     = "";
             bundle_structure["user_id"]       = "";
-            bundle_structure["version"]       = SoftFever_VERSION;
+            bundle_structure["version"]       = SLIC3R_VERSION;
             bundle_structure["bundle_id"]     = filament_name + "_" + clock;
             bundle_structure["bundle_type"] = "filament config bundle";
             bundle_structure["filament_name"] = filament_name;

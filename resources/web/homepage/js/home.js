@@ -80,54 +80,62 @@ function Set_RecentFile_MouseRightBtn_Event()
 	
 }
 
-function SetLoginPanelVisibility(visible) {
-  var leftBoard = document.getElementById("LeftBoard");
-  if (visible) {
-    leftBoard.style.display = "block";
-  } else {
-    leftBoard.style.display = "none";
-  }
-}
 
 function HandleStudio( pVal )
 {
 	let strCmd = pVal['command'];
 	
-	if (strCmd == "get_recent_projects") {
-    ShowRecentFileList(pVal["response"]);
-  } else if (strCmd == "studio_userlogin") {
-    SetLoginInfo(pVal["data"]["avatar"], pVal["data"]["name"]);
-  } else if (strCmd == "studio_useroffline") {
-    SetUserOffline();
-  } else if (strCmd == "studio_set_mallurl") {
-    SetMallUrl(pVal["data"]["url"]);
-  } else if (strCmd == "studio_clickmenu") {
-    let strName = pVal["data"]["menu"];
+	if(strCmd=='get_recent_projects')
+	{
+		ShowRecentFileList(pVal['response']);
+	}
+	else if(strCmd=='studio_userlogin')
+	{
+		SetLoginInfo(pVal['data']['avatar'],pVal['data']['name']);
+	}
+	else if(strCmd=='studio_useroffline')
+	{
+		SetUserOffline();
+	}
+	else if( strCmd=="studio_set_mallurl" )
+	{
+		SetMallUrl( pVal['data']['url'] );
+	}
+	else if( strCmd=="studio_clickmenu" )
+	{
+		let strName=pVal['data']['menu'];
+		
+		GotoMenu(strName);
+	}
+	else if( strCmd=="network_plugin_installtip" )
+	{
+		let nShow=pVal["show"]*1;
+		
+	    if(nShow==1)
+		{
+			$("#NoPluginTip").show();
+			$("#NoPluginTip").css("display","flex");
+		}
+		else
+		{
+			$("#NoPluginTip").hide();
+		}
+	}
+	else if( strCmd=="modelmall_model_advise_get")
+	{
+		//alert('hot');
+		if( m_HotModelList!=null )
+		{
+			let SS1=JSON.stringify(pVal['hits']);
+			let SS2=JSON.stringify(m_HotModelList);
+			
+			if( SS1==SS2 )
+				return;
+		}
 
-    GotoMenu(strName);
-  } else if (strCmd == "network_plugin_installtip") {
-    let nShow = pVal["show"] * 1;
-
-    if (nShow == 1) {
-      $("#NoPluginTip").show();
-      $("#NoPluginTip").css("display", "flex");
-    } else {
-      $("#NoPluginTip").hide();
-    }
-  } else if (strCmd == "modelmall_model_advise_get") {
-    //alert('hot');
-    if (m_HotModelList != null) {
-      let SS1 = JSON.stringify(pVal["hits"]);
-      let SS2 = JSON.stringify(m_HotModelList);
-
-      if (SS1 == SS2) return;
-    }
-
-    m_HotModelList = pVal["hits"];
-    ShowStaffPick(m_HotModelList);
-  } else if (data.cmd === "SetLoginPanelVisibility") {
-    SetLoginPanelVisibility(data.visible);
-  }
+	    m_HotModelList=pVal['hits'];		
+		ShowStaffPick( m_HotModelList );
+	}
 }
 
 function GotoMenu( strMenu )
@@ -159,7 +167,12 @@ function SetLoginInfo( strAvatar, strName )
 	
     let OriginAvatar=$("#UserAvatarIcon").prop("src");
 	if(strAvatar!=OriginAvatar)
-		$("#UserAvatarIcon").prop("src",strAvatar);
+	{
+		if(strAvatar != "default.jpg")
+		{
+			$("#UserAvatarIcon").prop("src",strAvatar);
+		}
+	}
 	else
 	{
 		//alert('Avatar is Same');
@@ -167,6 +180,11 @@ function SetLoginInfo( strAvatar, strName )
 	
 	$("#Login2").show();
 	$("#Login2").css("display","flex");
+	
+	var tSend={};
+	tSend['command']="homepage_received_login";
+	
+	SendWXMessage( JSON.stringify(tSend) );
 }
 
 function SetUserOffline()
@@ -488,7 +506,7 @@ function ShowStaffPick( ModelList )
 		strPickHtml+='<div class="HotModelPiece swiper-slide"  onClick="OpenOneStaffPickModel('+ModelID+')" >'+
 			    '<div class="HotModel_Designer_Info"><img src="'+DesignerAvatar+'" /><span class="TextS2">'+DesignerName+'</span></div>'+
 				'	<div class="HotModel_PrevBlock"><img class="HotModel_PrevImg" src="'+ModelCover+'" /></div>'+
-				'	<div  class="HotModel_NameText TextS1" title="'+ModelName+'">'+ModelName+'</div>'+
+				'	<div  class="HotModel_NameText TextS1">'+ModelName+'</div>'+
 				'</div>';
 	}
 	

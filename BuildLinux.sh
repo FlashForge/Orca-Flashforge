@@ -16,13 +16,13 @@ function check_available_memory_and_disk() {
     MIN_DISK_KB=$((10 * 1024 * 1024))
 
     if [ ${FREE_MEM_GB} -le ${MIN_MEM_GB} ]; then
-        echo -e "\nERROR: Orca Slicer Builder requires at least ${MIN_MEM_GB}G of 'available' mem (systen has only ${FREE_MEM_GB}G available)"
+        echo -e "\nERROR: Flash Slicer Builder requires at least ${MIN_MEM_GB}G of 'available' mem (systen has only ${FREE_MEM_GB}G available)"
         echo && free -h && echo
         exit 2
     fi
 
     if [[ ${FREE_DISK_KB} -le ${MIN_DISK_KB} ]]; then 
-        echo -e "\nERROR: Orca Slicer Builder requires at least $(echo $MIN_DISK_KB |awk '{ printf "%.1fG\n", $1/1024/1024; }') (systen has only $(echo ${FREE_DISK_KB} | awk '{ printf "%.1fG\n", $1/1024/1024; }') disk free)"
+        echo -e "\nERROR: Flash Slicer Builder requires at least $(echo $MIN_DISK_KB |awk '{ printf "%.1fG\n", $1/1024/1024; }') (systen has only $(echo ${FREE_DISK_KB} | awk '{ printf "%.1fG\n", $1/1024/1024; }') disk free)"
         echo && df -h . && echo
         exit 1
     fi
@@ -34,7 +34,7 @@ function usage() {
     echo "   -g: force gtk2 build"
     echo "   -b: build in debug mode"
     echo "   -d: build deps (optional)"
-    echo "   -s: build orca-slicer (optional)"
+    echo "   -s: build flash-slicer (optional)"
     echo "   -u: only update clock & dependency packets (optional and need sudo)"
     echo "   -r: skip free ram check (low ram compiling)"
     echo "For a first use, you want to 'sudo ./BuildLinux.sh -u'"
@@ -54,7 +54,7 @@ while getopts ":dsiuhgbr" opt; do
         BUILD_DEPS="1"
         ;;
     s )
-        BUILD_ORCA="1"
+        BUILD_Flash="1"
         ;;
     b )
         BUILD_DEBUG="1"
@@ -77,7 +77,7 @@ then
     exit 0
 fi
 
-# Addtional Dev packages for OrcaSlicer
+# Addtional Dev packages for Orca-Flashforge
 export REQUIRED_DEV_PACKAGES="libmspack-dev libgstreamerd-3-dev libsecret-1-dev libwebkit2gtk-4.0-dev libosmesa6-dev libssl-dev libcurl4-openssl-dev eglexternalplatform-dev libudev-dev libdbus-1-dev extra-cmake-modules texinfo"
 # libwebkit2gtk-4.1-dev ??
 export DEV_PACKAGES_COUNT=$(echo ${REQUIRED_DEV_PACKAGES} | wc -w)
@@ -184,7 +184,7 @@ then
         make deps -j$NCORES
         echo "done"
 
-        # rename wxscintilla # TODO: DeftDawg: Does OrcaSlicer need this?
+        # rename wxscintilla # TODO: DeftDawg: Does Orca-Flashforge need this?
         # echo "[5/9] Renaming wxscintilla library..."
         # pushd destdir/usr/local/lib
         #     if [[ -z "$FOUND_GTK3_DEV" ]]
@@ -210,7 +210,7 @@ then
     mkdir build
 fi
 
-if [[ -n "$BUILD_ORCA" ]]
+if [[ -n "$BUILD_Flash" ]]
 then
     echo "[7/9] Configuring Slic3r..."
     BUILD_ARGS=""
@@ -233,7 +233,7 @@ then
         
         # make Slic3r
         echo "[8/9] Building Slic3r..."
-        make -j$NCORES OrcaSlicer # Slic3r
+        make -j$NCORES Orca-Flashforge # Slic3r
 
         # make OrcaSlicer_profile_validator
         make -j$NCORES OrcaSlicer_profile_validator
