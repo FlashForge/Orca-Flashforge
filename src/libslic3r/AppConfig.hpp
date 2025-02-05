@@ -1,7 +1,3 @@
-///|/ Copyright (c) Prusa Research 2017 - 2023 Vojtěch Bubník @bubnikv, David Kocík @kocikdav, Lukáš Matěna @lukasmatena, Filip Sykala @Jony01, Enrico Turri @enricoturri1966, Oleksandra Iushchenko @YuSanka, Vojtěch Král @vojtechkral
-///|/
-///|/ PrusaSlicer is released under the terms of the AGPLv3 or higher
-///|/
 #ifndef slic3r_AppConfig_hpp_
 #define slic3r_AppConfig_hpp_
 
@@ -37,6 +33,9 @@ public:
 		GCodeViewer
 	};
 
+    typedef std::map<std::string, std::string> MacInfoMap;
+    typedef std::vector<MacInfoMap>			   LocalMacInfo;
+
     //BBS: remove GCodeViewer as seperate APP logic
 	explicit AppConfig() :
 		m_dirty(false),
@@ -47,13 +46,17 @@ public:
 		this->reset();
 	}
 
+    ~AppConfig();
+
 	std::string get_language_code();
 	std::string get_hms_host();
+	bool get_stealth_mode();
 
 	// Clear and reset to defaults.
 	void 			   	reset();
 	// Override missing or keys with their defaults.
 	void 			   	set_defaults();
+    void				set_version_check_url();
 
 	// Load the slic3r.ini from a user profile directory (or a datadir, if configured).
 	// return error string or empty strinf
@@ -84,8 +87,10 @@ public:
 		{ std::string value; this->get(section, key, value); return value; }
 	std::string 		get(const std::string &key) const
 		{ std::string value; this->get("app", key, value); return value; }
+	bool				get_bool(const std::string &section, const std::string &key) const
+		{ return this->get(section, key) == "true" || this->get(key) == "1"; }
 	bool				get_bool(const std::string &key) const
-		{ return this->get(key) == "true" || this->get(key) == "1"; }
+		{ return this->get_bool("app", key); }
 	void			    set(const std::string &section, const std::string &key, const std::string &value)
 	{
 #ifndef NDEBUG
@@ -232,8 +237,17 @@ public:
 	std::string         get_region();
 	std::string         get_country_code();
     bool				is_engineering_region();
+    void                get_local_mahcines(LocalMacInfo& local_machines);
+    void                save_bind_machine_to_config(const std::string&    dev_id,
+                                                    const std::string&    dev_name,
+                                                    const std::string&    placement,
+                                                    const unsigned short& pid,
+													bool modifyPlacement = true);
+    void                erase_local_machine(const std::string& dev_id, const std::string& dev_name);
 
-	// reset the current print / filament / printer selections, so that 
+    void                save_custom_color_to_config(const std::vector<std::string> &colors);
+    std::vector<std::string> get_custom_color_from_config();
+	// reset the current print / filament / printer selections, so that
 	// the  PresetBundle::load_selections(const AppConfig &config) call will select
 	// the first non-default preset when called.
     void                reset_selections();
@@ -295,6 +309,7 @@ public:
 	static const std::string SECTION_FILAMENTS;
     static const std::string SECTION_MATERIALS;
     static const std::string SECTION_EMBOSS_STYLE;
+    static const std::string SECTION_LOCAL_MACHINES;
 
 private:
 	template<typename T>
@@ -327,6 +342,9 @@ private:
 	Semver                                                      m_orig_version;
 	// Whether the existing version is before system profiles & configuration updating
 	bool                                                        m_legacy_datadir;
+
+    // Used connected machine's information
+    LocalMacInfo                                                m_local_machines;
 
 	std::string                                                 m_loading_path;
 

@@ -10,7 +10,9 @@
 #include <cstdint>
 #include <functional>
 #include <boost/any.hpp>
+#include "I18N.hpp"
 
+#include <wx/colourdata.h>
 #include <wx/spinctrl.h>
 #include <wx/bmpcbox.h>
 #include <wx/clrpicker.h>
@@ -22,6 +24,7 @@
 #include "GUI.hpp"
 #include "wxExtensions.hpp"
 #include "Widgets/SpinInput.hpp"
+#include "Widgets/TextInput.hpp"
 
 #ifdef __WXMSW__
 #define wxMSW true
@@ -223,6 +226,8 @@ public:
     virtual void        set_last_meaningful_value() {}
     virtual void        set_na_value() {}
 
+    virtual void        update_na_value(const boost::any& value) {}
+
     /// Gets a boost::any representing this control.
     /// subclasses should overload with a specific version
     virtual boost::any&	get_value() = 0;
@@ -281,6 +286,7 @@ protected:
 
     bool    bEnterPressed = false;
 
+    wxString m_na_value = _(L("N/A"));
     
 	friend class OptionsGroup;
 };
@@ -321,6 +327,8 @@ public:
 	void	set_value(const boost::any& value, bool change_event = false) override;
     void    set_last_meaningful_value() override;
     void	set_na_value() override;
+
+    void update_na_value(const boost::any& value) override;
 
 	boost::any&		get_value() override;
 
@@ -481,6 +489,14 @@ public:
     void			enable() override { dynamic_cast<wxColourPickerCtrl*>(window)->Enable(); }
     void			disable() override{ dynamic_cast<wxColourPickerCtrl*>(window)->Disable(); }
 	wxWindow*		getWindow() override { return window; }
+
+private:
+    void convert_to_picker_widget(wxColourPickerCtrl *widget);
+    void on_button_click(wxCommandEvent &WXUNUSED(ev));
+    void save_colors_to_config();
+private:
+    wxColourData*  m_clrData{nullptr};
+    wxColourPickerWidget* m_picker_widget{nullptr};
 };
 
 class PointCtrl : public Field {
@@ -493,7 +509,10 @@ public:
 	wxSizer*		sizer{ nullptr };
 	wxTextCtrl*		x_textctrl{ nullptr };
 	wxTextCtrl*		y_textctrl{ nullptr };
+	TextInput*      	x_input{nullptr};
+	TextInput*      	y_input{nullptr};
 
+    wxWindow*       window{nullptr};
 	void			BUILD()  override;
 	bool			value_was_changed(wxTextCtrl* win);
     // Propagate value from field to the OptionGroupe and Config after kill_focus/ENTER
@@ -512,7 +531,7 @@ public:
 		x_textctrl->Disable();
 		y_textctrl->Disable(); }
 	wxSizer*		getSizer() override { return sizer; }
-	wxWindow*		getWindow() override { return dynamic_cast<wxWindow*>(x_textctrl); }
+	wxWindow*		getWindow() override { return window; }
 };
 
 class StaticText : public Field {

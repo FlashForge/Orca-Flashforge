@@ -17,7 +17,6 @@
 #include <wx/dialog.h>
 #include <curl/curl.h>
 #include <wx/webrequest.h>
-#include <wx/hyperlink.h>
 #include "wxExtensions.hpp"
 #include "Plater.hpp"
 #include "Widgets/StepCtrl.hpp"
@@ -26,9 +25,12 @@
 #include "Widgets/ProgressBar.hpp"
 #include "Widgets/RoundedRectangle.hpp"
 #include "Jobs/BindJob.hpp"
+#include "Jobs/UnbindJob.hpp"
 #include "BBLStatusBar.hpp"
 #include "BBLStatusBarBind.hpp"
-#include "Jobs/Worker.hpp"
+#include "TitleDialog.hpp"
+#include "Widgets/FFCheckBox.hpp"
+
 
 #define BIND_DIALOG_GREY200 wxColour(248, 248, 248)
 #define BIND_DIALOG_GREY800 wxColour(50, 58, 61)
@@ -36,8 +38,10 @@
 #define BIND_DIALOG_BUTTON_SIZE wxSize(FromDIP(68), FromDIP(24))
 #define BIND_DIALOG_BUTTON_PANEL_SIZE wxSize(FromDIP(450), FromDIP(30))
 
-namespace Slic3r { namespace GUI {
 
+class FFButton;
+namespace Slic3r { namespace GUI {
+class ComAsyncThread;
 struct MemoryStruct
 {
     char * memory;
@@ -45,82 +49,132 @@ struct MemoryStruct
     size_t size;
 };
 
-class BindMachineDialog : public DPIDialog
+
+class RoundImagePanel : public wxPanel
+{
+public:
+    RoundImagePanel(wxWindow *parent, const wxSize& size = wxDefaultSize);
+
+    void SetImage(const wxImage& image);
+        
+private:
+    void OnPaint(wxPaintEvent& event);
+    void OnSize(wxSizeEvent& event);
+    void CreateRegion(wxDC &dc);
+
+private:
+    wxImage     m_image { wxNullImage };
+};
+
+struct BindInfo;
+//class DeviceObject;
+class BindMachineDialog : public TitleDialog
 {
 private:
+    class LinkLabel : public Label
+    {
+    public:
+        LinkLabel(wxWindow *parent, const wxString &text, const wxString& link);
+
+    private:
+        wxString m_link;
+    };
+
+private:
     wxWindow*      m_panel_agreement;
-    wxStaticText * m_printer_name;
-    wxStaticText * m_user_name;
-    StaticBox *   m_panel_left;
-    StaticBox *   m_panel_right;
-    wxStaticText *m_status_text;
-    wxStaticText* m_link_show_error;
-    Button *      m_button_bind;
-    Button *      m_button_cancel;
+
     wxSimplebook *m_simplebook;
-    wxStaticBitmap *m_avatar;
+    wxPanel*       m_normal_panel;
+    wxPanel*       m_top_panel;
+    wxSizer*       m_machine_sizer;
     wxStaticBitmap *m_printer_img;
-    wxStaticBitmap *m_static_bitmap_show_error;
-    wxBitmap      m_bitmap_show_error_close;
-    wxBitmap      m_bitmap_show_error_open;
-    wxScrolledWindow* m_sw_bind_failed_info;
-    Label*          m_bind_failed_info;
-    Label*          m_st_txt_error_code{ nullptr };
-    Label*          m_st_txt_error_desc{ nullptr };
-    Label*          m_st_txt_extra_info{ nullptr };
-    wxHyperlinkCtrl* m_link_network_state{ nullptr };
-    wxString        m_result_info;
-    wxString        m_result_extra;
-    bool            m_show_error_info_state = true;
-    bool            m_allow_privacy{false};
-    bool            m_allow_notice{false};
-    int             m_result_code;
-    std::shared_ptr<int>     m_tocken;
+    wxStaticText * m_printer_name;
+    wxSizer*       m_user_sizer;
+    RoundImagePanel* m_user_panel;
+    wxStaticText * m_user_name;
+    wxStaticBitmap *m_user_img;
+    wxStaticText * m_bind_text;
+    FFCheckBox*    m_checkbox_privacy;
+    LinkLabel*     m_privacy_title;
+    LinkLabel*     m_terms_title;
+    FFButton*      m_bind_btn;
+    FFButton*      m_cancel_btn;
+    wxPanel*       m_result_panel;
+    wxBoxSizer*    m_result_sizer;
+    wxStaticText*  m_result_text;
+    FFButton*      m_result_btn;
+
+    //wxWebRequest   m_web_request;
+    int            m_result_code;
+    bool           m_unbind_flag;
 
     MachineObject *                   m_machine_info{nullptr};
-    std::shared_ptr<BBLStatusBarBind> m_status_bar;
-    std::unique_ptr<Worker>           m_worker;
-
+    //DeviceObject                     *m_device_info {nullptr};
+    BindInfo                *m_bind_info{nullptr};
+    std::shared_ptr<BindJob>          m_bind_job;
+    std::vector<char>        m_pic_data;
+    std::shared_ptr<ComAsyncThread> m_pic_thread{nullptr};
 public:
-    BindMachineDialog(Plater *plater = nullptr);
+    BindMachineDialog();
     ~BindMachineDialog();
 
-    void     show_bind_failed_info(bool show, int code = 0, wxString description = wxEmptyString, wxString extra = wxEmptyString);
     void     on_cancel(wxCommandEvent& event);
     void     on_bind_fail(wxCommandEvent &event);
-    void     on_update_message(wxCommandEvent &event);
     void     on_bind_success(wxCommandEvent &event);
     void     on_bind_printer(wxCommandEvent &event);
     void     on_dpi_changed(const wxRect &suggested_rect) override;
     void     update_machine_info(MachineObject *info);
+    //void     update_device_info(DeviceObject *info);
+    void     update_device_info2(BindInfo* bind_info);
     void     on_show(wxShowEvent &event);
     void     on_close(wxCloseEvent& event);
     void     on_destroy();
-    wxString get_print_error(wxString str);
+    void     on_result_ok(wxCommandEvent& event);
+    void     downloadUrlPic(const std::string& url);
 };
 
-class UnBindMachineDialog : public DPIDialog
+// unbind
+class UnBindMachineDialog : public TitleDialog
 {
-protected:
-    wxStaticText *  m_printer_name;
-    wxStaticText *  m_user_name;
-    wxStaticText *m_status_text;
-    Button *      m_button_unbind;
-    Button *      m_button_cancel;
-    MachineObject *m_machine_info{nullptr};
-    wxStaticBitmap *m_avatar;
-    wxStaticBitmap *m_printer_img;
-    std::shared_ptr<int>     m_tocken;
+private:
+    wxWindow*      m_panel_agreement;
 
+    wxSizer*       m_machine_sizer;
+    wxStaticBitmap *m_printer_img;
+    wxStaticText * m_printer_name;
+    wxSizer*       m_user_sizer;
+    RoundImagePanel* m_user_panel;
+    wxStaticText * m_user_name;
+    wxStaticBitmap *m_user_img;
+    wxStaticText * m_unbind_text;
+    FFButton*      m_unbind_btn;
+    FFButton*      m_cancel_btn;
+
+    //wxWebRequest   m_web_request;
+    int            m_result_code;
+
+    MachineObject *                   m_machine_info{nullptr};
+    //DeviceObject                     *m_device_info {nullptr};
+    BindInfo                  *m_unbind_info{nullptr};
+    std::shared_ptr<UnbindJob>        m_unbind_job;
+    std::vector<char>          m_pic_data;
+    std::shared_ptr<ComAsyncThread> m_pic_thread{nullptr};
 public:
-    UnBindMachineDialog(Plater *plater = nullptr);
+    UnBindMachineDialog();
     ~UnBindMachineDialog();
 
-    void on_cancel(wxCommandEvent &event);
-    void on_unbind_printer(wxCommandEvent &event);
-    void on_dpi_changed(const wxRect &suggested_rect) override;
-    void update_machine_info(MachineObject *info) { m_machine_info = info; };
-    void on_show(wxShowEvent &event);
+    void     on_cancel(wxCommandEvent& event);
+    void     on_unbind_printer(wxCommandEvent &event);
+    void     on_unbind_completed(wxCommandEvent &event);
+    void     on_dpi_changed(const wxRect &suggested_rect) override;
+    void     update_machine_info(MachineObject *info);
+    //void     update_device_info(DeviceObject *info);
+    void     update_device_info2(BindInfo* info);
+    void     on_show(wxShowEvent &event);
+    void     on_close(wxCloseEvent& event);
+    void     on_destroy();
+    void     on_result_ok(wxCommandEvent& event);
+    void     downloadUrlPic(const std::string& url);
 };
 
 }} // namespace Slic3r::GUI

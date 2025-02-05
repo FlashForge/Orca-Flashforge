@@ -17,6 +17,10 @@ class Button : public StaticBox
     bool pressedDown = false;
     bool m_selected  = true;
     bool canFocus  = true;
+    bool isCenter = true;
+    bool m_flashforge_selected = false;
+    bool m_flashforge = false;
+    bool m_pure_text = false;
 
     static const int buttonWidth = 200;
     static const int buttonHeight = 50;
@@ -46,6 +50,10 @@ public:
 
     void SetSelected(bool selected = true) { m_selected = selected; }
 
+    void SetFlashForgeSelected(bool selected) { m_flashforge_selected  = selected;}
+
+    bool GetFlashForgeSelected() { return m_flashforge_selected; }
+
     bool Enable(bool enable = true) override;
 
     void SetCanFocus(bool canFocus) override;
@@ -54,7 +62,13 @@ public:
 
     bool GetValue() const;
 
+    void SetCenter(bool isCenter);
+
     void Rescale();
+
+    void SetFlashForge(bool bFlashForge = false);
+
+    void SetPureText(bool bPureText = false);
 
 protected:
 #ifdef __WIN32__
@@ -73,12 +87,23 @@ private:
     // some useful events
     void mouseDown(wxMouseEvent& event);
     void mouseReleased(wxMouseEvent& event);
+    void mouseEnter(wxMouseEvent &event);
+    void mouseLeave(wxMouseEvent &event);
     void mouseCaptureLost(wxMouseCaptureLostEvent &event);
     void keyDownUp(wxKeyEvent &event);
 
     void sendButtonEvent();
 
     DECLARE_EVENT_TABLE()
+};
+
+class TempButton : public Button
+{
+public:
+    TempButton(wxWindow *parent, wxString text, wxString icon = "", long style = 0, int iconSize = 0, wxWindowID btn_id = wxID_ANY);
+ protected:
+    virtual void doRender(wxDC &dc);
+
 };
 
 #endif // !slic3r_GUI_Button_hpp_

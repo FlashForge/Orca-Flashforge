@@ -38,19 +38,22 @@
 #include "Widgets/ComboBox.hpp"
 #include "Widgets/ScrolledWindow.hpp"
 #include "Widgets/PopupWindow.hpp"
+#include "FlashForge/MultiComUtils.hpp"
+#include "FlashForge/MultiComEvent.hpp"
 #include <wx/simplebook.h>
 #include <wx/hashmap.h>
-
-#include "Jobs/Worker.hpp"
+#include "slic3r/GUI/Widgets/FFPopupWindow.hpp"
 
 namespace Slic3r { namespace GUI {
 
 enum PrinterState {
-    OFFLINE,
+    OFFLINE_LAN,
+    OFFLINE_WAN,
     IDLE,
     BUSY,
-    LOCK,
-    IN_LAN
+    ONLINE_LAN, 
+    ONLINE_WAN,
+    IN_LAN, LOCK, OFFLINE
 };
 
 enum PrinterBindState {
@@ -63,6 +66,34 @@ enum PrintFromType {
     FROM_NORMAL,
     FROM_SDCARD_VIEW,
 };
+
+static int get_brightness_value(wxImage image) {
+
+    wxImage grayImage = image.ConvertToGreyscale();
+
+    int width = grayImage.GetWidth();
+    int height = grayImage.GetHeight();
+
+    int totalLuminance = 0;
+    unsigned char alpha;
+    int num_none_transparent = 0;
+    for (int y = 0; y < height; y += 2) {
+
+        for (int x = 0; x < width; x += 2) {
+
+            alpha = image.GetAlpha(x, y);
+            if (alpha != 0) {
+                wxColour pixelColor = grayImage.GetRed(x, y);
+                totalLuminance += pixelColor.Red();
+                num_none_transparent = num_none_transparent + 1;
+            }
+        }
+    }
+    if (totalLuminance <= 0 || num_none_transparent <= 0) {
+        return 0;
+    }
+    return totalLuminance / num_none_transparent;
+}
 
 class Material
 {
@@ -112,6 +143,7 @@ private:
     wxArrayString m_ipAddressValues;
 };
 
+class DeviceObject;
 class MachineObjectPanel : public wxPanel
 {
 private:
@@ -119,6 +151,7 @@ private:
     bool        m_show_edit{false};
     bool        m_show_bind{false};
     bool        m_hover {false};
+    bool        m_press_flag{false};
     bool        m_is_macos_special_version{false};
 
 
@@ -129,13 +162,15 @@ private:
     ScalableBitmap m_edit_name_img;
     ScalableBitmap m_select_unbind_img;
 
-    ScalableBitmap m_printer_status_offline;
+    ScalableBitmap m_printer_status_offline_lan;
+    ScalableBitmap m_printer_status_offline_wan;
     ScalableBitmap m_printer_status_busy;
     ScalableBitmap m_printer_status_idle;
-    ScalableBitmap m_printer_status_lock;
-    ScalableBitmap m_printer_in_lan;
+    ScalableBitmap m_printer_online_lan;
+    ScalableBitmap m_printer_online_wan;
 
     MachineObject *m_info;
+    DeviceObject  *m_devInfo;
 
 protected:
     wxStaticBitmap *m_bitmap_info;
@@ -151,11 +186,17 @@ public:
     
     ~MachineObjectPanel();
 
-    void show_bind_dialog();
     void set_printer_state(PrinterState state);
     void show_printer_bind(bool show, PrinterBindState state);
     void show_edit_printer_name(bool show);
     void update_machine_info(MachineObject *info, bool is_my_devices = false);
+    void update_device_info(DeviceObject *info, bool is_my_devices = false);
+    DeviceObject *device_info();
+
+    void SetHover(bool hover);
+    void SetPressed(bool pressed, bool hit);
+    bool IsPressed() const { return m_press_flag; }
+    
 protected:
     void OnPaint(wxPaintEvent &event);
     void render(wxDC &dc);
@@ -163,10 +204,13 @@ protected:
     void on_mouse_enter(wxMouseEvent &evt);
     void on_mouse_leave(wxMouseEvent &evt);
     void on_mouse_left_up(wxMouseEvent &evt);
+
+private:
+    bool is_wan_offline_lan_unbind(DeviceObject* &obj);
 };
 
-#define SELECT_MACHINE_POPUP_SIZE wxSize(FromDIP(216), FromDIP(364))
-#define SELECT_MACHINE_LIST_SIZE wxSize(FromDIP(212), FromDIP(360))  
+#define SELECT_MACHINE_POPUP_SIZE wxSize(FromDIP(216), FromDIP(674))
+#define SELECT_MACHINE_LIST_SIZE wxSize(FromDIP(212), FromDIP(1920))
 #define SELECT_MACHINE_ITEM_SIZE wxSize(FromDIP(182), FromDIP(35))
 #define SELECT_MACHINE_GREY900 wxColour(38, 46, 48)
 #define SELECT_MACHINE_GREY600 wxColour(144,144,144)
@@ -182,9 +226,33 @@ public:
     MachineObjectPanel *mPanel;
 };
 
+class PinCodePanel : public wxPanel
+{
+public:
+    PinCodePanel(wxWindow* parent,
+        wxWindowID      winid = wxID_ANY,
+        const wxPoint& pos = wxDefaultPosition,
+        const wxSize& size = wxDefaultSize);
+    ~PinCodePanel() {};
+
+    ScalableBitmap       m_bitmap;
+    bool           m_hover{false};
+
+    void OnPaint(wxPaintEvent& event);
+    void render(wxDC& dc);
+    void doRender(wxDC& dc);
+
+    void on_mouse_enter(wxMouseEvent& evt);
+    void on_mouse_leave(wxMouseEvent& evt);
+    void on_mouse_left_up(wxMouseEvent& evt);
+};
+
 
 class ThumbnailPanel;
-
+class DeviceObject;
+class DeviceListUpdateEvent;
+class MachineListUpdateEvent;
+#ifdef __WINDOWS__
 class SelectMachinePopup : public PopupWindow
 {
 public:
@@ -198,14 +266,14 @@ public:
     virtual bool Show(bool show = true) wxOVERRIDE;
 
     void update_machine_list(wxCommandEvent &event);
-    void start_ssdp(bool on_off);
     bool was_dismiss() { return m_dismiss; }
-
+public:
+#ifdef __APPLE__
+    static bool                       m_wan_bind_enable;
+#endif
 private:
     int                               m_my_devices_count{0};
     int                               m_other_devices_count{0};
-    wxWindow*                         m_placeholder_panel{nullptr};
-    wxHyperlinkCtrl*                  m_hyperlink{nullptr};
     wxBoxSizer *                      m_sizer_body{nullptr};
     wxBoxSizer *                      m_sizer_my_devices{nullptr};
     wxBoxSizer *                      m_sizer_other_devices{nullptr};
@@ -217,23 +285,92 @@ private:
     std::vector<MachinePanel*>        m_user_list_machine_panel;
     std::vector<MachinePanel*>        m_other_list_machine_panel;
     boost::thread*                    get_print_info_thread{ nullptr };
-    std::shared_ptr<int>              m_token = std::make_shared<int>(0);
-    std::string                       m_print_info = "";
+    std::string                       m_print_info;
     bool                              m_dismiss { false };
-
-    std::map<std::string, MachineObject*> m_bind_machine_list; 
-    std::map<std::string, MachineObject*> m_free_machine_list;
+    bool                              m_updateConnect { false };
+    
+    std::map<std::string, DeviceObject *> m_bind_machine_list;
+    std::map<std::string, DeviceObject*>  m_free_device_list;
 
 private:
     void OnLeftUp(wxMouseEvent &event);
+    void on_dclick_up(wxMouseEvent &event);
     void on_timer(wxTimerEvent &event);
 
-	void      update_other_devices();
+    void      update_other_devices();
     void      update_user_devices();
     bool      search_for_printer(MachineObject* obj);
     void      on_dissmiss_win(wxCommandEvent &event);
     wxWindow *create_title_panel(wxString text);
+    void      on_connect_exit(ComConnectionExitEvent &event);
+    void      on_connect_ready(ComConnectionReadyEvent &event);
+    void      on_devList_Updated(DeviceListUpdateEvent &event);
 };
+#else if __APPLE__
+class SelectMachinePopup : public FFPopupWindow
+{
+public:
+    SelectMachinePopup(wxWindow *parent);
+    ~SelectMachinePopup();
+
+    // PopupWindow virtual methods are all overridden to log them
+    virtual void Popup(wxWindow *focus = NULL) wxOVERRIDE;
+    void OnDismiss() override;
+    //virtual bool ProcessLeftDown(wxMouseEvent &event) wxOVERRIDE;
+    //virtual bool Show(bool show = true) wxOVERRIDE;
+
+    void update_machine_list(wxCommandEvent &event);
+    bool was_dismiss() { return m_dismiss; }
+    
+private:
+    void ProcessLeftDown(const wxPoint& pnt) override;
+    void ProcessLeftUp(const wxPoint& pnt) override;
+    void ProcessMotion(const wxPoint& pnt) override;
+    bool ShowDevList(bool show = true);
+public:
+#ifdef __APPLE__
+    static bool                       m_wan_bind_enable;
+#endif
+private:
+    int                               m_my_devices_count{0};
+    int                               m_other_devices_count{0};
+    wxBoxSizer *                      m_sizer_body{nullptr};
+    wxBoxSizer *                      m_sizer_my_devices{nullptr};
+    wxBoxSizer *                      m_sizer_other_devices{nullptr};
+    wxBoxSizer *                      m_sizer_search_bar{nullptr};
+    wxSearchCtrl*                     m_search_bar{nullptr};
+    wxScrolledWindow *                m_scrolledWindow{nullptr};
+    wxWindow *                        m_panel_body{nullptr};
+    wxTimer *                         m_refresh_timer{nullptr};
+    std::vector<MachinePanel*>        m_user_list_machine_panel;
+    std::vector<MachinePanel*>        m_other_list_machine_panel;
+    boost::thread*                    get_print_info_thread{ nullptr };
+    std::string                       m_print_info;
+    bool                              m_dismiss { false };
+    bool                              m_updateConnect { false };
+#if 0
+    bool m_left_down{false};
+    wxPoint m_mouse_pos;
+    wxPoint m_scroll_pos_start;
+#endif
+    std::map<std::string, DeviceObject *> m_bind_machine_list;
+    std::map<std::string, DeviceObject*>  m_free_device_list;
+
+private:
+    void OnLeftUp(wxMouseEvent &event);
+    void on_dclick_up(wxMouseEvent &event);
+    void on_timer(wxTimerEvent &event);
+
+	void      update_other_devices();
+    void      update_user_devices();    
+    bool      search_for_printer(MachineObject* obj);
+    void      on_dissmiss_win(wxCommandEvent &event);
+    wxWindow *create_title_panel(wxString text);
+    void      on_connect_exit(ComConnectionExitEvent &event);
+    void      on_connect_ready(ComConnectionReadyEvent &event);
+    void      on_devList_Updated(DeviceListUpdateEvent &event);
+};
+#endif
 
 #define SELECT_MACHINE_DIALOG_BUTTON_SIZE wxSize(FromDIP(68), FromDIP(23))
 #define SELECT_MACHINE_DIALOG_SIMBOOK_SIZE wxSize(FromDIP(370), FromDIP(64))
@@ -288,7 +425,7 @@ private:
     int                                 m_print_plate_idx{0};
     int                                 m_print_plate_total{0};
     int                                 m_timeout_count{0};
-    int                                 m_print_error_code;
+    int                                 m_print_error_code{0};
     bool                                m_is_in_sending_mode{ false };
     bool                                m_ams_mapping_res{ false };
     bool                                m_ams_mapping_valid{ false };
@@ -393,6 +530,12 @@ protected:
     wxStaticBitmap *                    img_use_ams_tip{nullptr};
     wxStaticBitmap *                    img_ams_backup{nullptr};
     ScalableBitmap *                    enable_ams{nullptr};
+    ThumbnailData                       m_cur_input_thumbnail_data;
+    ThumbnailData                       m_cur_no_light_thumbnail_data;
+    ThumbnailData                       m_preview_thumbnail_data;//when ams map change
+    std::vector<wxColour>               m_preview_colors_in_thumbnail;
+    std::vector<wxColour>               m_cur_colors_in_thumbnail;
+    std::vector<bool>                   m_edge_pixels;
 
 public:
     SelectMachineDialog(Plater *plater = nullptr);
@@ -431,7 +574,15 @@ public:
     void on_set_finish_mapping(wxCommandEvent& evt);
     void on_print_job_cancel(wxCommandEvent& evt);
     void set_default();
-    void set_default_normal();
+    void reset_and_sync_ams_list();
+    void clone_thumbnail_data();
+    void record_edge_pixels_data();
+    wxColour adjust_color_for_render(const wxColour& color);
+    void final_deal_edge_pixels_data(ThumbnailData& data);
+    void updata_thumbnail_data_after_connected_printer();
+    void unify_deal_thumbnail_data(ThumbnailData &input_data, ThumbnailData &no_light_data);
+    void change_default_normal(int old_filament_id, wxColour temp_ams_color);
+    void set_default_normal(const ThumbnailData&);
     void set_default_from_sdcard();
     void update_page_turn_state(bool show);
     void on_timer(wxTimerEvent& event);
@@ -515,12 +666,12 @@ public:
     void OnPaint(wxPaintEvent &event);
     void PaintBackground(wxDC &dc);
     void OnEraseBackground(wxEraseEvent &event);
-    void set_thumbnail(wxImage img);
+    void set_thumbnail(wxImage &img);
     void render(wxDC &dc);
 private:
     ScalableBitmap m_background_bitmap;
     wxBitmap bitmap_with_background;
-    
+    int m_brightness_value{ -1 };
 };
 
 }} // namespace Slic3r::GUI

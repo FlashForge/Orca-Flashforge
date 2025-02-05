@@ -30,6 +30,10 @@ src/OrcaSlicer-doc/
 **/process_full/
 **/machine_full/
 **/filament_full/
+/usr/
+/deps/
 /deps/DL_CACHE/
 /deps/DL_CACHE
+**/.flatpak-builder/
 resources/profiles/user/default
+*.code-workspace

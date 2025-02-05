@@ -136,7 +136,8 @@ TEST_CASE("SupportMaterial: forced support is generated", "[SupportMaterial]")
 
     std::vector<coordf_t> contact_z = {1.9};
     std::vector<coordf_t> top_z = {1.1};
-    print.default_object_config.support_material_enforce_layers = 100;
+    //modified by xlm
+    //print.default_object_config.support_material_enforce_layers = 100;
     print.default_object_config.support_material = 0;
     print.default_object_config.layer_height = 0.2;
     print.default_object_config.set_deserialize("first_layer_height", "0.3");

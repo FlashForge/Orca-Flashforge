@@ -8,7 +8,8 @@
 #include <boost/log/trivial.hpp>
 #include <boost/format.hpp>
 #include <mutex>
-
+    // for minidump
+#include <DbgHelp.h> 
 static std::string g_log_folder;
 static std::atomic<int> g_crash_log_count = 0;
 static std::mutex g_dump_mutex;
@@ -46,6 +47,41 @@ CBaseException::~CBaseException(void)
 	}
 }
 
+
+// generate the minidump for windows system
+void make_minidump(EXCEPTION_POINTERS *e)
+{
+    auto hDbgHelp = LoadLibraryA("dbghelp");
+    if (hDbgHelp == nullptr)
+        return;
+
+    auto pMiniDumpWriteDump = (decltype(&MiniDumpWriteDump)) GetProcAddress(hDbgHelp, "MiniDumpWriteDump");
+    if (pMiniDumpWriteDump == nullptr)
+        return;
+
+    char name[MAX_PATH];
+    {
+        auto       nameEnd = name + GetModuleFileNameA(GetModuleHandleA(0), name, MAX_PATH);
+        SYSTEMTIME t;
+        GetSystemTime(&t);
+        wsprintfA(nameEnd - strlen(".exe"), "_%4d%02d%02d_%02d%02d%02d.dmp", t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond);
+    }
+
+    auto hFile = CreateFileA(name, GENERIC_WRITE, FILE_SHARE_READ, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+    if (hFile == INVALID_HANDLE_VALUE)
+        return;
+
+    MINIDUMP_EXCEPTION_INFORMATION exception_info;
+    exception_info.ExceptionPointers = e;
+    exception_info.ThreadId          = GetCurrentThreadId();
+    exception_info.ClientPointers    = FALSE;
+
+    auto dumped = pMiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), hFile,
+                                     MINIDUMP_TYPE(MiniDumpWithIndirectlyReferencedMemory | MiniDumpScanMemory),
+                                     e ? &exception_info : nullptr, nullptr, nullptr);
+
+    CloseHandle(hFile);
+}
 
 //BBS set crash log folder
 void CBaseException::set_log_folder(std::string log_folder)
@@ -275,6 +311,7 @@ LONG WINAPI CBaseException::UnhandledExceptionFilter(PEXCEPTION_POINTERS pExcept
     g_dump_mutex.lock();
 	CBaseException base(GetCurrentProcess(), GetCurrentProcessId(), NULL, pExceptionInfo);
 	base.ShowExceptionInformation();
+    make_minidump(pExceptionInfo);
     g_dump_mutex.unlock();
 
 	return EXCEPTION_CONTINUE_SEARCH;

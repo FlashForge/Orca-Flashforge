@@ -1,8 +1,3 @@
-///|/ Copyright (c) Prusa Research 2016 - 2023 Vojtěch Bubník @bubnikv, Lukáš Hejl @hejllukas, Oleksandra Iushchenko @YuSanka, Lukáš Matěna @lukasmatena
-///|/ Copyright (c) SuperSlicer 2023 Remi Durand @supermerill
-///|/
-///|/ PrusaSlicer is released under the terms of the AGPLv3 or higher
-///|/
 #include <iostream>
 #include <memory.h>
 #include <cstring>
@@ -156,7 +151,8 @@ void PressureEqualizer::process_layer(const std::string &gcode)
 long PressureEqualizer::advance_segment_beyond_small_gap(const long idx_orig)
 {
     // this should only be run on the last extruding line before a gap
-    assert(m_gcode_lines[idx_orig].extruding());
+    // assert(m_gcode_lines[idx_cur_pos].extruding());
+    //assert(m_gcode_lines[idx_cur_pos].extruding());
     double distance_traveled = 0.0;
     // start at beginning of gap, advance till extrusion found or gap too big
     for (auto idx_cur_pos = idx_orig + 1; idx_cur_pos < m_gcode_lines.size(); idx_cur_pos++) {
@@ -774,6 +770,7 @@ void PressureEqualizer::push_line_to_output(const size_t line_idx, float new_fee
     // Orca: sanity check, 1 mm/s is the minimum feedrate.
     if (new_feedrate < 60)
         new_feedrate = 60;
+    new_feedrate = std::round(new_feedrate);
     const GCodeLine &line = m_gcode_lines[line_idx];
     if (line_idx > 0 && output_buffer_length > 0) {
         const std::string prev_line_str = std::string(output_buffer.begin() + int(this->output_buffer_prev_length),

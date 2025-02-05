@@ -3,6 +3,7 @@
 #include "slic3r/GUI/Plater.hpp"
 #include "slic3r/GUI/GUI.hpp"
 #include "slic3r/GUI/GUI_App.hpp"
+#include "slic3r/GUI/FlashForge/MultiComMgr.hpp"
 
 namespace Slic3r {
 namespace GUI {
@@ -23,7 +24,20 @@ BindJob::BindJob(std::string dev_id, std::string dev_ip, std::string sec_link, s
     m_sec_link(sec_link),
     m_ssdp_version(ssdp_version)
 {
-    ;
+}
+
+BindJob::BindJob(const std::string&                 ip,
+                 unsigned short                     port,
+                 const std::string&                 serialNumber,
+                 unsigned short                     pid,
+                 const std::string&                 name)
+    :
+    m_ip(ip),
+    m_port(port),
+    m_serial_number(serialNumber),
+    m_pid(pid),
+    m_name(name)
+{
 }
 
 void BindJob::on_success(std::function<void()> success)
@@ -40,78 +54,104 @@ void BindJob::update_status(Ctl &ctl, int st, const std::string &msg)
     wxPostEvent(m_event_handle, event);
 }
 
+void BindJob::process()
+{
+    if (m_ip.empty() || 0 == m_port || m_serial_number.empty() || 0 == m_pid) {
+        BOOST_LOG_TRIVIAL(error) << "BindJob: Invalid parameter: ip(" << m_ip
+            << "), port(" << m_port
+            << "), serial_number(" << m_serial_number
+            << "), pid(" << m_pid << ")";
+        wxCommandEvent event(EVT_BIND_MACHINE_FAIL);
+        event.SetInt(-1);
+        event.SetEventObject(m_event_handle);
+        wxPostEvent(m_event_handle, event);
+        return;
+    }
+
+    ComErrno result = MultiComMgr::inst()->bindWanDev(m_ip, m_port, m_serial_number, m_pid, m_name);
+    if (result != COM_OK) {
+        wxCommandEvent event(EVT_BIND_MACHINE_FAIL);
+        event.SetInt(result);
+        event.SetEventObject(m_event_handle);
+        wxPostEvent(m_event_handle, event);
+    } else {
+        wxCommandEvent event(EVT_BIND_MACHINE_SUCCESS);
+        event.SetEventObject(m_event_handle);
+        wxPostEvent(m_event_handle, event);
+    }
+}
+
 void BindJob::process(Ctl &ctl)
 {
-    int             result_code = 0;
-    std::string     result_info;
+    int         result_code = 0;
+    std::string result_info;
 
     /* display info */
-    auto msg = waiting_auth_str;
-    int curr_percent = 0;
+    auto msg          = waiting_auth_str;
+    int  curr_percent = 0;
 
     NetworkAgent* m_agent = wxGetApp().getAgent();
-    if (!m_agent) { return; }
+    if (!m_agent) {
+        return;
+    }
 
     // get timezone
     wxDateTime::TimeZone tz(wxDateTime::Local);
-    long offset = tz.GetOffset();
-    std::string timezone = get_timezone_utc_hm(offset);
-    
+    long                 offset   = tz.GetOffset();
+    std::string          timezone = get_timezone_utc_hm(offset);
+
     m_agent->track_update_property("ssdp_version", m_ssdp_version, "string");
     int result = m_agent->bind(m_dev_ip, m_dev_id, m_sec_link, timezone, m_improved,
-        [this, &ctl, &curr_percent, &msg, &result_code, &result_info](int stage, int code, std::string info) {
+                               [this, &ctl, &curr_percent, &msg, &result_code, &result_info](int stage, int code, std::string info) {
+                                   result_code = code;
+                                   result_info = info;
 
-            result_code = code;
-            result_info = info;
+                                   if (stage == BBL::BindJobStage::LoginStageConnect) {
+                                       curr_percent = 15;
+                                       msg          = _u8L("Logging in");
+                                   } else if (stage == BBL::BindJobStage::LoginStageLogin) {
+                                       curr_percent = 30;
+                                       msg          = _u8L("Logging in");
+                                   } else if (stage == BBL::BindJobStage::LoginStageWaitForLogin) {
+                                       curr_percent = 45;
+                                       msg          = _u8L("Logging in");
+                                   } else if (stage == BBL::BindJobStage::LoginStageGetIdentify) {
+                                       curr_percent = 60;
+                                       msg          = _u8L("Logging in");
+                                   } else if (stage == BBL::BindJobStage::LoginStageWaitAuth) {
+                                       curr_percent = 80;
+                                       msg          = _u8L("Logging in");
+                                   } else if (stage == BBL::BindJobStage::LoginStageFinished) {
+                                       curr_percent = 100;
+                                       msg          = _u8L("Logging in");
+                                   } else {
+                                       msg = _u8L("Logging in");
+                                   }
 
-            if (stage == BBL::BindJobStage::LoginStageConnect) {
-                curr_percent = 15;
-                msg = _u8L("Logging in");
-            } else if (stage == BBL::BindJobStage::LoginStageLogin) {
-                curr_percent = 30;
-                msg = _u8L("Logging in");
-            } else if (stage == BBL::BindJobStage::LoginStageWaitForLogin) {
-                curr_percent = 45;
-                msg = _u8L("Logging in");
-            } else if (stage == BBL::BindJobStage::LoginStageGetIdentify) {
-                curr_percent = 60;
-                msg = _u8L("Logging in");
-            } else if (stage == BBL::BindJobStage::LoginStageWaitAuth) {
-                curr_percent = 80;
-                msg = _u8L("Logging in");
-            } else if (stage == BBL::BindJobStage::LoginStageFinished) {
-                curr_percent = 100;
-                msg = _u8L("Logging in");
-            } else {
-                msg = _u8L("Logging in");
-            }
-
-            if (code != 0) {
-                msg = _u8L("Login failed");
-                if (code == BAMBU_NETWORK_ERR_TIMEOUT) {
-                    msg += _u8L("Please check the printer network connection.");
-                }
-            }
-            update_status(ctl, curr_percent, msg);
-        }
-    );
+                                   if (code != 0) {
+                                       msg = _u8L("Login failed");
+                                       if (code == BAMBU_NETWORK_ERR_TIMEOUT) {
+                                           msg += _u8L("Please check the printer network connection.");
+                                       }
+                                   }
+                                   update_status(ctl, curr_percent, msg);
+                               });
 
     if (result < 0) {
         BOOST_LOG_TRIVIAL(trace) << "login: result = " << result;
 
-        if (result_code == BAMBU_NETWORK_ERR_BIND_ECODE_LOGIN_REPORT_FAILED || result_code == BAMBU_NETWORK_ERR_BIND_GET_PRINTER_TICKET_TIMEOUT) {
-            int         error_code;
+        if (result_code == BAMBU_NETWORK_ERR_BIND_ECODE_LOGIN_REPORT_FAILED ||
+            result_code == BAMBU_NETWORK_ERR_BIND_GET_PRINTER_TICKET_TIMEOUT) {
+            int error_code;
 
-            try
-            {
-                error_code = stoi(result_info);
+            try {
+                error_code  = stoi(result_info);
                 result_info = wxGetApp().get_hms_query()->query_print_error_msg(error_code).ToStdString();
-            }
-            catch (...) {
+            } catch (...) {
                 ;
             }
         }
-        
+
         post_fail_event(result_code, result_info);
         return;
     }
@@ -124,9 +164,9 @@ void BindJob::process(Ctl &ctl)
     }
     dev->update_user_machine_list_info();
 
-    wxCommandEvent event(EVT_BIND_MACHINE_SUCCESS);
-    event.SetEventObject(m_event_handle);
-    wxPostEvent(m_event_handle, event);
+     wxCommandEvent event(EVT_BIND_MACHINE_SUCCESS);
+     event.SetEventObject(m_event_handle);
+     wxPostEvent(m_event_handle, event);
     return;
 }
 

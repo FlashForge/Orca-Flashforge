@@ -34,6 +34,11 @@ struct Calib_Params
     CalibMode mode;
 };
 
+enum FlowRatioCalibrationType {
+    COMPLETE_CALIBRATION = 0,
+    FINE_CALIBRATION,
+};
+
 class X1CCalibInfos
 {
 public:
@@ -78,6 +83,7 @@ struct PrinterCaliInfo
     bool                        cali_finished = true;
     float                       cache_flow_ratio;
     std::vector<CaliPresetInfo> selected_presets;
+    FlowRatioCalibrationType    cache_flow_rate_calibration_type = FlowRatioCalibrationType::COMPLETE_CALIBRATION;
 };
 
 class PACalibResult
@@ -145,11 +151,11 @@ protected:
 
     void delta_scale_bed_ext(BoundingBoxf &bed_ext) const { bed_ext.scale(1.0f / 1.41421f); }
 
-    std::string move_to(Vec2d pt, GCodeWriter &writer, std::string comment = std::string());
+    std::string move_to(Vec2d pt, GCodeWriter &writer, std::string comment = std::string(), double z = 0, double layer_height = -1);
     double e_per_mm(double line_width, double layer_height, float nozzle_diameter, float filament_diameter, float print_flow_ratio) const;
     double speed_adjust(int speed) const { return speed * 60; };
 
-    std::string convert_number_to_string(double num) const;
+    std::string convert_number_to_string(double num, unsigned precision = 0) const;
     double      number_spacing() const { return m_digit_segment_len + m_digit_gap_len; };
     std::string draw_digit(double                              startx,
                            double                              starty,
@@ -182,6 +188,7 @@ protected:
     const double                 m_digit_segment_len{2};
     const double                 m_digit_gap_len{1};
     const std::string::size_type m_max_number_len{5};
+    std::string::size_type       m_number_len{m_max_number_len}; /* Current length of number labels */
 };
 
 class CalibPressureAdvanceLine : public CalibPressureAdvance
@@ -249,6 +256,7 @@ public:
     double print_size_x() const { return object_size_x() + pattern_shift(); };
     double print_size_y() const { return object_size_y(); };
     double max_layer_z() const { return height_first_layer() + ((m_num_layers - 1) * height_layer()); };
+    double flow_val() const;
 
     void generate_custom_gcodes(const DynamicPrintConfig &config, bool is_bbl_machine, Model &model, const Vec3d &origin);
 
@@ -268,6 +276,7 @@ private:
     void _refresh_writer(bool is_bbl_machine, const Model &model, const Vec3d &origin);
 
     double    height_first_layer() const { return m_config.option<ConfigOptionFloat>("initial_layer_print_height")->value; };
+    double    height_z_offset() const { return m_config.option<ConfigOptionFloat>("z_offset")->value; };
     double    height_layer() const { return m_config.option<ConfigOptionFloat>("layer_height")->value; };
     const int get_num_patterns() const { return std::ceil((m_params.end - m_params.start) / m_params.step + 1); }
 
@@ -289,6 +298,7 @@ private:
     double glyph_length_x() const;
     double glyph_tab_max_x() const;
     double max_numbering_height() const;
+    size_t max_numbering_length() const;
 
     double pattern_shift() const;
 

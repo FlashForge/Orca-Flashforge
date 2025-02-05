@@ -333,10 +333,7 @@ void NetworkTestDialog::on_close(wxCloseEvent& event)
 }
 
 
-wxString NetworkTestDialog::get_studio_version()
-{
-	return wxString(SoftFever_VERSION);
-}
+wxString NetworkTestDialog::get_studio_version() { return wxString(SLIC3R_VERSION); }
 
 void NetworkTestDialog::set_default()
 {

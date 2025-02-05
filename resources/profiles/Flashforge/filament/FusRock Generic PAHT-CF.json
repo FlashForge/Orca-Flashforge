@@ -1,5 +1,7 @@
 {
   "type": "filament",
+  "inherits": "Flashforge Generic PETG",
+  "name": "FusRock Generic PAHT-CF",
   "filament_id": "GFB99",
   "setting_id": "GFSA04",
   "instantiation": "true",
@@ -20,11 +22,10 @@
     "1"
   ],
   "compatible_printers": [
-    "Flashforge Adventurer 5M 0.4 Nozzle",
-    "Flashforge Adventurer 5M 0.6 Nozzle",
-    "Flashforge Adventurer 5M Pro 0.4 Nozzle",
-    "Flashforge Adventurer 5M Pro 0.6 Nozzle",
-    "Flashforge Guider 3 Ultra 0.4 Nozzle"
+    "Flashforge Guider 3 Ultra 0.4 Nozzle",
+    "Flashforge Guider 3 Ultra 0.6 Nozzle",
+    "Flashforge Guider 3 Ultra 0.8 Nozzle",
+    "Flashforge Guider 2s 0.4 nozzle"
   ],
   "compatible_printers_condition": "",
   "compatible_prints": [],
@@ -203,8 +204,6 @@
   "hot_plate_temp_initial_layer": [
     "80"
   ],
-  "inherits": "Flashforge Generic PETG",
-  "name": "FusRock Generic PAHT-CF",
   "nozzle_temperature": [
     "295"
   ],

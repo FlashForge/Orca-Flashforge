@@ -121,7 +121,9 @@ namespace GUI {
 
 void RemovableDriveManager::register_window_osx()
 {
-    assert(m_impl_osx == nullptr);
+    //assert(m_impl_osx == nullptr);
+    if(m_impl_osx)
+        return;
     m_impl_osx = [[RemovableDriveManagerMM alloc] init];
 	if (m_impl_osx)
 		[(id)m_impl_osx add_unmount_observer];

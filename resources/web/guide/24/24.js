@@ -427,7 +427,7 @@ function CancelSelect()
 
 function ConfirmSelect()
 {
-	let nChoose=OnExitFilter();
+	let nChoose=OnExit();
 	
 	if(nChoose>0)
     {

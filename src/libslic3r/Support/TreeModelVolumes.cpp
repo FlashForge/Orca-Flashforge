@@ -1,7 +1,3 @@
-///|/ Copyright (c) Prusa Research 2022 - 2023 Vojtěch Bubník @bubnikv, Pavel Mikuš @Godrak
-///|/
-///|/ PrusaSlicer is released under the terms of the AGPLv3 or higher
-///|/
 // Tree supports by Thomas Rahm, losely based on Tree Supports by CuraEngine.
 // Original source of Thomas Rahm's tree supports:
 // https://github.com/ThomasRahm/CuraEngine
@@ -30,7 +26,7 @@
 #include <tbb/parallel_for.h>
 #include <tbb/task_group.h>
 
-namespace Slic3r::FFFTreeSupport
+namespace Slic3r::TreeSupport3D
 {
 
 using namespace std::literals;
@@ -875,4 +871,4 @@ std::vector<std::pair<TreeModelVolumes::RadiusLayerPair, std::reference_wrapper<
     return out;
 }
 
-} // namespace Slic3r::FFFTreeSupport
+} // namespace Slic3r::TreeSupport3D

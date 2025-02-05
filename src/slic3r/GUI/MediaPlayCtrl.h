@@ -42,6 +42,8 @@ public:
 
     void msw_rescale();
 
+    void jump_to_play();
+
 protected:
     void onStateChanged(wxMediaEvent & event);
 
@@ -65,13 +67,19 @@ private:
     static bool get_stream_url(std::string *url = nullptr);
 
 private:
-    static constexpr wxMediaState MEDIASTATE_IDLE = (wxMediaState) 3;
-    static constexpr wxMediaState MEDIASTATE_INITIALIZING = (wxMediaState) 4;
-    static constexpr wxMediaState MEDIASTATE_LOADING = (wxMediaState) 5;
-    static constexpr wxMediaState MEDIASTATE_BUFFERING = (wxMediaState) 6;
+    // static constexpr wxMediaState MEDIASTATE_IDLE = (wxMediaState) 3;
+    // static constexpr wxMediaState MEDIASTATE_INITIALIZING = (wxMediaState) 4;
+    // static constexpr wxMediaState MEDIASTATE_LOADING = (wxMediaState) 5;
+    // static constexpr wxMediaState MEDIASTATE_BUFFERING = (wxMediaState) 6;
+
+    static constexpr int MEDIASTATE_IDLE = (int) 3;
+    static constexpr int MEDIASTATE_INITIALIZING = (int) 4;
+    static constexpr int MEDIASTATE_LOADING = (int) 5;
+    static constexpr int MEDIASTATE_BUFFERING = (int) 6;
 
     wxMediaCtrl2 * m_media_ctrl;
-    wxMediaState m_last_state = MEDIASTATE_IDLE;
+    // wxMediaState m_last_state = MEDIASTATE_IDLE;
+    int m_last_state = MEDIASTATE_IDLE;
     std::string m_machine;
     int m_lan_proto = 0;
     std::string m_lan_ip;
@@ -95,11 +103,13 @@ private:
     bool m_user_triggered = false;
     int m_failed_retry = 0;
     int m_failed_code = 0;
+    std::vector<double> m_stat;
     std::set<int> m_last_failed_codes;
     wxDateTime    m_last_user_play;
     wxDateTime    m_next_retry;
 
     ::Button *m_button_play;
+    ::Label * m_label_stat;
     ::Label * m_label_status;
 };
 

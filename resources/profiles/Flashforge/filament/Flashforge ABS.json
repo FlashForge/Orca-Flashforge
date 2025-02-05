@@ -4,7 +4,7 @@
   "setting_id": "GFSA04",
   "name": "Flashforge ABS",
   "from": "system",
-  "instantiation": "true",
+  "instantiation": "false",
   "inherits": "fdm_filament_abs",
   "filament_flow_ratio": [
     "1.09"
