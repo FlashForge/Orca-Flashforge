@@ -23,11 +23,15 @@
 #include "GCode/ExtrusionProcessor.hpp"
 
 #include "GCode/PressureEqualizer.hpp"
+#include "GCode/SmallAreaInfillFlowCompensator.hpp"
+// ORCA: post processor below used for Dynamic Pressure advance
+#include "GCode/AdaptivePAProcessor.hpp"
 
 #include <memory>
 #include <map>
 #include <set>
 #include <string>
+#include <cfloat>
 
 namespace Slic3r {
 
@@ -41,25 +45,29 @@ class ConstPrintObjectPtrsAdaptor;
 class OozePrevention {
 public:
     bool enable;
-    Points standby_points;
 
     OozePrevention() : enable(false) {}
     std::string pre_toolchange(GCode &gcodegen);
     std::string post_toolchange(GCode &gcodegen);
 
 private:
-    int _get_temp(GCode &gcodegen);
+    int _get_temp(const GCode &gcodegen) const;
 };
 
 class Wipe {
 public:
     bool enable;
     Polyline path;
+    struct RetractionValues{
+        double retractLengthBeforeWipe;
+        double retractLengthDuringWipe;
+    };
 
     Wipe() : enable(false) {}
     bool has_path() const { return !this->path.points.empty(); }
     void reset_path() { this->path = Polyline(); }
-    std::string wipe(GCode &gcodegen, bool toolchange = false, bool is_last = false);
+    std::string wipe(GCode &gcodegen, double length, bool toolchange = false, bool is_last = false);
+    RetractionValues calculateWipeRetractionLengths(GCode& gcodegen, bool toolchange);
 };
 
 class WipeTowerIntegration {
@@ -152,6 +160,7 @@ struct LayerResult {
 };
 
 class GCode {
+
 public:
     GCode() :
     	m_origin(Vec2d::Zero()),
@@ -212,12 +221,13 @@ public:
     void            set_layer_count(unsigned int value) { m_layer_count = value; }
     void            apply_print_config(const PrintConfig &print_config);
 
-    std::string     travel_to(const Point& point, ExtrusionRole role, std::string comment);
+    std::string     travel_to(const Point& point, ExtrusionRole role, std::string comment, double z = DBL_MAX);
     bool            needs_retraction(const Polyline& travel, ExtrusionRole role, LiftType& lift_type);
     std::string     retract(bool toolchange = false, bool is_last_retraction = false, LiftType lift_type = LiftType::NormalLift);
     std::string     unretract() { return m_writer.unlift() + m_writer.unretract(); }
-    std::string     set_extruder(unsigned int extruder_id, double print_z);
+    std::string     set_extruder(unsigned int extruder_id, double print_z, bool by_object=false);
     bool is_BBL_Printer();
+    bool is_flashforge_printer();
 
     // SoftFever
     std::string set_object_info(Print* print);
@@ -305,6 +315,13 @@ private:
     static std::vector<LayerToPrint>        		                   collect_layers_to_print(const PrintObject &object);
     static std::vector<std::pair<coordf_t, std::vector<LayerToPrint>>> collect_layers_to_print(const Print &print);
 
+    std::string generate_skirt(const Print &print,
+        const ExtrusionEntityCollection &skirt,
+        const Point& offset,
+        const LayerTools &layer_tools,
+        const Layer& layer,
+        unsigned int extruder_id);
+
     LayerResult process_layer(
         const Print                     &print,
         // Set of object & print layers of the same PrintObject and with the same print_z.
@@ -348,10 +365,27 @@ private:
     std::string     preamble();
     // BBS
     std::string     change_layer(coordf_t print_z);
-    std::string     extrude_entity(const ExtrusionEntity &entity, std::string description = "", double speed = -1.);
-    std::string     extrude_loop(ExtrusionLoop loop, std::string description, double speed = -1.);
+    // Orca: pass the complete collection of region perimeters to the extrude loop to check whether the wipe before external loop
+    // should be executed
+    std::string     extrude_entity(const ExtrusionEntity &entity, std::string description = "", double speed = -1., const ExtrusionEntitiesPtr& region_perimeters = ExtrusionEntitiesPtr());
+    // Orca: pass the complete collection of region perimeters to the extrude loop to check whether the wipe before external loop
+    // should be executed
+    std::string     extrude_loop(ExtrusionLoop loop, std::string description, double speed = -1., const ExtrusionEntitiesPtr& region_perimeters = ExtrusionEntitiesPtr());
     std::string     extrude_multi_path(ExtrusionMultiPath multipath, std::string description = "", double speed = -1.);
     std::string     extrude_path(ExtrusionPath path, std::string description = "", double speed = -1.);
+    
+    // Orca: Adaptive PA variables
+    // Used for adaptive PA when extruding paths with multiple, varying flow segments.
+    // This contains the sum of the mm3_per_mm values weighted by the length of each path segment.
+    // The m_multi_flow_segment_path_pa_set constrains the PA change request to the first extrusion segment.
+    // It sets the mm3_mm value for the adaptive PA post processor to be the average of that path
+    // as calculated and stored in the m_multi_segment_path_average_mm3_per_mm value
+    double          m_multi_flow_segment_path_average_mm3_per_mm = 0;
+    bool            m_multi_flow_segment_path_pa_set = false;
+    // Adaptive PA last set flow to enable issuing of PA change commands when adaptive PA for overhangs
+    // is enabled
+    double          m_last_mm3_mm = 0;
+    // Orca: Adaptive PA code segment end
 
     // Extruding multiple objects with soluble / non-soluble / combined supports
     // on a multi-material printer, trying to minimize tool switches.
@@ -518,6 +552,15 @@ private:
     double                              m_last_mm3_per_mm;
 #endif // ENABLE_GCODE_VIEWER_DATA_CHECKING
 
+    // Always check gcode placeholders when building in debug mode.
+#if !defined(NDEBUG)
+#define ORCA_CHECK_GCODE_PLACEHOLDERS 1
+#endif
+    
+#if ORCA_CHECK_GCODE_PLACEHOLDERS
+    std::map<std::string, std::vector<std::string>> m_placeholder_error_messages;
+#endif
+
     Point                               m_last_pos;
     bool                                m_last_pos_defined;
 
@@ -525,9 +568,13 @@ private:
     std::unique_ptr<SpiralVase>         m_spiral_vase;
 
     std::unique_ptr<PressureEqualizer>  m_pressure_equalizer;
+    
+    std::unique_ptr<AdaptivePAProcessor>      m_pa_processor;
 
     std::unique_ptr<WipeTowerIntegration> m_wipe_tower;
 
+    std::unique_ptr<SmallAreaInfillFlowCompensator> m_small_area_infill_flow_compensator;
+    
     // Heights (print_z) at which the skirt has already been extruded.
     std::vector<coordf_t>               m_skirt_done;
     // Has the brim been extruded already? Brim is being extruded only for the first object of a multi-object print.
@@ -555,10 +602,12 @@ private:
     bool m_need_change_layer_lift_z = false;
     int m_start_gcode_filament = -1;
 
+    std::set<unsigned int>                  m_initial_layer_extruders;
     // BBS
     int get_bed_temperature(const int extruder_id, const bool is_first_layer, const BedType bed_type) const;
 
     std::string _extrude(const ExtrusionPath &path, std::string description = "", double speed = -1);
+    double get_overhang_degree_corr_speed(float speed, double path_degree);
     void print_machine_envelope(GCodeOutputStream &file, Print &print);
     void _print_first_layer_bed_temperature(GCodeOutputStream &file, Print &print, const std::string &gcode, unsigned int first_printing_extruder_id, bool wait);
     void _print_first_layer_extruder_temperatures(GCodeOutputStream &file, Print &print, const std::string &gcode, unsigned int first_printing_extruder_id, bool wait);
@@ -589,6 +638,7 @@ private:
     friend class WipeTowerIntegration;
     friend class PressureEqualizer;
     friend class Print;
+    friend class SmallAreaInfillFlowCompensator;
 };
 
 std::vector<const PrintInstance*> sort_object_instances_by_model_order(const Print& print, bool init_order = false);

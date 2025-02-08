@@ -1,11 +1,3 @@
-///|/ Copyright (c) Prusa Research 2017 - 2023 Oleksandra Iushchenko @YuSanka, Lukáš Matěna @lukasmatena, Tomáš Mészáros @tamasmeszaros, Lukáš Hejl @hejllukas, Vojtěch Bubník @bubnikv, Pavel Mikuš @Godrak, David Kocík @kocikdav, Enrico Turri @enricoturri1966, Vojtěch Král @vojtechkral
-///|/ Copyright (c) 2021 Martin Budden
-///|/ Copyright (c) 2021 Ilya @xorza
-///|/ Copyright (c) 2019 John Drake @foxox
-///|/ Copyright (c) 2018 Martin Loidl @LoidlM
-///|/
-///|/ PrusaSlicer is released under the terms of the AGPLv3 or higher
-///|/
 #include <cassert>
 
 #include "Config.hpp"
@@ -55,6 +47,7 @@
 #include "Utils.hpp"
 #include "Time.hpp"
 #include "PlaceholderParser.hpp"
+#include "libslic3r/GCode/Thumbnails.hpp"
 
 using boost::property_tree::ptree;
 
@@ -347,7 +340,7 @@ void Preset::normalize(DynamicPrintConfig &config)
                 static_cast<ConfigOptionVectorBase*>(opt)->resize(n, defaults.option(key));
         }
         // The following keys are mandatory for the UI, but they are not part of FullPrintConfig, therefore they are handled separately.
-        for (const std::string &key : { "filament_settings_id" }) {
+        for (const std::string key : { "filament_settings_id" }) {
             auto *opt = config.option(key, false);
             assert(opt == nullptr || opt->type() == coStrings);
             if (opt != nullptr && opt->type() == coStrings)
@@ -440,6 +433,7 @@ void Preset::load_info(const std::string& file)
             }
             else if (v.first.compare("base_id") == 0) {
                 this->base_id = v.second.get_value<std::string>();
+                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " load info from: " << file << " and base_id: " << this->base_id;
                 if (this->base_id.compare("null") == 0)
                     this->base_id.clear();
             }
@@ -518,6 +512,8 @@ void Preset::save(DynamicPrintConfig* parent_config)
     else
         from_str = std::string("Default");
 
+    boost::filesystem::create_directories(fs::path(this->file).parent_path());
+
     //BBS: only save difference if it has parent
     if (parent_config) {
         DynamicPrintConfig temp_config;
@@ -530,13 +526,35 @@ void Preset::save(DynamicPrintConfig* parent_config)
             opt_dst->set(opt_src);
         }
         temp_config.save_to_json(this->file, this->name, from_str, this->version.to_string(), this->custom_defined);
-    }
-    else
+    } else if (!filament_id.empty() && inherits().empty()) {
+        DynamicPrintConfig temp_config = config;
+        temp_config.set_key_value(BBL_JSON_KEY_FILAMENT_ID, new ConfigOptionString(filament_id));
+        temp_config.save_to_json(this->file, this->name, from_str, this->version.to_string(), this->custom_defined);
+    } else {
         this->config.save_to_json(this->file, this->name, from_str, this->version.to_string(), this->custom_defined);
+    }
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " save config for: " << this->name << " and filament_id: " << filament_id << " and base_id: " << this->base_id;
 
     fs::path idx_file(this->file);
     idx_file.replace_extension(".info");
     this->save_info(idx_file.string());
+}
+
+void Preset::reload(Preset const &parent)
+{
+    DynamicPrintConfig config;
+    // BBS: change to json format
+    // ConfigSubstitutions config_substitutions = config.load_from_ini(preset.file, substitution_rule);
+    std::map<std::string, std::string> key_values;
+    std::string                        reason;
+    ForwardCompatibilitySubstitutionRule substitution_rule    = ForwardCompatibilitySubstitutionRule::Disable;
+    try {
+        ConfigSubstitutions                config_substitutions = config.load_from_json(file, substitution_rule, key_values, reason);
+        this->config = parent.config;
+        this->config.apply(std::move(config));
+    } catch (const std::exception &err) {
+        BOOST_LOG_TRIVIAL(error) << boost::format("Failed loading the user-config file: %1%. Reason: %2%") % file % err.what();
+    }
 }
 
 // Return a label of this preset, consisting of a name and a "(modified)" suffix, if this preset is dirty.
@@ -665,7 +683,7 @@ std::string Preset::get_printer_type(PresetBundle *preset_bundle)
                     vendor_name = vendor_profile.first;
                     return vendor_model.model_id;
                 }
-        }    
+        }
     }
     return "";
 }
@@ -684,6 +702,25 @@ std::string Preset::get_current_printer_type(PresetBundle *preset_bundle)
         }
     }
     return "";
+}
+
+bool Preset::has_lidar(PresetBundle *preset_bundle)
+{
+    bool has_lidar = false;
+    if (preset_bundle) {
+        auto config = &preset_bundle->printers.get_edited_preset().config;
+        std::string vendor_name;
+        for (auto vendor_profile : preset_bundle->vendors) {
+            for (auto vendor_model : vendor_profile.second.models)
+                if (vendor_model.name == config->opt_string("printer_model")) {
+                    vendor_name = vendor_profile.first;
+                    break;
+                }
+        }
+        if (!vendor_name.empty())
+            has_lidar = vendor_name.compare("BBL") == 0 ? true : false;
+    }
+    return has_lidar;
 }
 
 bool Preset::is_custom_defined()
@@ -706,7 +743,7 @@ BedType Preset::get_default_bed_type(PresetBundle* preset_bundle)
     }
 
     std::string model_id = this->get_printer_type(preset_bundle);
-    if (model_id == "BL-P001" || model_id == "BL-P002") {
+    if (model_id == "BL-P001" || model_id == "BL-P002" || model_id == "C13") {
         return BedType::btPC;
     } else if (model_id == "C11") {
         return BedType::btPEI;
@@ -717,39 +754,39 @@ BedType Preset::get_default_bed_type(PresetBundle* preset_bundle)
 bool Preset::has_cali_lines(PresetBundle* preset_bundle)
 {
     std::string model_id = this->get_printer_type(preset_bundle);
-    if (model_id == "BL-P001" || model_id == "BL-P002") {
+    if (model_id == "BL-P001" || model_id == "BL-P002" || model_id == "C13") {
         return true;
     }
     return false;
 }
 
 static std::vector<std::string> s_Preset_print_options {
-    "layer_height", "initial_layer_print_height", "wall_loops", "slice_closing_radius", "spiral_mode", "slicing_mode",
+    "layer_height", "initial_layer_print_height", "wall_loops", "alternate_extra_wall", "slice_closing_radius", "spiral_mode", "spiral_mode_smooth", "spiral_mode_max_xy_smoothing", "slicing_mode",
     "top_shell_layers", "top_shell_thickness", "bottom_shell_layers", "bottom_shell_thickness",
-    "extra_perimeters_on_overhangs", "ensure_vertical_shell_thickness", "reduce_crossing_wall", "detect_thin_wall", "detect_overhang_wall", "overhang_reverse", "overhang_reverse_threshold",
-    "seam_position", "staggered_inner_seams", "wall_infill_order", "sparse_infill_density", "sparse_infill_pattern", "top_surface_pattern", "bottom_surface_pattern",
-    "infill_direction",
-    "minimum_sparse_infill_area", "reduce_infill_retraction","internal_solid_infill_pattern",
+    "extra_perimeters_on_overhangs", "ensure_vertical_shell_thickness", "reduce_crossing_wall", "detect_thin_wall", "detect_overhang_wall", "overhang_reverse", "overhang_reverse_threshold","overhang_reverse_internal_only", "wall_direction",
+    "seam_position", "staggered_inner_seams", "wall_sequence", "is_infill_first", "sparse_infill_density", "sparse_infill_pattern", "top_surface_pattern", "bottom_surface_pattern",
+    "infill_direction", "solid_infill_direction", "rotate_solid_infill_direction",  "counterbore_hole_bridging",
+    "minimum_sparse_infill_area", "reduce_infill_retraction","internal_solid_infill_pattern","gap_fill_target",
     "ironing_type", "ironing_pattern", "ironing_flow", "ironing_speed", "ironing_spacing", "ironing_angle",
     "max_travel_detour_distance",
-    "fuzzy_skin", "fuzzy_skin_thickness", "fuzzy_skin_point_distance",
+    "fuzzy_skin", "fuzzy_skin_thickness", "fuzzy_skin_point_distance", "fuzzy_skin_first_layer",
     "max_volumetric_extrusion_rate_slope", "max_volumetric_extrusion_rate_slope_segment_length",
     "inner_wall_speed", "outer_wall_speed", "sparse_infill_speed", "internal_solid_infill_speed",
     "top_surface_speed", "support_speed", "support_object_xy_distance", "support_interface_speed",
     "bridge_speed", "internal_bridge_speed", "gap_infill_speed", "travel_speed", "travel_speed_z", "initial_layer_speed",
-    "outer_wall_acceleration", "initial_layer_acceleration", "top_surface_acceleration", "default_acceleration", "skirt_loops", "skirt_speed", "skirt_distance", "skirt_height", "draft_shield",
+    "outer_wall_acceleration", "initial_layer_acceleration", "top_surface_acceleration", "default_acceleration", "skirt_type", "skirt_loops", "skirt_speed","min_skirt_length", "skirt_distance", "skirt_start_angle", "skirt_height", "draft_shield",
     "brim_width", "brim_object_gap", "brim_type", "brim_ears_max_angle", "brim_ears_detection_length", "enable_support", "support_type", "support_threshold_angle", "enforce_support_layers",
     "raft_layers", "raft_first_layer_density", "raft_first_layer_expansion", "raft_contact_distance", "raft_expansion",
     "support_base_pattern", "support_base_pattern_spacing", "support_expansion", "support_style",
     "independent_support_layer_height",
     "support_angle", "support_interface_top_layers", "support_interface_bottom_layers",
     "support_interface_pattern", "support_interface_spacing", "support_interface_loop_pattern",
-    "support_top_z_distance", "support_on_build_plate_only","support_critical_regions_only", "bridge_no_support", "thick_bridges", "max_bridge_length", "print_sequence", "support_remove_small_overhang",
+    "support_top_z_distance", "support_on_build_plate_only","support_critical_regions_only", "bridge_no_support", "thick_bridges", "thick_internal_bridges","dont_filter_internal_bridges", "max_bridge_length", "print_sequence", "print_order", "support_remove_small_overhang",
     "filename_format", "wall_filament", "support_bottom_z_distance",
-    "sparse_infill_filament", "solid_infill_filament", "support_filament", "support_interface_filament",
-    "ooze_prevention", "standby_temperature_delta", "interface_shells", "line_width", "initial_layer_line_width",
+    "sparse_infill_filament", "solid_infill_filament", "support_filament", "support_interface_filament","support_interface_not_for_body",
+    "ooze_prevention", "standby_temperature_delta", "preheat_time","preheat_steps", "interface_shells", "line_width", "initial_layer_line_width",
     "inner_wall_line_width", "outer_wall_line_width", "sparse_infill_line_width", "internal_solid_infill_line_width",
-    "top_surface_line_width", "support_line_width", "infill_wall_overlap", "bridge_flow",
+    "top_surface_line_width", "support_line_width", "infill_wall_overlap","top_bottom_infill_wall_overlap", "bridge_flow", "internal_bridge_flow",
     "elefant_foot_compensation", "elefant_foot_compensation_layers", "xy_contour_compensation", "xy_hole_compensation", "resolution", "enable_prime_tower",
     "prime_tower_width", "prime_tower_brim_width", "prime_volume",
     "wipe_tower_no_sparse_layers", "compatible_printers", "compatible_printers_condition", "inherits",
@@ -757,36 +794,39 @@ static std::vector<std::string> s_Preset_print_options {
      "tree_support_branch_angle", "tree_support_angle_slow", "tree_support_wall_count", "tree_support_top_rate", "tree_support_branch_distance", "tree_support_tip_diameter",
      "tree_support_branch_diameter", "tree_support_branch_diameter_angle", "tree_support_branch_diameter_double_wall",
      "detect_narrow_internal_solid_infill",
-     "gcode_add_line_number", "enable_arc_fitting", "infill_combination", /*"adaptive_layer_height",*/
+     "gcode_add_line_number", "enable_arc_fitting", "precise_z_height", "infill_combination","infill_combination_max_layer_height", /*"adaptive_layer_height",*/
      "support_bottom_interface_spacing", "enable_overhang_speed", "slowdown_for_curled_perimeters", "overhang_1_4_speed", "overhang_2_4_speed", "overhang_3_4_speed", "overhang_4_4_speed",
      "initial_layer_infill_speed", "only_one_wall_top", 
      "timelapse_type",
      "wall_generator", "wall_transition_length", "wall_transition_filter_deviation", "wall_transition_angle",
-     "wall_distribution_count", "min_feature_size", "min_bead_width", "post_process",
+     "wall_distribution_count", "min_feature_size", "min_bead_width", "post_process", "min_length_factor",
      "small_perimeter_speed", "small_perimeter_threshold","bridge_angle", "filter_out_gap_fill", "travel_acceleration","inner_wall_acceleration", "min_width_top_surface",
      "default_jerk", "outer_wall_jerk", "inner_wall_jerk", "infill_jerk", "top_surface_jerk", "initial_layer_jerk","travel_jerk",
      "top_solid_infill_flow_ratio","bottom_solid_infill_flow_ratio","only_one_wall_first_layer", "print_flow_ratio", "seam_gap",
-     "role_based_wipe_speed", "wipe_speed", "accel_to_decel_enable", "accel_to_decel_factor", "wipe_on_loops",
+     "role_based_wipe_speed", "wipe_speed", "accel_to_decel_enable", "accel_to_decel_factor", "wipe_on_loops", "wipe_before_external_loop",
      "bridge_density", "precise_outer_wall", "overhang_speed_classic", "bridge_acceleration",
      "sparse_infill_acceleration", "internal_solid_infill_acceleration", "tree_support_adaptive_layer_height", "tree_support_auto_brim", 
      "tree_support_brim_width", "gcode_comments", "gcode_label_objects",
      "initial_layer_travel_speed", "exclude_object", "slow_down_layers", "infill_anchor", "infill_anchor_max","initial_layer_min_bead_width",
      "make_overhang_printable", "make_overhang_printable_angle", "make_overhang_printable_hole_size" ,"notes",
-     "wipe_tower_cone_angle", "wipe_tower_extra_spacing", "wipe_tower_extruder", "wiping_volumes_extruders","wipe_tower_bridging", "single_extruder_multi_material_priming",
+     "wipe_tower_cone_angle", "wipe_tower_extra_spacing","wipe_tower_max_purge_speed", "wipe_tower_filament", "wiping_volumes_extruders","wipe_tower_bridging", "wipe_tower_extra_flow","single_extruder_multi_material_priming",
      "wipe_tower_rotation_angle", "tree_support_branch_distance_organic", "tree_support_branch_diameter_organic", "tree_support_branch_angle_organic",
-     "hole_to_polyhole", "hole_to_polyhole_threshold", "hole_to_polyhole_twisted"
+     "hole_to_polyhole", "hole_to_polyhole_threshold", "hole_to_polyhole_twisted", "mmu_segmented_region_max_width", "mmu_segmented_region_interlocking_depth",
+     "small_area_infill_flow_compensation", "small_area_infill_flow_compensation_model",
+     "seam_slope_type", "seam_slope_conditional", "scarf_angle_threshold", "scarf_joint_speed", "scarf_joint_flow_ratio", "seam_slope_start_height", "seam_slope_entire_loop", "seam_slope_min_length", "seam_slope_steps", "seam_slope_inner_walls", "scarf_overhang_threshold",
+     "interlocking_beam", "interlocking_orientation", "interlocking_beam_layer_count", "interlocking_depth", "interlocking_boundary_avoidance", "interlocking_beam_width",
 };
 
 static std::vector<std::string> s_Preset_filament_options {
-    /*"filament_colour", */ "default_filament_colour","required_nozzle_HRC","filament_diameter", "filament_type", "filament_soluble", "filament_is_support",
+    /*"filament_colour", */ "default_filament_colour","required_nozzle_HRC","filament_diameter", "pellet_flow_coefficient", "filament_type", "filament_soluble", "filament_is_support",
     "filament_max_volumetric_speed",
     "filament_flow_ratio", "filament_density", "filament_cost", "filament_minimal_purge_on_wipe_tower",
     "nozzle_temperature", "nozzle_temperature_initial_layer",
     // BBS
-    "cool_plate_temp", "eng_plate_temp", "hot_plate_temp", "textured_plate_temp", "cool_plate_temp_initial_layer", "eng_plate_temp_initial_layer", "hot_plate_temp_initial_layer","textured_plate_temp_initial_layer",
+    "cool_plate_temp", "textured_cool_plate_temp", "eng_plate_temp", "hot_plate_temp", "textured_plate_temp", "cool_plate_temp_initial_layer", "textured_cool_plate_temp_initial_layer", "eng_plate_temp_initial_layer", "hot_plate_temp_initial_layer","textured_plate_temp_initial_layer",
     // "bed_type",
     //BBS:temperature_vitrification
-    "temperature_vitrification", "reduce_fan_stop_start_freq", "slow_down_for_layer_cooling", "fan_min_speed",
+    "temperature_vitrification", "reduce_fan_stop_start_freq","dont_slow_down_outer_wall", "slow_down_for_layer_cooling", "fan_min_speed",
     "fan_max_speed", "enable_overhang_bridge_fan", "overhang_fan_speed", "overhang_fan_threshold", "close_fan_the_first_x_layers", "full_fan_speed_layer", "fan_cooling_layer_time", "slow_down_layer_time", "slow_down_min_speed",
     "filament_start_gcode", "filament_end_gcode",
     //exhaust fan control
@@ -800,11 +840,12 @@ static std::vector<std::string> s_Preset_filament_options {
     "filament_wipe_distance", "additional_cooling_fan_speed",
     "nozzle_temperature_range_low", "nozzle_temperature_range_high",
     //SoftFever
-    "enable_pressure_advance", "pressure_advance","chamber_temperature", "filament_shrink", "support_material_interface_fan_speed", "filament_notes" /*,"filament_seam_gap"*/,
-    "filament_loading_speed", "filament_loading_speed_start", "filament_load_time",
-    "filament_unloading_speed", "filament_unloading_speed_start", "filament_unload_time", "filament_toolchange_delay", "filament_cooling_moves",
+    "enable_pressure_advance", "pressure_advance","adaptive_pressure_advance","adaptive_pressure_advance_model","adaptive_pressure_advance_overhangs", "adaptive_pressure_advance_bridges","chamber_temperature", "filament_shrink","filament_shrinkage_compensation_z", "support_material_interface_fan_speed", "filament_notes" /*,"filament_seam_gap"*/,
+    "filament_loading_speed", "filament_loading_speed_start",
+    "filament_unloading_speed", "filament_unloading_speed_start", "filament_toolchange_delay", "filament_cooling_moves", "filament_stamping_loading_speed", "filament_stamping_distance",
     "filament_cooling_initial_speed", "filament_cooling_final_speed", "filament_ramming_parameters",
-    "filament_multitool_ramming", "filament_multitool_ramming_volume", "filament_multitool_ramming_flow", "activate_chamber_temp_control"
+    "filament_multitool_ramming", "filament_multitool_ramming_volume", "filament_multitool_ramming_flow", "activate_chamber_temp_control",
+    "filament_long_retractions_when_cut","filament_retraction_distances_when_cut", "idle_temperature"
     };
 
 static std::vector<std::string> s_Preset_machine_limits_options {
@@ -819,23 +860,23 @@ static std::vector<std::string> s_Preset_printer_options {
     "printer_technology",
     "printable_area", "bed_exclude_area","bed_custom_texture", "bed_custom_model", "gcode_flavor",
     "fan_kickstart", "fan_speedup_time", "fan_speedup_overhangs",
-    "single_extruder_multi_material", "manual_filament_change", "machine_start_gcode", "machine_end_gcode", "before_layer_change_gcode", "layer_change_gcode", "time_lapse_gcode", "change_filament_gcode", "change_extrusion_role_gcode",
+    "single_extruder_multi_material", "manual_filament_change", "machine_start_gcode", "machine_end_gcode", "before_layer_change_gcode", "printing_by_object_gcode", "layer_change_gcode", "time_lapse_gcode", "change_filament_gcode", "change_extrusion_role_gcode",
     "printer_model", "printer_variant", "printable_height", "extruder_clearance_radius", "extruder_clearance_height_to_lid", "extruder_clearance_height_to_rod",
+    "nozzle_height",
     "default_print_profile", "inherits",
     "silent_mode",
-    // BBS
-    "scan_first_layer", "machine_load_filament_time", "machine_unload_filament_time","time_cost", "machine_pause_gcode", "template_custom_gcode",
-    "nozzle_type", "nozzle_hrc","auxiliary_fan", "nozzle_volume","upward_compatible_machine", "z_hop_types", "retract_lift_enforce","support_chamber_temp_control","support_air_filtration","printer_structure",
-    "best_object_pos",
-    //SoftFever
-    "host_type", "print_host", "printhost_apikey",
+    "scan_first_layer", "machine_load_filament_time", "machine_unload_filament_time", "machine_tool_change_time", "time_cost", "machine_pause_gcode", "template_custom_gcode",
+    "nozzle_type", "nozzle_hrc","auxiliary_fan", "nozzle_volume","upward_compatible_machine", "z_hop_types", "travel_slope", "retract_lift_enforce","support_chamber_temp_control","support_air_filtration","printer_structure",
+    "best_object_pos","head_wrap_detect_zone",
+    "host_type", "print_host", "printhost_apikey", "bbl_use_printhost",
     "print_host_webui",
     "printhost_cafile","printhost_port","printhost_authorization_type",
     "printhost_user", "printhost_password", "printhost_ssl_ignore_revoke", "thumbnails", "thumbnails_format",
     "use_firmware_retraction", "use_relative_e_distances", "printer_notes",
     "cooling_tube_retraction",
     "cooling_tube_length", "high_current_on_filament_swap", "parking_pos_retraction", "extra_loading_move", "purge_in_prime_tower", "enable_filament_ramming",
-    "z_offset"
+    "z_offset",
+    "disable_m73", "preferred_orientation", "emit_machine_limits_to_gcode", "pellet_modded_printer", "support_multi_bed_types","bed_mesh_min","bed_mesh_max","bed_mesh_probe_distance", "adaptive_bed_mesh_margin", "enable_long_retraction_when_cut","long_retractions_when_cut","retraction_distances_when_cut"
     };
 
 static std::vector<std::string> s_Preset_sla_print_options {
@@ -1018,8 +1059,13 @@ void PresetCollection::load_presets(
     // see https://github.com/prusa3d/PrusaSlicer/issues/732
     boost::filesystem::path dir = boost::filesystem::absolute(boost::filesystem::path(dir_path) / subdir).make_preferred();
 
+    // Load custom roots first
+    if (fs::exists(dir / "base")) {
+        load_presets(dir.string(), "base", substitutions, substitution_rule);
+    }
+
     //BBS: add config related logs
-    BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(" enter, load presets from %1%, current type %2%")%dir %Preset::get_type_string(m_type);
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(" enter, load presets from %1%, current type %2%")%dir %Preset::get_type_string(m_type);
     //BBS do not parse folder if not exists
     m_dir_path = dir.string();
     if (!fs::exists(dir)) {
@@ -1071,21 +1117,23 @@ void PresetCollection::load_presets(
                         if (fs::exists(file_path))
                             fs::remove(file_path);
                         BOOST_LOG_TRIVIAL(error) << boost::format("parse config %1% failed")%preset.file;
+                        ++m_errors;
                         continue;
                     }
 
                     std::string version_str = key_values[BBL_JSON_KEY_VERSION];
                     boost::optional<Semver> version = Semver::parse(version_str);
                     if (!version) continue;
-                    Semver app_version = *(Semver::parse(SLIC3R_VERSION));
-                    if ( version->maj() !=  app_version.maj()) {
-                        BOOST_LOG_TRIVIAL(warning) << "Preset incompatibla, not loading: " << name;
-                        continue;
-                    }
                     preset.version = *version;
 
+                    if (key_values.find(BBL_JSON_KEY_FILAMENT_ID) != key_values.end())
+                        preset.filament_id = key_values[BBL_JSON_KEY_FILAMENT_ID];
                     if (key_values.find(BBL_JSON_KEY_IS_CUSTOM) != key_values.end())
                         preset.custom_defined = key_values[BBL_JSON_KEY_IS_CUSTOM];
+                    if (key_values.find(BBL_JSON_KEY_DESCRIPTION) != key_values.end())
+                        preset.description = key_values[BBL_JSON_KEY_DESCRIPTION];
+                    if (key_values.find("instantiation") != key_values.end())
+                        preset.is_visible = key_values["instantiation"] != "false";
 
                     //BBS: use inherit config as the base
                     Preset* inherit_preset = nullptr;
@@ -1105,29 +1153,37 @@ void PresetCollection::load_presets(
                         preset.filament_id = inherit_preset->filament_id;
                     }
                     else {
-                        if (!preset.is_custom_defined()) {
+                        // We support custom root preset now
+                        auto inherits_config2 = dynamic_cast<ConfigOptionString *>(inherits_config);
+                        if ((inherits_config2 && !inherits_config2->value.empty()) && !preset.is_custom_defined()) {
                             BOOST_LOG_TRIVIAL(error) << boost::format("can not find parent for config %1%!")%preset.file;
+                            ++m_errors;
                             continue;
                         }
-                        //should not happen
-                        //BOOST_LOG_TRIVIAL(error) << boost::format("can not find parent for config %1%!")%preset.file;
                         // Find a default preset for the config. The PrintPresetCollection provides different default preset based on the "printer_technology" field.
                         preset.config = default_preset.config;
                     }
+                    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " load preset: " << name << " and filament_id: " << preset.filament_id << " and base_id: " << preset.base_id;
                     preset.config.apply(std::move(config));
                     Preset::normalize(preset.config);
                     // Report configuration fields, which are misplaced into a wrong group.
                     std::string incorrect_keys = Preset::remove_invalid_keys(preset.config, default_preset.config);
-                    if (!incorrect_keys.empty())
-                        BOOST_LOG_TRIVIAL(error) << "Error in a preset file: The preset \"" <<
-                        preset.file << "\" contains the following incorrect keys: " << incorrect_keys << ", which were removed";
+                    if (!incorrect_keys.empty()) {
+                        ++m_errors;
+                        BOOST_LOG_TRIVIAL(error)
+                            << "Error in a preset file: The preset \"" << preset.file
+                            << "\" contains the following incorrect keys: " << incorrect_keys << ", which were removed";
+                    }
                     preset.loaded = true;
                     //BBS: add some workaround for previous incorrect settings
                     if ((!preset.setting_id.empty())&&(preset.setting_id == preset.base_id))
                         preset.setting_id.clear();
                     //BBS: add config related logs
                     BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(", preset type %1%, name %2%, path %3%, is_system %4%, is_default %5% is_visible %6%")%Preset::get_type_string(m_type) %preset.name %preset.file %preset.is_system %preset.is_default %preset.is_visible;
+                    // add alias for custom filament preset
+                    set_custom_preset_alias(preset);
                 } catch (const std::ifstream::failure &err) {
+                    ++m_errors;
                     BOOST_LOG_TRIVIAL(error) << boost::format("The user-config cannot be loaded: %1%. Reason: %2%")%preset.file %err.what();
                     fs::path file_path(preset.file);
                     if (fs::exists(file_path))
@@ -1137,6 +1193,7 @@ void PresetCollection::load_presets(
                         fs::remove(file_path);
                     //throw Slic3r::RuntimeError(std::string("The selected preset cannot be loaded: ") + preset.file + "\n\tReason: " + err.what());
                 } catch (const std::runtime_error &err) {
+                    ++m_errors;
                     BOOST_LOG_TRIVIAL(error) << boost::format("Failed loading the user-config file: %1%. Reason: %2%")%preset.file %err.what();
                     //throw Slic3r::RuntimeError(std::string("Failed loading the preset file: ") + preset.file + "\n\tReason: " + err.what());
                     fs::path file_path(preset.file);
@@ -1147,6 +1204,7 @@ void PresetCollection::load_presets(
                         fs::remove(file_path);
                 }
                 presets_loaded.emplace_back(preset);
+                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << __LINE__ << " load config successful and preset name is:" << preset.name;
             } catch (const std::runtime_error &err) {
                 errors_cummulative += err.what();
                 errors_cummulative += "\n";
@@ -1200,6 +1258,7 @@ int PresetCollection::get_differed_values_to_update(Preset& preset, std::map<std
 {
     if (preset.is_system || preset.is_default || preset.is_project_embedded) {
         BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(" Error: not a user preset! Should not happen, name %1%") %preset.name;
+        ++m_errors;
         return -1;
     }
 
@@ -1219,16 +1278,28 @@ int PresetCollection::get_differed_values_to_update(Preset& preset, std::map<std
             if (opt_src)
                 key_values[option] = opt_src->serialize();
         }
-        //add other values
-        key_values[BBL_JSON_KEY_VERSION] = preset.version.to_string();
-        key_values[BBL_JSON_KEY_BASE_ID] = preset.base_id;
-        key_values[BBL_JSON_KEY_UPDATE_TIME] = std::to_string(preset.updated_time);
-        key_values[BBL_JSON_KEY_TYPE] = Preset::get_iot_type_string(preset.type);
     }
     else {
-        BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(" Error: can not find the parent! Should not happen, name %1%") %preset.name;
-        return -1;
+        for (auto iter = preset.config.cbegin(); iter != preset.config.cend(); ++iter)
+        {
+            key_values[iter->first] = iter->second->serialize();
+        }
     }
+
+    //add other values
+    key_values[BBL_JSON_KEY_VERSION] = preset.version.to_string();
+    if (!preset.base_id.empty()) {
+        key_values[BBL_JSON_KEY_BASE_ID] = preset.base_id;
+    } else {
+        key_values.erase(BBL_JSON_KEY_BASE_ID);
+        if (get_preset_base(preset) == &preset && !preset.filament_id.empty()) {
+            key_values[BBL_JSON_KEY_FILAMENT_ID] = preset.filament_id;
+        }
+    }
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " uploading user preset name is: " << preset.name << "and create filament_id is: " << preset.filament_id
+                            << " and base_id is: " << preset.base_id;
+    key_values[BBL_JSON_KEY_UPDATE_TIME] = std::to_string(preset.updated_time);
+    key_values[BBL_JSON_KEY_TYPE] = Preset::get_iot_type_string(preset.type);
     return 0;
 }
 
@@ -1287,9 +1358,11 @@ void PresetCollection::load_project_embedded_presets(std::vector<Preset*>& proje
             Preset::normalize(preset->config);
             // Report configuration fields, which are misplaced into a wrong group.
             std::string incorrect_keys = Preset::remove_invalid_keys(preset->config, default_preset.config);
-            if (! incorrect_keys.empty())
-                BOOST_LOG_TRIVIAL(error) << "Error in a preset file: The preset \"" <<
-                    preset->name << "\" contains the following incorrect keys: " << incorrect_keys << ", which were removed";
+            if (!incorrect_keys.empty()) {
+                ++m_errors;
+                BOOST_LOG_TRIVIAL(error) << "Error in a preset file: The preset \"" << preset->name
+                                         << "\" contains the following incorrect keys: " << incorrect_keys << ", which were removed";
+            }
             preset->loaded = true;
             presets_loaded.emplace_back(*preset);
             BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(", %1% got preset, name %2%, path %3%, is_system %4%, is_default %5% is_visible %6%")%Preset::get_type_string(m_type) %preset->name %preset->file %preset->is_system %preset->is_default %preset->is_visible;
@@ -1363,7 +1436,7 @@ bool PresetCollection::reset_project_embedded_presets()
     return re_select;
 }
 
-void PresetCollection::set_sync_info_and_save(std::string name, std::string setting_id, std::string syncinfo)
+void PresetCollection::set_sync_info_and_save(std::string name, std::string setting_id, std::string syncinfo, long long update_time)
 {
     lock();
     for (auto it = m_presets.begin(); it != m_presets.end(); it++) {
@@ -1373,16 +1446,34 @@ void PresetCollection::set_sync_info_and_save(std::string name, std::string sett
                 preset->sync_info.clear();
             else
                 preset->sync_info = syncinfo;
+            if (get_preset_base(*preset) == preset) {
+                for (auto & preset2 : m_presets)
+                    if (preset2.inherits() == preset->name) {
+                        preset2.base_id = setting_id;
+                        preset2.save_info();
+                    }
+            }
             preset->setting_id = setting_id;
-            preset->save_info();
+            if (update_time > 0)
+                preset->updated_time = update_time;
+            preset->sync_info == "update" ? preset->save(nullptr) : preset->save_info();
             break;
         }
     }
     unlock();
 }
 
+bool PresetCollection::need_sync(std::string name, std::string setting_id, long long update_time)
+{
+    lock();
+    auto preset = find_preset(name, false, true);
+    bool need   = preset == nullptr || preset->setting_id != setting_id || preset->updated_time < update_time;
+    unlock();
+    return need;
+}
+
 //BBS: get user presets
-int PresetCollection::get_user_presets(std::vector<Preset>& result_presets)
+int PresetCollection::get_user_presets(PresetBundle *preset_bundle, std::vector<Preset> &result_presets)
 {
     int count = 0;
     result_presets.clear();
@@ -1390,6 +1481,10 @@ int PresetCollection::get_user_presets(std::vector<Preset>& result_presets)
     lock();
     for (Preset &preset : m_presets) {
         if (!preset.is_user()) continue;
+        if (preset.base_id.empty() && preset.inherits() != "") continue;
+        if (!preset.setting_id.empty() && preset.sync_info.empty()) continue;
+        //if (!preset.is_bbl_vendor_preset(preset_bundle)) continue;
+        if (preset.sync_info == "hold") continue;
 
         result_presets.push_back(preset);
         count++;
@@ -1426,7 +1521,9 @@ void PresetCollection::save_user_presets(const std::string& dir_path, const std:
     for (auto it = m_presets.begin(); it != m_presets.end(); it++) {
         Preset* preset = &m_presets[it - m_presets.begin()];
         if (!preset->is_user()) continue;
-        preset->file = path_from_name(preset->name);
+        if (preset->sync_info != "save") continue;
+        preset->sync_info.clear();
+        preset->file = path_for_preset(*preset);
 
         if (preset->is_custom_defined()) {
             preset->save(nullptr);
@@ -1434,21 +1531,25 @@ void PresetCollection::save_user_presets(const std::string& dir_path, const std:
             //BBS: only save difference for user preset
             std::string inherits = Preset::inherits(preset->config);
             if (inherits.empty()) {
-                BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(" can not find inherits for %1% , should not happen")%preset->name;
-                // BBS add sync info
-                preset->sync_info = "delete";
-                need_to_delete_list.push_back(preset->setting_id);
-                delete_name_list.push_back(preset->name);
+                // We support custom root preset now
+                //BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(" can not find inherits for %1% , should not happen")%preset->name;
+                //// BBS add sync info
+                //preset->sync_info = "delete";
+                //need_to_delete_list.push_back(preset->setting_id);
+                //delete_name_list.push_back(preset->name);
+                preset->save(nullptr);
                 continue;
             }
             Preset* parent_preset = this->find_preset(inherits, false, true);
             if (!parent_preset) {
+                ++m_errors;
                 BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(" can not find parent preset for %1% , inherits %2%")%preset->name %inherits;
                 continue;
             }
 
             if (preset->base_id.empty())
                 preset->base_id = parent_preset->setting_id;
+            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " " << preset->name << " filament_id: " << preset->filament_id << " base_id: " << preset->base_id;
             preset->save(&(parent_preset->config));
         }
     }
@@ -1471,7 +1572,7 @@ bool PresetCollection::load_user_preset(std::string name, std::map<std::string, 
     //std::deque<Preset> presets_loaded;
     int count = 0;
 
-    BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(" enter, name %1% , total value counts %2%")%name %preset_values.size();
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(" enter, name %1% , total value counts %2%")%name %preset_values.size();
 
     //if the version is not matching, skip it
     if (preset_values.find(BBL_JSON_KEY_VERSION) == preset_values.end()) {
@@ -1484,11 +1585,6 @@ bool PresetCollection::load_user_preset(std::string name, std::map<std::string, 
         BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format("invalid version %1%, not loading for user preset %2%")%version_str %name;
         return false;
     }
-    Semver app_version = *(Semver::parse(SLIC3R_VERSION));
-    if ( cloud_version->maj() !=  app_version.maj()) {
-        BOOST_LOG_TRIVIAL(warning)<< __FUNCTION__ << boost::format("version %1% mismatch with app version %2%, not loading for user preset %3%")%version_str %SLIC3R_VERSION %name;
-        return false;
-    }
 
     //setting_id
     if (preset_values.find(BBL_JSON_KEY_SETTING_ID) == preset_values.end()) {
@@ -1496,13 +1592,6 @@ bool PresetCollection::load_user_preset(std::string name, std::map<std::string, 
         return false;
     }
     std::string cloud_setting_id = preset_values[BBL_JSON_KEY_SETTING_ID];
-
-    //base_id
-    if (preset_values.find(BBL_JSON_KEY_BASE_ID) == preset_values.end()) {
-        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format("can not find base_id, not loading for user preset %1%")%name;
-        return false;
-    }
-    std::string cloud_base_id = preset_values[BBL_JSON_KEY_BASE_ID];
 
     //update_time
     long long cloud_update_time = 0;
@@ -1517,12 +1606,6 @@ bool PresetCollection::load_user_preset(std::string name, std::map<std::string, 
     }
     std::string cloud_user_id = preset_values[BBL_JSON_KEY_USER_ID];
 
-    //filament_id
-    std::string cloud_filament_id;
-    if ((m_type == Preset::TYPE_FILAMENT) && preset_values.find(BBL_JSON_KEY_FILAMENT_ID) != preset_values.end()) {
-        cloud_filament_id = preset_values[BBL_JSON_KEY_FILAMENT_ID];
-    }
-
     lock();
     //std::string name = preset->name;
     auto iter = this->find_preset_internal(name);
@@ -1535,6 +1618,11 @@ bool PresetCollection::load_user_preset(std::string name, std::map<std::string, 
                 iter->sync_info = "update";
             else
                 iter->sync_info.clear();
+            // Fixup possible data lost
+            iter->setting_id = cloud_setting_id;
+            fs::path idx_file(iter->file);
+            idx_file.replace_extension(".info");
+            iter->save_info(idx_file.string());
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format("preset %1%'s update_time is eqaul or newer, cloud  update_time %2%, local update_time %3%")%name %cloud_update_time %iter->updated_time;
             unlock();
             return false;
@@ -1542,11 +1630,25 @@ bool PresetCollection::load_user_preset(std::string name, std::map<std::string, 
         else {
             //update the one from cloud which is newer
             need_update = true;
-            iter->sync_info.clear();
         }
     }
 
-    DynamicPrintConfig  new_config, cloud_config;
+    // base_id
+    if (preset_values.find(BBL_JSON_KEY_BASE_ID) == preset_values.end()) {
+        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format("can not find base_id, not loading for user preset %1%") % name;
+        unlock();
+        return false;
+    }
+    std::string cloud_base_id = preset_values[BBL_JSON_KEY_BASE_ID];
+
+    //filament_id
+    std::string cloud_filament_id;
+    if ((m_type == Preset::TYPE_FILAMENT) && preset_values.find(BBL_JSON_KEY_FILAMENT_ID) != preset_values.end()) {
+        cloud_filament_id = preset_values[BBL_JSON_KEY_FILAMENT_ID];
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " " << name << " filament_id: " << cloud_filament_id << " base_id: " << cloud_base_id;
+    }
+
+    DynamicPrintConfig new_config, cloud_config;
     try {
         ConfigSubstitutions config_substitutions = cloud_config.load_string_map(preset_values, rule);
         if (! config_substitutions.empty())
@@ -1568,22 +1670,31 @@ bool PresetCollection::load_user_preset(std::string name, std::map<std::string, 
         const Preset& default_preset = this->default_preset_for(cloud_config);
         if (inherit_preset) {
             new_config = inherit_preset->config;
+            if (cloud_filament_id == "null") {
+                cloud_filament_id = inherit_preset->filament_id;
+            }
         }
         else {
+            // We support custom root preset now
+            auto inherits_config2 = dynamic_cast<ConfigOptionString *>(inherits_config);
+            if (inherits_config2 && !inherits_config2->value.empty()) {
+                //we should skip this preset here
+                BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(", can not find inherit preset for user preset %1%, just skip")%name;
+                unlock();
+                return false;
+            }
             // Find a default preset for the config. The PrintPresetCollection provides different default preset based on the "printer_technology" field.
-            //new_config = default_preset.config;
-            //we should skip this preset here
-            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(", can not find inherit preset for user preset %1%, just skip")%name;
-            unlock();
-            return false;
+            new_config = default_preset.config;
         }
         new_config.apply(std::move(cloud_config));
         Preset::normalize(new_config);
         // Report configuration fields, which are misplaced into a wrong group.
         std::string incorrect_keys = Preset::remove_invalid_keys(new_config, default_preset.config);
-        if (! incorrect_keys.empty())
-            BOOST_LOG_TRIVIAL(error) << "Error in a preset file: The preset \"" <<
-                name << "\" contains the following incorrect keys: " << incorrect_keys << ", which were removed";
+        if (!incorrect_keys.empty()) {
+            ++m_errors;
+            BOOST_LOG_TRIVIAL(error) << "Error in a preset file: The preset \"" << name
+                                     << "\" contains the following incorrect keys: " << incorrect_keys << ", which were removed";
+        }
         if (need_update) {
             if (iter->name == m_edited_preset.name && iter->is_dirty) {
                 // Keep modifies when update from remote
@@ -1591,14 +1702,15 @@ bool PresetCollection::load_user_preset(std::string name, std::map<std::string, 
             }
             iter->config = new_config;
             iter->updated_time = cloud_update_time;
-            iter->version = cloud_version.value();
+            iter->sync_info    = "save";
+            iter->version      = cloud_version.value();
             iter->user_id = cloud_user_id;
             iter->setting_id = cloud_setting_id;
             iter->base_id = cloud_base_id;
             iter->filament_id = cloud_filament_id;
             //presets_loaded.emplace_back(*it->second);
-            BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(", update the user preset %1% from cloud, type %2%, setting_id %3%, base_id %4%, sync_info %5% inherits %6%")
-               % iter->name %Preset::get_type_string(m_type) %iter->setting_id %iter->base_id %iter->sync_info %iter->inherits();
+            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(", update the user preset %1% from cloud, type %2%, setting_id %3%, base_id %4%, sync_info %5% inherits %6%, filament_id %7%")
+               % iter->name %Preset::get_type_string(m_type) %iter->setting_id %iter->base_id %iter->sync_info %iter->inherits() % iter->filament_id;
         }
         else {
             //create a new one
@@ -1607,7 +1719,8 @@ bool PresetCollection::load_user_preset(std::string name, std::map<std::string, 
             preset.loaded = true;
             preset.config = new_config;
             preset.updated_time = cloud_update_time;
-            preset.version = cloud_version.value();
+            preset.sync_info   = "save";
+            preset.version      = cloud_version.value();
             preset.user_id = cloud_user_id;
             preset.setting_id = cloud_setting_id;
             preset.base_id = cloud_base_id;
@@ -1616,8 +1729,8 @@ bool PresetCollection::load_user_preset(std::string name, std::map<std::string, 
             size_t cur_index = iter - m_presets.begin();
             m_presets.insert(iter, preset);
             //m_presets.emplace_back (preset);
-            BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(", insert a new user preset %1%, type %2%, setting_id %3%, base_id %4%, sync_info %5% inherits %6%")
-               %preset.name %Preset::get_type_string(m_type) %preset.setting_id %preset.base_id %preset.sync_info %preset.inherits();
+            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(", insert a new user preset %1%, type %2%, setting_id %3%, base_id %4%, sync_info %5% inherits %6%, filament_id %7%")
+               %preset.name %Preset::get_type_string(m_type) %preset.setting_id %preset.base_id %preset.sync_info %preset.inherits() %preset.filament_id;
             if (cur_index <= m_idx_selected) {
                 m_idx_selected ++;
                 BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(", increase m_idx_selected to %1%, due to user preset inserted")%m_idx_selected;
@@ -1651,28 +1764,33 @@ void PresetCollection::update_after_user_presets_loaded()
     return;
 }
 
-//BBS: validate_printers
-bool PresetCollection::validate_printers(const std::string &name, DynamicPrintConfig& config, std::string &inherit)
+//BBS: validate_preset
+bool PresetCollection::validate_preset(const std::string &preset_name, std::string &inherit_name)
 {
-    std::string&                 original_name = config.opt_string("printer_settings_id", true);
-    std::deque<Preset>::iterator it       = this->find_preset_internal(original_name);
-    bool                         found    = it != m_presets.end() && it->name == original_name && (it->is_system || it->is_default);
+    std::deque<Preset>::iterator it       = this->find_preset_internal(preset_name);
+    bool                         found    = (it != m_presets.end()) && (it->name == preset_name) && (it->is_system || it->is_default);
     if (!found) {
-        it = this->find_preset_renamed(original_name);
+        it = this->find_preset_renamed(preset_name);
         found = it != m_presets.end() && (it->is_system || it->is_default);
     }
     if (!found) {
-        if (!inherit.empty()) {
-            it    = this->find_preset_internal(inherit);
-            found = it != m_presets.end() && it->name == inherit && (it->is_system || it->is_default);
+        if (!inherit_name.empty()) {
+            it    = this->find_preset_internal(inherit_name);
+            found = it != m_presets.end() && it->name == inherit_name && (it->is_system || it->is_default);
+            if (found)
+                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": preset_name %1%, inherit_name %2%, found inherit in list")%preset_name %inherit_name;
+            else
+                BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(": preset_name %1%, inherit_name %2%, can not found preset and inherit in list")%preset_name %inherit_name;
         }
         else {
             //inherit is null , should not happen , just consider it as valid
             found = false;
-            BOOST_LOG_TRIVIAL(warning) << boost::format(": name %1%, printer_settings %2%, no inherit, set to not found")%name %original_name;
+            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(": preset_name %1%, no inherit, set to not found")%preset_name;
         }
     }
-    BOOST_LOG_TRIVIAL(warning) << boost::format(": name %1%, printer_settings %2%, inherit %3%, found result %4%")%name %original_name % inherit % found;
+    else {
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": preset_name %1%, found in list")%preset_name;
+    }
 
     return found;
 }
@@ -1729,7 +1847,7 @@ std::pair<Preset*, bool> PresetCollection::load_external_preset(
     keys.erase(std::remove_if(keys.begin(), keys.end(),
                               [](std::string &val) {
                                 return val == "print_host" || val == "print_host_webui" || val == "printhost_apikey" ||
-                                       val == "printhost_cafile";
+                                       val == "printhost_cafile" || val == "printhost_user" || val == "printhost_password" || val == "printhost_port";
                               }),
                keys.end());
     cfg.apply_only(combined_config, keys, true);
@@ -1940,12 +2058,13 @@ std::pair<Preset*, bool> PresetCollection::load_external_preset(
                 preset.filament_id = parent->filament_id;
         }
     }
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " " << preset.name << " filament_id: " << preset.filament_id << " base_id: " << preset.base_id;
     if (from_project) {
         preset.is_project_embedded = true;
     }
     else {
         //external config
-        preset.file = path_from_name(preset.name);
+        preset.file = path_for_preset(preset);
         //BBS: save full config here for external
         //we can not reach here
         preset.save(nullptr);
@@ -1985,6 +2104,110 @@ Preset& PresetCollection::load_preset(const std::string &path, const std::string
     return preset;
 }
 
+bool PresetCollection::clone_presets(std::vector<Preset const *> const &presets, std::vector<std::string> &failures, std::function<void(Preset &, Preset::Type &)> modifier, bool force_rewritten)
+{
+    std::vector<Preset> new_presets;
+    for (auto curr_preset : presets) {
+        new_presets.push_back(*curr_preset);
+        auto &preset = new_presets.back();
+        preset.vendor         = nullptr;
+        preset.renamed_from.clear();
+        preset.setting_id.clear();
+        preset.inherits().clear();
+        preset.is_default  = false;
+        preset.is_system   = false;
+        preset.is_external = false;
+        preset.is_visible = true;
+        preset.is_project_embedded = false;
+        modifier(preset, m_type);
+        if (find_preset(preset.name) && !force_rewritten) {
+            failures.push_back(preset.name);
+        }
+        preset.file                = this->path_for_preset(preset);
+        if (m_type == Preset::TYPE_PRINT)
+            preset.config.option<ConfigOptionString>("print_settings_id", true)->value = preset.name;
+        else if (m_type == Preset::TYPE_FILAMENT)
+            preset.config.option<ConfigOptionStrings>("filament_settings_id", true)->values[0] = preset.name;
+        else if (m_type == Preset::TYPE_PRINTER)
+            preset.config.option<ConfigOptionString>("printer_settings_id", true)->value = preset.name;
+    }
+    if (!failures.empty() && !force_rewritten)
+        return false;
+    lock();
+    auto old_name = this->get_edited_preset().name;
+    for (auto preset : new_presets) {
+        preset.alias.clear();
+        set_custom_preset_alias(preset);
+        preset.base_id.clear();
+        auto it = this->find_preset_internal(preset.name);
+        assert((it == m_presets.end() || it->name != preset.name) || force_rewritten);
+        if (it == m_presets.end() || it->name != preset.name) {
+            Preset &new_preset = *m_presets.insert(it, preset);
+            new_preset.save(nullptr);
+        } else if (force_rewritten) {
+            *it = preset;
+            (*it).save(nullptr);
+        }
+    }
+    this->select_preset_by_name(old_name, true);
+    unlock();
+    return true;
+}
+
+bool PresetCollection::clone_presets_for_printer(std::vector<Preset const *> const &     templates,
+                                                 std::vector<std::string> &              failures,
+                                                 std::string const &                     printer,
+                                                 std::function<std::string(std::string)> create_filament_id,
+                                                 bool                                    force_rewritten)
+{
+    return clone_presets(templates, failures, [printer, create_filament_id](Preset &preset, Preset::Type &type) {
+            std::string prefix          = preset.name.substr(0, preset.name.find(" @"));
+            std::replace(prefix.begin(), prefix.end(), '/', '-');
+            preset.name                 = prefix + " @" + printer;
+            auto *compatible_printers   = dynamic_cast<ConfigOptionStrings *>(preset.config.option("compatible_printers"));
+            compatible_printers->values = std::vector<std::string>{printer};
+            preset.is_visible           = true;
+            if (type == Preset::TYPE_FILAMENT) {
+                preset.filament_id = create_filament_id(prefix);
+                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " " << __LINE__ << preset.name << " create filament_id: " << preset.filament_id;
+            }
+    }, force_rewritten);
+}
+
+bool PresetCollection::clone_presets_for_filament(Preset const *const &     preset,
+                                                  std::vector<std::string> &failures,
+                                                  std::string const &       filament_name,
+                                                  std::string const &       filament_id,
+                                                  const DynamicConfig &     dynamic_config,
+                                                  const std::string &       compatible_printers,
+                                                  bool                      force_rewritten)
+{
+    std::vector<Preset const *> const presets = {preset};
+    return clone_presets(presets, failures, [&filament_name, &filament_id, &dynamic_config, &compatible_printers](Preset &preset, Preset::Type &type) {
+        preset.name        = filament_name + " @" + compatible_printers;
+        if (type == Preset::TYPE_FILAMENT) {
+            preset.config.apply_only(dynamic_config, {"filament_vendor", "compatible_printers", "filament_type"},true);
+
+            preset.filament_id = filament_id;
+            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " " << __LINE__ << preset.name << " is cloned and filament_id: " << filament_id;
+         }
+        },
+        force_rewritten);
+}
+
+std::map<std::string, std::vector<Preset const *>> PresetCollection::get_filament_presets() const
+{
+    std::map<std::string, std::vector<Preset const *>> filament_presets;
+    for (auto &preset : m_presets) {
+        if (preset.is_user()) {
+            if (preset.inherits() == "") { filament_presets[preset.filament_id].push_back(&preset); }
+            continue;
+        }
+        if (get_preset_base(preset) == &preset) { filament_presets[preset.filament_id].push_back(&preset); }
+    }
+    return filament_presets;
+}
+
 //BBS: add project embedded preset logic
 void PresetCollection::save_current_preset(const std::string &new_name, bool detach, bool save_to_project, Preset* _curr_preset)
 {
@@ -2020,15 +2243,27 @@ void PresetCollection::save_current_preset(const std::string &new_name, bool det
             BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(": save preset %1% , with detach")%new_name;
         }
         //BBS: add lock logic for sync preset in background
+
+        if (m_type == Preset::TYPE_PRINT)
+            preset.config.option<ConfigOptionString>("print_settings_id", true)->value = new_name;
+        else if (m_type == Preset::TYPE_FILAMENT)
+            preset.config.option<ConfigOptionStrings>("filament_settings_id", true)->values[0] = new_name;
+        else if (m_type == Preset::TYPE_PRINTER)
+            preset.config.option<ConfigOptionString>("printer_settings_id", true)->value = new_name;
         final_inherits = preset.inherits();
         unlock();
+        // TODO: apply change from custom root to devided presets.
+        if (preset.inherits().empty()) {
+            for (auto &preset2 : m_presets)
+                if (preset2.inherits() == preset.name)
+                    preset2.reload(preset);
+        }
     } else {
         // Creating a new preset.
         Preset       &preset   = *m_presets.insert(it, curr_preset);
         std::string  &inherits = preset.inherits();
         std::string   old_name = preset.name;
         preset.name = new_name;
-        preset.file = this->path_from_name(new_name);
         preset.vendor = nullptr;
 		preset.alias.clear();
         preset.renamed_from.clear();
@@ -2037,19 +2272,13 @@ void PresetCollection::save_current_preset(const std::string &new_name, bool det
         	// Clear the link to the parent profile.
         	inherits.clear();
             BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(": save preset %1% , with detach")%new_name;
-        } else if (preset.is_system) {
-            // Inheriting from a system preset.
-            inherits = /* preset.vendor->name + "/" + */ old_name;
-        } else if (inherits.empty()) {
-            // Inheriting from a user preset. Link the new preset to the old preset.
-            // inherits = old_name;
-        } else {
-            // Inherited from a user preset. Just maintain the "inherited" flag,
-            // meaning it will inherit from either the system preset, or the inherited user preset.
+        } else if (is_base_preset(preset)) {
+            inherits = old_name;
         }
         preset.is_default  = false;
         preset.is_system   = false;
         preset.is_external = false;
+        preset.file        = this->path_for_preset(preset);
         // The newly saved preset will be activated -> make it visible.
         preset.is_visible  = true;
         // Just system presets have aliases
@@ -2061,11 +2290,11 @@ void PresetCollection::save_current_preset(const std::string &new_name, bool det
         else
             preset.is_project_embedded = false;
         if (m_type == Preset::TYPE_PRINT)
-            preset.config.option<ConfigOptionString >("print_settings_id", true)->value  = preset.name;
+            preset.config.option<ConfigOptionString>("print_settings_id", true)->value = new_name;
         else if (m_type == Preset::TYPE_FILAMENT)
-            preset.config.option<ConfigOptionStrings>("filament_settings_id", true)->values[0] = preset.name;
+            preset.config.option<ConfigOptionStrings>("filament_settings_id", true)->values[0] = new_name;
         else if (m_type == Preset::TYPE_PRINTER)
-            preset.config.option<ConfigOptionString>("printer_settings_id", true)->value = preset.name;
+            preset.config.option<ConfigOptionString>("printer_settings_id", true)->value = new_name;
         //BBS: add lock logic for sync preset in background
         final_inherits = inherits;
         unlock();
@@ -2079,9 +2308,9 @@ void PresetCollection::save_current_preset(const std::string &new_name, bool det
         parent_preset = this->find_preset(final_inherits, false, true);
         if (parent_preset && this->get_selected_preset().base_id.empty()) {
             this->get_selected_preset().base_id = parent_preset->setting_id;
+            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " base_id: " << parent_preset->setting_id;
         }
     }
-    this->get_selected_preset().updated_time = (long long)Slic3r::Utils::get_current_time_utc();
     if (parent_preset)
         this->get_selected_preset().save(&(parent_preset->config));
     else
@@ -2093,6 +2322,13 @@ bool PresetCollection::delete_current_preset()
     Preset &selected = this->get_selected_preset();
     if (selected.is_default)
         return false;
+
+    if (get_preset_base(selected) == &selected) {
+        for (auto &preset2 : m_presets)
+            if (preset2.inherits() == selected.name)
+                return false;
+    }
+
     //BBS: add project embedded preset logic and refine is_external
     //if (! selected.is_external && ! selected.is_system) {
     if (! selected.is_system) {
@@ -2142,7 +2378,7 @@ const Preset* PresetCollection::get_selected_preset_parent() const
         return nullptr;
 
     const Preset 	  &selected_preset = this->get_selected_preset();
-    if (selected_preset.is_system || selected_preset.is_default)
+    if (get_preset_base(selected_preset) == &selected_preset)
         return &selected_preset;
 
     const Preset 	  &edited_preset   = this->get_edited_preset();
@@ -2190,6 +2426,17 @@ const Preset* PresetCollection::get_preset_parent(const Preset& child) const
             preset;
 }
 
+const Preset *PresetCollection::get_preset_base(const Preset &child) const
+{
+    if (child.is_system || child.is_default)
+        return &child;
+    // Handle user preset
+    if (child.inherits().empty())
+        return &child; // this is user root
+    auto inherits = find_preset(child.inherits());
+    return inherits ? get_preset_base(*inherits) : nullptr;
+}
+
 // Return vendor of the first parent profile, for which the vendor is defined, or null if such profile does not exist.
 PresetWithVendorProfile PresetCollection::get_preset_with_vendor_profile(const Preset &preset) const
 {
@@ -2212,10 +2459,13 @@ const std::string& PresetCollection::get_preset_name_by_alias(const std::string&
 		auto it = Slic3r::lower_bound_by_predicate(m_map_alias_to_profile_name.begin(), m_map_alias_to_profile_name.end(), [&alias](auto &l){ return l.first < alias; });
 		// Continue over all profile names with the same alias.
 		it != m_map_alias_to_profile_name.end() && it->first == alias; ++ it)
-		if (auto it_preset = this->find_preset_internal(it->second);
-			it_preset != m_presets.end() && it_preset->name == it->second &&
+        for (const std::string &preset_name : it->second) {
+            if (auto it_preset = this->find_preset_internal(preset_name);
+			it_preset != m_presets.end() && it_preset->name == preset_name &&
             it_preset->is_visible && (it_preset->is_compatible || size_t(it_preset - m_presets.begin()) == m_idx_selected))
 	        return it_preset->name;
+        }
+		
     return alias;
 }
 
@@ -2225,6 +2475,28 @@ const std::string* PresetCollection::get_preset_name_renamed(const std::string &
 	if (it_renamed != m_map_system_profile_renamed.end())
 		return &it_renamed->second;
 	return nullptr;
+}
+
+bool PresetCollection::is_alias_exist(const std::string &alias, Preset* preset)
+{
+    auto it = m_map_alias_to_profile_name.find(alias);
+    if (m_map_alias_to_profile_name.end() == it) return false;
+    if (!preset) return true;
+
+    auto compatible_printers = dynamic_cast<ConfigOptionStrings *>(preset->config.option("compatible_printers"));
+    if (compatible_printers == nullptr) return true;
+
+    for (const std::string &printer_name : compatible_printers->values) {
+        auto printer_iter = m_printer_hold_alias.find(printer_name);
+        if (m_printer_hold_alias.end() != printer_iter) {
+            auto alias_iter = m_printer_hold_alias[printer_name].find(alias);
+            if (m_printer_hold_alias[printer_name].end() != alias_iter) {
+                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " " << " The alias already exists: " << alias << " and the preset name: " << preset->name;
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 const std::string& PresetCollection::get_suffix_modified() {
@@ -2326,6 +2598,12 @@ void add_correct_opts_to_diff(const std::string &opt_key, t_config_option_keys& 
     const T* opt_init = static_cast<const T*>(other.option(opt_key));
     const T* opt_cur = static_cast<const T*>(this_c.option(opt_key));
     int opt_init_max_id = opt_init->values.size() - 1;
+    if (opt_init_max_id < 0) {
+        for (int i = 0; i < int(opt_cur->values.size()); i++)
+            vec.emplace_back(opt_key + "#" + std::to_string(i));
+        return;
+    }
+
     for (int i = 0; i < int(opt_cur->values.size()); i++)
     {
         int init_id = i <= opt_init_max_id ? i : 0;
@@ -2351,6 +2629,16 @@ inline t_config_option_keys deep_diff(const ConfigBase &config_this, const Confi
             } else if (opt_key == "default_filament_profile") {
                 // Ignore this field, it is not presented to the user, therefore showing a "modified" flag for this parameter does not help.
                 // Also the length of this field may differ, which may lead to a crash if the block below is used.
+            }
+            else if (opt_key == "thumbnails") {
+                // "thumbnails" can not contain extensions in old config but they are valid and use PNG extension by default
+                // So, check if "thumbnails" is really changed
+                // We will compare full thumbnails instead of exactly config values
+                auto [thumbnails, er]         = GCodeThumbnails::make_and_check_thumbnail_list(config_this);
+                auto [thumbnails_new, er_new] = GCodeThumbnails::make_and_check_thumbnail_list(config_other);
+                if (thumbnails != thumbnails_new || er != er_new)
+                    // if those strings are actually the same, erase them from the list of dirty oprions
+                    diff.emplace_back(opt_key);
             } else {
                 switch (other_opt->type()) {
                 case coInts:    add_correct_opts_to_diff<ConfigOptionInts       >(opt_key, diff, config_other, config_this);  break;
@@ -2553,9 +2841,11 @@ void PresetCollection::update_vendor_ptrs_after_copy(const VendorMap &new_vendor
 void PresetCollection::update_map_alias_to_profile_name()
 {
 	m_map_alias_to_profile_name.clear();
-	for (const Preset &preset : m_presets)
-		m_map_alias_to_profile_name.emplace_back(preset.alias, preset.name);
-	std::sort(m_map_alias_to_profile_name.begin(), m_map_alias_to_profile_name.end(), [](auto &l, auto &r) { return l.first < r.first; });
+    for (const Preset &preset : m_presets) {
+        m_map_alias_to_profile_name[preset.alias].push_back(preset.name);
+    }
+	// now m_map_alias_to_profile_name is map, not need sort
+	//std::sort(m_map_alias_to_profile_name.begin(), m_map_alias_to_profile_name.end(), [](auto &l, auto &r) { return l.first < r.first; });
 }
 
 void PresetCollection::update_map_system_profile_renamed()
@@ -2564,9 +2854,54 @@ void PresetCollection::update_map_system_profile_renamed()
 	for (Preset &preset : m_presets)
 		for (const std::string &renamed_from : preset.renamed_from) {
             const auto [it, success] = m_map_system_profile_renamed.insert(std::pair<std::string, std::string>(renamed_from, preset.name));
-			if (! success)
-                BOOST_LOG_TRIVIAL(error) << boost::format("Preset name \"%1%\" was marked as renamed from \"%2%\", though preset name \"%3%\" was marked as renamed from \"%2%\" as well.") % preset.name % renamed_from % it->second;
-		}
+            if (!success) {
+                ++m_errors;
+                BOOST_LOG_TRIVIAL(error) << boost::format("Preset name \"%1%\" was marked as renamed from \"%2%\", though preset name "
+                                                          "\"%3%\" was marked as renamed from \"%2%\" as well.") %
+                                                preset.name % renamed_from % it->second;
+            }
+        }
+}
+
+void PresetCollection::set_custom_preset_alias(Preset &preset)
+{
+    if (m_type == Preset::Type::TYPE_FILAMENT && preset.config.has(BBL_JSON_KEY_INHERITS) && preset.config.option<ConfigOptionString>(BBL_JSON_KEY_INHERITS)->value.empty()) {
+        std::string alias_name;
+        std::string preset_name = preset.name;
+        if (alias_name.empty()) {
+            size_t end_pos = preset_name.find_first_of("@");
+            if (end_pos != std::string::npos) {
+                alias_name = preset_name.substr(0, end_pos);
+                boost::trim_right(alias_name);
+            }
+        }
+        if (alias_name.empty() || is_alias_exist(alias_name, &preset))
+            preset.alias = "";
+        else {
+            preset.alias = std::move(alias_name);
+            m_map_alias_to_profile_name[preset.alias].push_back(preset.name);
+            set_printer_hold_alias(preset.alias, preset);
+        }
+    }
+}
+
+void PresetCollection::set_printer_hold_alias(const std::string &alias, Preset &preset)
+{
+    auto compatible_printers = dynamic_cast<ConfigOptionStrings *>(preset.config.option("compatible_printers"));
+    if (compatible_printers == nullptr) return;
+    for (const std::string &printer_name : compatible_printers->values) {
+        auto printer_iter = m_printer_hold_alias.find(printer_name);
+        if (m_printer_hold_alias.end() == printer_iter) {
+            m_printer_hold_alias[printer_name].insert(alias);
+        } else {
+            auto alias_iter = m_printer_hold_alias[printer_name].find(alias);
+            if (m_printer_hold_alias[printer_name].end() == alias_iter) {
+                m_printer_hold_alias[printer_name].insert(alias);
+            } else {
+                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " " << printer_name << "already has alias: " << alias << " and the preset name: " << preset.name;
+            }
+        }
+    }
 }
 
 std::string PresetCollection::name() const
@@ -2614,12 +2949,20 @@ std::vector<std::string> PresetCollection::system_preset_names() const
 }
 
 // Generate a file path from a profile name. Add the ".ini" suffix if it is missing.
-std::string PresetCollection::path_from_name(const std::string &new_name) const
+std::string PresetCollection::path_from_name(const std::string &new_name, bool detach) const
 {
      //BBS: change to json format
     //std::string file_name = boost::iends_with(new_name, ".ini") ? new_name : (new_name + ".ini");
     std::string file_name = boost::iends_with(new_name, ".json") ? new_name : (new_name + ".json");
-    return (boost::filesystem::path(m_dir_path) / file_name).make_preferred().string();
+    if (detach)
+        return (boost::filesystem::path(m_dir_path) / "base" / file_name).make_preferred().string();
+    else
+        return (boost::filesystem::path(m_dir_path) / file_name).make_preferred().string();
+}
+
+std::string PresetCollection::path_for_preset(const Preset &preset) const
+{
+    return path_from_name(preset.name, is_base_preset(preset));
 }
 
 const Preset& PrinterPresetCollection::default_preset_for(const DynamicPrintConfig &config) const
@@ -2634,6 +2977,21 @@ const Preset* PrinterPresetCollection::find_system_preset_by_model_and_variant(c
 
     const auto it = std::find_if(cbegin(), cend(), [&](const Preset &preset) {
         if (!preset.is_system || preset.config.opt_string("printer_model") != model_id)
+            return false;
+        if (variant.empty())
+            return true;
+        return preset.config.opt_string("printer_variant") == variant;
+    });
+
+    return it != cend() ? &*it : nullptr;
+}
+
+const Preset *PrinterPresetCollection::find_custom_preset_by_model_and_variant(const std::string &model_id, const std::string &variant) const
+{
+    if (model_id.empty()) { return nullptr; }
+
+    const auto it = std::find_if(cbegin(), cend(), [&](const Preset &preset) {
+        if (preset.config.opt_string("printer_model") != model_id)
             return false;
         if (variant.empty())
             return true;
@@ -2664,6 +3022,7 @@ static std::vector<std::string> s_PhysicalPrinter_opts {
     "preset_name", // temporary option to compatibility with older Slicer
     "preset_names",
     "printer_technology",
+    "bbl_use_printhost",
     "host_type",
     "print_host",
     "print_host_webui",

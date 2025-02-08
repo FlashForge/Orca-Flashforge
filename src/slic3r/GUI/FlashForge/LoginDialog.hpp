@@ -77,6 +77,7 @@ private:
     void title2Clicked(wxMouseEvent &event);
     void switchTitle1();
     void switchTtitle2();
+    void gCodeClicked(wxMouseEvent& event);
 
     void setupLayoutPage1(wxBoxSizer* page1Sizer,wxPanel* parent);
     void setupLayoutPage2(wxBoxSizer* page2Sizer,wxPanel* parent,bool foreign = false);
@@ -131,6 +132,7 @@ private:
     wxStaticText* m_service_link_page1 {nullptr};
     wxStaticText    *m_st_and_title1{nullptr};
     wxStaticText* m_privacy_policy_page1 {nullptr};
+    wxPanel*         m_panel_checkbox_page0{nullptr};
     wxPanel* m_panel_checkbox_page1 {nullptr};
     wxPanel *m_panel_separotor_login{nullptr};
 
@@ -140,6 +142,7 @@ private:
     wxPanel  *m_panel_separotor_login2{nullptr};
 
     FFButton* m_login_button_page2 {nullptr};
+    wxPanel*  m_panel_checkbox_page3{nullptr};
     wxPanel* m_panel_checkbox_page2 {nullptr};
 
     wxStaticText* m_protocol_page2{nullptr};

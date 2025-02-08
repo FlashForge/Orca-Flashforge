@@ -169,6 +169,9 @@ void DeviceItemPanel::mouseDown(wxMouseEvent& event)
 
 void DeviceItemPanel::mouseReleased(wxMouseEvent& event)
 {
+    if (m_pressed == false) {
+        return;
+    }
     if (isPointIn(convertEventPoint(event))) {
         sendEvent();
     }
@@ -213,8 +216,29 @@ void DeviceItemPanel::onPaint(wxPaintEvent& event)
 {
     wxPaintDC dc(this);
     wxSize sz = GetSize();
-    wxPen pen;
-    pen.SetWidth(3);
+#ifdef __WXMSW__
+    wxMemoryDC memdc;
+    wxBitmap   bmp(sz.x, sz.y);
+    memdc.SelectObject(bmp);
+    memdc.Blit({0, 0}, sz, &dc, {0, 0});
+    {
+        wxGCDC dc2(memdc);
+        dc2.SetFont(GetFont());
+        do_render(dc2);
+    }
+    memdc.SelectObject(wxNullBitmap);
+    dc.DrawBitmap(bmp, 0, 0);
+#else
+    do_render(dc);
+#endif
+    event.Skip();
+}
+
+void DeviceItemPanel::do_render(wxDC& dc)
+{
+    wxSize sz = GetSize();
+    wxPen  pen;
+    pen.SetWidth(2);
     dc.SetBrush(m_bg_color);
     if (m_hovered && m_pressed) {
         pen.SetColour(m_border_press_color);
@@ -224,8 +248,7 @@ void DeviceItemPanel::onPaint(wxPaintEvent& event)
         pen.SetColour(m_border_color);
     }
     dc.SetPen(pen);
-    dc.DrawRoundedRectangle(0, 0, sz.x, sz.y, 7);
-    event.Skip();
+    dc.DrawRoundedRectangle(1, 1, sz.x-1, sz.y-1, 7);
 }
 
 
@@ -245,16 +268,25 @@ DeviceInfoItemPanel::DeviceInfoItemPanel(wxWindow *parent, const DeviceInfo& inf
     m_placement_text->SetBackgroundColour(m_bg_color);
     m_status_text = new wxStaticText(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     m_status_text->SetBackgroundColour(m_bg_color);
+    m_progress_text = new wxStaticText(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxHL_ALIGN_RIGHT);
+    m_progress_text->SetBackgroundColour(m_bg_color);
 
-    m_main_sizer->AddStretchSpacer(1);
+    wxBoxSizer* status_sizer = new wxBoxSizer(wxHORIZONTAL);
+    status_sizer->Add(m_status_text, 0, wxEXPAND | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL);
+    status_sizer->AddStretchSpacer(1);
+    status_sizer->Add(m_progress_text, 0, wxEXPAND | wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL);
+
+    m_main_sizer->AddSpacer(2);
+    m_main_sizer->AddStretchSpacer(1);    
     m_main_sizer->Add(m_name_text, 0, wxEXPAND | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(10));
     m_main_sizer->AddSpacer(FromDIP(3));
     m_main_sizer->Add(m_icon, 0, wxALIGN_CENTER | wxLEFT | wxRIGHT, FromDIP(10));
     m_main_sizer->AddSpacer(FromDIP(3));
     m_main_sizer->Add(m_placement_text, 0, wxEXPAND | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(10));
     m_main_sizer->AddSpacer(FromDIP(3));
-    m_main_sizer->Add(m_status_text, 0, wxEXPAND | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(10));
+    m_main_sizer->Add(status_sizer, 0, wxEXPAND | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(10));
     m_main_sizer->AddStretchSpacer(1);
+    m_main_sizer->AddSpacer(2);
     
     updateInfo(info);
     Layout();
@@ -268,7 +300,7 @@ void DeviceInfoItemPanel::updateInfo(const DeviceInfo& info)
     wxScreenDC dc;
     dc.SetFont(GetFont());
     wxString name = FFUtils::trimString(dc, wxString::FromUTF8(info.name), width);
-    m_name_text->SetLabel(name);
+    m_name_text->SetLabelText(name);
     //if (info.placement.empty()) {
     //    m_placement_text->SetLabel(_L("Default"));
     //} else {
@@ -373,6 +405,13 @@ void DeviceInfoItemPanel::updateStatus()
     wxString status = FFUtils::convertStatus(m_info.status, color);
     m_status_text->SetLabel(status);
     m_status_text->SetForegroundColour(color);
+    if ("printing" == m_info.status) {
+        m_progress_text->Show(true);
+        m_progress_text->SetLabel(wxString::Format("%d%s", m_info.progress, "%"));
+        m_progress_text->SetForegroundColour(color);
+    } else {
+        m_progress_text->Show(false);
+    }
 }
 
 wxBitmap DeviceInfoItemPanel::machineBitmap(unsigned short pid)
@@ -756,7 +795,7 @@ void DeviceListPanel::filterDeviceList()
         const auto& dev_info = iter->second->deviceInfo();
         //std::string type_str = FFUtils::getPrinterName(dev_info.pid);
         if ((m_filter_placement_default || dev_info.placement == m_filter_placement)
-            && (m_filter_status_default || dev_info.status == m_filter_status)
+            && (m_filter_status_default || FFUtils::convertStatus(dev_info.status) == m_filter_status)
             && (m_filter_types.find(dev_info.pid) != m_filter_types.end())
             && ((m_wlan_btn->GetValue() && !dev_info.lanFlag) || (m_lan_btn->GetValue() && dev_info.lanFlag))) {
             m_device_sizer->Add(iter->second);
@@ -772,14 +811,18 @@ void DeviceListPanel::filterDeviceList()
     Thaw();
 }
 
-void DeviceListPanel::updateFilterMap()
+bool DeviceListPanel::updateFilterMap()
 {
-    updatePlacementMap();
-    updateStatusMap();
+    bool refresh = false;
+    refresh = updatePlacementMap();
+    if (updateStatusMap()) {
+        refresh = true;
+    }
     updateTypeMap();
+    return refresh;
 }
 
-void DeviceListPanel::updatePlacementMap()
+bool DeviceListPanel::updatePlacementMap()
 {
     PlacementItemMap backMap;
     for (const auto& iter : m_placement_item_map) {
@@ -809,24 +852,28 @@ void DeviceListPanel::updatePlacementMap()
             iter.second = nullptr;
         }
     }
-    if (!default_exist) {
-        m_filter_placement_default = true;
-        m_filter_placement = "";
-        m_filter_placement_trimmed = "";
-        updateFilterTitle();
-        filterDeviceList();
-    }
+//    if (!default_exist) {
+//        if (!m_filter_placement_default) {
+ //           m_filter_placement_default = true;
+//            m_filter_placement = "";
+//            m_filter_placement_trimmed = "";
+//            updateFilterTitle();
+//        }
+//        updateFilterTitle();
+//        filterDeviceList();
+//    }
     backMap.clear();
+    return !default_exist;
 }
 
-void DeviceListPanel::updateStatusMap()
+bool DeviceListPanel::updateStatusMap()
 {
     for (auto& iter : m_status_item_map) {
         iter.second->SetValid(false);
     }
     bool default_exist = false;
     for (auto& iter : m_device_map) {
-        std::string status = iter.second->deviceInfo().status;
+        wxString status = FFUtils::convertStatus(iter.second->deviceInfo().status);
         auto status_iter = m_status_item_map.find(status);
         if (status_iter == m_status_item_map.end()) {
             auto item = new DeviceStatusFilterItem(m_filter_popup, status);
@@ -841,6 +888,7 @@ void DeviceListPanel::updateStatusMap()
             default_exist = true;
         }
     }
+    return !default_exist;
     if (!default_exist) {
         m_filter_status_default = true;
         m_filter_status = "";
@@ -887,7 +935,11 @@ void DeviceListPanel::updateFilterTitle()
 void DeviceListPanel::updateStaticMap()
 {
     std::map<std::string, int> statusMap;
-    for (const auto& dev : m_device_map) {
+    DeviceItemMapSort  deviceMapSort;
+    for (auto it : m_device_map) {
+        deviceMapSort.emplace(it);
+    }
+    for (const auto& dev : deviceMapSort) {
         const auto& status = dev.second->deviceInfo().status;
         auto iter = statusMap.find(status);
         if (iter != statusMap.end()) {
@@ -996,8 +1048,8 @@ void DeviceListPanel::onFilterItemClicked(DeviceFilterEvent& event)
             m_filter_placement_trimmed = "";
         } else {
             m_filter_placement_default = false;
-            m_filter_placement = event.fullStringValue;
-            m_filter_placement_trimmed = event.elidedStringValue;
+            m_filter_placement = event.fullStringValue.ToStdString();
+            m_filter_placement_trimmed = event.elidedStringValue.ToStdString();
         }
         m_filter_popup->Dismiss();
     } else if (Filter_Popup_Type_Status == m_filter_popup_type) {
@@ -1042,36 +1094,36 @@ void DeviceListPanel::onFilterButtonClicked(wxMouseEvent &event)
         //pos = m_placement_btn->ClientToScreen(wxPoint(0, 0));
         //pos.y += m_placement_btn->GetSize().y + 2;
         m_filter_popup_type = Filter_Popup_Type_Placement;
-        m_default_filter_item->SetBottomCornerRound(m_placement_item_map.empty());
+        //m_default_filter_item->SetBottomCornerRound(m_placement_item_map.empty());
         m_default_filter_item->SetSelect(m_filter_placement_default);
         m_filter_popup->AddItem(m_default_filter_item);
         for (auto& iter : m_placement_item_map) {
-            iter.second->SetBottomCornerRound(false);
+            //iter.second->SetBottomCornerRound(false);
             iter.second->SetSelect(!m_filter_placement_default && (iter.first == m_filter_placement));
             m_filter_popup->AddItem(iter.second);
         }
-        if (!m_placement_item_map.empty()) {
-            m_placement_item_map.rbegin()->second->SetBottomCornerRound(true);
-        }
+        //if (!m_placement_item_map.empty()) {
+        //    m_placement_item_map.rbegin()->second->SetBottomCornerRound(true);
+        //}
         //m_filter_popup->Move(pos);
         m_filter_popup->Popup(m_placement_btn);
     } else if (event.GetEventObject() == m_status_btn) {
         m_filter_popup_type = Filter_Popup_Type_Status;
-        m_default_filter_item->SetBottomCornerRound(m_status_item_map.empty());
+        //m_default_filter_item->SetBottomCornerRound(m_status_item_map.empty());
         m_default_filter_item->SetSelect(m_filter_status_default);
         m_filter_popup->AddItem(m_default_filter_item);
         DeviceStatusFilterItem* last_item = nullptr;
         for (auto& iter : m_status_item_map) {
             if (iter.second->IsValid()) {
-                iter.second->SetBottomCornerRound(false);
+                //iter.second->SetBottomCornerRound(false);
                 iter.second->SetSelect(!m_filter_status_default && (iter.first == m_filter_status));
                 m_filter_popup->AddItem(iter.second);
                 last_item = iter.second;
             }
         }
-        if (last_item) {
-            last_item->SetBottomCornerRound(true);
-        }
+        //if (last_item) {
+        //    last_item->SetBottomCornerRound(true);
+        //}
         //pos = m_status_btn->ClientToScreen(wxPoint(0, 0));
         //pos.y += m_status_btn->GetSize().y + 2;
         m_filter_popup->Move(pos);
@@ -1081,20 +1133,22 @@ void DeviceListPanel::onFilterButtonClicked(wxMouseEvent &event)
         DeviceTypeFilterItem* last_item = nullptr;
         for (auto& iter : m_type_item_map) {
             if (iter.second->IsValid()) {
-                iter.second->SetBottomCornerRound(false);
+                //iter.second->SetBottomCornerRound(false);
                 iter.second->SetChecked(m_filter_types.find(iter.first) != m_filter_types.end());
                 m_filter_popup->AddItem(iter.second);
                 last_item = iter.second;
             }
         }
-        if (last_item) {
-            m_type_item_map.begin()->second->SetTopCornerRound(true);
-            m_type_item_map.rbegin()->second->SetBottomCornerRound(true);
-        }
+        //if (last_item) {
+            //m_type_item_map.begin()->second->SetTopCornerRound(true);
+            //m_type_item_map.rbegin()->second->SetBottomCornerRound(true);
+        //}
         //pos = m_type_btn->ClientToScreen(wxPoint(0, 0));
         //pos.y += m_type_btn->GetSize().y + 2;
-        m_filter_popup->Move(pos);
-        m_filter_popup->Popup(m_type_btn);
+        if (!m_type_item_map.empty()) {
+            m_filter_popup->Move(pos);
+            m_filter_popup->Popup(m_type_btn);
+        }
     }
 }
 
@@ -1125,6 +1179,7 @@ void DeviceListPanel::copyDeviceInfo(DeviceInfoItemPanel::DeviceInfo& dest, cons
     if (dest.conn_id < 0) {
         dest.status = "offline";
     }
+    dest.progress = source.progress;
 }
 
 void DeviceListPanel::onDeviceListUpdated(DeviceListUpdateEvent& event)
@@ -1136,6 +1191,8 @@ void DeviceListPanel::onDeviceListUpdated(DeviceListUpdateEvent& event)
 
     int conn_id = event.GetConnectionId();
     bool valid = getDeviceInfo(device_data.device_info, conn_id);
+    //BOOST_LOG_TRIVIAL(error) << "onDeviceListUpdated: dev_id(" << device_data.dev_id << "), op(" << (int)device_data.op
+    //    <<"), name(" << device_data.device_info.name << "), status: (" << device_data.device_info.status <<")";
     auto iter = m_device_data_cached.find(device_data.dev_id);
     if (iter == m_device_data_cached.end()) {
         DeviceKey key(generateNewPriorityId(), device_data.dev_id, device_data.device_info.name);
@@ -1255,16 +1312,21 @@ void DeviceListPanel::updateDeviceList()
         }
     }
     //std::sort(m_device_map.begin(), m_device_map.end(), deviceKeySortFunc);
-    updateFilterMap();
+    if (updateFilterMap()) {
+        refresh_flag = true;
+    }
     updateStaticMap();
     m_device_data_cached.clear();
     if (refresh_flag) {
-        m_filter_placement_default = true;
-        m_filter_status_default = true;
+        //if (!m_filter_placement_default) {
+        //    m_filter_placement_default = true;
+        //    updateFilterTitle();
+        //}
+        //m_filter_status_default = true;
         m_simple_book->ChangeSelection(m_device_map.empty() ? 0 : 1);
         //updateDeviceWindowSize();
         updateDeviceSizer();
-    }    
+    } 
 }
 
 bool DeviceListPanel::getDeviceInfo(DeviceInfoItemPanel::DeviceInfo& info, int conn_id)
@@ -1280,9 +1342,12 @@ bool DeviceListPanel::getDeviceInfo(DeviceInfoItemPanel::DeviceInfo& info, int c
                 info.placement = data.devDetail->location;
                 info.status    = data.devDetail->status;
                 info.name      = data.devDetail->name;
-            } else
+                info.progress  = data.devDetail->printProgress * 100;
+            } else {
                 info.name = data.lanDevInfo.name;
-            info.pid = data.lanDevInfo.pid;            
+                info.progress = 0;
+            }
+            info.pid = data.lanDevInfo.pid;
         } else if (COM_CONNECT_WAN == data.connectMode && valid && data.devDetail) {
             std::string dev_id = data.wanDevInfo.serialNumber;
             info.lanFlag = false;
@@ -1291,6 +1356,11 @@ bool DeviceListPanel::getDeviceInfo(DeviceInfoItemPanel::DeviceInfo& info, int c
             info.pid = data.devDetail->pid;
             info.placement = data.wanDevInfo.location;
             info.status = data.wanDevInfo.status;
+            if (data.devDetail) {
+                info.progress = data.devDetail->printProgress * 100;
+            } else {
+                info.progress = 0;
+            }
         }
         if (info.status.empty()) info.status = "offline";
     }
@@ -1302,35 +1372,52 @@ void DeviceListPanel::updateDeviceInfo(const std::string& dev_id, const DeviceIn
     bool status_changed = false;
     bool placement_changed = false;
     bool type_changed = false;
+    bool refresh_list = false;
     auto iter = m_device_map.find(dev_id);
     if (iter != m_device_map.end()) {
         auto dev_info = iter->second->deviceInfo();        
         if (info.lanFlag || info.status != "offline" || !dev_info.lanFlag) {
             if (dev_info.status != info.status) {
                 status_changed = true;
+                refresh_list = (m_filter_status == FFUtils::convertStatus(dev_info.status)) || (m_filter_status == FFUtils::convertStatus(info.status));
             }
             if (dev_info.placement != info.placement) {
                 placement_changed = true;
+                refresh_list = (m_filter_placement == dev_info.placement) || (m_filter_placement == info.placement);
             }
             if (dev_info.pid != info.pid) {
                 type_changed = true;
             }
             if (status_changed || placement_changed || type_changed
-                || dev_info.conn_id != info.conn_id || dev_info.lanFlag != info.lanFlag || dev_info.name != info.name) {
+                || dev_info.conn_id != info.conn_id || dev_info.lanFlag != info.lanFlag
+                || dev_info.name != info.name || dev_info.progress != info.progress) {
                 iter->second->updateInfo(info);
             }
+            if (info.lanFlag && (dev_info.name != info.name || dev_info.placement != info.placement)) {
+                AppConfig* config = GUI::wxGetApp().app_config;
+                if (config) {
+                    config->save_bind_machine_to_config(dev_id, info.name, info.placement, info.pid);
+                }
+            }
             if (placement_changed) {
-                updatePlacementMap();
+                if (updatePlacementMap()) {
+                    refresh_list = true;
+                }
             }
             if (type_changed) {
                 updateTypeMap();
             }
             if (status_changed) {
-                updateStatusMap();
-                updateStaticMap();                
+                if (updateStatusMap()) {
+                    refresh_list = true;
+                }
+                updateStaticMap();
                 if (m_static_btn->GetValue()) {
                     updateDeviceSizer();
                 }
+            }
+            if (!m_static_btn->GetValue() && refresh_list) {
+                filterDeviceList();
             }
         }
     }
@@ -1341,16 +1428,19 @@ void DeviceListPanel::onComDevDetailUpdate(ComDevDetailUpdateEvent& event)
     auto conn_id = event.id;
     bool valid = false;
     const auto& data = MultiComMgr::inst()->devData(conn_id, &valid);
-    BOOST_LOG_TRIVIAL(info) << "onComDevDetailUpdate: " << data.connectMode << ", " << valid ? "valid" : "invalid";
-    if (COM_CONNECT_LAN == data.connectMode && valid) {
-        std::string dev_id = data.lanDevInfo.serialNumber;
+    //BOOST_LOG_TRIVIAL(info) << "onComDevDetailUpdate: " << data.connectMode << ", " << valid ? "valid" : "invalid";
+    if (valid) {
         DeviceInfoItemPanel::DeviceInfo info;
-        info.lanFlag = true;
+        info.lanFlag = COM_CONNECT_LAN == data.connectMode;
         info.conn_id = conn_id;
-        info.name = data.devDetail->name;
-        info.pid = data.devDetail->pid;
-        info.placement = data.devDetail->location;
-        info.status = data.devDetail->status;
+        if (data.devDetail) {
+            info.name = data.devDetail->name;
+            info.pid = data.devDetail->pid;
+            info.placement = data.devDetail->location;
+            info.status = data.devDetail->status;
+            info.progress = data.devDetail->printProgress * 100;
+        }
+        std::string dev_id = info.lanFlag ? data.lanDevInfo.serialNumber : data.wanDevInfo.serialNumber;
         updateDeviceInfo(dev_id, info);
         BOOST_LOG_TRIVIAL(info) << "onComDevDetailUpdate: " << info.name << ", " << info.placement << ", " << info.status;
     }
@@ -1365,16 +1455,18 @@ void DeviceListPanel::onComWanDeviceInfoUpdate(ComWanDevInfoUpdateEvent& event)
     const auto& data = MultiComMgr::inst()->devData(conn_id, &valid);
     BOOST_LOG_TRIVIAL(info) << "onComWanDeviceInfoUpdate: " << data.connectMode << ", " << valid ? "valid" : "invalid";
     if (COM_CONNECT_WAN == data.connectMode && valid && data.devDetail) {
-        std::string dev_id = data.wanDevInfo.serialNumber;
         DeviceInfoItemPanel::DeviceInfo info;
         info.lanFlag = false;
         info.conn_id = conn_id;
         info.name = data.wanDevInfo.name;
-        info.pid = data.devDetail->pid;
         info.placement = data.wanDevInfo.location;
         info.status = data.wanDevInfo.status;
-        updateDeviceInfo(dev_id, info);
-        BOOST_LOG_TRIVIAL(info) << "onComDevDetailUpdate: " << info.name << ", " << info.placement << ", " << info.status;
+        if (data.devDetail) {
+            info.pid = data.devDetail->pid;
+            info.progress = data.devDetail->printProgress * 100;
+        }
+        updateDeviceInfo(data.wanDevInfo.serialNumber, info);
+        BOOST_LOG_TRIVIAL(info) << "onComWanDeviceInfoUpdate: " << info.name << ", " << info.placement << ", " << info.status;
     }
     flush_logs();
     event.Skip();

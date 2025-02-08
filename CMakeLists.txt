@@ -52,14 +52,15 @@ if (APPLE)
     if (CMAKE_MACOSX_BUNDLE)
         set(CMAKE_INSTALL_RPATH @executable_path/../Frameworks)
     endif()
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "11.3" CACHE STRING "Minimum OS X deployment version" FORCE)
     SET(CMAKE_XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.softfever3d.orca-slicer")
 
+    message(STATUS "Orca: IS_CROSS_COMPILE: ${IS_CROSS_COMPILE}")
 endif ()
 
 # Proposal for C++ unit tests and sandboxes
 option(SLIC3R_BUILD_SANDBOXES   "Build development sandboxes" OFF)
 option(SLIC3R_BUILD_TESTS       "Build unit tests" OFF)
+option(ORCA_TOOLS       "Build Orca tools" OFF)
 
 if (IS_CROSS_COMPILE)
     message("Detected cross compilation setup. Tests and encoding checks will be forcedly disabled!")
@@ -83,6 +84,11 @@ endif ()
 if(SLIC3R_DESKTOP_INTEGRATION)
     add_definitions(-DSLIC3R_DESKTOP_INTEGRATION)
 endif ()
+
+if (CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g")
+endif()
 
 if (MSVC AND CMAKE_CXX_COMPILER_ID STREQUAL Clang)
     set(IS_CLANG_CL TRUE)
@@ -111,6 +117,9 @@ if (MSVC)
     # C4244: 'conversion' conversion from 'type1' to 'type2', possible loss of data. An integer type is converted to a smaller integer type.
     # C4267: The compiler detected a conversion from size_t to a smaller type.
     add_compile_options(/wd4244 /wd4267)
+    # Disable warnings on comparison of unsigned and signed
+    # C4018: signed/unsigned mismatch
+    add_compile_options(/wd4018)
 endif ()
 
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL "AppleClang" AND ${CMAKE_CXX_COMPILER_VERSION} VERSION_GREATER 15)
@@ -239,6 +248,22 @@ if (NOT MSVC AND ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMP
     # On GCC and Clang, no return from a non-void function is a warning only. Here, we make it an error.
     add_compile_options(-Werror=return-type)
 
+    # Since some portions of code are just commented out or put under conditional compilation, there are
+    # a bunch of warning related to unused functions and variables. Suppress those warnings to not pollute
+    # compilers diagnostics output with warnings we not going to look at
+    add_compile_options(-Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-label -Wno-unused-local-typedefs)
+
+    # Ignore signed/unsigned comparison warnings
+    add_compile_options(-Wno-sign-compare)
+
+    # The mismatch of tabs and spaces throughout the project can sometimes
+    # cause this warning to appear even though the indentation is fine.
+    # Some includes also cause the warning
+    add_compile_options(-Wno-misleading-indentation)
+
+    # Disable warning if enum value does not have a corresponding case in switch statement
+    add_compile_options(-Wno-switch)
+
     # removes LOTS of extraneous Eigen warnings (GCC only supports it since 6.1)
     # https://eigen.tuxfamily.org/bz/show_bug.cgi?id=1221
     if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 6.0)
@@ -252,12 +277,25 @@ if (NOT MSVC AND ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMP
         add_compile_options(-Wno-deprecated-declarations)
     endif()
 
+    if (${CMAKE_CXX_COMPILER_ID} STREQUAL "AppleClang" AND ${CMAKE_CXX_COMPILER_VERSION} VERSION_GREATER 15)
+        add_compile_options(-Wno-error=enum-constexpr-conversion)
+    endif()
+
     #GCC generates loads of -Wunknown-pragmas when compiling igl. The fix is not easy due to a bug in gcc, see
     # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=66943 or
     # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53431
     # We will turn the warning of for GCC for now:
     if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+        # GCC generates loads of -Wunknown-pragmas when compiling igl. The fix is not easy due to a bug in gcc, see
+        # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=66943 or
+        # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53431
+        # We will turn the warning of for GCC for now:
         add_compile_options(-Wno-unknown-pragmas)
+    endif()
+
+    # Bit of a hack for flatpak building: compress the debug info with zstd to save space in CI 
+    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 13.0)
+        add_compile_options(-gz=zstd)
     endif()
 
 endif()
@@ -272,6 +310,8 @@ if (SLIC3R_ASAN)
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
         set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fsanitize=address")
         set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -fsanitize=address")
+    else()
+        add_compile_definitions(_DISABLE_STRING_ANNOTATION=1 _DISABLE_VECTOR_ANNOTATION=1)
     endif ()
 
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
@@ -306,7 +346,7 @@ if(WIN32)
     add_definitions(-D_USE_MATH_DEFINES -D_WIN32 -D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS)
     if(MSVC)
         # BOOST_ALL_NO_LIB: Avoid the automatic linking of Boost libraries on Windows. Rather rely on explicit linking.
-        add_definitions(-DBOOST_ALL_NO_LIB -DBOOST_USE_WINAPI_VERSION=0x601 -DBOOST_SYSTEM_USE_UTF8 )
+        add_definitions(-DBOOST_ALL_NO_LIB -DBOOST_USE_WINAPI_VERSION=0x602 -DBOOST_SYSTEM_USE_UTF8 )
         # Force the source code encoding to UTF-8. See OrcaSlicer GH pull request #5583
         add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
         add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
@@ -332,6 +372,16 @@ if(CMAKE_CXX_FLAGS_RELWITHDEBINFO MATCHES "/O2")
     string(REGEX REPLACE "/O2" "/Od" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 endif()
 
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    if(CMAKE_C_FLAGS_RELWITHDEBINFO MATCHES "-O2")
+        string(REGEX REPLACE "-O2" "-O0" CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
+    endif()
+
+    if(CMAKE_CXX_FLAGS_RELWITHDEBINFO MATCHES "-O2")
+        string(REGEX REPLACE "-O2" "-O0" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+    endif()
+endif()
+
 if(MSVC)
     if(CMAKE_C_FLAGS_RELWITHDEBINFO MATCHES "/Ob1")
         string(REGEX REPLACE "/Ob1" "/Ob0" CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
@@ -342,6 +392,20 @@ if(MSVC)
 
     set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} /RTC1")
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /RTC1")
+endif()
+
+if (CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
+    string(REGEX REPLACE "/O2" "/Od" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+    string(REGEX REPLACE "/O2" "/Od" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+
+    string(REGEX REPLACE "-O2" "-O0" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+    string(REGEX REPLACE "-O2" "-O0" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+
+    string(REGEX REPLACE "/O2" "/Od" CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
+    string(REGEX REPLACE "/O2" "/Od" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+
+    string(REGEX REPLACE "-O2" "-O0" CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
+    string(REGEX REPLACE "-O2" "-O0" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 endif()
 
 list(REMOVE_DUPLICATES CMAKE_C_FLAGS_RELWITHDEBINFO)
@@ -358,9 +422,7 @@ endif()
 # set(Boost_COMPILER "-mgw81")
 # boost::process was introduced first in version 1.64.0,
 # boost::beast::detail::base64 was introduced first in version 1.66.0
-set(MINIMUM_BOOST_VERSION "1.66.0")
-set(_boost_components "system;filesystem;thread;log;locale;regex;chrono;atomic;date_time;iostreams")
-find_package(Boost ${MINIMUM_BOOST_VERSION} REQUIRED COMPONENTS ${_boost_components})
+find_package(Boost 1.66 REQUIRED COMPONENTS system filesystem thread log locale regex chrono atomic date_time iostreams program_options)
 
 add_library(boost_libs INTERFACE)
 add_library(boost_headeronly INTERFACE)
@@ -386,28 +448,8 @@ function(slic3r_remap_configs targets from_Cfg to_Cfg)
     endif()
 endfunction()
 
-if(TARGET Boost::system)
-    message(STATUS "Boost::boost exists")
-    target_link_libraries(boost_headeronly INTERFACE Boost::boost)
-
-    # Only from cmake 3.12
-    # list(TRANSFORM _boost_components PREPEND Boost:: OUTPUT_VARIABLE _boost_targets)
-    set(_boost_targets "")
-    foreach(comp ${_boost_components})
-        list(APPEND _boost_targets "Boost::${comp}")
-    endforeach()
-
-    target_link_libraries(boost_libs INTERFACE
-        boost_headeronly # includes the custom compile definitions as well
-        ${_boost_targets}
-        )
-    slic3r_remap_configs("${_boost_targets}" RelWithDebInfo Release)
-else()
-    target_include_directories(boost_headeronly INTERFACE ${Boost_INCLUDE_DIRS})
-    target_link_libraries(boost_libs INTERFACE boost_headeronly ${Boost_LIBRARIES})
-endif()
-
-
+target_include_directories(boost_headeronly INTERFACE ${Boost_INCLUDE_DIRS})
+target_link_libraries(boost_libs INTERFACE boost_headeronly ${Boost_LIBRARIES})
 
 # Find and configure intel-tbb
 if(SLIC3R_STATIC)
@@ -426,11 +468,8 @@ find_package(TBB REQUIRED)
 # add_definitions(-DTBB_USE_CAPTURED_EXCEPTION=0)
 
 find_package(OpenSSL REQUIRED)
-if (APPLE)
-find_package(CURL CONFIG REQUIRED)
-else()
 find_package(CURL REQUIRED)
-endif()
+
 
 add_library(libcurl INTERFACE)
 target_link_libraries(libcurl INTERFACE CURL::libcurl)
@@ -499,6 +538,8 @@ find_package(PNG REQUIRED)
 set(OpenGL_GL_PREFERENCE "LEGACY")
 find_package(OpenGL REQUIRED)
 
+set(GLEW_ROOT "${CMAKE_PREFIX_PATH}")
+message("GLEW_ROOT: ${GLEW_ROOT}")
 # Find glew or use bundled version
 if (SLIC3R_STATIC AND NOT SLIC3R_STATIC_EXCLUDE_GLEW)
     set(GLEW_USE_STATIC_LIBS ON)
@@ -511,9 +552,11 @@ find_package(glfw3 REQUIRED)
 
 # Find the Cereal serialization library
 find_package(cereal REQUIRED)
-set_target_properties(cereal PROPERTIES IMPORTED_GLOBAL TRUE)
 if (NOT TARGET cereal::cereal)
+    set_target_properties(cereal PROPERTIES IMPORTED_GLOBAL TRUE)
     add_library(cereal::cereal ALIAS cereal)
+else ()
+    set_target_properties(cereal::cereal PROPERTIES IMPORTED_GLOBAL TRUE)
 endif ()
 
 # l10n

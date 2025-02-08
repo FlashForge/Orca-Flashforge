@@ -1,17 +1,17 @@
 {
     "type": "filament",
     "name": "fdm_filament_pla",
-    "inherits": "fdm_filament_common",
     "from": "system",
     "instantiation": "false",
-    "filament_type": [
-        "PLA"
-    ],
+    "inherits": "fdm_filament_common",
     "fan_cooling_layer_time": [
         "100"
     ],
     "filament_max_volumetric_speed": [
         "0"
+    ],
+    "filament_type": [
+        "PLA"
     ],
     "filament_density": [
         "1.24"

@@ -22,6 +22,7 @@ enum StringExceptionType {
     STRING_EXCEPT_FILAMENTS_DIFFERENT_TEMP      = 2,
     STRING_EXCEPT_OBJECT_COLLISION_IN_SEQ_PRINT = 3,
     STRING_EXCEPT_OBJECT_COLLISION_IN_LAYER_PRINT = 4,
+    STRING_EXCEPT_LAYER_HEIGHT_EXCEEDS_LIMIT = 5,
     STRING_EXCEPT_COUNT
 };
 
@@ -582,7 +583,16 @@ public:
     bool            is_step_done(PrintStepEnum step) const { return m_state.is_done(step, this->state_mutex()); }
 	PrintStateBase::StateWithTimeStamp step_state_with_timestamp(PrintStepEnum step) const { return m_state.state_with_timestamp(step, this->state_mutex()); }
     PrintStateBase::StateWithWarnings  step_state_with_warnings(PrintStepEnum step) const { return m_state.state_with_warnings(step, this->state_mutex()); }
-
+    // Add a slicing warning to the active Print step and send a status notification.
+    // This method could be called multiple times between this->set_started() and this->set_done().
+    void            active_step_add_warning(PrintStateBase::WarningLevel warning_level, const std::string &message,
+                            PrintStateBase::SlicingNotificationType message_id = PrintStateBase::SlicingDefaultNotification)
+    {
+        std::pair<PrintStepEnum, bool> active_step = m_state.active_step_add_warning(warning_level, message, (int)message_id, this->state_mutex());
+        if (active_step.second)
+            // Update UI.
+            this->status_update_warnings(static_cast<int>(active_step.first), warning_level, message, nullptr, message_id);
+    }
 protected:
     bool            set_started(PrintStepEnum step) { return m_state.set_started(step, this->state_mutex(), [this](){ this->throw_if_canceled(); }); }
 	PrintStateBase::TimeStamp set_done(PrintStepEnum step) {
@@ -604,16 +614,6 @@ protected:
 	bool            is_step_started_unguarded(PrintStepEnum step) const { return m_state.is_started_unguarded(step); }
 	bool            is_step_done_unguarded(PrintStepEnum step) const { return m_state.is_done_unguarded(step); }
 
-    // Add a slicing warning to the active Print step and send a status notification.
-    // This method could be called multiple times between this->set_started() and this->set_done().
-    void            active_step_add_warning(PrintStateBase::WarningLevel warning_level, const std::string &message,
-                            PrintStateBase::SlicingNotificationType message_id = PrintStateBase::SlicingDefaultNotification)
-    {
-        std::pair<PrintStepEnum, bool> active_step = m_state.active_step_add_warning(warning_level, message, (int)message_id, this->state_mutex());
-        if (active_step.second)
-            // Update UI.
-            this->status_update_warnings(static_cast<int>(active_step.first), warning_level, message, nullptr, message_id);
-    }
 
 private:
     PrintState<PrintStepEnum, COUNT> m_state;

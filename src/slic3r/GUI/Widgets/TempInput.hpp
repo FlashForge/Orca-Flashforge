@@ -3,6 +3,7 @@
 
 #include "../wxExtensions.hpp"
 #include <wx/textctrl.h>
+#include <wx/stattext.h>
 #include "SwitchButton.hpp"
 #include "StaticBox.hpp"
 #include "Label.hpp"
@@ -15,6 +16,8 @@
 #include "slic3r/GUI/FlashForge/ComCommand.hpp"
 
 wxDECLARE_EVENT(wxCUSTOMEVT_SET_TEMP_FINISH, wxCommandEvent);
+wxDECLARE_EVENT(EVT_CANCEL_PRINT_CLICKED, wxCommandEvent);
+wxDECLARE_EVENT(EVT_CONTINUE_PRINT_CLICKED, wxCommandEvent);
 
 wxDECLARE_EVENT(EVT_CANCEL_PRINT_CLICKED, wxCommandEvent);
 wxDECLARE_EVENT(EVT_CONTINUE_PRINT_CLICKED, wxCommandEvent);
@@ -103,6 +106,7 @@ public:
     wxPopupTransientWindow *wdialog{nullptr};
     int  temp_type;
     bool actice = false;
+    bool target_temp_vis = false;
 
     
     wxString erasePending(wxString &str);
@@ -127,11 +131,14 @@ public:
     void SetMaxTemp(int temp);
     void SetMinTemp(int temp);
 
+    void SetNormalIcon(wxString normalIcon);
+    void SetTargetTempVis(bool visible);
+
     int GetType() { return temp_type; }
 
     wxString GetTagTemp() { return text_ctrl->GetValue(); }
     wxString GetCurrTemp() { return GetLabel(); }
-
+    int get_max_temp() { return max_temp; }
     void SetLabel(const wxString &label);
 
     void SetTextColor(StateColor const &color);
@@ -268,12 +275,13 @@ public:
                  long style = wxTAB_TRAVERSAL);
     ~TempMixDevice(){};
 
-    void setState(int state);
+    void setState(int state,bool lampState = false);
     void setCurId(int curId);
     void reInitProductState();
     void reInitPage();
     void setDevProductAuthority(const fnet_dev_product_t &data);
     void lostFocusmodifyTemp();
+    void changeMachineType(unsigned short pid);
 
     void create_panel(wxWindow* parent,bool idle, wxString nozzleTemp,wxString platformTemp,wxString cavityTemp);
 
@@ -288,9 +296,17 @@ public:
     void setDeviceInfoBtnIcon(const wxString &icon);
 
     void modifyTemp(wxString nozzleTemp = "--", wxString platformTemp = "--", wxString cavityTemp = "--", int topTemp = 0, int bottomTemp = 0,int chamberTemp = 0);
-    void modifyDeviceInfo(wxString machineType, wxString sprayNozzle,wxString printSize,wxString version,wxString number,wxString material);
+    void modifyDeviceInfo(wxString machineType,
+                          wxString sprayNozzle,
+                          wxString printSize,
+                          wxString version,
+                          wxString number,
+                          wxString time,
+                          wxString material,
+                          wxString ip);
     void modifyDeviceLampState(bool bOpen);
     void modifyDeviceFilterState(bool internalOpen, bool externalOpen);
+    void modifyG3UClearFanState(bool bOpen);
 
 private:
     wxPanel* m_panel_idle_device_state;
@@ -315,12 +331,18 @@ private:
     Label *m_print_size_data{nullptr};
     Label *m_firmware_version_data{nullptr};
     Label *m_serial_number_data{nullptr};
+    Label *m_cumulative_print_time{nullptr};
     Label *m_private_material_data{nullptr};
+    Label *m_ipAddr{nullptr};
 
     int m_cur_id = -1;
 
     double m_right_target_temp = 0.00;
     double m_plat_target_temp = 0.00;
+    double m_cavity_target_temp = 0.00;
+
+    bool m_g3uMachine = false;
+    bool m_clearFanPressed = false;
 
 };
 

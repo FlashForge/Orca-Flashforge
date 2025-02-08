@@ -13,8 +13,13 @@ public:
 
 	static std::string getPrinterName(unsigned short pid);
 
-	static unsigned short getPrinterPID(const std::string& type);
+	static std::string getPrinterModelId(unsigned short pid);
 
+	static bool isPrinterSupportAms(const std::string &modelId);
+
+	static bool isPrinterSupportFlowCalibration(const std::string &modelId);
+	
+	static wxString convertStatus(const std::string& status);
 	static wxString convertStatus(const std::string& status, wxColour& color);
 
 	static wxString converDeviceError(const std::string &error);
@@ -22,10 +27,14 @@ public:
 	static std::string utf8Substr(const std::string& str, int start, int length);
 
 	static std::string truncateString(const std::string &s, size_t length);
+    static std::string wxString2StdString(const wxString& str);
 
 	static wxString trimString(wxDC &dc, const wxString &str, int width);
     static wxString elideString(wxWindow* wnd, const wxString& str, int width);
 	static wxString elideString(wxWindow* wnd, const wxString& str, int width, int lines);
+	static wxString wrapString(wxWindow* wnd, const wxString& str, int width);
+	static wxString wrapString(wxDC &dc, const wxString &str, int width);
+	static int getStringLines(const wxString& str);
 
 	static std::string flashforgeWebsite();
 	static wxString privacyPolicy();

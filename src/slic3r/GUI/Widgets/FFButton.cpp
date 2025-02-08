@@ -257,14 +257,22 @@ void FFButton::sendEvent()
 }
 
 
-FFPushButton::FFPushButton(wxWindow *parent,wxWindowID      id,const wxString &normalIcon,const wxString &hoverIcon,const wxString &pressIcon,const wxString &disableIcon,const int iconSize)
-    : wxButton(parent, id, "", wxPoint(10, 10), wxSize(25, 25), wxNO_BORDER)
+FFPushButton::FFPushButton(wxWindow *parent,
+						    wxWindowID id,
+						    const wxString &normalIcon,
+						    const wxString &hoverIcon,
+							const wxString &pressIcon,
+							const wxString &disableIcon,
+							const int iconSize)
+    : wxButton(parent, id, wxEmptyString, wxPoint(10, 10), wxDefaultSize, wxNO_BORDER)
     , m_normalIcon(normalIcon)
     , m_hoverIcon(hoverIcon)
     , m_pressIcon(pressIcon)
     , m_disableIcon(disableIcon)
 {
     //SetBitmap(wxBitmap(normalIcon));
+    SetMinSize(wxSize(FromDIP(21), FromDIP(21)));
+    SetMaxSize(wxSize(FromDIP(21), FromDIP(21)));
     m_normalBitmap  = create_scaled_bitmap(normalIcon.ToStdString(), this, iconSize);
     m_hoverBitmap   = create_scaled_bitmap(hoverIcon.ToStdString(), this, iconSize);
     m_pressBitmap   = create_scaled_bitmap(pressIcon.ToStdString(), this, iconSize);

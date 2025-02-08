@@ -34,6 +34,19 @@ DeviceFilterItem::DeviceFilterItem(wxWindow* parent, const wxString& label, bool
     Fit();
 
     Bind(wxEVT_PAINT, &DeviceFilterItem::onPaint, this);
+    Bind(wxEVT_SHOW, [this](auto& e) {
+        if (!e.IsShown()) {m_hover_flag = false; m_press_flag = false;}
+        });
+#ifndef __WXMAC__
+    Bind(wxEVT_ENTER_WINDOW, &DeviceFilterItem::onEnter, this);
+    Bind(wxEVT_LEAVE_WINDOW, &DeviceFilterItem::onLeave, this);
+    Bind(wxEVT_LEFT_DOWN, &DeviceFilterItem::onMouseDown, this);
+    Bind(wxEVT_LEFT_UP, &DeviceFilterItem::onMouseUp, this);
+    m_text->Bind(wxEVT_ENTER_WINDOW, &DeviceFilterItem::onEnter, this);
+    m_text->Bind(wxEVT_LEAVE_WINDOW, &DeviceFilterItem::onLeave, this);
+    m_text->Bind(wxEVT_LEFT_DOWN, &DeviceFilterItem::onMouseDown, this);
+    m_text->Bind(wxEVT_LEFT_UP, &DeviceFilterItem::onMouseUp, this);
+#endif
 }
 
 DeviceFilterItem::~DeviceFilterItem()
@@ -78,8 +91,6 @@ void DeviceFilterItem::SetHover(bool hover)
 
 void DeviceFilterItem::SetPressed(bool pressed, bool hit)
 {
-    //BOOST_LOG_TRIVIAL(info) << "Set pressed: " << pressed << ", " << hit << ", current: " << m_press_flag;
-    //flush_logs();
     if (m_press_flag != pressed) {
         m_press_flag = pressed;
         Refresh();
@@ -115,14 +126,14 @@ void DeviceFilterItem::onPaint(wxPaintEvent& event)
     auto sz = GetSize();
     dc.SetPen(*wxTRANSPARENT_PEN);
     //if (!m_top_corner_round || !m_bottom_corner_round) {
-    if (GetParent()) {
-        dc.SetBrush(GetParent()->GetBackgroundColour());
-        dc.DrawRectangle(0, 0, sz.x, sz.y);
-    }
+    //if (GetParent()) {
+    //    dc.SetBrush(GetParent()->GetBackgroundColour());
+    //    dc.DrawRectangle(0, 0, sz.x, sz.y);
+    // }
     wxColour color("#ffffff"), fcolor("#333333");
     if (m_press_flag) {
-        color = wxColour("#328DFB");
-        fcolor = wxColour("#ffffff");
+        color = wxColour("#D9EAFF");
+        //fcolor = wxColour("#ffffff");
     } else if (m_hover_flag) {
         color = wxColour("#D9EAFF");
     } else if (m_select_flag) {
@@ -130,20 +141,68 @@ void DeviceFilterItem::onPaint(wxPaintEvent& event)
         fcolor = wxColour("#ffffff");
     }
     dc.SetBrush(color);
-    if (!m_top_corner_round && !m_bottom_corner_round) {
-        dc.DrawRectangle(0, 0, sz.x, sz.y);
-    } else if (m_top_corner_round && m_bottom_corner_round) {
-        dc.DrawRoundedRectangle(0, 0, sz.x, sz.y, 6);
-    } else if (m_top_corner_round) {
-        dc.DrawRoundedRectangle(0, 0, sz.x, sz.y, 6);
-        dc.DrawRectangle(0, 6, sz.x, sz.y);
-    } else if (m_bottom_corner_round) {
-        dc.DrawRoundedRectangle(0, 0, sz.x, sz.y, 6);
-        dc.DrawRectangle(0, 0, sz.x, 6);
-    }
+    //if (!m_top_corner_round && !m_bottom_corner_round) {
+    //    dc.DrawRectangle(0, 0, sz.x, sz.y);
+    //} else if (m_top_corner_round && m_bottom_corner_round) {
+    //    dc.DrawRoundedRectangle(0, 0, sz.x, sz.y, 6);
+    //} else if (m_top_corner_round) {
+    //    dc.DrawRoundedRectangle(0, 0, sz.x, sz.y, 6);
+    //    dc.DrawRectangle(0, 6, sz.x, sz.y);
+    //} else if (m_bottom_corner_round) {
+    //    dc.DrawRoundedRectangle(0, 0, sz.x, sz.y, 6);
+    //    dc.DrawRectangle(0, 0, sz.x, 6);
+    //}
+    dc.DrawRectangle(0, 0, sz.x, sz.y);
     updateChildrenBackground(color);
     m_text->SetForegroundColour(fcolor);
 }
+
+#ifndef __WXMAC__
+wxPoint DeviceFilterItem::convertEventPoint(const wxMouseEvent& event)
+{
+    wxPoint pnt = event.GetPosition();
+    if (event.GetId() == m_text->GetId()) {
+        pnt += m_text->GetPosition();
+    }
+    return pnt;
+}
+
+void DeviceFilterItem::onEnter(wxMouseEvent& event)
+{
+    SetHover(true);
+    event.Skip();
+}
+
+void DeviceFilterItem::onLeave(wxMouseEvent& event)
+{
+    auto rect = GetRect();
+    wxPoint pnt = convertEventPoint(event);
+    if (!wxRect(GetSize()).Contains(pnt)) {
+        SetHover(false);
+    }
+    event.Skip();
+}
+
+void DeviceFilterItem::onMouseDown(wxMouseEvent& event)
+{
+    wxPoint pnt = convertEventPoint(event);
+    CaptureMouse();
+    SetPressed(true, true);
+    event.Skip();
+}
+
+void DeviceFilterItem::onMouseUp(wxMouseEvent& event)
+{
+    wxPoint pnt = convertEventPoint(event);
+    if (wxRect(GetSize()).Contains(pnt)) {
+        SetPressed(false, true);
+    } else {
+        SetPressed(false, false);
+    }
+    ReleaseMouse();
+    event.Skip();
+}
+#endif /* __WXMAC__ */
 
 void DeviceFilterItem::updateChildrenBackground(const wxColour& color)
 {
@@ -152,9 +211,7 @@ void DeviceFilterItem::updateChildrenBackground(const wxColour& color)
 
 void DeviceFilterItem::sendEvent(const wxString& full_data, const wxString& trim_data, int int_data)
 {
-    //BOOST_LOG_TRIVIAL(info) << "Send Event, " << full_data << ", " << trim_data << ", " << int_data;
-    //flush_logs();
-    DeviceFilterEvent event(EVT_DEVICE_FILTER_ITEM_CLICKED, GetId(), full_data.ToStdString(), trim_data.ToStdString(), int_data, this);
+    DeviceFilterEvent event(EVT_DEVICE_FILTER_ITEM_CLICKED, GetId(), full_data, trim_data, int_data, this);
     event.SetEventObject(this);
     wxPostEvent(this, event);
 }
@@ -165,7 +222,7 @@ void DeviceFilterItem::mouseUpEvent()
 }
 
 
-DeviceStatusFilterItem::DeviceStatusFilterItem(wxWindow* parent, const std::string& status,
+DeviceStatusFilterItem::DeviceStatusFilterItem(wxWindow* parent, const wxString& status,
     bool top_corner_round/* = false*/, bool bottom_corner_round/* = false*/)
     : DeviceFilterItem(parent, wxEmptyString, top_corner_round, bottom_corner_round)
     , m_status(status)
@@ -179,10 +236,10 @@ void DeviceStatusFilterItem::mouseUpEvent()
     sendEvent(m_status, m_text->GetLabel(), 0);
 }
 
-void DeviceStatusFilterItem::SetStatus(const std::string& status)
+void DeviceStatusFilterItem::SetStatus(const wxString& status)
 {
-    wxColour color;
-    SetLabel(FFUtils::convertStatus(m_status, color));
+    m_status = status;
+    SetLabel(m_status);
 }
 
 
@@ -191,48 +248,72 @@ DeviceTypeFilterItem::DeviceTypeFilterItem(wxWindow* parent, unsigned short pid,
     , m_pid(pid)
 {
     m_main_sizer->Clear();
-    m_check_box = new FFCheckBox(this);
+    m_bitmap = new wxStaticBitmap(this, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxSize(FromDIP(16), FromDIP(16)));
+    m_bitmap->SetMinSize(wxSize(FromDIP(16), FromDIP(16)));
+    m_bitmap->SetMinSize(wxSize(FromDIP(16), FromDIP(16)));
+
+    //m_check_box = new FFCheckBox(this);
     m_main_sizer->AddSpacer(FromDIP(15));
-    m_main_sizer->Add(m_check_box, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT | wxTOP | wxBOTTOM, FromDIP(5));
+    m_main_sizer->Add(m_bitmap, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT | wxTOP | wxBOTTOM, FromDIP(5));
     m_main_sizer->Add(m_text, 1, wxALIGN_CENTER_VERTICAL | wxTOP | wxBOTTOM, FromDIP(5));
     m_main_sizer->AddSpacer(FromDIP(15));
     
     SetLabel(FFUtils::getPrinterName(m_pid));
-    m_check_box->SetValue(checked);
+    updateBitmap();
+    //m_check_box->SetValue(checked);
+
+ #ifndef __WXMAC__
+    m_bitmap->Bind(wxEVT_LEFT_DOWN, &DeviceTypeFilterItem::onMouseDown, this);
+    m_bitmap->Bind(wxEVT_LEFT_UP, &DeviceTypeFilterItem::onMouseUp, this);
+#endif
 }
 
 bool DeviceTypeFilterItem::IsChecked() const
 {
-    return m_check_box->GetValue();
+    return m_check_flag;
+    //return m_check_box->GetValue();
 }
 
 void DeviceTypeFilterItem::SetChecked(bool checked)
 {
-    m_check_box->SetValue(checked);
+    if (m_check_flag != checked) {
+        m_check_flag = checked;
+        updateBitmap();
+    }
+    //m_check_box->SetValue(checked);
 }
 
 void DeviceTypeFilterItem::updateChildrenBackground(const wxColour& color)
 {
-    m_check_box->SetBackgroundColour(color);
+    m_bitmap->SetBackgroundColour(color);
     DeviceFilterItem::updateChildrenBackground(color);
 }
 
 void DeviceTypeFilterItem::mouseDownEvent()
 {
-    m_check_box->SetValue(!m_check_box->GetValue());
-    //BOOST_LOG_TRIVIAL(info) << "DeviceTypeFilterItem::mouseDownEvent, " << m_check_box->GetValue();
-    //flush_logs();
+    SetChecked(!IsChecked());
+    //m_check_box->SetValue(!m_check_box->GetValue());
     sendEvent("", "", m_pid);
 }
 
 void DeviceTypeFilterItem::messureSize()
 {
-    int min_width = m_check_box->GetSize().x + m_text->GetTextExtent(GetLabel()).x + FromDIP(40);
+    //int min_width = m_check_box->GetSize().x + m_text->GetTextExtent(GetLabel()).x + FromDIP(40);
+    int min_width = m_bitmap->GetSize().x + m_text->GetTextExtent(GetLabel()).x + FromDIP(40);
     SetMinSize(wxSize(min_width, FromDIP(30)));
     SetSize(wxSize(min_width, FromDIP(30)));
 }
 
+void DeviceTypeFilterItem::updateBitmap()
+{
+    if (m_check_flag) {
+        m_bitmap->SetBitmap(create_scaled_bitmap("ff_check_on", 0, 16));
+    } else {
+        m_bitmap->SetBitmap(create_scaled_bitmap("ff_check_off", 0, 16));
+    }
+}
 
+#ifdef __WXMAC__
 DeviceFilterPopupWindow::DeviceFilterPopupWindow(wxWindow* parent)
     : FFPopupWindow(parent)
     , m_sizer(new wxBoxSizer(wxVERTICAL))
@@ -272,10 +353,10 @@ void DeviceFilterPopupWindow::Create()
 void DeviceFilterPopupWindow::Popup(wxWindow* focus/*=nullptr*/)
 {
     Create();
-    wxGraphicsPath path = wxGraphicsRenderer::GetDefaultRenderer()->CreatePath();
-    wxSize size = GetSize();
-    path.AddRoundedRectangle(0, 0, size.x, size.y, 6);
-    SetShape(path);
+    //wxGraphicsPath path = wxGraphicsRenderer::GetDefaultRenderer()->CreatePath();
+    //wxSize size = GetSize();
+    //path.AddRoundedRectangle(0, 0, size.x, size.y, 6);
+    //SetShape(path);
     FFPopupWindow::Popup(focus);
 }
 
@@ -302,8 +383,6 @@ void DeviceFilterPopupWindow::ClearItems()
 
 void DeviceFilterPopupWindow::ProcessLeftDown(const wxPoint& pnt)
 {
-    //BOOST_LOG_TRIVIAL(info) << "DeviceFilterPopupWindow::ProcessLeftDown";
-    //flush_logs();
     m_last_point = pnt;
     for (auto& it : m_items) {
         it->SetPressed(false, false);
@@ -340,6 +419,93 @@ void DeviceFilterPopupWindow::ProcessMotion(const wxPoint& pnt)
         }
     }
 }
+#else
+
+DeviceFilterPopupWindow::DeviceFilterPopupWindow(wxWindow* parent)
+    : PopupWindow(parent, wxBORDER_NONE | wxPU_CONTAINS_CONTROLS | wxFRAME_SHAPED)
+    , m_sizer(new wxBoxSizer(wxVERTICAL))
+{
+#ifdef __WINDOWS__
+    SetDoubleBuffered(true);
+#endif //__WINDOWS__
+    SetBackgroundColour(wxColour("#c1c1c1"));
+    wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
+    sizer->Add(m_sizer, 0, wxEXPAND | wxALL, 1);
+    SetSizer(sizer);
+}
+
+DeviceFilterPopupWindow::~DeviceFilterPopupWindow()
+{    
+}
+
+void DeviceFilterPopupWindow::Create()
+{
+    m_sizer->Clear();
+    int max_width = 0;
+    int height = m_items.size() * FromDIP(30);
+    for (auto btn : m_items) {
+        max_width = std::max(btn->GetMinSize().x, max_width);
+    }
+
+    for (auto btn : m_items) {
+        btn->SetSize(max_width, FromDIP(30));
+        btn->Layout();
+        m_sizer->Add(btn, 0, wxEXPAND);
+    }
+    SetSize(wxSize(max_width+2, height+2));
+    Layout();
+    Refresh();
+}
+
+void DeviceFilterPopupWindow::Popup(wxWindow* focus/* = nullptr*/)
+{
+    Create();
+    //wxGraphicsPath path = wxGraphicsRenderer::GetDefaultRenderer()->CreatePath();
+    //wxSize size = GetSize();
+    //path.AddRoundedRectangle(0, 0, size.x, size.y, 8);
+    //SetShape(path);
+    if (focus) {
+        wxPoint pos = focus->ClientToScreen(wxPoint(0, focus->GetSize().y + 2));
+        Move(pos);
+    }
+    PopupWindow::Popup();
+}
+
+void DeviceFilterPopupWindow::OnDismiss()
+{
+    ClearItems();
+}
+
+void DeviceFilterPopupWindow::AddItem(DeviceFilterItem* item)
+{
+    item->Show(true);
+    m_items.emplace_back(item);
+}
+
+void DeviceFilterPopupWindow::ClearItems()
+{
+    for (auto& iter : m_items) {
+        iter->Show(false);
+    }
+    m_items.clear();
+    m_sizer->Clear();
+}
+
+void DeviceFilterPopupWindow::onPaint(wxPaintEvent& event)
+{
+    auto sz = GetSize();
+    wxPaintDC dc(this);
+    dc.SetBrush(wxColour("#c1c1c1"));
+    dc.SetPen(*wxTRANSPARENT_PEN);
+    dc.DrawRectangle(0, 0, sz.x, sz.y);
+}
+
+bool DeviceFilterPopupWindow::ProcessLeftDown(wxMouseEvent &event)
+{
+    return PopupWindow::ProcessLeftDown(event);
+}
+
+#endif /* __WXMAC__ */
 
 } // GUI
 } // Slic3r

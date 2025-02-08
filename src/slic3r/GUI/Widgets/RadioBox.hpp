@@ -32,7 +32,38 @@ private:
     ScalableBitmap m_off;
 };
 
-}}
+class RadioButton : public wxBitmapToggleButton
+{
+public:
+    RadioButton(wxWindow* parent);
+    ~RadioButton();
+    void SetValue(bool value) override;
+    bool GetValue();
+    bool Disable() { return wxBitmapToggleButton::Disable(); }
+    bool Enable() { return wxBitmapToggleButton::Enable(); }
+    enum PaintMode { Normal = 0, Hover = 1};
+
+protected:
+    void paintEvent(wxPaintEvent& event);
+    void OnMouseEnter(wxMouseEvent& event);
+    void OnMouseLeave(wxMouseEvent& event);
+
+private:
+    void connectEvent();
+
+private:
+    PaintMode      m_mode;
+    ScalableBitmap m_on_normal;
+    ScalableBitmap m_on_hover;
+    ScalableBitmap m_off_normal;
+    ScalableBitmap m_off_hover;
+};
+
+
+
+
+
+}}//namespace
 
 
 

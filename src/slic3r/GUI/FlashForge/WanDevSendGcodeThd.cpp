@@ -1,9 +1,11 @@
 #include "WanDevSendGcodeThd.hpp"
+#include <algorithm>
 #include <fstream>
 #include <iterator>
 #include <boost/algorithm/hex.hpp>
 #include <openssl/md5.h>
 #include "ComCommand.hpp"
+#include "ComWanNimConn.hpp"
 #include "FreeInDestructor.h"
 #include "MultiComUtils.hpp"
 #include "WanDevTokenMgr.hpp"
@@ -25,24 +27,33 @@ void WanDevSendGcodeThd::exit()
     m_thread.join();
 }
 
-bool WanDevSendGcodeThd::startSendGcode(const std::string &uid,
-    const std::vector<std::string> &devIds, const std::string &gcodeFilePath,
-    const std::string &thumbFilePath, const std::string &gcodeDstName, bool printNow,
-    bool levelingBeforePrint)
+bool WanDevSendGcodeThd::startSendGcode(const std::string &uid, const std::vector<std::string> &devIds,
+    const std::vector<std::string> &devSerialNumbers, const std::string &nimTeamId,
+    const std::vector<std::string> &nimAccountIds, const com_send_gcode_data_t &sendGocdeData)
 {
     if (m_sendGcodeEvent.get()) {
         return false;
     }
     m_uid = uid;
     m_devIds = devIds;
-    m_gcodeFilePath = gcodeFilePath;
-    m_thumbFilePath = thumbFilePath;
-    m_gcodeDstName = gcodeDstName;
-    m_sendGcodeData.gcodeFilePath = m_gcodeFilePath.c_str();
-    m_sendGcodeData.thumbFilePath = m_thumbFilePath.c_str();
-    m_sendGcodeData.gcodeDstName = m_gcodeDstName.c_str();
-    m_sendGcodeData.printNow = printNow;
-    m_sendGcodeData.levelingBeforePrint = levelingBeforePrint;
+    m_nimTeamId = nimTeamId;
+    m_devSerialNumberMap.clear();
+    m_nimAccountIdMap.clear();
+    for (size_t i = 0; i < devIds.size(); ++i) {
+        m_devSerialNumberMap.emplace(devIds[i], devSerialNumbers[i]);
+        m_nimAccountIdMap.emplace(devIds[i], nimAccountIds[i]);
+    }
+    m_comSendGcodeData = sendGocdeData;
+    m_materialMappings = MultiComUtils::comMaterialMappings2Fnet(m_comSendGcodeData.materialMappings);
+    m_sendGcodeData.gcodeFilePath = m_comSendGcodeData.gcodeFilePath.c_str();
+    m_sendGcodeData.thumbFilePath = m_comSendGcodeData.thumbFilePath.c_str();
+    m_sendGcodeData.gcodeDstName = m_comSendGcodeData.gcodeDstName.c_str();
+    m_sendGcodeData.printNow = m_comSendGcodeData.printNow;
+    m_sendGcodeData.levelingBeforePrint = m_comSendGcodeData.levelingBeforePrint;
+    m_sendGcodeData.flowCalibration = m_comSendGcodeData.flowCalibration;
+    m_sendGcodeData.useMatlStation = m_comSendGcodeData.useMatlStation;
+    m_sendGcodeData.gcodeToolCnt = (int)m_comSendGcodeData.materialMappings.size();
+    m_sendGcodeData.materialMappings = m_materialMappings.data();
     m_sendGcodeData.callback = callback;
     m_sendGcodeData.callbackData = this;
     m_progress = 0.0;
@@ -70,26 +81,23 @@ void WanDevSendGcodeThd::run()
 
             fnet_clound_gcode_data_t *cloundGcodeData;
             int fnetRet = m_networkIntfc->wanDevSendGcodeClound(
-                m_uid.c_str(), accessToken, &m_sendGcodeData, &cloundGcodeData, 15000);
+                m_uid.c_str(), accessToken, &m_sendGcodeData, &cloundGcodeData, ComTimeoutWanB);
             fnet::FreeInDestructor freeCloundGcodeData(
                 cloundGcodeData, m_networkIntfc->freeCloundGcodeData);
 
-            fnet_clound_job_error_t *errors = nullptr;
-            int errorCnt = 0;
+            std::map<std::string, ComCloundJobErrno> errorMap;
             if (fnetRet == FNET_OK) {
-                fnetRet = startCloundJob(accessToken, cloundGcodeData, &errors, &errorCnt);
+                fnetRet = startCloundJob(accessToken, cloundGcodeData, errorMap);
             }
-            fnet::FreeInDestructorArg freeErrors(errors, m_networkIntfc->freeCloudJobErrors, errorCnt);
-            
             ComErrno ret = MultiComUtils::fnetRet2ComErrno(fnetRet);
-            QueueEvent(new ComSendGcodeFinishEvent(COM_SEND_GCODE_FINISH_EVENT, errors, errorCnt, ret));
+            QueueEvent(new ComSendGcodeFinishEvent(COM_SEND_GCODE_FINISH_EVENT, errorMap, ret));
         }
         m_sendGcodeEvent.set(false);
     }
 }
 
-int WanDevSendGcodeThd::startCloundJob(const char *accessToken,
-    const fnet_clound_gcode_data_t *cloundGcodeData, fnet_clound_job_error_t **errors, int *errorCnt)
+int WanDevSendGcodeThd::startCloundJob(const char *accessToken, const fnet_clound_gcode_data_t *cloundGcodeData,
+    std::map<std::string, ComCloundJobErrno> &errorMap)
 {
     std::vector<const char *> devIds;
     for (auto &devId : m_devIds) {
@@ -106,6 +114,8 @@ int WanDevSendGcodeThd::startCloundJob(const char *accessToken,
 
     fnet_clound_job_data_t jobData;
     jobData.devIds = devIds.data();
+    jobData.devSerialNumbers = nullptr;
+    jobData.jobIds = nullptr;
     jobData.devCnt = devIds.size();
     jobData.gcodeName = m_sendGcodeData.gcodeDstName;
     jobData.gcodeType = gcodeType.c_str();
@@ -114,7 +124,7 @@ int WanDevSendGcodeThd::startCloundJob(const char *accessToken,
     jobData.thumbName = thumbName.c_str();
     jobData.thumbType = thumbType.c_str();
     jobData.thumbMd5 = thumbMd5.c_str();
-    jobData.thumbSize = boost::filesystem::file_size(m_sendGcodeData.thumbFilePath);;
+    jobData.thumbSize = boost::filesystem::file_size(m_sendGcodeData.thumbFilePath);
     jobData.bucketName = cloundGcodeData->bucketName;
     jobData.endpoint = cloundGcodeData->endpoint;
     jobData.gcodeStorageKey = cloundGcodeData->gcodeStorageKey;
@@ -123,9 +133,31 @@ int WanDevSendGcodeThd::startCloundJob(const char *accessToken,
     jobData.thumbStorageUrl = cloundGcodeData->thumbStorageUrl;
     jobData.printNow = m_sendGcodeData.printNow;
     jobData.levelingBeforePrint = m_sendGcodeData.levelingBeforePrint;
+    jobData.flowCalibration = m_sendGcodeData.flowCalibration;
+    jobData.useMatlStation = m_sendGcodeData.useMatlStation;
+    jobData.gcodeToolCnt = m_sendGcodeData.gcodeToolCnt;
+    jobData.materialMappings = m_sendGcodeData.materialMappings;
 
-    return m_networkIntfc->wanDevStartCloundJob(
-        m_uid.c_str(), accessToken, &jobData, errors, errorCnt, ComTimeoutWan);
+    fnet_add_clound_job_result_t *results;
+    int resultCnt;
+    int fnetRet = m_networkIntfc->wanDevAddCloundJob(
+        m_uid.c_str(), accessToken, &jobData, &results, &resultCnt, ComTimeoutWanB);
+    if (fnetRet != FNET_OK) {
+        return fnetRet;
+    }
+    fnet::FreeInDestructorArg freeResults(results, m_networkIntfc->freeAddCloudJobResults, resultCnt);
+    if (resultCnt != m_devIds.size()) {
+        BOOST_LOG_TRIVIAL(error) << "invalid resultCnt: " << resultCnt << " devCnt: " << m_devIds.size();
+        return FNET_ERROR;
+    }
+    for (int i = 0; i < resultCnt; ++i) {
+        if (m_devSerialNumberMap.find(results[i].devId) == m_devSerialNumberMap.end()) {
+            BOOST_LOG_TRIVIAL(error) << "invalid devId: " << results[i].devId;
+            return FNET_ERROR;
+        }
+    }
+    sendStartCloundJob(results, resultCnt, jobData, errorMap);
+    return fnetRet;
 }
 
 std::string WanDevSendGcodeThd::getFileMd5(const char *filePath)
@@ -153,6 +185,59 @@ std::string WanDevSendGcodeThd::getFileMd5(const char *filePath)
     std::string result;
     boost::algorithm::hex_lower(std::begin(hash), std::end(hash), std::back_inserter(result));
     return result;
+}
+
+void WanDevSendGcodeThd::sendStartCloundJob(const fnet_add_clound_job_result_t *results, int resultCnt,
+    fnet_clound_job_data_t &jobData, std::map<std::string, ComCloundJobErrno> &errorMap)
+{
+    for (int i = 0; i < resultCnt; i += 30) {
+        std::vector<const char *> devIds;
+        std::vector<const char *> devSerialNumbers;
+        std::vector<const char *> jobIds;
+        for (size_t j = 0; j < 30 && i + j < resultCnt; ++j) {
+            if (results[i + j].error == FNET_ADD_CLOUND_JOB_OK) {
+                devIds.push_back(results[i + j].devId);
+                devSerialNumbers.push_back(m_devSerialNumberMap.at(results[i + j].devId).c_str());
+                jobIds.push_back(results[i + j].jobId);
+            } else {
+                errorMap.emplace(results[i + j].devId, convertError(results[i + j].error));
+            }
+        }
+        jobData.devIds = devIds.data();
+        jobData.devSerialNumbers = devSerialNumbers.data();
+        jobData.jobIds = jobIds.data();
+        jobData.devCnt = devIds.size();
+        ComCloundJobErrno error = COM_CLOUND_JOB_OK;
+        if (devIds.size() == 1) {
+            const char *nimAccountId = m_nimAccountIdMap.at(results[i].devId).c_str();
+            if (ComWanNimConn::inst()->sendStartCloundJob(0, nimAccountId, jobData) != COM_OK) {
+                error = COM_CLOUND_JOB_NIM_SEND_ERROR;
+            }
+        } else if (devIds.size() > 1) {
+            if (ComWanNimConn::inst()->sendStartCloundJob(1, m_nimTeamId.c_str(), jobData) != COM_OK) {
+                error = COM_CLOUND_JOB_NIM_SEND_ERROR;
+            }
+        }
+        for (size_t i = 0; i < devIds.size(); ++i) {
+            errorMap.emplace(devIds[i], error);
+        }
+    }
+}
+
+ComCloundJobErrno WanDevSendGcodeThd::convertError(fnet_add_clound_job_error_t error)
+{
+    switch (error) {
+    case FNET_ADD_CLOUND_JOB_OK:
+        return COM_CLOUND_JOB_OK;
+    case FNET_ADD_CLOUND_JOB_DEVICE_BUSY:
+        return COM_CLOUND_JOB_DEVICE_BUSY;
+    case FNET_ADD_CLOUND_JOB_DEVICE_NOT_FOUND:
+        return COM_CLOUND_JOB_DEVICE_NOT_FOUND;
+    case FNET_ADD_CLOUND_JOB_SERVER_INTERNAL_ERROR:
+        return COM_CLOUND_JOB_SERVER_INTERNAL_ERROR;
+    default:
+        return COM_CLOUND_JOB_UNKNOWN_ERROR;
+    }
 }
 
 int WanDevSendGcodeThd::callback(long long now, long long total, void *callbackData)

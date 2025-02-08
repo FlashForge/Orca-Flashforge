@@ -9,7 +9,7 @@ double Extruder::m_share_retracted = 0.;
 Extruder::Extruder(unsigned int id, GCodeConfig *config, bool share_extruder) :
     m_id(id),
     m_config(config),
-    m_share_extruder(m_share_extruder)
+    m_share_extruder(share_extruder)
 {
     reset();
     
@@ -54,11 +54,11 @@ double Extruder::retract(double length, double restart_extra)
         if (m_config->use_relative_e_distances)
             m_share_E = 0.;
         double to_retract = std::max(0., length - m_share_retracted);
+        m_restart_extra = restart_extra;
         if (to_retract > 0.) {
             m_share_E             -= to_retract;
             m_absolute_E          -= to_retract;
             m_share_retracted     += to_retract;
-            m_restart_extra = restart_extra;
         }
         return to_retract;
     } else {
@@ -66,11 +66,11 @@ double Extruder::retract(double length, double restart_extra)
         if (m_config->use_relative_e_distances)
             m_E = 0.;
         double to_retract = std::max(0., length - m_retracted);
+        m_restart_extra = restart_extra;
         if (to_retract > 0.) {
             m_E             -= to_retract;
             m_absolute_E    -= to_retract;
             m_retracted     += to_retract;
-            m_restart_extra = restart_extra;
         }
         return to_retract;
     }
@@ -201,6 +201,11 @@ double Extruder::retract_length_toolchange() const
 double Extruder::retract_restart_extra_toolchange() const
 {
     return m_config->retract_restart_extra_toolchange.get_at(m_id);
+}
+
+double Extruder::travel_slope() const
+{
+    return m_config->travel_slope.get_at(m_id) * PI / 180;
 }
 
 }

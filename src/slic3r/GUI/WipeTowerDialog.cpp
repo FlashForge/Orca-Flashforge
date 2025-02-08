@@ -7,18 +7,20 @@
 #include "I18N.hpp"
 #include "GUI_App.hpp"
 #include "MsgDialog.hpp"
+#include "libslic3r/Color.hpp"
 #include "Widgets/Button.hpp"
 #include "slic3r/Utils/ColorSpaceConvert.hpp"
 #include "MainFrame.hpp"
+#include "libslic3r/Config.hpp"
 
-#include <wx/sizer.h>
-
+using namespace Slic3r;
 using namespace Slic3r::GUI;
 
 int scale(const int val) { return val * Slic3r::GUI::wxGetApp().em_unit() / 10; }
 int ITEM_WIDTH() { return scale(30); }
 static const wxColour g_text_color = wxColour(107, 107, 107, 255);
 
+#undef  ICON_SIZE
 #define ICON_SIZE               wxSize(FromDIP(16), FromDIP(16))
 #define TABLE_BORDER            FromDIP(28)
 #define HEADER_VERT_PADDING     FromDIP(12)
@@ -31,9 +33,11 @@ static const wxColour g_text_color = wxColour(107, 107, 107, 255);
 #define ROW_END_PADDING         FromDIP(21)
 #define BTN_SIZE                wxSize(FromDIP(58), FromDIP(24))
 #define BTN_GAP                 FromDIP(20)
-#define TEXT_BEG_PADDING        FromDIP(41)
+#define TEXT_BEG_PADDING        FromDIP(30)
 #define MAX_FLUSH_VALUE         999
-#define MIN_WIPING_DIALOG_WIDTH FromDIP(400)
+#define MIN_WIPING_DIALOG_WIDTH FromDIP(300)
+#define TIP_MESSAGES_PADDING    FromDIP(8)
+
 
 
 static void update_ui(wxWindow* window)
@@ -288,6 +292,36 @@ wxBoxSizer* WipingDialog::create_btn_sizer(long flags)
     return btn_sizer;
 
 }
+
+wxBoxSizer* WipingPanel::create_calc_btn_sizer(wxWindow* parent) {
+    auto btn_sizer = new wxBoxSizer(wxHORIZONTAL);
+    StateColor calc_btn_bg(
+        std::pair<wxColour, int>(wxColour(0, 137, 123), StateColor::Pressed),
+        std::pair<wxColour, int>(wxColour(38, 166, 154), StateColor::Hovered),
+        std::pair<wxColour, int>(wxColour(0, 150, 136), StateColor::Normal)
+    );
+
+    StateColor calc_btn_bd(
+        std::pair<wxColour, int>(wxColour(0, 150, 136), StateColor::Normal)
+    );
+
+    StateColor calc_btn_text(
+        std::pair<wxColour, int>(wxColour(255, 255, 254), StateColor::Normal)
+    );
+
+    Button* calc_btn = new Button(parent, _L("Re-calculate"));
+    calc_btn->SetFont(Label::Body_13);
+    calc_btn->SetMinSize(wxSize(FromDIP(75), FromDIP(24)));
+    calc_btn->SetCornerRadius(FromDIP(12));
+    calc_btn->SetBackgroundColor(calc_btn_bg);
+    calc_btn->SetBorderColor(calc_btn_bd);
+    calc_btn->SetTextColor(calc_btn_text);
+    calc_btn->SetFocus();
+    btn_sizer->Add(calc_btn, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, BTN_GAP);
+    calc_btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { calc_flushing_volumes(); });
+
+    return btn_sizer;
+}
 void WipingDialog::on_dpi_changed(const wxRect &suggested_rect)
 {
     for (auto button_item : m_button_list) 
@@ -312,7 +346,7 @@ void WipingDialog::on_dpi_changed(const wxRect &suggested_rect)
 
 // Parent dialog for purging volume adjustments - it fathers WipingPanel widget (that contains all controls) and a button to toggle simple/advanced mode:
 WipingDialog::WipingDialog(wxWindow* parent, const std::vector<float>& matrix, const std::vector<float>& extruders, const std::vector<std::string>& extruder_colours,
-    int extra_flush_volume, float flush_multiplier)
+    const std::vector<int>&extra_flush_volume, float flush_multiplier)
     : DPIDialog(parent ? parent : static_cast<wxWindow *>(wxGetApp().mainframe),
                 wxID_ANY,
                 _(L("Flushing volumes for filament change")),
@@ -320,21 +354,28 @@ WipingDialog::WipingDialog(wxWindow* parent, const std::vector<float>& matrix, c
                 wxDefaultSize,
                 wxDEFAULT_DIALOG_STYLE /* | wxRESIZE_BORDER*/)
 {
+    std::string icon_path = (boost::format("%1%/images/OrcaSlicerTitle.ico") % Slic3r::resources_dir()).str();
+    SetIcon(wxIcon(Slic3r::encode_path(icon_path.c_str()), wxBITMAP_TYPE_ICO));
+
+    auto m_line_top = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 1));
+    m_line_top->SetBackgroundColour(wxColour(166, 169, 170));
+
     this->SetBackgroundColour(*wxWHITE);
     this->SetMinSize(wxSize(MIN_WIPING_DIALOG_WIDTH, -1));
+    
 
     m_panel_wiping = new WipingPanel(this, matrix, extruders, extruder_colours, nullptr, extra_flush_volume, flush_multiplier);
 
     auto main_sizer = new wxBoxSizer(wxVERTICAL);
-
+    main_sizer->Add(m_line_top, 0, wxEXPAND, 0);
+    
     // set min sizer width according to extruders count
     auto sizer_width = (int)((sqrt(matrix.size()) + 2.8)*ITEM_WIDTH());
     sizer_width = sizer_width > MIN_WIPING_DIALOG_WIDTH ? sizer_width : MIN_WIPING_DIALOG_WIDTH;
     main_sizer->SetMinSize(wxSize(sizer_width, -1));
-
     main_sizer->Add(m_panel_wiping, 1, wxEXPAND | wxALL, 0);
 
-    auto btn_sizer = create_btn_sizer(wxOK | wxCANCEL |wxRESET);
+    auto btn_sizer = create_btn_sizer(wxOK | wxCANCEL);
     main_sizer->Add(btn_sizer, 0, wxBOTTOM | wxRIGHT | wxEXPAND, BTN_GAP);
     SetSizer(main_sizer);
     main_sizer->SetSizeHints(this);
@@ -351,9 +392,13 @@ WipingDialog::WipingDialog(wxWindow* parent, const std::vector<float>& matrix, c
         this->FindWindowById(wxID_CANCEL, this)->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EndModal(wxCANCEL); });
 
     }
+
+    /*
     if (this->FindWindowById(wxID_RESET, this)) {
         this->FindWindowById(wxID_RESET, this)->Bind(wxEVT_BUTTON, [this](wxCommandEvent &) { m_panel_wiping->calc_flushing_volumes(); });
     }
+    */
+
     this->Bind(wxEVT_CLOSE_WINDOW, [this](wxCloseEvent& e) { EndModal(wxCANCEL); });
     this->Bind(wxEVT_CHAR_HOOK, [this](wxKeyEvent& e) {
         if (e.GetKeyCode() == WXK_ESCAPE) {
@@ -388,6 +433,7 @@ void WipingPanel::create_panels(wxWindow* parent, const int num) {
         for (int j = 0; j < num; ++j) {
             edit_boxes[j][i]->Reparent(panel);
             edit_boxes[j][i]->SetBackgroundColour(panel->GetBackgroundColour());
+            edit_boxes[j][i]->SetFont(::Label::Body_13);
             sizer->AddSpacer(EDIT_BOXES_GAP);
             sizer->Add(edit_boxes[j][i], 0, wxALIGN_CENTER_VERTICAL, 0);
         }
@@ -400,18 +446,19 @@ void WipingPanel::create_panels(wxWindow* parent, const int num) {
 
 // This panel contains all control widgets for both simple and advanced mode (these reside in separate sizers)
 WipingPanel::WipingPanel(wxWindow* parent, const std::vector<float>& matrix, const std::vector<float>& extruders, const std::vector<std::string>& extruder_colours, Button* calc_button,
-    int extra_flush_volume, float flush_multiplier)
+    const std::vector<int>& extra_flush_volume, float flush_multiplier)
 : wxPanel(parent,wxID_ANY, wxDefaultPosition, wxDefaultSize/*,wxBORDER_RAISED*/)
 ,m_matrix(matrix), m_min_flush_volume(extra_flush_volume), m_max_flush_volume(Slic3r::g_max_flush_volume)
 {
     m_number_of_extruders = (int)(sqrt(matrix.size())+0.001);
 
     for (const std::string& color : extruder_colours) {
-        //unsigned char rgb[3];
-        //Slic3r::GUI::BitmapCache::parse_color(color, rgb);
-        m_colours.push_back(wxColor(color));
+        Slic3r::ColorRGB rgb;
+        Slic3r::decode_color(color, rgb);
+        m_colours.push_back(wxColor(rgb.r_uchar(), rgb.g_uchar(), rgb.b_uchar()));
     }
-
+    auto sizer_width = (int)((sqrt(matrix.size())) * ITEM_WIDTH() + (sqrt(matrix.size()) + 1) * HEADER_BEG_PADDING);
+    sizer_width = sizer_width > MIN_WIPING_DIALOG_WIDTH ? sizer_width : MIN_WIPING_DIALOG_WIDTH;
     // Create two switched panels with their own sizers
     m_sizer_simple          = new wxBoxSizer(wxVERTICAL);
     m_sizer_advanced        = new wxBoxSizer(wxVERTICAL);
@@ -419,6 +466,7 @@ WipingPanel::WipingPanel(wxWindow* parent, const std::vector<float>& matrix, con
     m_page_advanced			= new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     m_page_simple->SetSizer(m_sizer_simple);
     m_page_advanced->SetSizer(m_sizer_advanced);
+    m_page_advanced->SetBackgroundColour(*wxWHITE);
 
     update_ui(m_page_simple);
     update_ui(m_page_advanced);
@@ -439,7 +487,7 @@ WipingPanel::WipingPanel(wxWindow* parent, const std::vector<float>& matrix, con
             edit_boxes.back().push_back(new wxTextCtrl(m_page_advanced, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(ITEM_WIDTH(), -1)));
 #endif
             if (i == j) {
-                edit_boxes[i][j]->SetValue(wxString("-"));
+                edit_boxes[i][j]->SetValue(wxString("0"));
                 edit_boxes[i][j]->SetEditable(false);
                 edit_boxes[i][j]->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent&) {});
                 edit_boxes[i][j]->Bind(wxEVT_SET_FOCUS, [this](wxFocusEvent&) {});
@@ -453,6 +501,9 @@ WipingPanel::WipingPanel(wxWindow* parent, const std::vector<float>& matrix, con
                     if (value > MAX_FLUSH_VALUE) {
                         str = wxString::Format(("%d"), MAX_FLUSH_VALUE);
                         edit_boxes[i][j]->SetValue(str);
+                    }
+                    else if (value < 0) {
+                        edit_boxes[i][j]->SetValue(wxString("0"));
                     }
                     });
 
@@ -471,6 +522,30 @@ WipingPanel::WipingPanel(wxWindow* parent, const std::vector<float>& matrix, con
     }
 
     // BBS
+    m_sizer_advanced->AddSpacer(FromDIP(10));
+    auto tip_message_panel = new wxPanel(m_page_advanced, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+    tip_message_panel->SetBackgroundColour(wxColour(238, 238, 238));
+    auto message_sizer = new wxBoxSizer(wxVERTICAL);
+    tip_message_panel->SetSizer(message_sizer);
+    {
+        wxString message = _L("Orca would re-calculate your flushing volumes every time the filaments color changed. You could disable the auto-calculate in Orca Slicer > Preferences");
+        m_tip_message_label = new Label(tip_message_panel, wxEmptyString);
+        wxClientDC dc(tip_message_panel);
+        wxString multiline_message;
+        m_tip_message_label->split_lines(dc, sizer_width, message, multiline_message);
+        m_tip_message_label->SetLabel(multiline_message);
+        m_tip_message_label->SetFont(Label::Body_13);
+        message_sizer->Add(m_tip_message_label, 0, wxEXPAND | wxALL, TIP_MESSAGES_PADDING);
+    }
+    m_sizer_advanced->Add(tip_message_panel, 0, wxEXPAND | wxRIGHT | wxLEFT, TABLE_BORDER);
+    bool is_show = wxGetApp().app_config->get("auto_calculate") == "true" || wxGetApp().app_config->get("auto_calculate_when_filament_change") == "true";
+    tip_message_panel->Show(is_show);
+    m_sizer_advanced->AddSpacer(FromDIP(10));
+    auto calc_btn_sizer = create_calc_btn_sizer(m_page_advanced);
+    m_sizer_advanced->Add(calc_btn_sizer, 0, wxEXPAND | wxLEFT, FromDIP(30));
+    
+    //m_sizer_advanced->AddSpacer(FromDIP(10));
+    m_sizer_advanced->AddSpacer(FromDIP(5));
     header_line_panel = new wxPanel(m_page_advanced, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     header_line_panel->SetBackgroundColour(wxColour(238, 238, 238));
     auto header_line_sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -487,33 +562,20 @@ WipingPanel::WipingPanel(wxWindow* parent, const std::vector<float>& matrix, con
         header_line_sizer->Add(icon, 0, wxALIGN_CENTER_VERTICAL | wxTOP | wxBOTTOM, HEADER_VERT_PADDING);
     }
     header_line_sizer->AddSpacer(HEADER_END_PADDING);
-
-    m_sizer_advanced->Add(header_line_panel, 0, wxEXPAND | wxTOP | wxRIGHT | wxLEFT, TABLE_BORDER);
-
+    
+    m_sizer_advanced->Add(header_line_panel, 0, wxEXPAND | wxRIGHT | wxLEFT, TABLE_BORDER);
+    
     create_panels(m_page_advanced, m_number_of_extruders);
 
-    m_sizer_advanced->AddSpacer(BTN_SIZE.y);
+    //m_sizer_advanced->AddSpacer(BTN_SIZE.y);
 
     // BBS: for tunning flush volumes
     {
-        wxBoxSizer* param_sizer = new wxBoxSizer(wxHORIZONTAL);
-       
-        wxStaticText* flush_multiplier_title = new wxStaticText(m_page_advanced, wxID_ANY, _L("Multiplier"));
-        param_sizer->Add(flush_multiplier_title);
-        param_sizer->AddSpacer(FromDIP(5));
-        m_flush_multiplier_ebox = new wxTextCtrl(m_page_advanced, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(FromDIP(50), -1), wxTE_PROCESS_ENTER);
-        char flush_multi_str[32] = { 0 };
-        snprintf(flush_multi_str, sizeof(flush_multi_str), "%.2f", flush_multiplier);
-        m_flush_multiplier_ebox->SetValue(flush_multi_str);
-        param_sizer->Add(m_flush_multiplier_ebox);
-        param_sizer->AddStretchSpacer(1);
-        m_sizer_advanced->Add(param_sizer, 0, wxEXPAND | wxLEFT, TEXT_BEG_PADDING);
-
         auto multi_desc_label = new wxStaticText(m_page_advanced, wxID_ANY, _(L("Flushing volume (mm³) for each filament pair.")), wxDefaultPosition, wxDefaultSize, 0);
         multi_desc_label->SetForegroundColour(g_text_color);
         m_sizer_advanced->Add(multi_desc_label, 0, wxEXPAND | wxLEFT, TEXT_BEG_PADDING);
 
-        wxString min_flush_str = wxString::Format(_L("Suggestion: Flushing Volume in range [%d, %d]"), m_min_flush_volume, m_max_flush_volume);
+        wxString min_flush_str = wxString::Format(_L("Suggestion: Flushing Volume in range [%d, %d]"),*std::min_element(m_min_flush_volume.begin(), m_min_flush_volume.end()), m_max_flush_volume);
         m_min_flush_label = new wxStaticText(m_page_advanced, wxID_ANY, min_flush_str, wxDefaultPosition, wxDefaultSize, 0);
         m_min_flush_label->SetForegroundColour(g_text_color);
         m_sizer_advanced->Add(m_min_flush_label, 0, wxEXPAND | wxLEFT, TEXT_BEG_PADDING);
@@ -538,10 +600,31 @@ WipingPanel::WipingPanel(wxWindow* parent, const std::vector<float>& matrix, con
             this->update_warning_texts();
             e.Skip();
         };
-        m_flush_multiplier_ebox->Bind(wxEVT_TEXT_ENTER, on_apply_text_modify);
-        m_flush_multiplier_ebox->Bind(wxEVT_KILL_FOCUS, on_apply_text_modify);
 
         m_sizer_advanced->AddSpacer(10);
+
+        wxBoxSizer* param_sizer = new wxBoxSizer(wxHORIZONTAL);
+        wxStaticText* flush_multiplier_title = new wxStaticText(m_page_advanced, wxID_ANY, _L("Multiplier"));
+        param_sizer->Add(flush_multiplier_title, 0, wxALIGN_CENTER | wxALL, 0);
+        param_sizer->AddSpacer(FromDIP(5));
+        m_flush_multiplier_ebox = new wxTextCtrl(m_page_advanced, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(FromDIP(50), -1), wxTE_PROCESS_ENTER);
+        m_flush_multiplier_ebox->SetValue(wxString::Format(("%.2f"), flush_multiplier));
+        m_flush_multiplier_ebox->SetValidator(wxTextValidator(wxFILTER_NUMERIC));
+        param_sizer->Add(m_flush_multiplier_ebox, 0, wxALIGN_CENTER | wxALL, 0);
+        param_sizer->AddStretchSpacer(1);
+        m_sizer_advanced->Add(param_sizer, 0, wxEXPAND | wxLEFT, TEXT_BEG_PADDING);
+
+        m_flush_multiplier_ebox->Bind(wxEVT_TEXT_ENTER, on_apply_text_modify);
+        m_flush_multiplier_ebox->Bind(wxEVT_KILL_FOCUS, on_apply_text_modify);
+        m_flush_multiplier_ebox->Bind(wxEVT_COMMAND_TEXT_UPDATED, [this](wxCommandEvent&) {
+            wxString str = m_flush_multiplier_ebox->GetValue();
+            float multiplier = wxAtof(str);
+            if (multiplier < g_min_flush_multiplier || multiplier > g_max_flush_multiplier) {
+                str = wxString::Format(("%.2f"), multiplier < g_min_flush_multiplier ? g_min_flush_multiplier : g_max_flush_multiplier);
+                m_flush_multiplier_ebox->SetValue(str);
+            }
+            m_flush_multiplier_ebox->SetInsertionPointEnd();
+        });
     }
     this->update_warning_texts();
 
@@ -641,9 +724,9 @@ WipingPanel::WipingPanel(wxWindow* parent, const std::vector<float>& matrix, con
     });
 }
 
-int WipingPanel::calc_flushing_volume(const wxColour& from_, const wxColour& to_)
+int WipingPanel::calc_flushing_volume(const wxColour& from_, const wxColour& to_ ,int min_flush_volume)
 {
-    Slic3r::FlushVolCalculator calculator(m_min_flush_volume, m_max_flush_volume);
+    Slic3r::FlushVolCalculator calculator(min_flush_volume, m_max_flush_volume);
 
     return calculator.calc_flush_vol(from_.Alpha(), from_.Red(), from_.Green(), from_.Blue(), to_.Alpha(), to_.Red(), to_.Green(), to_.Blue());
 }
@@ -666,7 +749,7 @@ void WipingPanel::update_warning_texts()
             auto text_box = box_vec[j];
             wxString str = text_box->GetValue();
             int actual_volume = wxAtoi(str);
-            if (actual_volume < m_min_flush_volume || actual_volume > m_max_flush_volume) {
+            if (actual_volume < m_min_flush_volume[i] || actual_volume > m_max_flush_volume) {
                 if (text_box->GetForegroundColour() != g_warning_color) {
                     text_box->SetForegroundColour(g_warning_color);
                     text_box->Refresh();
@@ -694,10 +777,29 @@ void WipingPanel::update_warning_texts()
 
 void WipingPanel::calc_flushing_volumes()
 {
-    for (int from_idx = 0; from_idx < m_colours.size(); from_idx++) {
-        const wxColour& from = m_colours[from_idx];
+    auto& ams_multi_color_filament = wxGetApp().preset_bundle->ams_multi_color_filment;
+    std::vector<std::vector<wxColour>> multi_colors;
+
+    // Support for multi-color filament
+    for (int i = 0; i < m_colours.size(); ++i) {
+        std::vector<wxColour> single_filament;
+        if (i < ams_multi_color_filament.size()) {
+            if (!ams_multi_color_filament[i].empty()) {
+                std::vector<std::string> colors = ams_multi_color_filament[i];
+                for (int j = 0; j < colors.size(); ++j) {
+                    single_filament.push_back(wxColour(colors[j]));
+                }
+                multi_colors.push_back(single_filament);
+                continue;
+            }
+        }
+        single_filament.push_back(wxColour(m_colours[i]));
+        multi_colors.push_back(single_filament);
+    }
+
+    for (int from_idx = 0; from_idx < multi_colors.size(); ++from_idx) {
         bool is_from_support = is_support_filament(from_idx);
-        for (int to_idx = 0; to_idx < m_colours.size(); to_idx++) {
+        for (int to_idx = 0; to_idx < multi_colors.size(); ++to_idx) {
             bool is_to_support = is_support_filament(to_idx);
             if (from_idx == to_idx) {
                 edit_boxes[to_idx][from_idx]->SetValue(std::to_string(0));
@@ -708,8 +810,15 @@ void WipingPanel::calc_flushing_volumes()
                     flushing_volume = Slic3r::g_flush_volume_to_support;
                 }
                 else {
-                    const wxColour& to = m_colours[to_idx];
-                    flushing_volume = calc_flushing_volume(from, to);
+                    for (int i = 0; i < multi_colors[from_idx].size(); ++i) {
+                        const wxColour& from = multi_colors[from_idx][i];
+                        for (int j = 0; j < multi_colors[to_idx].size(); ++j) {
+                            const wxColour& to = multi_colors[to_idx][j];
+                            int volume = calc_flushing_volume(from, to, m_min_flush_volume[from_idx]);
+                            flushing_volume = std::max(flushing_volume, volume);
+                        }
+                    }
+
                     if (is_from_support) {
                         flushing_volume = std::max(Slic3r::g_min_flush_volume_from_support, flushing_volume);
                     }

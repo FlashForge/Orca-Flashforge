@@ -8,6 +8,8 @@
 
 #include <wx/dcgraph.h>
 
+#include <boost/log/trivial.hpp>
+
 wxDEFINE_EVENT(EVT_ITEM_ACTION, wxCommandEvent);
 
 BEGIN_EVENT_TABLE(Slic3r::GUI::ImageGrid, wxPanel)
@@ -44,6 +46,8 @@ ImageGrid::ImageGrid(wxWindow * parent)
     , m_model_time_icon(this, "model_time", 14)
     , m_model_weight_icon(this, "model_weight", 14)
 {
+    m_cell_size.Set(396, 228);
+
     SetBackgroundStyle(wxBG_STYLE_PAINT);
     SetBackgroundColour(0xEEEEEE);
     SetFont(Label::Head_20);
@@ -121,6 +125,12 @@ void Slic3r::GUI::ImageGrid::SetSelecting(bool selecting)
 }
 
 void Slic3r::GUI::ImageGrid::DoActionOnSelection(int action) { DoAction(-1, action); }
+
+void Slic3r::GUI::ImageGrid::ShowDownload(bool show)
+{
+    m_show_download = show;
+    Refresh();
+}
 
 void Slic3r::GUI::ImageGrid::Rescale()
 {
@@ -266,10 +276,13 @@ std::pair<int, size_t> Slic3r::GUI::ImageGrid::HitTest(wxPoint const &pt)
         auto & file = m_file_sys->GetFile(index);
         int    btn  = file.IsDownload() && file.DownloadProgress() >= 0 ? 3 : 2;
         if (m_file_sys->GetFileType() == PrinterFileSystem::F_MODEL) {
-            btn = 3;
+            if (m_show_download)
+                btn = 3;
             hover_rect.y -= m_content_rect.GetHeight() * 64 / 264;
         }
-        if (hover_rect.Contains(off.x, off.y)) { return {HIT_ACTION, index * 4 + off.x * btn / hover_rect.GetWidth()}; } // Two buttons
+        if (hover_rect.Contains(off.x, off.y)) {
+            return {HIT_ACTION, index * 4 + off.x * btn / hover_rect.GetWidth()};
+        } // Two buttons
     }
     return {HIT_ITEM, index};
 }
@@ -282,9 +295,16 @@ void ImageGrid::mouseMoved(wxMouseEvent& event)
     if (hit != std::make_pair(m_hit_type, m_hit_item)) {
         m_hit_type = hit.first;
         m_hit_item = hit.second;
-        if (hit.first == HIT_ITEM)
-            SetToolTip(from_u8(m_file_sys->GetFile(hit.second).Title()));
-        else
+        if (hit.first == HIT_ITEM) {
+            SetToolTip({});
+            auto & file = m_file_sys->GetFile(hit.second);
+            if (auto title = file.Title(); !title.empty()) {
+                auto tip = wxString::Format(_L("File: %s\nTitle: %s\n"), from_u8(file.name), from_u8(title));
+                SetToolTip(tip);
+            } else {
+                SetToolTip(from_u8(file.name));
+            }
+        } else
             SetToolTip({});
         Refresh();
     }
@@ -593,12 +613,12 @@ void Slic3r::GUI::ImageGrid::renderContent1(wxDC &dc, wxPoint const &pt, int ind
     bool show_download_state_always = true;
     // Draw checked icon
     if (m_selecting && !show_download_state_always)
-        dc.DrawBitmap(selected ? m_checked_icon.bmp() : m_unchecked_icon.bmp(), pt + wxPoint{10, m_content_rect.GetHeight() - m_checked_icon.GetBmpHeight() - 10});
+        dc.DrawBitmap(selected ? m_checked_icon.bmp() : m_unchecked_icon.bmp(), pt + wxPoint{10, 10});
     // can't handle alpha
     // dc.GradientFillLinear({pt.x, pt.y, m_border_size.GetWidth(), 60}, wxColour(0x6F, 0x6F, 0x6F, 0x99), wxColour(0x6F, 0x6F, 0x6F, 0), wxBOTTOM);
     else if (m_file_sys->GetGroupMode() == PrinterFileSystem::G_NONE) {
         wxString nonHoverText;
-        wxString secondAction = _L("Download");
+        wxString secondAction = m_show_download ? _L("Download") : "";
         wxString thirdAction;
         int      states = 0;
         // Draw download progress
@@ -644,7 +664,7 @@ void Slic3r::GUI::ImageGrid::renderContent1(wxDC &dc, wxPoint const &pt, int ind
         dc.DrawText(date, pt + wxPoint{24, 16});
     }
     if (m_selecting && show_download_state_always)
-        dc.DrawBitmap(selected ? m_checked_icon.bmp() : m_unchecked_icon.bmp(), pt + wxPoint{10, m_content_rect.GetHeight() - m_checked_icon.GetBmpHeight() - 10});
+        dc.DrawBitmap(selected ? m_checked_icon.bmp() : m_unchecked_icon.bmp(), pt + wxPoint{10, 10});
 }
 
 void Slic3r::GUI::ImageGrid::renderContent2(wxDC &dc, wxPoint const &pt, int index, bool hit)
@@ -721,7 +741,17 @@ void Slic3r::GUI::ImageGrid::renderText(wxDC &dc, wxString const &text, wxRect c
     dc.SetTextForeground(m_buttonTextColor.colorForStatesNoDark(states));
     wxRect rc({0, 0}, dc.GetTextExtent(text));
     rc = rc.CenterIn(rect);
-    dc.DrawText(text, rc.GetTopLeft());
+    float fontScale = float(rect.width - 8) / rc.width;
+    if (fontScale < 1) {
+        auto font = dc.GetFont();
+        dc.SetFont(font.Scaled(fontScale));
+        wxRect rc({0, 0}, dc.GetTextExtent(text));
+        rc = rc.CenterIn(rect);
+        dc.DrawText(text, rc.GetTopLeft());
+        dc.SetFont(font);
+    } else {
+        dc.DrawText(text, rc.GetTopLeft());
+    }
 }
 
 void Slic3r::GUI::ImageGrid::renderText2(wxDC &dc, wxString text, wxRect const &rect)

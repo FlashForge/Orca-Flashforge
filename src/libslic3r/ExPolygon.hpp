@@ -142,19 +142,6 @@ inline Lines to_lines(const ExPolygons &src)
     return lines;
 }
 
-inline Points to_points(const ExPolygons& src)
-{
-    Points points;
-    size_t count = count_points(src);
-    points.reserve(count);
-    for (const ExPolygon& expolygon : src) {
-        append(points, expolygon.contour.points);
-        for (const Polygon& hole : expolygon.holes)
-            append(points, hole.points);
-    }
-    return points;
-}
-
 // Line is from point index(see to_points) to next point.
 // Next point of last point in polygon is first polygon point.
 inline Linesf to_linesf(const ExPolygons &src, uint32_t count_lines = 0)
@@ -203,6 +190,20 @@ inline Linesf to_unscaled_linesf(const ExPolygons &src)
         }
     }
     return lines;
+}
+
+
+inline Points to_points(const ExPolygons &src)
+{
+    Points points;
+    size_t count = count_points(src);
+    points.reserve(count);
+    for (const ExPolygon &expolygon : src) {
+        append(points, expolygon.contour.points);
+        for (const Polygon &hole : expolygon.holes)
+            append(points, hole.points);
+    }
+    return points;
 }
 
 inline Polylines to_polylines(const ExPolygon &src)
@@ -371,6 +372,11 @@ inline Points to_points(const ExPolygon &expoly)
     return out;
 }
 
+inline void translate(ExPolygons &expolys, const Point &p) {
+    for (ExPolygon &expoly : expolys)
+        expoly.translate(p);
+}
+
 inline void polygons_append(Polygons &dst, const ExPolygon &src) 
 { 
     dst.reserve(dst.size() + src.holes.size() + 1);
@@ -463,6 +469,9 @@ std::vector<BoundingBox> get_extents_vector(const ExPolygons &polygons);
 // Test for duplicate points. The points are copied, sorted and checked for duplicates globally.
 bool has_duplicate_points(const ExPolygon &expoly);
 bool has_duplicate_points(const ExPolygons &expolys);
+
+// Return True when erase some otherwise False.
+bool remove_same_neighbor(ExPolygons &expolys);
 
 bool remove_sticks(ExPolygon &poly);
 void keep_largest_contour_only(ExPolygons &polygons);

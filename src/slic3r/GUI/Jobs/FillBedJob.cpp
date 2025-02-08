@@ -146,8 +146,7 @@ void FillBedJob::prepare()
 
     double sc = scaled<double>(1.) * scaled(1.);
 
-    const GLCanvas3D::ArrangeSettings& settings = static_cast<const GLCanvas3D*>(m_plater->canvas3D())->get_arrange_settings();
-    auto polys = offset_ex(m_selected.front().poly, scaled(settings.distance) / 2);
+    auto polys = offset_ex(m_selected.front().poly, params.min_obj_distance / 2);
     ExPolygon poly = polys.empty() ? m_selected.front().poly : polys.front();
     double poly_area = poly.area() / sc;
     double unsel_area = std::accumulate(m_unselected.begin(),
@@ -198,8 +197,12 @@ void FillBedJob::prepare()
             p.translation(X) -= p.bed_idx * stride;*/
 }
 
-void FillBedJob::process()
+void FillBedJob::process(Ctl &ctl)
 {
+    auto statustxt = _u8L("Filling");
+    ctl.call_on_main_thread([this] { prepare(); }).wait();
+    ctl.update_status(0, statustxt);
+
     if (m_object_idx == -1 || m_selected.empty()) return;
 
     update_arrange_params(params, m_plater->config(), m_selected);
@@ -217,13 +220,13 @@ void FillBedJob::process()
     update_unselected_items_inflation(m_unselected, m_plater->config(), params);
 
     bool do_stop = false;
-    params.stopcondition = [this, &do_stop]() {
-        return was_canceled() || do_stop;
+    params.stopcondition = [&ctl, &do_stop]() {
+        return ctl.was_canceled() || do_stop;
     };
 
-    params.progressind = [this](unsigned st,std::string str="") {
+    params.progressind = [this, &ctl, &statustxt](unsigned st,std::string str="") {
          if (st > 0)
-             update_status(st, _L("Filling bed " + str));
+             ctl.update_status(st * 100 / status_range(), statustxt + " " + str);
     };
 
     params.on_packed = [&do_stop] (const ArrangePolygon &ap) {
@@ -232,18 +235,35 @@ void FillBedJob::process()
     // final align用的是凸包，在有fixed item的情况下可能找到的参考点位置是错的，这里就不做了。见STUDIO-3265
     params.do_final_align = !is_bbl;
 
-    arrangement::arrange(m_selected, m_unselected, m_bedpts, params);
+    if (m_selected.size() > 100){
+        // too many items, just find grid empty cells to put them
+        Vec2f step = unscaled<float>(get_extents(m_selected.front().poly).size()) + Vec2f(m_selected.front().brim_width, m_selected.front().brim_width);
+        std::vector<Vec2f> empty_cells = Plater::get_empty_cells(step);
+        size_t n=std::min(m_selected.size(), empty_cells.size());
+        for (size_t i = 0; i < n; i++) {
+            m_selected[i].translation = scaled<coord_t>(empty_cells[i]);
+            m_selected[i].bed_idx= 0;
+        }
+        for (size_t i = n; i < m_selected.size(); i++) {
+            m_selected[i].bed_idx = -1;
+        }
+    }
+    else
+        arrangement::arrange(m_selected, m_unselected, m_bedpts, params);
 
     // finalize just here.
-    update_status(m_status_range, was_canceled() ?
-                                       _(L("Bed filling canceled.")) :
-                                       _(L("Bed filling done.")));
+    ctl.update_status(100, ctl.was_canceled() ?
+                                       _u8L("Bed filling canceled.") :
+                                       _u8L("Bed filling done."));
 }
 
-void FillBedJob::finalize()
+FillBedJob::FillBedJob() : m_plater{wxGetApp().plater()} {}
+
+void FillBedJob::finalize(bool canceled, std::exception_ptr &eptr)
 {
     // Ignore the arrange result if aborted.
-    if (was_canceled()) return;
+    if (canceled || eptr)
+        return;
 
     if (m_object_idx == -1) return;
 
@@ -275,10 +295,12 @@ void FillBedJob::finalize()
             else
                 ap.bed_idx = cur_plate;
 
-            ap.row = ap.bed_idx / plate_cols;
-            ap.col = ap.bed_idx % plate_cols;
-            ap.translation(X) += bed_stride_x(m_plater) * ap.col;
-            ap.translation(Y) -= bed_stride_y(m_plater) * ap.row;
+            if (m_selected.size() <= 100) {
+                ap.row = ap.bed_idx / plate_cols;
+                ap.col = ap.bed_idx % plate_cols;
+                ap.translation(X) += bed_stride_x(m_plater) * ap.col;
+                ap.translation(Y) -= bed_stride_y(m_plater) * ap.row;
+            }
 
             ap.apply();
 
@@ -289,6 +311,7 @@ void FillBedJob::finalize()
         auto obj_list = m_plater->sidebar().obj_list();
         for (size_t i = oldSize; i < newSize; i++) {
             obj_list->add_object_to_list(i, true, true, false);
+            obj_list->update_printable_state(i, 0);
         }
 
         BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << ": paste_objects_into_list";
@@ -303,8 +326,6 @@ void FillBedJob::finalize()
 
         m_plater->update();
     }
-
-    Job::finalize();
 }
 
 }} // namespace Slic3r::GUI

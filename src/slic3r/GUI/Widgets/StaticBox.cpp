@@ -1,5 +1,6 @@
 #include "StaticBox.hpp"
 #include "../GUI.hpp"
+#include <wx/dcclient.h>
 #include <wx/dcgraph.h>
 
 BEGIN_EVENT_TABLE(StaticBox, wxWindow)
@@ -143,7 +144,11 @@ void StaticBox::render(wxDC& dc)
 	wxSize size = GetSize();
     if (size.x <= 0 || size.y <= 0)
         return;
-    wxMemoryDC memdc;
+    wxMemoryDC memdc(&dc);
+    if (!memdc.IsOk()) {
+        doRender(dc);
+        return;
+    }
     wxBitmap bmp(size.x, size.y);
     memdc.SelectObject(bmp);
     //memdc.Blit({0, 0}, size, &dc, {0, 0});

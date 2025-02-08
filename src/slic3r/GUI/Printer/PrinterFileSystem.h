@@ -4,6 +4,7 @@
 #define BAMBU_DYNAMIC
 #include "BambuTunnel.h"
 
+#include <wx/bitmap.h>
 #include <wx/event.h>
 
 #include <boost/thread.hpp>
@@ -44,11 +45,13 @@ public:
         ERROR_JSON          = 2,
         ERROR_PIPE          = 3,
         ERROR_CANCEL        = 4,
+        ERROR_RES_BUSY      = 5,
+
         FILE_NO_EXIST       = 10,
         FILE_NAME_INVALID   = 11,
         FILE_SIZE_ERR       = 12,
         FILE_OPEN_ERR       = 13,
-        FILE_READ_ERR       = 14,
+        FILE_READ_WRITE_ERR = 14,
         FILE_CHECK_ERR      = 15,
         FILE_TYPE_ERR       = 16,
         STORAGE_UNAVAILABLE = 17,
@@ -277,8 +280,6 @@ private:
     void HandleResponse(boost::unique_lock<boost::mutex> &l, Bambu_Sample const &sample);
 
     void Reconnect(boost::unique_lock<boost::mutex> & l, int result);
-
-    int RecvData(std::function<int(Bambu_Sample & sample)> const & callback);
 
     template <typename T>
     void PostCallback(Callback<T> const& callback, int result, T const& resp)

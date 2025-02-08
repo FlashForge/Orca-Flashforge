@@ -8,6 +8,7 @@
 #include "Point.hpp"
 #include "Execution/ExecutionTBB.hpp"
 #include "Execution/ExecutionSeq.hpp"
+#include "CutUtils.hpp"
 #include "Utils.hpp"
 #include "Format/STL.hpp"
 #include <libqhullcpp/Qhull.h>
@@ -47,17 +48,17 @@ static void fill_initial_stats(const indexed_triangle_set &its, TriangleMeshStat
     out.volume              = its_volume(its);
     update_bounding_box(its, out);
 
-    const std::vector<Vec3i> face_neighbors = its_face_neighbors(its);
+    const std::vector<Vec3i32> face_neighbors = its_face_neighbors(its);
     out.number_of_parts = its_number_of_patches(its, face_neighbors);
     out.open_edges      = its_num_open_edges(face_neighbors);
 }
 
-TriangleMesh::TriangleMesh(const std::vector<Vec3f> &vertices, const std::vector<Vec3i> &faces) : its { faces, vertices }
+TriangleMesh::TriangleMesh(const std::vector<Vec3f> &vertices, const std::vector<Vec3i32> &faces) : its { faces, vertices }
 {
     fill_initial_stats(this->its, m_stats);
 }
 
-TriangleMesh::TriangleMesh(std::vector<Vec3f> &&vertices, const std::vector<Vec3i> &&faces) : its { std::move(faces), std::move(vertices) }
+TriangleMesh::TriangleMesh(std::vector<Vec3f> &&vertices, const std::vector<Vec3i32> &&faces) : its { std::move(faces), std::move(vertices) }
 {
     fill_initial_stats(this->its, m_stats);
 }
@@ -208,21 +209,21 @@ bool TriangleMesh::from_stl(stl_file& stl, bool repair)
     return true;
 }
 
-bool TriangleMesh::ReadSTLFile(const char* input_file, bool repair, ImportstlProgressFn stlFn)
-{ 
+bool TriangleMesh::ReadSTLFile(const char *input_file, bool repair, ImportstlProgressFn stlFn, int custom_header_length)
+{
     stl_file stl;
-    if (! stl_open(&stl, input_file, stlFn))
+    if (!stl_open(&stl, input_file, stlFn, custom_header_length))
         return false;
     return from_stl(stl, repair);
 }
 
 bool TriangleMesh::write_ascii(const char* output_file)
-{ 
+{
     return its_write_stl_ascii(output_file, "", this->its);
 }
 
 bool TriangleMesh::write_binary(const char* output_file)
-{ 
+{
     return its_write_stl_binary(output_file, "", this->its);
 }
 
@@ -562,9 +563,9 @@ static std::vector<EdgeToFace> create_edge_map(
 // Map from a face edge to a unique edge identifier or -1 if no neighbor exists.
 // Two neighbor faces share a unique edge identifier even if they are flipped.
 template<typename FaceFilter, typename ThrowOnCancelCallback>
-static inline std::vector<Vec3i> its_face_edge_ids_impl(const indexed_triangle_set &its, FaceFilter face_filter, ThrowOnCancelCallback throw_on_cancel)
+static inline std::vector<Vec3i32> its_face_edge_ids_impl(const indexed_triangle_set &its, FaceFilter face_filter, ThrowOnCancelCallback throw_on_cancel)
 {
-    std::vector<Vec3i> out(its.indices.size(), Vec3i(-1, -1, -1));
+    std::vector<Vec3i32> out(its.indices.size(), Vec3i32(-1, -1, -1));
 
     std::vector<EdgeToFace> edges_map = create_edge_map(its, face_filter, throw_on_cancel);
 
@@ -612,36 +613,36 @@ static inline std::vector<Vec3i> its_face_edge_ids_impl(const indexed_triangle_s
     return out;
 }
 
-std::vector<Vec3i> its_face_edge_ids(const indexed_triangle_set &its)
+std::vector<Vec3i32> its_face_edge_ids(const indexed_triangle_set &its)
 {
     return its_face_edge_ids_impl(its, [](const uint32_t){ return true; }, [](){});
 }
 
-std::vector<Vec3i> its_face_edge_ids(const indexed_triangle_set &its, std::function<void()> throw_on_cancel_callback)
+std::vector<Vec3i32> its_face_edge_ids(const indexed_triangle_set &its, std::function<void()> throw_on_cancel_callback)
 {
     return its_face_edge_ids_impl(its, [](const uint32_t){ return true; }, throw_on_cancel_callback);
 }
 
-std::vector<Vec3i> its_face_edge_ids(const indexed_triangle_set &its, const std::vector<bool> &face_mask)
+std::vector<Vec3i32> its_face_edge_ids(const indexed_triangle_set &its, const std::vector<bool> &face_mask)
 {
     return its_face_edge_ids_impl(its, [&face_mask](const uint32_t idx){ return face_mask[idx]; }, [](){});
 }
 
 // Having the face neighbors available, assign unique edge IDs to face edges for chaining of polygons over slices.
-std::vector<Vec3i> its_face_edge_ids(const indexed_triangle_set &its, std::vector<Vec3i> &face_neighbors, bool assign_unbound_edges, int *num_edges)
+std::vector<Vec3i32> its_face_edge_ids(const indexed_triangle_set &its, std::vector<Vec3i32> &face_neighbors, bool assign_unbound_edges, int *num_edges)
 {
     // out elements are not initialized!
-    std::vector<Vec3i> out(face_neighbors.size());
+    std::vector<Vec3i32> out(face_neighbors.size());
     int last_edge_id = 0;
     for (int i = 0; i < int(face_neighbors.size()); ++ i) {
         const stl_triangle_vertex_indices   &triangle  = its.indices[i];
-        const Vec3i                         &neighbors = face_neighbors[i];
+        const Vec3i32                         &neighbors = face_neighbors[i];
         for (int j = 0; j < 3; ++ j) {
             int n = neighbors[j];
             if (n > i) {
                 const stl_triangle_vertex_indices &triangle2 = its.indices[n];
                 int   edge_id = last_edge_id ++;
-                Vec2i edge    = its_triangle_edge(triangle, j);
+                Vec2i32 edge    = its_triangle_edge(triangle, j);
                 // First find an edge with opposite orientation.
                 std::swap(edge(0), edge(1));
                 int   k       = its_triangle_edge_index(triangle2, edge);
@@ -788,7 +789,7 @@ bool its_store_triangle(const indexed_triangle_set &its,
                         size_t                      triangle_index)
 {
     if (its.indices.size() <= triangle_index) return false;
-    Vec3i                t = its.indices[triangle_index];
+    Vec3i32                t = its.indices[triangle_index];
     indexed_triangle_set its2;
     its2.indices  = {{0, 1, 2}};
     its2.vertices = {its.vertices[t[0]], its.vertices[t[1]],
@@ -806,8 +807,8 @@ bool its_store_triangles(const indexed_triangle_set &its,
     std::map<size_t, size_t> vertex_map;
     for (auto ti : triangles) {
         if (its.indices.size() <= ti) return false;
-        Vec3i t = its.indices[ti];
-        Vec3i new_t;
+        Vec3i32 t = its.indices[ti];
+        Vec3i32 new_t;
         for (size_t i = 0; i < 3; ++i) {
             size_t vi = t[i];
             auto   it = vertex_map.find(vi);
@@ -958,6 +959,51 @@ indexed_triangle_set its_make_cylinder(double r, double h, double fa)
     return mesh;
 }
 
+indexed_triangle_set its_make_frustum(double r, double h, double fa)
+{
+    indexed_triangle_set mesh;
+    size_t n_steps    = (size_t)ceil(2. * PI / fa);
+    double angle_step = 2. * PI / n_steps;
+
+    auto &vertices = mesh.vertices;
+    auto &facets   = mesh.indices;
+    vertices.reserve(2 * n_steps + 2);
+    facets.reserve(4 * n_steps);
+
+    // 2 special vertices, top and bottom center, rest are relative to this
+    vertices.emplace_back(Vec3f(0.f, 0.f, 0.f));
+    vertices.emplace_back(Vec3f(0.f, 0.f, float(h)));
+
+    // for each line along the polygon approximating the top/bottom of the
+    // circle, generate four points and four facets (2 for the wall, 2 for the
+    // top and bottom.
+    // Special case: Last line shares 2 vertices with the first line.
+    Vec2f vec_top = Eigen::Rotation2Df(0.f) * Eigen::Vector2f(0, 0.5f*r);
+    Vec2f vec_botton = Eigen::Rotation2Df(0.f) * Eigen::Vector2f(0, r);
+
+    vertices.emplace_back(Vec3f(vec_botton(0), vec_botton(1), 0.f));
+    vertices.emplace_back(Vec3f(vec_top(0), vec_top(1), float(h)));
+    for (size_t i = 1; i < n_steps; ++i) {
+        vec_top = Eigen::Rotation2Df(angle_step * i) * Eigen::Vector2f(0, 0.5f*float(r));
+        vec_botton = Eigen::Rotation2Df(angle_step * i) * Eigen::Vector2f(0, float(r));
+        vertices.emplace_back(Vec3f(vec_botton(0), vec_botton(1), 0.f));
+        vertices.emplace_back(Vec3f(vec_top(0), vec_top(1), float(h)));
+        int id = (int)vertices.size() - 1;
+        facets.emplace_back( 0, id - 1, id - 3); // top
+        facets.emplace_back(id,      1, id - 2); // bottom
+        facets.emplace_back(id, id - 2, id - 3); // upper-right of side
+        facets.emplace_back(id, id - 3, id - 1); // bottom-left of side
+    }
+    // Connect the last set of vertices with the first.
+    int id = (int)vertices.size() - 1;
+    facets.emplace_back( 0, 2, id - 1);
+    facets.emplace_back( 3, 1,     id);
+    facets.emplace_back(id, 2,      3);
+    facets.emplace_back(id, id - 1, 2);
+
+    return mesh;
+}
+
 indexed_triangle_set its_make_cone(double r, double h, double fa)
 {
     indexed_triangle_set mesh;
@@ -980,61 +1026,6 @@ indexed_triangle_set its_make_cone(double r, double h, double fa)
     }
     facets.emplace_back(0, 2, i+1); // close the shape
     facets.emplace_back(1, i+1, 2);
-
-    return mesh;
-}
-
-// Generates mesh for a frustum dowel centered about the origin, using the count of sectors
-// Note: This function uses code for sphere generation, but for stackCount = 2;
-indexed_triangle_set its_make_frustum_dowel(double radius, double h, int sectorCount)
-{
-    int   stackCount = 2;
-    float sectorStep = float(2. * M_PI / sectorCount);
-    float stackStep = float(M_PI / stackCount);
-
-    indexed_triangle_set mesh;
-    auto& vertices = mesh.vertices;
-    vertices.reserve((stackCount - 1) * sectorCount + 2);
-    for (int i = 0; i <= stackCount; ++i) {
-        // from pi/2 to -pi/2
-        double stackAngle = 0.5 * M_PI - stackStep * i;
-        double xy = radius * cos(stackAngle);
-        double z = radius * sin(stackAngle);
-        if (i == 0 || i == stackCount)
-            vertices.emplace_back(Vec3f(float(xy), 0.f, float(h * sin(stackAngle))));
-        else
-            for (int j = 0; j < sectorCount; ++j) {
-                // from 0 to 2pi
-                double sectorAngle = sectorStep * j + 0.25 * M_PI;
-                vertices.emplace_back(Vec3d(xy * std::cos(sectorAngle), xy * std::sin(sectorAngle), z).cast<float>());
-            }
-    }
-
-    auto& facets = mesh.indices;
-    facets.reserve(2 * (stackCount - 1) * sectorCount);
-    for (int i = 0; i < stackCount; ++i) {
-        // Beginning of current stack.
-        int k1 = (i == 0) ? 0 : (1 + (i - 1) * sectorCount);
-        int k1_first = k1;
-        // Beginning of next stack.
-        int k2 = (i == 0) ? 1 : (k1 + sectorCount);
-        int k2_first = k2;
-        for (int j = 0; j < sectorCount; ++j) {
-            // 2 triangles per sector excluding first and last stacks
-            int k1_next = k1;
-            int k2_next = k2;
-            if (i != 0) {
-                k1_next = (j + 1 == sectorCount) ? k1_first : (k1 + 1);
-                facets.emplace_back(k1, k2, k1_next);
-            }
-            if (i + 1 != stackCount) {
-                k2_next = (j + 1 == sectorCount) ? k2_first : (k2 + 1);
-                facets.emplace_back(k1_next, k2, k2_next);
-            }
-            k1 = k1_next;
-            k2 = k2_next;
-        }
-    }
 
     return mesh;
 }
@@ -1116,10 +1107,186 @@ indexed_triangle_set its_make_sphere(double radius, double fa)
     return mesh;
 }
 
+// Generates mesh for a frustum dowel centered about the origin, using the count of sectors
+// Note: This function uses code for sphere generation, but for stackCount = 2;
+indexed_triangle_set its_make_frustum_dowel(double radius, double h, int sectorCount)
+{
+    int   stackCount = 2;
+    float sectorStep = float(2. * M_PI / sectorCount);
+    float stackStep = float(M_PI / stackCount);
+
+    indexed_triangle_set mesh;
+    auto& vertices = mesh.vertices;
+    vertices.reserve((stackCount - 1) * sectorCount + 2);
+    for (int i = 0; i <= stackCount; ++i) {
+        // from pi/2 to -pi/2
+        double stackAngle = 0.5 * M_PI - stackStep * i;
+        double xy = radius * cos(stackAngle);
+        double z = radius * sin(stackAngle);
+        if (i == 0 || i == stackCount)
+            vertices.emplace_back(Vec3f(float(xy), 0.f, float(h * sin(stackAngle))));
+        else
+            for (int j = 0; j < sectorCount; ++j) {
+                // from 0 to 2pi
+                double sectorAngle = sectorStep * j + 0.25 * M_PI;
+                vertices.emplace_back(Vec3d(xy * std::cos(sectorAngle), xy * std::sin(sectorAngle), z).cast<float>());
+            }
+    }
+
+    auto& facets = mesh.indices;
+    facets.reserve(2 * (stackCount - 1) * sectorCount);
+    for (int i = 0; i < stackCount; ++i) {
+        // Beginning of current stack.
+        int k1 = (i == 0) ? 0 : (1 + (i - 1) * sectorCount);
+        int k1_first = k1;
+        // Beginning of next stack.
+        int k2 = (i == 0) ? 1 : (k1 + sectorCount);
+        int k2_first = k2;
+        for (int j = 0; j < sectorCount; ++j) {
+            // 2 triangles per sector excluding first and last stacks
+            int k1_next = k1;
+            int k2_next = k2;
+            if (i != 0) {
+                k1_next = (j + 1 == sectorCount) ? k1_first : (k1 + 1);
+                facets.emplace_back(k1, k2, k1_next);
+            }
+            if (i + 1 != stackCount) {
+                k2_next = (j + 1 == sectorCount) ? k2_first : (k2 + 1);
+                facets.emplace_back(k1_next, k2, k2_next);
+            }
+            k1 = k1_next;
+            k2 = k2_next;
+        }
+    }
+
+    return mesh;
+}
+
+indexed_triangle_set its_make_snap(double r, double h, float space_proportion, float bulge_proportion)
+{
+    const float radius = (float)r;
+    const float height = (float)h;
+    const size_t sectors_cnt = 10; //(float)fa;
+    const float halfPI = 0.5f * (float)PI;
+
+    const float space_len = space_proportion * radius;
+
+    const float b_len = radius;
+    const float m_len = (1 + bulge_proportion) * radius;
+    const float t_len = 0.5f * radius;
+
+    const float b_height = 0.f;
+    const float m_height = 0.5f * height;
+    const float t_height = height;
+
+    const float b_angle = acos(space_len/b_len);
+    const float t_angle = acos(space_len/t_len);
+
+    const float b_angle_step = b_angle / (float)sectors_cnt;
+    const float t_angle_step = t_angle / (float)sectors_cnt;
+
+    const Vec2f b_vec = Eigen::Vector2f(0, b_len);
+    const Vec2f t_vec = Eigen::Vector2f(0, t_len);
+
+
+    auto add_side_vertices = [b_vec, t_vec, b_height, m_height, t_height](std::vector<stl_vertex>& vertices, float b_angle, float t_angle, const Vec2f& m_vec) {
+        Vec2f b_pt = Eigen::Rotation2Df(b_angle) * b_vec;
+        Vec2f m_pt = Eigen::Rotation2Df(b_angle) * m_vec;
+        Vec2f t_pt = Eigen::Rotation2Df(t_angle) * t_vec;
+
+        vertices.emplace_back(Vec3f(b_pt(0), b_pt(1), b_height));
+        vertices.emplace_back(Vec3f(m_pt(0), m_pt(1), m_height));
+        vertices.emplace_back(Vec3f(t_pt(0), t_pt(1), t_height));
+    };
+
+    auto add_side_facets = [](std::vector<stl_triangle_vertex_indices>& facets, int vertices_cnt, int frst_id, int scnd_id) {
+        int id = vertices_cnt - 1;
+
+        facets.emplace_back(frst_id, id - 2, id - 5);
+
+        facets.emplace_back(id - 2, id - 1, id - 5);
+        facets.emplace_back(id - 1, id - 4, id - 5);
+        facets.emplace_back(id - 4, id - 1, id);
+        facets.emplace_back(id, id - 3, id - 4);
+
+        facets.emplace_back(id, scnd_id, id - 3);
+    };
+
+    const float f = (b_len - m_len) / m_len; // Flattening
+
+    auto get_m_len = [b_len, f](float angle) {
+        const float rad_sqr = b_len * b_len;
+        const float sin_sqr = sin(angle) * sin(angle);
+        const float f_sqr = (1-f)*(1-f);
+        return sqrtf(rad_sqr / (1 + (1 / f_sqr - 1) * sin_sqr));
+    };
+
+    auto add_sub_mesh = [add_side_vertices, add_side_facets, get_m_len,
+                        b_height, t_height, b_angle, t_angle, b_angle_step, t_angle_step]
+                        (indexed_triangle_set& mesh, float center_x, float angle_rotation, int frst_vertex_id) {
+        auto& vertices = mesh.vertices;
+        auto& facets     = mesh.indices;
+
+        // 2 special vertices, top and bottom center, rest are relative to this
+        vertices.emplace_back(Vec3f(center_x, 0.f, b_height));
+        vertices.emplace_back(Vec3f(center_x, 0.f, t_height));
+
+        float b_angle_start = angle_rotation - b_angle;
+        float t_angle_start = angle_rotation - t_angle;
+        const float b_angle_stop  = angle_rotation + b_angle;
+
+        const int frst_id = frst_vertex_id;
+        const int scnd_id = frst_id + 1;
+
+        // add first side vertices and internal facets
+        {
+            const Vec2f m_vec = Eigen::Vector2f(0, get_m_len(b_angle_start));
+            add_side_vertices(vertices, b_angle_start, t_angle_start, m_vec);
+
+            int id = (int)vertices.size() - 1;
+
+            facets.emplace_back(frst_id, id - 2, id - 1);
+            facets.emplace_back(frst_id, id - 1, id);
+            facets.emplace_back(frst_id, id, scnd_id);
+        }
+
+        // add d side vertices and facets
+        while (!is_approx(b_angle_start, b_angle_stop)) {
+            b_angle_start += b_angle_step;
+            t_angle_start += t_angle_step;
+
+            const Vec2f m_vec = Eigen::Vector2f(0, get_m_len(b_angle_start));
+            add_side_vertices(vertices, b_angle_start, t_angle_start, m_vec);
+
+            add_side_facets(facets, (int)vertices.size(), frst_id, scnd_id);
+        }
+
+        // add last internal facets to close the mesh
+        {
+            int id = (int)vertices.size() - 1;
+
+            facets.emplace_back(frst_id, scnd_id, id);
+            facets.emplace_back(frst_id, id, id - 1);
+            facets.emplace_back(frst_id, id - 1, id - 2);
+        }
+    };
+
+
+    indexed_triangle_set mesh;
+
+    mesh.vertices.reserve(2 * (3 * (2 * sectors_cnt + 1) + 2));
+    mesh.indices.reserve(2 * (6 * 2 * sectors_cnt + 6));
+
+    add_sub_mesh(mesh, -space_len, halfPI    , 0);
+    add_sub_mesh(mesh,  space_len, 3 * halfPI, (int)mesh.vertices.size());
+
+    return mesh;
+}
+
 indexed_triangle_set its_convex_hull(const std::vector<Vec3f> &pts)
 {
     std::vector<Vec3f>  dst_vertices;
-    std::vector<Vec3i>  dst_facets;
+    std::vector<Vec3i32>  dst_facets;
 
     if (! pts.empty()) {
         // The qhull call:
@@ -1155,7 +1322,7 @@ indexed_triangle_set its_convex_hull(const std::vector<Vec3f> &pts)
     #endif // NDEBUG
         for (const orgQhull::QhullFacet &facet : qhull.facetList()) {
             // Collect face vertices first, allocate unique vertices in dst_vertices based on QHull's vertex ID.
-            Vec3i  indices;
+            Vec3i32  indices;
             int    cnt = 0;
             for (const orgQhull::QhullVertex vertex : facet.vertices()) {
                 int id = vertex.id();
@@ -1215,7 +1382,7 @@ void its_merge(indexed_triangle_set &A, const indexed_triangle_set &B)
     A.indices.insert(A.indices.end(), B.indices.begin(), B.indices.end());
 
     for(size_t n = N_f; n < A.indices.size(); n++)
-        A.indices[n] += Vec3i{N, N, N};
+        A.indices[n] += Vec3i32{N, N, N};
 }
 
 void its_merge(indexed_triangle_set &A, const std::vector<Vec3f> &triangles)
@@ -1284,7 +1451,7 @@ size_t its_number_of_patches(const indexed_triangle_set &its)
 {
     return its_number_of_patches<>(its);
 }
-size_t its_number_of_patches(const indexed_triangle_set &its, const std::vector<Vec3i> &face_neighbors)
+size_t its_number_of_patches(const indexed_triangle_set &its, const std::vector<Vec3i32> &face_neighbors)
 {
     return its_number_of_patches<>(ItsNeighborsWrapper{ its, face_neighbors });
 }
@@ -1294,15 +1461,15 @@ bool its_is_splittable(const indexed_triangle_set &its)
 {
     return its_is_splittable<>(its);
 }
-bool its_is_splittable(const indexed_triangle_set &its, const std::vector<Vec3i> &face_neighbors)
+bool its_is_splittable(const indexed_triangle_set &its, const std::vector<Vec3i32> &face_neighbors)
 {
     return its_is_splittable<>(ItsNeighborsWrapper{ its, face_neighbors });
 }
 
-size_t its_num_open_edges(const std::vector<Vec3i> &face_neighbors)
+size_t its_num_open_edges(const std::vector<Vec3i32> &face_neighbors)
 {
     size_t num_open_edges = 0;
-    for (Vec3i neighbors : face_neighbors)
+    for (Vec3i32 neighbors : face_neighbors)
         for (int n : neighbors)
             if (n < 0)
                 ++ num_open_edges;
@@ -1339,12 +1506,12 @@ void VertexFaceIndex::create(const indexed_triangle_set &its)
     m_vertex_to_face_start.front() = 0;
 }
 
-std::vector<Vec3i> its_face_neighbors(const indexed_triangle_set &its)
+std::vector<Vec3i32> its_face_neighbors(const indexed_triangle_set &its)
 {
     return create_face_neighbors_index(ex_seq, its);
 }
 
-std::vector<Vec3i> its_face_neighbors_par(const indexed_triangle_set &its)
+std::vector<Vec3i32> its_face_neighbors_par(const indexed_triangle_set &its)
 {
     return create_face_neighbors_index(ex_tbb, its);
 }

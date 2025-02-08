@@ -7,6 +7,7 @@
 #include "Event.hpp"
 #include "I18N.hpp"
 #include "Jobs/ProgressIndicator.hpp"
+#include "Downloader.hpp"
 
 #include <libslic3r/ObjectID.hpp>
 #include <libslic3r/Technologies.hpp>
@@ -27,6 +28,8 @@ using ExportGcodeNotificationClickedEvent = SimpleEvent;
 wxDECLARE_EVENT(EVT_EXPORT_GCODE_NOTIFICAION_CLICKED, ExportGcodeNotificationClickedEvent);
 using PresetUpdateAvailableClickedEvent = SimpleEvent;
 wxDECLARE_EVENT(EVT_PRESET_UPDATE_AVAILABLE_CLICKED, PresetUpdateAvailableClickedEvent);
+using PrinterConfigUpdateAvailableClickedEvent = SimpleEvent;
+wxDECLARE_EVENT(EVT_PRINTER_CONFIG_UPDATE_AVAILABLE_CLICKED, PrinterConfigUpdateAvailableClickedEvent);
 
 using CancelFn = std::function<void()>;
 
@@ -117,10 +120,14 @@ enum class NotificationType
 	// Give user advice to simplify object with big amount of triangles
 	// Contains ObjectID for closing when object is deleted
 	SimplifySuggestion,
+	// Change of text will change font to similar one on.
+	UnknownFont,
 	// information about netfabb is finished repairing model (blocking proccess)
 	NetfabbFinished,
 	// Short meesage to fill space between start and finish of export
 	ExportOngoing,
+    // Progressbar of download from prusaslicer://url
+    URLDownload,
 	// BBS: Short meesage to fill space between start and finish of arranging
 	ArrangeOngoing,
 	// BBL: Plate Info ,Design For @YangLeDuo
@@ -141,6 +148,8 @@ enum class NotificationType
 	BBLPluginInstallHint,
 	BBLPluginUpdateAvailable,
 	BBLPreviewOnlyMode,
+    BBLPrinterConfigUpdateAvailable,
+	BBLUserPresetExceedLimit,
 };
 
 class NotificationManager
@@ -237,9 +246,18 @@ public:
 	// Exporting finished, show this information with path, button to open containing folder and if ejectable - eject button
 	void push_exporting_finished_notification(const std::string& path, const std::string& dir_path, bool on_removable);
 	void push_import_finished_notification(const std::string& path, const std::string& dir_path, bool on_removable);
+
+    // Download URL progress notif
+    void push_download_URL_progress_notification(size_t id, const std::string& text, std::function<bool(DownloaderUserAction, int)> user_action_callback);
+    void set_download_URL_progress(size_t id, float percentage);
+    void set_download_URL_paused(size_t id);
+    void set_download_URL_canceled(size_t id);
+    void set_download_URL_error(size_t id, const std::string& text);
+
 	// notifications with progress bar
 	// slicing progress
 	void init_slicing_progress_notification(std::function<bool()> cancel_callback);
+	void update_slicing_notif_dailytips(bool need_change);
 	void set_slicing_progress_began();
 	// percentage negative = canceled, <0-1) = progress, 1 = completed
 	void set_slicing_progress_percentage(const std::string& text, float percentage);
@@ -411,7 +429,8 @@ private:
 		// set start of notification to now. Used by delayed notifications
 		void                   reset_timer() { m_notification_start = GLCanvas3D::timestamp_now(); m_state = EState::Shown; }
         void set_Multiline(bool Multi) { m_multiline = Multi; }
-		void on_change_color_mode(bool is_dark);
+		virtual void on_change_color_mode(bool is_dark);
+		void set_scale(float scale) { m_scale = scale; }
 
 	protected:
 		// Call after every size change
@@ -455,7 +474,10 @@ private:
 		// used this function instead of reading directly m_data.duration. Some notifications might need to return changing value.
 		virtual int  get_duration() { return m_data.duration; }
 
+		void ensure_ui_inited();
+
 		bool m_is_dark = false;
+        bool m_is_dark_inited = false;
 
 		const NotificationData m_data;
 		// For reusing ImGUI windows.
@@ -485,6 +507,7 @@ private:
 		ImVec4     m_CurrentColor;
 
         float      m_WindowRadius;
+        bool       m_WindowRadius_inited = false;
 
 		void use_bbl_theme();
         void restore_default_theme();
@@ -544,6 +567,8 @@ private:
         size_t           m_lines_count{ 1 };
 	    // Target for wxWidgets events sent by clicking on the hyperlink available at some notifications.
 		wxEvtHandler*    m_evt_handler;
+
+		float m_scale = 1.0f;
 	};
 
 
@@ -574,6 +599,7 @@ private:
 
 		ProgressBarNotification(const NotificationData& n, NotificationIDProvider& id_provider, wxEvtHandler* evt_handler) : PopNotification(n, id_provider, evt_handler) { }
 		virtual void set_percentage(float percent) { m_percentage = percent; }
+        float get_percentage() const { return m_percentage; }
 	protected:
 		virtual void init() override;
 		virtual void	render_text(ImGuiWrapper& imgui,
@@ -595,6 +621,62 @@ private:
 		// local time of last hover for showing tooltip
 
 	};
+
+    class URLDownloadNotification : public ProgressBarNotification
+    {
+    public:
+        URLDownloadNotification(const NotificationData& n, NotificationIDProvider& id_provider, wxEvtHandler* evt_handler, size_t download_id, std::function<bool(DownloaderUserAction, int)> user_action_callback)
+        //: ProgressBarWithCancelNotification(n, id_provider, evt_handler, cancel_callback)
+                : ProgressBarNotification(n, id_provider, evt_handler)
+                , m_download_id(download_id)
+                , m_user_action_callback(user_action_callback)
+        {
+        }
+        void	set_percentage(float percent) override
+        {
+            m_percentage = percent;
+            if (m_percentage >= 1.f) {
+                m_notification_start = GLCanvas3D::timestamp_now();
+                m_state = EState::Shown;
+            } else
+                m_state = EState::NotFading;
+        }
+        size_t	get_download_id() { return m_download_id; }
+        void	set_user_action_callback(std::function<bool(DownloaderUserAction, int)> user_action_callback) { m_user_action_callback = user_action_callback; }
+        void	set_paused(bool paused) { m_download_paused = paused; }
+        void    set_error_message(const std::string& message) { m_error_message = message; }
+        bool    compare_text(const std::string& text) const override { return false; };
+    protected:
+        void	render_close_button(ImGuiWrapper& imgui,
+                                    const float win_size_x, const float win_size_y,
+                                    const float win_pos_x, const float win_pos_y) override;
+        void    render_close_button_inner(ImGuiWrapper& imgui,
+                                          const float win_size_x, const float win_size_y,
+                                          const float win_pos_x, const float win_pos_y);
+        void    render_pause_cancel_buttons_inner(ImGuiWrapper& imgui,
+                                                  const float win_size_x, const float win_size_y,
+                                                  const float win_pos_x, const float win_pos_y);
+        void    render_open_button_inner(ImGuiWrapper& imgui,
+                                         const float win_size_x, const float win_size_y,
+                                         const float win_pos_x, const float win_pos_y);
+        void    render_cancel_button_inner(ImGuiWrapper& imgui,
+                                           const float win_size_x, const float win_size_y,
+                                           const float win_pos_x, const float win_pos_y);
+        void    render_pause_button_inner(ImGuiWrapper& imgui,
+                                          const float win_size_x, const float win_size_y,
+                                          const float win_pos_x, const float win_pos_y);
+        void	render_bar(ImGuiWrapper& imgui,
+                           const float win_size_x, const float win_size_y,
+                           const float win_pos_x, const float win_pos_y) override;
+        void    trigger_user_action_callback(DownloaderUserAction action);
+
+        void    count_spaces() override;
+
+        size_t							m_download_id;
+        std::function<bool(DownloaderUserAction, int)>	m_user_action_callback;
+        bool							m_download_paused {false};
+        std::string						m_error_message;
+    };
 
 	class PrintHostUploadNotification : public ProgressBarNotification
 	{
@@ -637,74 +719,6 @@ private:
 		float			    m_file_size;
 		long				m_hover_time{ 0 };
 		UploadJobState		m_uj_state{ UploadJobState::PB_PROGRESS };
-	};
-	class SlicingProgressNotification : public ProgressBarNotification
-	{
-	public:
-		// Inner state of notification, Each state changes bahaviour of the notification
-		enum class SlicingProgressState
-		{
-			SP_NO_SLICING, // hidden
-			SP_BEGAN, // still hidden but allows to go to SP_PROGRESS state. This prevents showing progress after slicing was canceled.
-			SP_PROGRESS, // never fades outs, no close button, has cancel button
-			SP_CANCELLED, // fades after 10 seconds, simple message
-			SP_COMPLETED // Has export hyperlink and print info, fades after 20 sec if sidebar is shown, otherwise no fade out
-		};
-		SlicingProgressNotification(const NotificationData& n, NotificationIDProvider& id_provider, wxEvtHandler* evt_handler, std::function<bool()> callback)
-		: ProgressBarNotification(n, id_provider, evt_handler)
-		, m_cancel_callback(callback)
-		{
-			set_progress_state(SlicingProgressState::SP_NO_SLICING);
-			m_has_cancel_button = false;
-			m_render_percentage = true;
-		}
-		// sets text of notification - call after setting progress state
-		void				set_status_text(const std::string& text);
-		// sets cancel button callback
-		void			    set_cancel_callback(std::function<bool()> callback) { m_cancel_callback = callback; }
-		bool                has_cancel_callback() const { return m_cancel_callback != nullptr; }
-		// sets SlicingProgressState, negative percent means canceled, returns true if state was set succesfully.
-		bool				set_progress_state(float percent);
-		// sets SlicingProgressState, percent is used only at progress state. Returns true if state was set succesfully.
-		bool				set_progress_state(SlicingProgressState state,float percent = 0.f);
-		// sets additional string of print info and puts notification into Completed state.
-		void			    set_print_info(const std::string& info);
-		// sets fading if in Completed state.
-		void                set_sidebar_collapsed(bool collapsed);
-		// Calls inherited update_state and ensures Estate goes to hidden not closing.
-		bool                update_state(bool paused, const int64_t delta) override;
-		// Switch between technology to provide correct text.
-		void				set_fff(bool b) { m_is_fff = b; }
-		void				set_fdm(bool b) { m_is_fff = b; }
-		void				set_sla(bool b) { m_is_fff = !b; }
-		void                set_export_possible(bool b) { m_export_possible = b; }
-	protected:
-		void        init() override;
-		void	    render_text(ImGuiWrapper& imgui, const float win_size_x, const float win_size_y, const float win_pos_x, const float win_pos_y) override;
-		void		render_bar(ImGuiWrapper& imgui,
-								const float win_size_x, const float win_size_y,
-								const float win_pos_x, const float win_pos_y) override;
-		void		render_cancel_button(ImGuiWrapper& imgui,
-											const float win_size_x, const float win_size_y,
-											const float win_pos_x, const float win_pos_y) override;
-		void		render_close_button(ImGuiWrapper& imgui,
-										const float win_size_x, const float win_size_y,
-										const float win_pos_x, const float win_pos_y) override;
-		void		render_hypertext(ImGuiWrapper& imgui,
-										const float text_x, const float text_y,
-										const std::string text,
-										bool more = false) override ;
-		void       on_cancel_button();
-		int		   get_duration() override;
-		// if returns false, process was already canceled
-		std::function<bool()>	m_cancel_callback;
-		SlicingProgressState	m_sp_state { SlicingProgressState::SP_PROGRESS };
-		bool				    m_has_print_info { false };
-		std::string             m_print_info;
-		bool                    m_sidebar_collapsed { false };
-		bool					m_is_fff { true };
-		// if true, it is possible show export hyperlink in state SP_PROGRESS
-		bool                    m_export_possible { false };
 	};
 
 	class ProgressIndicatorNotification : public ProgressBarNotification
@@ -802,6 +816,9 @@ private:
 		//void render_left_sign(ImGuiWrapper& imgui) override;
 		std::vector<std::pair<InfoItemType, size_t>> m_types_and_counts;
 	};
+
+	// in SlicingProgressNotification.hpp
+	class SlicingProgressNotification;
 
 	// in HintNotification.hpp
 	class HintNotification;
@@ -914,6 +931,21 @@ private:
 				 return true;
              }},
 
+        NotificationData{NotificationType::BBLPrinterConfigUpdateAvailable, NotificationLevel::ImportantNotificationLevel, BBL_NOTICE_MAX_INTERVAL,
+                         _u8L("New printer config available."), _u8L("Details"),
+                         [](wxEvtHandler *evnthndlr) {
+                             if (evnthndlr != nullptr) wxPostEvent(evnthndlr, PrinterConfigUpdateAvailableClickedEvent(EVT_PRINTER_CONFIG_UPDATE_AVAILABLE_CLICKED));
+                             return true;
+                         }},
+
+        NotificationData{NotificationType::BBLUserPresetExceedLimit, NotificationLevel::WarningNotificationLevel, BBL_NOTICE_MAX_INTERVAL,
+			_u8L("The number of user presets cached in the cloud has exceeded the upper limit, newly created user presets can only be used locally."), 
+			_u8L("Wiki"),
+                         [](wxEvtHandler* evnthndlr) {
+				wxLaunchDefaultBrowser("https://wiki.bambulab.com/en/software/bambu-studio/3rd-party-printer-profile#cloud-user-presets-limit");
+				return false;
+             }},
+
         NotificationData{NotificationType::UndoDesktopIntegrationFail, NotificationLevel::WarningNotificationLevel, 10,
 		_u8L("Undo integration failed.") },
         NotificationData{NotificationType::ExportOngoing, NotificationLevel::RegularNotificationLevel, 0, _u8L("Exporting.")},
@@ -928,7 +960,7 @@ private:
 	};
 public:
     void set_scale(float scale = 1.0);
-	 float m_scale = 1.0;
+	float m_scale = 1.0f;
 };
 
 }//namespace GUI

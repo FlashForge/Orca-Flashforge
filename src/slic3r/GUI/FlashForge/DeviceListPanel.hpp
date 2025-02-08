@@ -65,6 +65,7 @@ protected:
     virtual void sendEvent() {};
     bool isPointIn(const wxPoint& pt);
     void bindEvent(bool bind);
+    void do_render(wxDC& dc);
 
 protected:
     bool            m_hovered {false};
@@ -90,6 +91,7 @@ public:
         std::string name;
         std::string placement;
         std::string status;
+        int progress {0};
     };
 
     DeviceInfoItemPanel(wxWindow *parent, const DeviceInfo& info, wxWindow* event_handle = nullptr);
@@ -111,6 +113,7 @@ private:
     wxStaticBitmap* m_icon {nullptr};
     wxStaticText*   m_placement_text {nullptr};
     wxStaticText*   m_status_text {nullptr};
+    wxStaticText*   m_progress_text {nullptr};
     wxWindow*       m_event_handle {nullptr};
 };
 //wxDECLARE_EVENT(EVT_DEVICE_ITEM_SELECTED, wxCommandEvent);
@@ -143,8 +146,13 @@ struct StringCompareFunc {
         return lhs < rhs;
     }
 };
+struct WXStringCompareFunc {
+    bool operator()(const wxString& lhs, const wxString& rhs) const {
+        return lhs < rhs;
+    }
+};
 typedef std::map<std::string, DeviceFilterItem*, StringCompareFunc> PlacementItemMap;
-typedef std::map<std::string, DeviceStatusFilterItem*, StringCompareFunc> StatusItemMap;
+typedef std::map<wxString, DeviceStatusFilterItem*, WXStringCompareFunc> StatusItemMap;
 typedef std::map<unsigned short, DeviceTypeFilterItem*> DeviceTypeItemMap;
 
 //class DeviceListUpdateEvent;
@@ -172,9 +180,9 @@ private:
     void initLocalDevice(std::map<std::string, DeviceInfoItemPanel::DeviceInfo>& deviceInfoMap);
     void initWlanDevice(std::map<std::string, DeviceInfoItemPanel::DeviceInfo>& deviceInfoMap);
     void initDeviceList();
-    void updateFilterMap();
-    void updatePlacementMap();
-    void updateStatusMap();
+    bool updateFilterMap();
+    bool updatePlacementMap();
+    bool updateStatusMap();
     void updateTypeMap();
     void updateFilterTitle();
     void updateStaticMap();
@@ -213,13 +221,17 @@ private:
     
     struct DeviceKeySortFunc {
         bool operator()(const DeviceKey& lhs, const DeviceKey& rhs) const {
-            if (lhs.priority != rhs.priority) {
-                return lhs.priority > rhs.priority;
+            //if (lhs.priority != rhs.priority) {
+            //    return lhs.priority > rhs.priority;
+            //}
+            if (lhs.dev_name == rhs.dev_name) {
+                return lhs.dev_id < rhs.dev_id;
             }
             return lhs.dev_name < rhs.dev_name;
         }
     };
     typedef std::map<DeviceKey, DeviceInfoItemPanel*> DeviceItemMap;
+    typedef std::map<DeviceKey, DeviceInfoItemPanel*, DeviceKeySortFunc> DeviceItemMapSort;
     typedef std::set<DeviceKey, DeviceKeySortFunc> DeviceKeySet;
     int generateNewPriorityId();
     void updatePriorityId();
@@ -263,7 +275,7 @@ private:
     std::string         m_filter_placement;
     std::string         m_filter_placement_trimmed;
     bool                m_filter_status_default {true};
-    std::string         m_filter_status;
+    wxString            m_filter_status;
     std::set<unsigned short> m_filter_types;
 
     static int m_last_priority_id;

@@ -13,9 +13,6 @@ namespace RasterizationImpl {
 using IndexPair = std::pair<int64_t, int64_t>;
 using Grids     = std::vector<IndexPair>;
 
-inline constexpr int64_t RasteXDistance = scale_(1);
-inline constexpr int64_t RasteYDistance = scale_(1);
-
 inline IndexPair point_map_grid_index(const Point &pt, int64_t xdist, int64_t ydist)
 {
     auto x = pt.x() / xdist;
@@ -25,7 +22,7 @@ inline IndexPair point_map_grid_index(const Point &pt, int64_t xdist, int64_t yd
 
 inline bool nearly_equal(const Point &p1, const Point &p2) { return std::abs(p1.x() - p2.x()) < SCALED_EPSILON && std::abs(p1.y() - p2.y()) < SCALED_EPSILON; }
 
-inline Grids line_rasterization(const Line &line, int64_t xdist = RasteXDistance, int64_t ydist = RasteYDistance)
+inline Grids line_rasterization(const Line &line, int64_t xdist = scale_(1), int64_t ydist = scale_(1))
 {
     Grids     res;
     Point     rayStart     = line.a;
@@ -91,34 +88,39 @@ inline Grids line_rasterization(const Line &line, int64_t xdist = RasteXDistance
 
 void LinesBucketQueue::emplace_back_bucket(ExtrusionLayers &&els, const void *objPtr, Point offset)
 {
-    auto oldSize = _buckets.capacity();
-    _buckets.emplace_back(std::move(els), objPtr, offset);
-    _pq.push(&_buckets.back());
-    auto newSize = _buckets.capacity();
-    if (oldSize != newSize) { // pointers change
-        decltype(_pq) newQueue;
-        for (LinesBucket &bucket : _buckets) { newQueue.push(&bucket); }
-        std::swap(_pq, newQueue);
+    auto oldSize = line_buckets.capacity();
+    line_buckets.emplace_back(std::move(els), objPtr, offset);
+    auto newSize = line_buckets.capacity();
+    // Since line_bucket_ptr_queue is storing pointers into line_buckets,
+    // we need to handle the case where the capacity changes since that makes
+    // the existing pointers invalid
+    if (oldSize == newSize) {
+        line_bucket_ptr_queue.push(&line_buckets.back());
+    }
+    else { // pointers change, create a new queue from scratch
+        decltype(line_bucket_ptr_queue) newQueue;
+        for (LinesBucket &bucket : line_buckets) { newQueue.push(&bucket); }
+        std::swap(line_bucket_ptr_queue, newQueue);
     }
 }
 
 // remove lowest and get the current bottom z
 float LinesBucketQueue::getCurrBottomZ()
 {
-    auto lowest = _pq.top();
-    _pq.pop();
+    auto lowest = line_bucket_ptr_queue.top();
+    line_bucket_ptr_queue.pop();
     float                      layerBottomZ = lowest->curBottomZ();
     std::vector<LinesBucket *> lowests;
     lowests.push_back(lowest);
 
-    while (_pq.empty() == false && std::abs(_pq.top()->curBottomZ() - lowest->curBottomZ()) < EPSILON) {
-        lowests.push_back(_pq.top());
-        _pq.pop();
+    while (line_bucket_ptr_queue.empty() == false && std::abs(line_bucket_ptr_queue.top()->curBottomZ() - lowest->curBottomZ()) < EPSILON) {
+        lowests.push_back(line_bucket_ptr_queue.top());
+        line_bucket_ptr_queue.pop();
     }
 
     for (LinesBucket *bp : lowests) {
         bp->raise();
-        if (bp->valid()) { _pq.push(bp); }
+        if (bp->valid()) { line_bucket_ptr_queue.push(bp); }
     }
     return layerBottomZ;
 }
@@ -126,7 +128,7 @@ float LinesBucketQueue::getCurrBottomZ()
 LineWithIDs LinesBucketQueue::getCurLines() const
 {
     LineWithIDs lines;
-    for (const LinesBucket &bucket : _buckets) {
+    for (const LinesBucket &bucket : line_buckets) {
         if (bucket.valid()) {
             LineWithIDs tmpLines = bucket.curLines();
             lines.insert(lines.end(), tmpLines.begin(), tmpLines.end());
@@ -218,6 +220,7 @@ ConflictResultOpt ConflictChecker::find_inter_of_lines_in_diff_objs(PrintObjectP
 {
     if (objs.size() <= 1 && !wtdptr) { return {}; }
     LinesBucketQueue conflictQueue;
+
     if (wtdptr.has_value()) { // wipe tower at 0 by default
         auto            wtpaths = wtdptr.value()->getFakeExtrusionPathsFromWipeTower();
         ExtrusionLayers wtels;

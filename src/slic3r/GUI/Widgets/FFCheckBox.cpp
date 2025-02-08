@@ -13,7 +13,8 @@ FFCheckBox::FFCheckBox(wxWindow *parent, int id)
 {
 	//SetBackgroundStyle(wxBG_STYLE_TRANSPARENT);
 	if (parent)
-		SetBackgroundColour(parent->GetBackgroundColour());
+        SetBackgroundColour(*wxWHITE);
+		//SetBackgroundColour(parent->GetBackgroundColour());
 	Bind(wxEVT_TOGGLEBUTTON, [this](auto& e) { update(); e.Skip(); });
 #ifdef __WXOSX__ // State not fully implement on MacOS
     Bind(wxEVT_SET_FOCUS, &FFCheckBox::updateBitmap, this);

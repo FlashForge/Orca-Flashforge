@@ -206,6 +206,12 @@ function ShowModelInfo( pModel )
 	let sLicence=pModel.license.toUpperCase();
 	let sModelDesc=decodeURIComponent(pModel.description);
 	
+	if( pModel.hasOwnProperty('model_id') )
+	{
+		let m_id=pModel['model_id']+'';
+		UpdateModelID( m_id.trim() );
+	}
+	
 	SendWXDebugInfo("Model Name:  "+sModelName);
 	
 	$('#ModelName').html(sModelName);
@@ -580,7 +586,14 @@ function OnClickOpenImage( F_ID )
 	$("img#"+F_ID).click();
 }
 
-
+function OnClickEditProjectInfo()
+{
+	var tSend={};
+	tSend['sequence_id']=Math.round(new Date() / 1000);
+	tSend['command']="edit_project_info";
+		
+	SendWXMessage( JSON.stringify(tSend) );		
+}
 
 
 

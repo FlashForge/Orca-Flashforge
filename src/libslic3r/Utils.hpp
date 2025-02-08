@@ -1,16 +1,13 @@
-///|/ Copyright (c) Prusa Research 2016 - 2023 Oleksandra Iushchenko @YuSanka, Vojtěch Bubník @bubnikv, Filip Sykala @Jony01, David Kocík @kocikdav, Enrico Turri @enricoturri1966, Tomáš Mészáros @tamasmeszaros, Lukáš Matěna @lukasmatena, Vojtěch Král @vojtechkral
-///|/ Copyright (c) 2019 Sijmen Schoon
-///|/
-///|/ PrusaSlicer is released under the terms of the AGPLv3 or higher
-///|/
 #ifndef slic3r_Utils_hpp_
 #define slic3r_Utils_hpp_
 
+#include <iomanip>
 #include <locale>
 #include <utility>
 #include <functional>
 #include <type_traits>
 #include <system_error>
+#include <regex>
 
 #include <boost/system/error_code.hpp>
 #include <boost/algorithm/string.hpp>
@@ -48,6 +45,8 @@
 #define CLI_PRINTABLE_SIZE_REDUCED     -20
 #define CLI_OBJECT_ARRANGE_FAILED      -21
 #define CLI_OBJECT_ORIENT_FAILED       -22
+#define CLI_MODIFIED_PARAMS_TO_PRINTER -23
+#define CLI_FILE_VERSION_NOT_SUPPORTED -24
 
 
 #define CLI_NO_SUITABLE_OBJECTS     -50
@@ -124,8 +123,11 @@ inline std::string convert_to_full_version(std::string short_version)
     }
     return result;
 }
-
-
+template<typename DataType>
+inline DataType round_divide(DataType dividend, DataType divisor) //!< Return dividend divided by divisor rounded to the nearest integer
+{
+    return (dividend + divisor / 2) / divisor;
+}
 
 // Set a path with GUI localization files.
 void set_local_dir(const std::string &path);
@@ -139,6 +141,11 @@ const std::string& sys_shapes_dir();
 
 // Return a full path to the custom shapes gallery directory.
 std::string custom_shapes_dir();
+
+// Set a path with shapes gallery files.
+void set_custom_gcodes_dir(const std::string &path);
+// Return a full path to the system shapes gallery directory.
+const std::string& custom_gcodes_dir();
 
 // Set a path with preset files.
 void set_data_dir(const std::string &path);
@@ -159,6 +166,11 @@ void flush_logs();
 // A special type for strings encoded in the local Windows 8-bit code page.
 // This type is only needed for Perl bindings to relay to Perl that the string is raw, not UTF-8 encoded.
 typedef std::string local_encoded_string;
+
+// Returns next utf8 sequence length. =number of bytes in string, that creates together one utf-8 character. 
+// Starting at pos. ASCII characters returns 1. Works also if pos is in the middle of the sequence.
+extern size_t get_utf8_sequence_length(const std::string& text, size_t pos = 0);
+extern size_t get_utf8_sequence_length(const char *seq, size_t size);
 
 // Convert an UTF-8 encoded string into local coding.
 // On Windows, the UTF-8 string is converted to a local 8-bit code page.
@@ -204,6 +216,30 @@ extern bool is_shapes_dir(const std::string& dir);
 //BBS: add json support
 extern bool is_json_file(const std::string& path);
 
+// Orca: custom protocal support utils
+inline bool is_orca_open(const std::string& url) { return boost::starts_with(url, "orcaslicer://open"); }
+inline bool is_prusaslicer_open(const std::string& url) { return boost::starts_with(url, "prusaslicer://open"); }
+inline bool is_bambustudio_open(const std::string& url) { return boost::starts_with(url, "bambustudio://open") || boost::starts_with(url, "bambustudioopen://"); }
+inline bool is_cura_open(const std::string& url) { return boost::starts_with(url, "cura://open"); }
+inline bool is_supported_open_protocol(const std::string& url) { return is_orca_open(url) || is_prusaslicer_open(url) || is_bambustudio_open(url) || is_cura_open(url); }
+inline bool is_printables_link(const std::string& url) {
+    const std::regex url_regex("(http|https)://printables.com", std::regex_constants::icase);
+    return std::regex_match(url, url_regex);
+}
+inline bool is_makerworld_link(const std::string& url) {
+    const std::regex url_regex("(http|https)://makerworld.com", std::regex_constants::icase);
+    return std::regex_match(url, url_regex);
+}
+inline bool is_thingiverse_link(const std::string& url) {
+    const std::regex url_regex("(http|https)://www.thingiverse.com", std::regex_constants::icase);
+    return std::regex_match(url, url_regex);
+}
+
+// sanitize a string to be used as a filename
+inline std::string sanitize_filename(const std::string &filename){
+    const std::regex special_chars("[/\\\\:*?\"<>|]");
+    return std::regex_replace(filename, special_chars, "_");
+}
 // File path / name / extension splitting utilities, working with UTF-8,
 // to be published to Perl.
 namespace PerlUtils {
@@ -363,6 +399,7 @@ inline typename CONTAINER_TYPE::value_type& next_value_modulo(typename CONTAINER
 }
 
 extern std::string xml_escape(std::string text, bool is_marked = false);
+extern std::string xml_escape_double_quotes_attribute_value(std::string text);
 extern std::string xml_unescape(std::string text);
 
 
@@ -638,8 +675,11 @@ inline std::string filter_characters(const std::string& str, const std::string& 
     return filteredStr;
 }
 
-void copy_directory_recursively(const boost::filesystem::path &source, const boost::filesystem::path &target);
+void copy_directory_recursively(const boost::filesystem::path &source, const boost::filesystem::path &target, std::function<bool(const std::string)> filter = nullptr);
 
+// Orca: Since 1.7.9 Boost deprecated save_string_file and load_string_file, copy and modified from boost 1.7.8
+void save_string_file(const boost::filesystem::path& p, const std::string& str);
+void load_string_file(const boost::filesystem::path& p, std::string& str);
 
 } // namespace Slic3r
 

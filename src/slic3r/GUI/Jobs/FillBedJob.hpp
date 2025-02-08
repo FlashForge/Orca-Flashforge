@@ -7,7 +7,7 @@ namespace Slic3r { namespace GUI {
 
 class Plater;
 
-class FillBedJob : public PlaterJob
+class FillBedJob : public Job
 {
     int     m_object_idx = -1;
 
@@ -24,23 +24,21 @@ class FillBedJob : public PlaterJob
     arrangement::ArrangeParams params;
 
     int m_status_range = 0;
-
-protected:
-
-    void prepare() override;
-    void process() override;
+    Plater *m_plater;
 
 public:
-    FillBedJob(std::shared_ptr<ProgressIndicator> pri, Plater *plater)
-        : PlaterJob{std::move(pri), plater}
-    {}
 
-    int status_range() const override
+    void prepare();
+    void process(Ctl &ctl) override;
+
+    FillBedJob();
+
+    int status_range() const
     {
         return m_status_range;
     }
 
-    void finalize() override;
+    void finalize(bool canceled, std::exception_ptr &e) override;
 };
 
 }} // namespace Slic3r::GUI

@@ -17,6 +17,7 @@ class Button : public StaticBox
     bool pressedDown = false;
     bool m_selected  = true;
     bool canFocus  = true;
+    bool isCenter = true;
     bool m_flashforge_selected = false;
     bool m_flashforge = false;
     bool m_pure_text = false;
@@ -60,6 +61,8 @@ public:
     void SetValue(bool state);
 
     bool GetValue() const;
+
+    void SetCenter(bool isCenter);
 
     void Rescale();
 

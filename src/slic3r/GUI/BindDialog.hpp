@@ -130,6 +130,7 @@ public:
     void     on_close(wxCloseEvent& event);
     void     on_destroy();
     void     on_result_ok(wxCommandEvent& event);
+    void     downloadUrlPic(const std::string& url);
 };
 
 // unbind
@@ -173,6 +174,7 @@ public:
     void     on_close(wxCloseEvent& event);
     void     on_destroy();
     void     on_result_ok(wxCommandEvent& event);
+    void     downloadUrlPic(const std::string& url);
 };
 
 }} // namespace Slic3r::GUI

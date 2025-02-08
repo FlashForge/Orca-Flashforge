@@ -32,6 +32,10 @@ private:
     ScalableBitmap m_printer_status_idle;
     ScalableBitmap m_printer_online_lan;
     ScalableBitmap m_printer_online_wan;
+
+    ScalableBitmap m_printer_status_offline;
+    ScalableBitmap m_printer_status_lock;
+    ScalableBitmap m_printer_in_lan;
     MachineObject* m_info;
 
 public:
@@ -90,6 +94,7 @@ private:
     std::vector<MPanel*>                m_user_list_machine_panel;
     boost::thread*                      get_print_info_thread{ nullptr };
     std::string                         m_print_info;
+    std::shared_ptr<int>                m_token = std::make_shared<int>(0);
     std::map<std::string, MachineObject*> m_bind_machine_list;
 
 private:

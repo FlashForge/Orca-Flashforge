@@ -3,13 +3,27 @@
 
 #include <atomic>
 #include <wx/event.h>
-#include "ComWanAsyncConn.hpp"
+#include "ComWanNimConn.hpp"
 #include "FlashNetworkIntfc.h"
+#include "FreeInDestructor.h"
 #include "MultiComDef.hpp"
 #include "MultiComEvent.hpp"
 #include "MultiComUtils.hpp"
 
 namespace Slic3r { namespace GUI {
+
+struct com_command_exec_data_t {
+    ComConnectMode connectMode;
+    fnet::FlashNetworkIntfc *networkIntfc;
+    const char *ip;
+    unsigned int port;
+    const char *serialNumber;
+    const char *checkCode;
+    const char *uid;
+    const char *accessToken;
+    const char *deviceId;
+    const char *nimAccountId;
+};
 
 class ComCommand
 {
@@ -29,11 +43,7 @@ public:
     {
         return typeid(*this) == typeid(*that);
     }
-    virtual ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &ip,
-        unsigned int port, const std::string &serialNumber, const std::string &checkCode) = 0;
-
-    virtual ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &uid,
-        const std::string &accessToken, const std::string &deviceId) = 0;
+    virtual ComErrno exec(const com_command_exec_data_t &data) = 0;
 
 protected:
     int m_commandId;
@@ -47,17 +57,16 @@ public:
         : m_devProduct(nullptr)
     {
     }
-    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &ip,
-        unsigned int port, const std::string &serialNumber, const std::string &checkCode)
+    ComErrno exec(const com_command_exec_data_t &data)
     {
-        int ret = networkIntfc->getLanDevProduct(
-            ip.c_str(), port, serialNumber.c_str(), checkCode.c_str(), &m_devProduct, ComTimeoutLan);
+        int ret;
+        if (data.connectMode == COM_CONNECT_LAN) {
+            ret = data.networkIntfc->getLanDevProduct(
+                data.ip, data.port, data.serialNumber, data.checkCode, &m_devProduct, ComTimeoutLanA);
+        } else {
+            ret = FNET_ERROR;
+        }
         return MultiComUtils::fnetRet2ComErrno(ret);
-    }
-    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &uid,
-        const std::string &accessToken, const std::string &deviceId)
-    {
-        return COM_ERROR;
     }
     fnet_dev_product_t *devProduct()
     {
@@ -75,17 +84,16 @@ public:
         : m_devDetail(nullptr)
     {
     }
-    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &ip,
-        unsigned int port, const std::string &serialNumber, const std::string &checkCode)
+    ComErrno exec(const com_command_exec_data_t &data)
     {
-        int ret = networkIntfc->getLanDevDetail(
-            ip.c_str(), port, serialNumber.c_str(), checkCode.c_str(), &m_devDetail, ComTimeoutLan);
+        int ret;
+        if (data.connectMode == COM_CONNECT_LAN) {
+            ret = data.networkIntfc->getLanDevDetail(
+                data.ip, data.port, data.serialNumber, data.checkCode, &m_devDetail, ComTimeoutLanA);
+        } else {
+            ret = FNET_ERROR;
+        }
         return MultiComUtils::fnetRet2ComErrno(ret);
-    }
-    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &uid,
-        const std::string &accessToken, const std::string &deviceId)
-    {
-        return COM_ERROR;
     }
     fnet_dev_detail_t *devDetail()
     {
@@ -104,16 +112,15 @@ public:
         , m_devDetail(nullptr)
     {
     }
-    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &ip,
-        unsigned int port, const std::string &serialNumber, const std::string &checkCode)
+    ComErrno exec(const com_command_exec_data_t &data)
     {
-        return COM_ERROR;
-    }
-    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &uid,
-        const std::string &accessToken, const std::string &deviceId)
-    {
-        int ret = networkIntfc->getWanDevProductDetail(uid.c_str(), accessToken.c_str(),
-            deviceId.c_str(), &m_devProduct, &m_devDetail, ComTimeoutWan);
+        int ret;
+        if (data.connectMode == COM_CONNECT_LAN) {
+            ret = FNET_ERROR;
+        } else {
+            ret = data.networkIntfc->getWanDevProductDetail(data.uid, data.accessToken,
+                data.deviceId, &m_devProduct, &m_devDetail, ComTimeoutWanB);
+        }
         return MultiComUtils::fnetRet2ComErrno(ret);
     }
     fnet_dev_product_t *devProduct()
@@ -130,39 +137,149 @@ private:
     fnet_dev_detail_t *m_devDetail;
 };
 
+class ComGetDevGcodeList : public ComCommand
+{
+public:
+    ComGetDevGcodeList()
+    {
+        m_lanGcodeList.gcodeCnt = 0;
+        m_lanGcodeList.gcodeDatas = nullptr;
+        m_wanGcodeList.gcodeCnt = 0;
+        m_wanGcodeList.gcodeDatas = nullptr;
+    }
+    ComErrno exec(const com_command_exec_data_t &data)
+    {
+        int ret;
+        if (data.connectMode == COM_CONNECT_LAN) {
+            ret = data.networkIntfc->getLanDevGcodeList(data.ip, data.port, data.serialNumber,
+                data.checkCode, &m_lanGcodeList.gcodeDatas, &m_lanGcodeList.gcodeCnt, ComTimeoutLanA);
+        } else {
+            ret = data.networkIntfc->getWanDevGcodeList(data.uid, data.accessToken,
+                data.deviceId, &m_wanGcodeList.gcodeDatas, &m_wanGcodeList.gcodeCnt, ComTimeoutWanA);
+        }
+        return MultiComUtils::fnetRet2ComErrno(ret);
+    }
+    const com_gcode_list_t &lanGcodeList()
+    {
+        return m_lanGcodeList;
+    }
+    const com_gcode_list_t &wanGcodeList()
+    {
+        return m_wanGcodeList;
+    }
+
+private:
+    com_gcode_list_t m_lanGcodeList;
+    com_gcode_list_t m_wanGcodeList;
+};
+
+class ComGetGcodeThumb : public ComCommand
+{
+public:
+    ComGetGcodeThumb(const std::string &fileNameOrThumbUrl)
+        : m_fileNameOrThumbUrl(fileNameOrThumbUrl)
+    {
+    }
+    ComErrno exec(const com_command_exec_data_t &data)
+    {
+        if (data.connectMode == COM_CONNECT_LAN) {
+            fnet_file_data_t *fileData;
+            int ret = data.networkIntfc->getLanDevGcodeThumb(data.ip, data.port, data.serialNumber,
+                data.checkCode, m_fileNameOrThumbUrl.c_str(), &fileData, ComTimeoutLanB);
+            if (ret != FNET_OK) {
+                return MultiComUtils::fnetRet2ComErrno(ret);
+            }
+            fnet::FreeInDestructor freeFileData(fileData, data.networkIntfc->freeFileData);
+            m_thumbData.assign(fileData->data, fileData->data + fileData->size);
+            return COM_OK;
+        } else {
+            return MultiComUtils::downloadFile(m_fileNameOrThumbUrl, m_thumbData, ComTimeoutWanB);
+        }
+    }
+    std::vector<char> &thumbData()
+    {
+        return m_thumbData;
+    }
+
+private:
+    std::string m_fileNameOrThumbUrl;
+    std::vector<char> m_thumbData;
+};
+
+class ComStartJob : public ComCommand
+{
+public:
+    ComStartJob(const com_local_job_data_t &comJobData)
+        : m_comJobData(comJobData)
+    {
+        m_materialMappings = MultiComUtils::comMaterialMappings2Fnet(m_comJobData.materialMappings);
+        m_jobData.jobId = nullptr;
+        m_jobData.thumbUrl = nullptr;
+        m_jobData.fileName = m_comJobData.fileName.c_str();
+        m_jobData.printNow = m_comJobData.printNow;
+        m_jobData.levelingBeforePrint = m_comJobData.levelingBeforePrint;
+        m_jobData.useMatlStation = m_comJobData.useMatlStation;
+        m_jobData.gcodeToolCnt = (int)m_comJobData.materialMappings.size();
+        m_jobData.materialMappings = m_materialMappings.data();
+    }
+    ComErrno exec(const com_command_exec_data_t &data)
+    {
+        if (data.connectMode == COM_CONNECT_LAN) {
+            int ret = data.networkIntfc->lanDevStartJob(data.ip, data.port, data.serialNumber,
+                data.checkCode, &m_jobData, ComTimeoutLanA);
+            return MultiComUtils::fnetRet2ComErrno(ret);
+        } else {
+            fnet_add_job_result_t *result = nullptr;
+            int ret = data.networkIntfc->wanDevAddJob(data.uid, data.accessToken,
+                data.deviceId, &m_jobData, &result, ComTimeoutWanA);
+            if (ret != FNET_OK) {
+                return MultiComUtils::fnetRet2ComErrno(ret);
+            }
+            fnet::FreeInDestructor freeResult(result, data.networkIntfc->freeAddJobResult);
+            m_jobData.jobId = result->jobId;
+            m_jobData.thumbUrl = result->thumbUrl;
+            return ComWanNimConn::inst()->sendStartJob(data.nimAccountId, m_jobData);
+        }
+    }
+
+private:
+    fnet_local_job_data_t m_jobData;
+    com_local_job_data_t  m_comJobData;
+    std::vector<fnet_material_mapping_t> m_materialMappings;
+};
+
 class ComSendGcode : public ComCommand
 {
 public:
-    ComSendGcode(const std::string &gcodeFilePath, const std::string &thumbFilePath,
-        const std::string &gcodeDstName, bool printNow, bool levelingBeforePrint)
+    ComSendGcode(const com_send_gcode_data_t &comSendGcodeData)
         : m_progress(0)
         , m_callbackRet(0)
         , m_comId(ComInvalidId)
         , m_evtHandler(nullptr)
-        , m_gcodeFilePath(gcodeFilePath)
-        , m_thumbFilePath(thumbFilePath)
-        , m_gcodeDstName(gcodeDstName)
+        , m_comSendGcodeData(comSendGcodeData)
     {
-        m_sendGcodeData.gcodeFilePath = m_gcodeFilePath.c_str();
-        m_sendGcodeData.thumbFilePath = m_thumbFilePath.c_str();
-        m_sendGcodeData.gcodeDstName = m_gcodeDstName.c_str();
-        m_sendGcodeData.printNow = printNow;
-        m_sendGcodeData.levelingBeforePrint = levelingBeforePrint;
+        m_materialMappings = MultiComUtils::comMaterialMappings2Fnet(m_comSendGcodeData.materialMappings);
+        m_sendGcodeData.gcodeFilePath = m_comSendGcodeData.gcodeFilePath.c_str();
+        m_sendGcodeData.thumbFilePath = m_comSendGcodeData.thumbFilePath.c_str();
+        m_sendGcodeData.gcodeDstName = m_comSendGcodeData.gcodeDstName.c_str();
+        m_sendGcodeData.printNow = m_comSendGcodeData.printNow;
+        m_sendGcodeData.levelingBeforePrint = m_comSendGcodeData.levelingBeforePrint;
+        m_sendGcodeData.flowCalibration = m_comSendGcodeData.flowCalibration;
+        m_sendGcodeData.useMatlStation = m_comSendGcodeData.useMatlStation;
+        m_sendGcodeData.gcodeToolCnt = (int)m_comSendGcodeData.materialMappings.size();
+        m_sendGcodeData.materialMappings = m_materialMappings.data();
         m_sendGcodeData.callback = callback;
         m_sendGcodeData.callbackData = this;
     }
-    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &ip,
-        unsigned int port, const std::string &serialNumber, const std::string &checkCode)
+    ComErrno exec(const com_command_exec_data_t &data)
     {
-        int ret = networkIntfc->lanDevSendGcode(ip.c_str(), port, serialNumber.c_str(),
-            checkCode.c_str(), &m_sendGcodeData, 15000);
-        return MultiComUtils::fnetRet2ComErrno(ret);
-    }
-    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &uid,
-        const std::string &accessToken, const std::string &deviceId)
-    {
-        int ret = networkIntfc->wanDevSendGcode(
-            uid.c_str(), accessToken.c_str(), deviceId.c_str(), &m_sendGcodeData, 15000);
+        int ret;
+        if (data.connectMode == COM_CONNECT_LAN) {
+            ret = data.networkIntfc->lanDevSendGcode(data.ip, data.port, data.serialNumber,
+                data.checkCode, &m_sendGcodeData, ComTimeoutLanB);
+        } else {
+            ret = FNET_ERROR;
+        }
         return MultiComUtils::fnetRet2ComErrno(ret);
     }
     void abort()
@@ -195,24 +312,12 @@ private:
     std::atomic<int>        m_callbackRet;
     com_id_t                m_comId;
     wxEvtHandler           *m_evtHandler;
-    std::string             m_gcodeFilePath;
-    std::string             m_thumbFilePath;
-    std::string             m_gcodeDstName;
     fnet_send_gcode_data_t  m_sendGcodeData;
+    com_send_gcode_data_t   m_comSendGcodeData;
+    std::vector<fnet_material_mapping_t> m_materialMappings;
 };
 
-class ComWanAsyncCommand : public ComCommand
-{
-public:
-    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &uid,
-        const std::string &accessToken, const std::string &deviceId)
-    {
-        return COM_ERROR;
-    }
-    virtual void asyncExec(ComWanAsyncConn *wanAsyncConn, const std::string &devId) = 0;
-};
-
-class ComTempCtrl : public ComWanAsyncCommand
+class ComTempCtrl : public ComCommand
 {
 public:
     ComTempCtrl(double platformTemp, double rightTemp, double leftTemp, double chamberTemp)
@@ -222,23 +327,22 @@ public:
         m_tempCtrl.leftTemp = leftTemp;
         m_tempCtrl.chamberTemp = chamberTemp;
     }
-    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &ip,
-        unsigned int port, const std::string &serialNumber, const std::string &checkCode)
+    ComErrno exec(const com_command_exec_data_t &data)
     {
-        int ret = networkIntfc->ctrlLanDevTemp(ip.c_str(), port, serialNumber.c_str(),
-            checkCode.c_str(), &m_tempCtrl, ComTimeoutLan);
-        return MultiComUtils::fnetRet2ComErrno(ret);
-    }
-    void asyncExec(ComWanAsyncConn *wanAsyncConn, const std::string &devId)
-    {
-        wanAsyncConn->postTempCtrl(devId, m_tempCtrl);
+        if (data.connectMode == COM_CONNECT_LAN) {
+            int ret = data.networkIntfc->ctrlLanDevTemp(data.ip, data.port, data.serialNumber,
+                data.checkCode, &m_tempCtrl, ComTimeoutLanA);
+            return MultiComUtils::fnetRet2ComErrno(ret);
+        } else {
+            return ComWanNimConn::inst()->sendTempCtrl(data.nimAccountId, m_tempCtrl);
+        }
     }
 
 private:
     fnet_temp_ctrl_t m_tempCtrl;
 };
 
-class ComLightCtrl : public ComWanAsyncCommand
+class ComLightCtrl : public ComCommand
 {
 public:
     ComLightCtrl(const std::string &lightStatus)
@@ -246,16 +350,15 @@ public:
     {
         m_lightCtrl.lightStatus = m_lightStatus.c_str();
     }
-    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &ip,
-        unsigned int port, const std::string &serialNumber, const std::string &checkCode)
+    ComErrno exec(const com_command_exec_data_t &data)
     {
-        int ret = networkIntfc->ctrlLanDevLight(ip.c_str(), port, serialNumber.c_str(),
-            checkCode.c_str(), &m_lightCtrl, ComTimeoutLan);
-        return MultiComUtils::fnetRet2ComErrno(ret);
-    }
-    void asyncExec(ComWanAsyncConn *wanAsyncConn, const std::string &devId)
-    {
-        wanAsyncConn->postLightCtrl(devId, m_lightCtrl);
+        if (data.connectMode == COM_CONNECT_LAN) {
+            int ret = data.networkIntfc->ctrlLanDevLight(data.ip, data.port, data.serialNumber,
+                data.checkCode, &m_lightCtrl, ComTimeoutLanA);
+            return MultiComUtils::fnetRet2ComErrno(ret);
+        } else {
+            return ComWanNimConn::inst()->sendLightCtrl(data.nimAccountId, m_lightCtrl);
+        }
     }
 
 private:
@@ -263,7 +366,7 @@ private:
     fnet_light_ctrl_t m_lightCtrl;
 };
 
-class ComAirFilterCtrl : public ComWanAsyncCommand
+class ComAirFilterCtrl : public ComCommand
 {
 public:
     ComAirFilterCtrl(const std::string &internalFanStatus, const std::string &externalFanStatus)
@@ -273,16 +376,15 @@ public:
         m_airFilterCtrl.internalFanStatus = m_internalFanStatus.c_str();
         m_airFilterCtrl.externalFanStatus = m_externalFanStatus.c_str();
     }
-    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &ip,
-        unsigned int port, const std::string &serialNumber, const std::string &checkCode)
+    ComErrno exec(const com_command_exec_data_t &data)
     {
-        int ret = networkIntfc->ctrlLanDevAirFilter(ip.c_str(), port, serialNumber.c_str(),
-            checkCode.c_str(), &m_airFilterCtrl, ComTimeoutLan);
-        return MultiComUtils::fnetRet2ComErrno(ret);
-    }
-    void asyncExec(ComWanAsyncConn *wanAsyncConn, const std::string &devId)
-    {
-        wanAsyncConn->postAirFilterCtrl(devId, m_airFilterCtrl);
+        if (data.connectMode == COM_CONNECT_LAN) {
+            int ret = data.networkIntfc->ctrlLanDevAirFilter(data.ip, data.port, data.serialNumber,
+                data.checkCode, &m_airFilterCtrl, ComTimeoutLanA);
+            return MultiComUtils::fnetRet2ComErrno(ret);
+        } else {
+            return ComWanNimConn::inst()->sendAirFilterCtrl(data.nimAccountId, m_airFilterCtrl);
+        }
     }
 
 private:
@@ -291,34 +393,103 @@ private:
     fnet_air_filter_ctrl_t m_airFilterCtrl;
 };
 
-class ComPrintCtrl : public ComWanAsyncCommand
+class ComClearFanCtrl : public ComCommand
+{
+public:
+    ComClearFanCtrl(const std::string &clearFanStatus)
+        : m_clearFanStatus(clearFanStatus)
+    {
+        m_clearFanCtrl.clearFanStatus = m_clearFanStatus.c_str();
+    }
+    ComErrno exec(const com_command_exec_data_t &data)
+    {
+        if (data.connectMode == COM_CONNECT_LAN) {
+            int ret = data.networkIntfc->ctrlLanDevClearFan(data.ip, data.port, data.serialNumber,
+                data.checkCode, &m_clearFanCtrl, ComTimeoutLanA);
+            return MultiComUtils::fnetRet2ComErrno(ret);
+        } else {
+            return ComWanNimConn::inst()->sendClearFanCtrl(data.nimAccountId, m_clearFanCtrl);
+        }
+    }
+
+private:
+    std::string m_clearFanStatus;
+    fnet_clear_fan_ctrl_t m_clearFanCtrl;
+};
+
+class ComMatlStationCtrl : public ComCommand
+{
+public:
+    ComMatlStationCtrl(int slotId, int action)
+    {
+        m_matlStationCtrl.slotId = slotId;
+        m_matlStationCtrl.action = action;
+    }
+    ComErrno exec(const com_command_exec_data_t &data)
+    {
+        if (data.connectMode == COM_CONNECT_LAN) {
+            int ret = data.networkIntfc->ctrlLanDevMatlStation(data.ip, data.port, data.serialNumber,
+                data.checkCode, &m_matlStationCtrl, ComTimeoutLanA);
+            return MultiComUtils::fnetRet2ComErrno(ret);
+        } else {
+            return ComWanNimConn::inst()->sendMatlStationCtrl(data.nimAccountId, m_matlStationCtrl);
+        }
+    }
+
+private:
+    fnet_matl_station_ctrl_t m_matlStationCtrl;
+};
+
+class ComIndepMatlCtrl : public ComCommand
+{
+public:
+    ComIndepMatlCtrl(int action)
+    {
+        m_indepMatlCtrl.action = action;
+    }
+    ComErrno exec(const com_command_exec_data_t &data)
+    {
+        if (data.connectMode == COM_CONNECT_LAN) {
+            int ret = data.networkIntfc->ctrlLanDevIndepMatl(data.ip, data.port, data.serialNumber,
+                data.checkCode, &m_indepMatlCtrl, ComTimeoutLanA);
+            return MultiComUtils::fnetRet2ComErrno(ret);
+        } else {
+            return ComWanNimConn::inst()->sendIndepMatlCtrl(data.nimAccountId, m_indepMatlCtrl);
+        }
+    }
+
+private:
+    fnet_indep_matl_ctrl_t m_indepMatlCtrl;
+};
+
+class ComPrintCtrl : public ComCommand
 {
 public:
     ComPrintCtrl(double zAxisCompensation, double printSpeedAdjust, double coolingFanSpeed,
-        double chamberFanSpeed)
+        double coolingFanLeftSpeed, double chamberFanSpeed)
     {
         m_printCtrl.zAxisCompensation = zAxisCompensation;
         m_printCtrl.printSpeedAdjust = printSpeedAdjust;
         m_printCtrl.coolingFanSpeed = coolingFanSpeed;
+        m_printCtrl.coolingFanLeftSpeed = coolingFanLeftSpeed;
         m_printCtrl.chamberFanSpeed = chamberFanSpeed;
     }
-    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &ip,
-        unsigned int port, const std::string &serialNumber, const std::string &checkCode)
+    ComErrno exec(const com_command_exec_data_t &data)
     {
-        int ret = networkIntfc->ctrlLanDevPrint(ip.c_str(), port, serialNumber.c_str(),
-            checkCode.c_str(), &m_printCtrl, ComTimeoutLan);
-        return MultiComUtils::fnetRet2ComErrno(ret);
-    }
-    void asyncExec(ComWanAsyncConn *wanAsyncConn, const std::string &devId)
-    {
-        wanAsyncConn->postPrintCtrl(devId, m_printCtrl);
+        if (data.connectMode == COM_CONNECT_LAN) {
+            int ret = data.networkIntfc->ctrlLanDevPrint(data.ip, data.port, data.serialNumber,
+                data.checkCode, &m_printCtrl, ComTimeoutLanA);
+            return MultiComUtils::fnetRet2ComErrno(ret);
+        } else {
+            return ComWanNimConn::inst()->sendPrintCtrl(data.nimAccountId, m_printCtrl);
+        }
     }
 
 private:
     fnet_print_ctrl_t m_printCtrl;
 };
 
-class ComJobCtrl : public ComWanAsyncCommand
+class ComJobCtrl : public ComCommand
 {
 public:
     ComJobCtrl(const std::string &jobId, const std::string &action)
@@ -328,16 +499,15 @@ public:
         m_jobCtrl.jobId = m_jobId.c_str();
         m_jobCtrl.action = m_action.c_str();
     }
-    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &ip,
-        unsigned int port, const std::string &serialNumber, const std::string &checkCode)
+    ComErrno exec(const com_command_exec_data_t &data)
     {
-        int ret = networkIntfc->ctrlLanDevJob(ip.c_str(), port, serialNumber.c_str(),
-            checkCode.c_str(), &m_jobCtrl, ComTimeoutLan);
-        return MultiComUtils::fnetRet2ComErrno(ret);
-    }
-    void asyncExec(ComWanAsyncConn *wanAsyncConn, const std::string &devId)
-    {
-        wanAsyncConn->postJobCtrl(devId, m_jobCtrl);
+        if (data.connectMode == COM_CONNECT_LAN) {
+            int ret = data.networkIntfc->ctrlLanDevJob(data.ip, data.port, data.serialNumber,
+                data.checkCode, &m_jobCtrl, ComTimeoutLanA);
+            return MultiComUtils::fnetRet2ComErrno(ret);
+        } else {
+            return ComWanNimConn::inst()->sendJobCtrl(data.nimAccountId, m_jobCtrl);
+        }
     }
 
 private:
@@ -346,7 +516,31 @@ private:
     fnet_job_ctrl_t m_jobCtrl;
 };
 
-class ComCameraStreamCtrl : public ComWanAsyncCommand
+class ComStateCtrl : public ComCommand
+{
+public:
+    ComStateCtrl(const std::string &action)
+        : m_action(action)
+    {
+        m_stateCtrl.action = m_action.c_str();
+    }
+    ComErrno exec(const com_command_exec_data_t &data)
+    {
+        if (data.connectMode == COM_CONNECT_LAN) {
+            int ret = data.networkIntfc->ctrlLanDevState(data.ip, data.port, data.serialNumber,
+                data.checkCode, &m_stateCtrl, ComTimeoutLanA);
+            return MultiComUtils::fnetRet2ComErrno(ret);
+        } else {
+            return ComWanNimConn::inst()->sendStateCtrl(data.nimAccountId, m_stateCtrl);
+        }
+    }
+
+private:
+    std::string m_action;
+    fnet_state_ctrl_t m_stateCtrl;
+};
+
+class ComCameraStreamCtrl : public ComCommand
 {
 public:
     ComCameraStreamCtrl(const std::string &action)
@@ -354,19 +548,74 @@ public:
     {
         m_cameraStreamCtrl.action = m_action.c_str();
     }
-    ComErrno exec(fnet::FlashNetworkIntfc *networkIntfc, const std::string &ip,
-        unsigned int port, const std::string &serialNumber, const std::string &checkCode)
+    ComErrno exec(const com_command_exec_data_t &data)
     {
-        return COM_OK;
-    }
-    void asyncExec(ComWanAsyncConn *wanAsyncConn, const std::string &devId)
-    {
-        wanAsyncConn->postCameraStreamCtrl(devId, m_cameraStreamCtrl);
+        if (data.connectMode == COM_CONNECT_LAN) {
+            return COM_ERROR;
+        } else {
+            return ComWanNimConn::inst()->sendCameraStreamCtrl(data.nimAccountId, m_cameraStreamCtrl);
+        }
     }
 
 private:
     std::string m_action;
     fnet_camera_stream_ctrl_t m_cameraStreamCtrl;
+};
+
+class ComMatlStationConfig : public ComCommand
+{
+public:
+    ComMatlStationConfig(int slotId, const std::string &materialName, const std::string &materialColor)
+        : m_materialName(materialName)
+        , m_materialColor(materialColor)
+    {
+        m_matlStationConfig.slotId = slotId;
+        m_matlStationConfig.materialName = m_materialName.c_str();
+        m_matlStationConfig.materialColor = m_materialColor.c_str();
+    }
+    ComErrno exec(const com_command_exec_data_t &data)
+    {
+        if (data.connectMode == COM_CONNECT_LAN) {
+            int ret = data.networkIntfc->configLanDevMatlStation(data.ip, data.port, data.serialNumber,
+                data.checkCode, &m_matlStationConfig, ComTimeoutLanA);
+            return MultiComUtils::fnetRet2ComErrno(ret);
+        } else {
+            return ComWanNimConn::inst()->sendMatlStationConfig(data.nimAccountId, m_matlStationConfig);
+        }
+    }
+
+private:
+    std::string m_materialName;
+    std::string m_materialColor;
+    fnet_matl_station_config_t m_matlStationConfig;
+};
+
+class ComIndepMatlConfig : public ComCommand
+{
+public:
+    ComIndepMatlConfig(const std::string &materialName, const std::string &materialColor)
+        : m_materialName(materialName)
+        , m_materialColor(materialColor)
+    {
+        m_indepMatlConfig.materialName = m_materialName.c_str();
+        m_indepMatlConfig.materialColor = m_materialColor.c_str();
+    }
+    ComErrno exec(const com_command_exec_data_t &data)
+    {
+        if (data.connectMode == COM_CONNECT_LAN) {
+            int ret = data.networkIntfc->configLanDevIndepMatl(data.ip, data.port, data.serialNumber,
+                data.checkCode, &m_indepMatlConfig, ComTimeoutLanA);
+            return MultiComUtils::fnetRet2ComErrno(ret);
+        } else {
+            return ComWanNimConn::inst()->sendIndepMatlConfig(data.nimAccountId, m_indepMatlConfig);
+        }
+
+    }
+
+private:
+    std::string m_materialName;
+    std::string m_materialColor;
+    fnet_indep_matl_config_t m_indepMatlConfig;
 };
 
 }} // namespace Slic3r::GUI

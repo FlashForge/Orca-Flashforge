@@ -1,20 +1,15 @@
-/*var TestData={"sequence_id":"0","command":"studio_send_recentfile","data":[{"path":"D:\\work\\Models\\Toy\\3d-puzzle-cube-model_files\\3d-puzzle-cube.3mf","time":"2022\/3\/24 20:33:10"},{"path":"D:\\work\\Models\\Art\\Carved Stone Vase - remeshed+drainage\\Carved Stone Vase.3mf","time":"2022\/3\/24 17:11:51"},{"path":"D:\\work\\Models\\Art\\Kity & Cat\\Cat.3mf","time":"2022\/3\/24 17:07:55"},{"path":"D:\\work\\Models\\Toy\\鐩村墤.3mf","time":"2022\/3\/24 17:06:02"},{"path":"D:\\work\\Models\\Toy\\minimalistic-dual-tone-whistle-model_files\\minimalistic-dual-tone-whistle.3mf","time":"2022\/3\/22 21:12:22"},{"path":"D:\\work\\Models\\Toy\\spiral-city-model_files\\spiral-city.3mf","time":"2022\/3\/22 18:58:37"},{"path":"D:\\work\\Models\\Toy\\impossible-dovetail-puzzle-box-model_files\\impossible-dovetail-puzzle-box.3mf","time":"2022\/3\/22 20:08:40"}]};*/
+//var TestData={"sequence_id":"0","command":"get_recent_projects","response":[{"path":"D:\\work\\Models\\Toy\\3d-puzzle-cube-model_files\\3d-puzzle-cube.3mf","time":"2022\/3\/24 20:33:10"},{"path":"D:\\work\\Models\\Art\\Carved Stone Vase - remeshed+drainage\\Carved Stone Vase.3mf","time":"2022\/3\/24 17:11:51"},{"path":"D:\\work\\Models\\Art\\Kity & Cat\\Cat.3mf","time":"2022\/3\/24 17:07:55"},{"path":"D:\\work\\Models\\Toy\\鐩村墤.3mf","time":"2022\/3\/24 17:06:02"},{"path":"D:\\work\\Models\\Toy\\minimalistic-dual-tone-whistle-model_files\\minimalistic-dual-tone-whistle.3mf","time":"2022\/3\/22 21:12:22"},{"path":"D:\\work\\Models\\Toy\\spiral-city-model_files\\spiral-city.3mf","time":"2022\/3\/22 18:58:37"},{"path":"D:\\work\\Models\\Toy\\impossible-dovetail-puzzle-box-model_files\\impossible-dovetail-puzzle-box.3mf","time":"2022\/3\/22 20:08:40"}]};
 
 var m_HotModelList=null;
 
 function OnInit()
-{	
-	//-----Test-----
-	//Set_RecentFile_MouseRightBtn_Event();
-	
+{
 	//-----Official-----
     TranslatePage();
 
 	SendMsg_GetLoginInfo();
 	SendMsg_GetRecentFile();
 	SendMsg_GetStaffPick();
-	
-	//InitStaffPick();
 }
 
 //------最佳打开文件的右键菜单功能----------
@@ -180,6 +175,11 @@ function SetLoginInfo( strAvatar, strName )
 	
 	$("#Login2").show();
 	$("#Login2").css("display","flex");
+	
+	var tSend={};
+	tSend['command']="homepage_received_login";
+	
+	SendWXMessage( JSON.stringify(tSend) );
 }
 
 function SetUserOffline()
@@ -324,14 +324,7 @@ function OnOpenRecentFile( strPath )
 
 function OnDeleteRecentFile( )
 {
-	var tSend={};
-	tSend['sequence_id']=Math.round(new Date() / 1000);
-	tSend['command']="homepage_delete_recentfile";
-	tSend['data']={};
-	tSend['data']['path']=decodeURI(RightBtnFilePath);
-	
-	SendWXMessage( JSON.stringify(tSend) );	
-
+	//Clear in UI
 	$("#recnet_context_menu").hide();
 	
 	let AllFile=$(".FileItem");
@@ -344,19 +337,27 @@ function OnDeleteRecentFile( )
 	}	
 	
 	UpdateRecentClearBtnDisplay();
+	
+	//Send Msg to C++
+	var tSend={};
+	tSend['sequence_id']=Math.round(new Date() / 1000);
+	tSend['command']="homepage_delete_recentfile";
+	tSend['data']={};
+	tSend['data']['path']=RightBtnFilePath;
+	
+	SendWXMessage( JSON.stringify(tSend) );
 }
 
 function OnDeleteAllRecentFiles()
 {
+	$('#FileList').html('');
+	UpdateRecentClearBtnDisplay();
+	
 	var tSend={};
 	tSend['sequence_id']=Math.round(new Date() / 1000);
 	tSend['command']="homepage_delete_all_recentfile";
 	
-	SendWXMessage( JSON.stringify(tSend) );		
-	
-	$('#FileList').html('');
-	
-	UpdateRecentClearBtnDisplay();
+	SendWXMessage( JSON.stringify(tSend) );
 }
 
 function UpdateRecentClearBtnDisplay()

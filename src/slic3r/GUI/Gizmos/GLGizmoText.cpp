@@ -6,13 +6,15 @@
 #include "slic3r/GUI/ImGuiWrapper.hpp"
 #include "slic3r/GUI/GUI_ObjectList.hpp"
 #include "slic3r/GUI/Plater.hpp"
-
+#include "libslic3r/ClipperUtils.hpp"
 #include "libslic3r/Geometry/ConvexHull.hpp"
 #include "libslic3r/Model.hpp"
 
 #include "libslic3r/Shape/TextShape.hpp"
 
 #include <numeric>
+
+#include <boost/log/trivial.hpp>
 
 #include <GL/glew.h>
 
@@ -22,6 +24,7 @@
 #include <imgui/imgui_internal.h>
 #include "libslic3r/SVG.hpp"
 #include <codecvt>
+#include "wx/fontenum.h"
 
 namespace Slic3r {
 namespace GUI {
@@ -31,6 +34,119 @@ static const wxColour FONT_TEXTURE_BG = wxColour(0, 0, 0, 0);
 static const wxColour FONT_TEXTURE_FG = *wxWHITE;
 static const int FONT_SIZE = 12;
 static const float SELECTABLE_INNER_OFFSET = 8.0f;
+
+static std::vector<std::string> font_black_list = {
+#ifdef _WIN32
+    "MT Extra",
+    "Marlett",
+    "Symbol",
+    "Webdings",
+    "Wingdings",
+    "Wingdings 2",
+    "Wingdings 3",
+#endif
+};
+
+static const wxFontEncoding font_encoding = wxFontEncoding::wxFONTENCODING_SYSTEM;
+
+#ifdef _WIN32
+static bool load_hfont(void *hfont, DWORD &dwTable, DWORD &dwOffset, size_t &size, HDC hdc = nullptr)
+{
+    bool del_hdc = false;
+    if (hdc == nullptr) {
+        del_hdc = true;
+        hdc     = ::CreateCompatibleDC(NULL);
+        if (hdc == NULL) return false;
+    }
+
+    // To retrieve the data from the beginning of the file for TrueType
+    // Collection files specify 'ttcf' (0x66637474).
+    dwTable  = 0x66637474;
+    dwOffset = 0;
+
+    ::SelectObject(hdc, hfont);
+    size = ::GetFontData(hdc, dwTable, dwOffset, NULL, 0);
+    if (size == GDI_ERROR) {
+        // HFONT is NOT TTC(collection)
+        dwTable = 0;
+        size    = ::GetFontData(hdc, dwTable, dwOffset, NULL, 0);
+    }
+
+    if (size == 0 || size == GDI_ERROR) {
+        if (del_hdc) ::DeleteDC(hdc);
+        return false;
+    }
+    return true;
+}
+#endif // _WIN32
+
+bool can_load(const wxFont &font)
+{
+#ifdef _WIN32
+    DWORD  dwTable = 0, dwOffset = 0;
+    size_t size = 0;
+    void* hfont = font.GetHFONT();
+    if (!load_hfont(hfont, dwTable, dwOffset, size))
+        return false;
+    return hfont != nullptr;
+#elif defined(__APPLE__)
+    return true;
+#elif defined(__linux__)
+    return true;
+#endif
+    return false;
+}
+
+std::vector<std::string> init_face_names()
+{
+    std::vector<std::string> valid_font_names;
+    wxArrayString            facenames = wxFontEnumerator::GetFacenames(font_encoding);
+    std::vector<wxString>    bad_fonts;
+
+    // validation lambda
+    auto is_valid_font = [coding = font_encoding, bad = bad_fonts](const wxString &name) {
+        if (name.empty())
+            return false;
+
+        // vertical font start with @, we will filter it out
+        // Not sure if it is only in Windows so filtering is on all platforms
+        if (name[0] == '@')
+            return false;
+
+        // previously detected bad font
+        auto it = std::lower_bound(bad.begin(), bad.end(), name);
+        if (it != bad.end() && *it == name)
+            return false;
+
+        wxFont wx_font(wxFontInfo().FaceName(name).Encoding(coding));
+        // Faster chech if wx_font is loadable but not 100%
+        // names could contain not loadable font
+        if (!wx_font.IsOk())
+            return false;
+
+        if (!can_load(wx_font))
+            return false;
+
+        return true;
+    };
+
+    std::sort(facenames.begin(), facenames.end());
+    for (const wxString &name : facenames) {
+        if (is_valid_font(name)) {
+            valid_font_names.push_back(name.ToStdString());
+        }
+        else {
+            bad_fonts.emplace_back(name);
+        }
+    }
+    assert(std::is_sorted(bad_fonts.begin(), bad_fonts.end()));
+
+    for (auto iter = font_black_list.begin(); iter != font_black_list.end(); ++iter) {
+        valid_font_names.erase(std::remove(valid_font_names.begin(), valid_font_names.end(), *iter), valid_font_names.end());
+    }
+
+    return valid_font_names;
+}
 
 class Line_3D
 {
@@ -140,10 +256,14 @@ GLGizmoText::~GLGizmoText()
 
 bool GLGizmoText::on_init()
 {
-    m_avail_font_names = init_occt_fonts();
+    m_avail_font_names = init_face_names();
+
+    //m_avail_font_names = init_occt_fonts();
     update_font_texture();
     m_scale = m_imgui->get_font_size();
     m_shortcut_key = WXK_CONTROL_T;
+
+    m_grabbers.push_back(Grabber());
 
     reset_text_info();
 
@@ -152,16 +272,15 @@ bool GLGizmoText::on_init()
     m_desc["thickness"]     = _L("Thickness");
     m_desc["text_gap"]      = _L("Text Gap");
     m_desc["angle"]         = _L("Angle");
-    m_desc["embeded_depth"] = _L("Embeded\ndepth");
+    m_desc["embeded_depth"] = _L("Embedded\ndepth");
     m_desc["input_text"]    = _L("Input text");
 
     m_desc["surface"]         = _L("Surface");
     m_desc["horizontal_text"] = _L("Horizontal text");
 
-    m_desc["rotate_text_caption"] = _L("Shift + Mouse move up or dowm");
+    m_desc["rotate_text_caption"] = _L("Shift + Mouse move up or down");
     m_desc["rotate_text"]         = _L("Rotate text");
 
-    m_grabbers.push_back(Grabber());
     return true;
 }
 
@@ -263,16 +382,11 @@ bool GLGizmoText::gizmo_event(SLAGizmoEventType action, const Vec2d &mouse_posit
         m_mouse_position = mouse_position;
     }
     else if (action == SLAGizmoEventType::LeftDown) {
-        if (!selection.is_empty() && get_hover_id() != -1) {
-            start_dragging();
-            return true;
-        }
-
         if (m_is_modify)
-            return true;
+            return false;
 
         Plater *plater = wxGetApp().plater();
-        if (!plater)
+        if (!plater || m_thickness <= 0)
             return true;
 
         ModelObject *model_object = selection.get_model()->objects[m_object_idx];
@@ -298,7 +412,7 @@ bool GLGizmoText::gizmo_event(SLAGizmoEventType action, const Vec2d &mouse_posit
 
         // Cast a ray on all meshes, pick the closest hit and save it for the respective mesh
         for (int mesh_id = 0; mesh_id < int(trafo_matrices.size()); ++mesh_id) {
-            MeshRaycaster mesh_raycaster = MeshRaycaster(mo->volumes[mesh_id]->mesh());
+            MeshRaycaster mesh_raycaster = MeshRaycaster(mo->volumes[mesh_id]->mesh_ptr());
 
             if (mesh_raycaster.unproject_on_mesh(mouse_position, trafo_matrices[mesh_id], camera, hit, normal,
                                                                            m_c->object_clipper()->get_clipping_plane(), &facet)) {
@@ -329,6 +443,40 @@ bool GLGizmoText::gizmo_event(SLAGizmoEventType action, const Vec2d &mouse_posit
 
     return true;
 }
+
+bool GLGizmoText::on_mouse(const wxMouseEvent &mouse_event)
+{
+    // wxCoord == int --> wx/types.h
+    Vec2i32 mouse_coord(mouse_event.GetX(), mouse_event.GetY());
+    Vec2d mouse_pos = mouse_coord.cast<double>();
+    bool control_down           = mouse_event.CmdDown();
+
+    if (mouse_event.Moving()) {
+        gizmo_event(SLAGizmoEventType::Moving, mouse_pos, mouse_event.ShiftDown(), mouse_event.AltDown(), control_down);
+    }
+
+    // when control is down we allow scene pan and rotation even when clicking
+    // over some object
+    bool grabber_contains_mouse = (get_hover_id() != -1);
+
+    if (mouse_event.LeftDown()) {
+        if ((!control_down || grabber_contains_mouse) &&            
+            gizmo_event(SLAGizmoEventType::LeftDown, mouse_pos, mouse_event.ShiftDown(), mouse_event.AltDown(), false))
+            // the gizmo got the event and took some action, there is no need
+            // to do anything more
+            return true;
+    }
+
+    return use_grabbers(mouse_event);
+}
+
+void GLGizmoText::on_register_raycasters_for_picking()
+{
+    // the gizmo grabbers are rendered on top of the scene, so the raytraced picker should take it into account
+    m_parent.set_raycaster_gizmos_on_top(true);
+}
+
+void GLGizmoText::on_unregister_raycasters_for_picking() { m_parent.set_raycaster_gizmos_on_top(false); }
 
 void GLGizmoText::on_set_state()
 {
@@ -456,9 +604,15 @@ void GLGizmoText::on_render()
 
         m_grabbers[0].center       = m_mouse_position_world;
         m_grabbers[0].enabled      = true;
-        std::array<float, 4> color = picking_color_component(0);
-        m_grabbers[0].color        = color;
-        m_grabbers[0].render_for_picking(mean_size);
+
+        GLShaderProgram *shader    = wxGetApp().get_shader("gouraud_light");
+        if (shader != nullptr) {
+            shader->start_using();
+            shader->set_uniform("emission_factor", 0.1f);
+            render_grabbers(mean_size);
+
+            shader->stop_using();
+        }
     }
     
     delete_temp_preview_text_volume();
@@ -470,45 +624,7 @@ void GLGizmoText::on_render()
     plater->update();
 }
 
-void GLGizmoText::on_render_for_picking()
-{
-    glsafe(::glDisable(GL_DEPTH_TEST));
-
-    int          obejct_idx, volume_idx;
-    ModelVolume *model_volume = get_selected_single_volume(obejct_idx, volume_idx);
-    if (model_volume && !model_volume->get_text_info().m_text.empty()) {
-        if (m_grabbers.size() == 1) {
-            ModelObject *mo = m_c->selection_info()->model_object();
-            if (m_is_modify) {
-                const Selection &selection = m_parent.get_selection();
-                mo                         = selection.get_model()->objects[m_object_idx];
-            }
-            if (mo == nullptr) return;
-
-            const Selection &    selection = m_parent.get_selection();
-            const ModelInstance *mi        = mo->instances[selection.get_instance_idx()];
-
-            // Precalculate transformations of individual meshes.
-            std::vector<Transform3d> trafo_matrices;
-            for (const ModelVolume *mv : mo->volumes) {
-                if (mv->is_model_part()) {
-                    trafo_matrices.emplace_back(mi->get_transformation().get_matrix() * mv->get_matrix());
-                }
-            }
-
-            m_mouse_position_world = trafo_matrices[m_rr.mesh_id] * Vec3d(m_rr.hit(0), m_rr.hit(1), m_rr.hit(2));
-
-            float mean_size = (float) (GLGizmoBase::Grabber::FixedGrabberSize);
-            m_grabbers[0].center       = m_mouse_position_world;
-            m_grabbers[0].enabled      = true;
-            std::array<float, 4> color = picking_color_component(0);
-            m_grabbers[0].color        = color;
-            m_grabbers[0].render_for_picking(mean_size);
-        }
-    }
-}
-
-void GLGizmoText::on_update(const UpdateData &data)
+void GLGizmoText::on_dragging(const UpdateData &data)
 {
     Vec2d              mouse_pos = Vec2d(data.mouse_pos.x(), data.mouse_pos.y());
     const ModelObject *mo = m_c->selection_info()->model_object();
@@ -540,7 +656,7 @@ void GLGizmoText::on_update(const UpdateData &data)
         if (mesh_id == m_volume_idx)
             continue;
 
-        MeshRaycaster mesh_raycaster = MeshRaycaster(mo->volumes[mesh_id]->mesh());
+        MeshRaycaster mesh_raycaster = MeshRaycaster(mo->volumes[mesh_id]->mesh_ptr());
 
         if (mesh_raycaster.unproject_on_mesh(mouse_pos, trafo_matrices[mesh_id], camera, hit, normal, m_c->object_clipper()->get_clipping_plane(),
                                                                        &facet)) {
@@ -647,7 +763,7 @@ void GLGizmoText::on_render_input_window(float x, float y, float bottom_limit)
 
     const Selection &selection = m_parent.get_selection();
     if (selection.is_single_full_instance() || selection.is_single_full_object()) {
-        const GLVolume * gl_volume = selection.get_volume(*selection.get_volume_idxs().begin());
+        const GLVolume * gl_volume = selection.get_first_volume();
         int object_idx = gl_volume->object_idx();
         if (object_idx != m_object_idx || (object_idx == m_object_idx && m_volume_idx != -1)) {
             m_object_idx = object_idx;
@@ -912,7 +1028,7 @@ ModelVolume *GLGizmoText::get_selected_single_volume(int &out_object_idx, int &o
 {
     if (m_parent.get_selection().is_single_volume() || m_parent.get_selection().is_single_modifier()) {
         const Selection &selection = m_parent.get_selection();
-        const GLVolume * gl_volume = selection.get_volume(*selection.get_volume_idxs().begin());
+        const GLVolume * gl_volume = selection.get_first_volume();
         out_object_idx             = gl_volume->object_idx();
         ModelObject *model_object  = selection.get_model()->objects[out_object_idx];
         out_volume_idx             = gl_volume->volume_idx();
@@ -938,6 +1054,7 @@ void GLGizmoText::reset_text_info()
     m_keep_horizontal = false;
 
     m_is_modify = false;
+    m_grabbers[0].enabled = false;
 }
 
 bool GLGizmoText::update_text_positions(const std::vector<std::string>& texts)
@@ -1122,10 +1239,8 @@ bool GLGizmoText::update_text_positions(const std::vector<std::string>& texts)
     Polygons polys = union_(temp_polys);
 
     auto point_in_line_rectange = [](const Line &line, const Point &point, double& distance) {
-        distance = abs((point.x() - line.a.x()) * (line.b.y() - line.a.y()) - (line.b.x() - line.a.x()) * (point.y() - line.a.y()));
-        bool   in_rectange = (std::min(line.a.x(), line.b.x()) - 1000) <= point.x() && point.x() <= (std::max(line.a.x(), line.b.x()) + 1000) &&
-                           (std::min(line.a.y(), line.b.y()) - 1000) <= point.y() && point.y() <= (std::max(line.a.y(), line.b.y()) + 1000);
-        return in_rectange;
+        distance = line.distance_to(point);
+        return distance < line.length() / 2;
     };
 
     int            index     = 0;
@@ -1508,9 +1623,7 @@ void GLGizmoText::generate_text_volume(bool is_temp)
         new_model_volume->set_text_info(text_info);
         new_model_volume->name = model_volume->name;
         new_model_volume->set_type(model_volume->type());
-        if (model_volume->config.option("extruder"))
-            new_model_volume->config.set("extruder", model_volume->config.extruder());
-
+        new_model_volume->config.apply(model_volume->config);
         std::swap(model_object->volumes[m_volume_idx], model_object->volumes.back());
         model_object->delete_volume(model_object->volumes.size() - 1);
         plater->update();

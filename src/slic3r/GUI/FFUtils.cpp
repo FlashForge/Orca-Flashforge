@@ -15,6 +15,15 @@ wxString FFUtils::getBitmapFileName(unsigned short pid)
 	case 0x0024:
 		str = "adventurer_5m_pro";
 		break;
+    case 0x0025: 
+        str = "Guider4"; 
+        break;
+    case 0x0026:
+        str = "ad5x";
+        break;
+    case 0x001F:
+        str = "guider_3_ultra";
+        break;
 	}
 	return str;
 }
@@ -29,19 +38,85 @@ std::string FFUtils::getPrinterName(unsigned short pid)
 	case 0x0024:
 		str = "Adventurer 5M Pro";
 		break;
+    case 0x0025: 
+        str = "Flashforge Guider 4"; 
+        break;
+    case 0x0026:
+        str = "Flashforge AD5X";
+        break;
+    case 0x001F:
+        str = "Guider 3 Ultra";
+        break;
 	}
 	return str;
 }
 
-unsigned short FFUtils::getPrinterPID(const std::string& type)
+std::string FFUtils::getPrinterModelId(unsigned short pid)
 {
-	unsigned short pid = 0;
-	if (type == "Adventurer 5M") {
-		pid = 0x0023;
-	} else if (type == "Adventurer 5M Pro") {
-		pid = 0x0024;
+    std::string str;
+	switch (pid) {
+	case 0x0023:
+		str = "Flashforge-Adventurer-5M";
+		break;
+	case 0x0024:
+		str = "Flashforge-Adventurer-5M-Pro";
+		break;
+    case 0x0025: 
+        str = "Flashforge-Guider-4"; 
+        break;
+    case 0x0026:
+        str = "Flashforge-AD5X";
+        break;
+    case 0x001F:
+        str = "Flashforge-Guider-3-Ultra";
+        break;
 	}
-	return pid;
+	return str;
+}
+
+bool FFUtils::isPrinterSupportAms(const std::string &modelId)
+{
+    if (modelId == "Flashforge-AD5X" || modelId == "Flashforge-Guider-4") {
+        return true;
+    }
+    return false;
+}
+
+bool FFUtils::isPrinterSupportFlowCalibration(const std::string &modelId)
+{
+    if (modelId == "Flashforge-Guider-4") {
+        return true;
+    }
+    return false;
+}
+
+wxString FFUtils::convertStatus(const std::string& status)
+{
+    wxString st = _L("Idle");
+    if ("offline" == status) {
+        st = _L("Offline");
+    } else {
+        if ("printing" == status || "canceling" == status) {
+            st = _L("Printing");
+        } else if ("pause" == status || "pausing" == status) {
+            st = _L("Paused");
+        } else if ("error" == status) {
+            st = _L("Error");
+        } else if ("busy" == status || "calibrate_doing" == status || "heating" == status) {
+            st = _L("Busy");
+        } else if ("completed" == status || "cancel" == status) {
+            st = _L("Completed");
+        }
+        //} else if ("cancel" == status || "canceling" == status) {
+        //    st = _L("Cancel");
+        //    color = wxColour("#328DFB");
+        //}
+        //} else if ("heating" == rawstatus) {
+        //    status = _L("Heating");
+        //    //color = wxColour("");
+        //}
+    }
+    return st;
 }
 
 wxString FFUtils::convertStatus(const std::string& status, wxColour& color)
@@ -146,6 +221,11 @@ std::string FFUtils::truncateString(const std::string &s, size_t length)
     }
 }
 
+std::string FFUtils::wxString2StdString(const wxString& str)
+{
+    return std::string(str.utf8_str().data(), str.utf8_str().length()); 
+}
+
 wxString FFUtils::trimString(wxDC &dc, const wxString &str, int width)
 {
     wxString clipText = str;
@@ -217,6 +297,66 @@ wxString FFUtils::elideString(wxWindow* wnd, const wxString& str, int width, int
     return elide_str;
 }
 
+wxString FFUtils::wrapString(wxWindow* wnd, const wxString& str, int width)
+{
+    if (!wnd || wnd->GetTextExtent(str).x <= width) return str;
+
+    wxString wrap_str;
+    wxString _str = str;
+    while (!_str.empty()) {
+        if (wnd->GetTextExtent(_str).x <= width) {
+            wrap_str += _str;
+            break;
+        }
+        int wrap_width = 0;
+        wxString tmp_str;
+        for (size_t i = 0; i < _str.length(); ++i) {
+            wrap_width += wnd->GetTextExtent(_str[i]).x;
+            if (wrap_width > width) {
+                wrap_str += _str.Left(i) + "\n";
+                _str = _str.substr(i);
+                break;
+            }
+        }
+    }
+    return wrap_str;
+}
+
+wxString FFUtils::wrapString(wxDC &dc, const wxString &str, int width)
+{
+    auto findFirstWrapPos = [](const wxString &str, size_t start) {
+        for (size_t i = start + 1; i < str.size(); ++i) {
+            if (isspace(str[i]) || str[i] == '-') {
+                return i;
+            }
+        }
+        return str.size();
+    };
+    wxString ret = str;
+    for (size_t i = 0, j = findFirstWrapPos(ret, i); j != ret.size();) {
+        size_t k = findFirstWrapPos(ret, j);
+        if (dc.GetTextExtent(ret.Mid(i, k - i)).x > width) {
+            ret.insert(j, 1, '\n');
+            i = j + 1;
+            j = k + 1;
+        } else {
+            j = k;
+        }
+    }
+    return ret;
+}
+
+int FFUtils::getStringLines(const wxString& str)
+{
+    int lines = 1;
+    size_t pos   = 0;
+    while ((pos = str.find('\n', pos)) != wxString::npos) {
+        ++lines;
+        ++pos;
+    }
+    return lines;
+}
+
 std::string FFUtils::flashforgeWebsite()
 {
     std::string code = Slic3r::GUI::wxGetApp().app_config->get("language");
@@ -249,7 +389,19 @@ wxString FFUtils::userRegister()
     std::string code = Slic3r::GUI::wxGetApp().app_config->get("language");
     if (code == "zh_CN") {
         return "https://auth.flashforge.com/zh/signUp/?channel=Orca";
-    }
+    }else if(code.compare("fr_FR") == 0){
+		return "https://auth.flashforge.com/fr/signUp/?channel=Orca";
+	}else if(code.compare("es_ES") == 0){
+		return "https://auth.flashforge.com/es/signUp/?channel=Orca";
+	}else if(code.compare("de_DE") == 0){
+		return "https://auth.flashforge.com/de/signUp/?channel=Orca";
+	}else if(code.compare("ja_JP") == 0){
+		return "https://auth.flashforge.com/ja/signUp/?channel=Orca";
+	}else if(code.compare("ko_KR") == 0){
+		return "https://auth.flashforge.com/ko/signUp/?channel=Orca";
+	}else if(code.compare("lt_LT") == 0){
+		return "https://auth.flashforge.com/lt/signUp/?channel=Orca";
+	}
     return "https://auth.flashforge.com/en/signUp/?channel=Orca";
 }
 
@@ -258,7 +410,19 @@ wxString FFUtils::passwordForget()
     std::string code = Slic3r::GUI::wxGetApp().app_config->get("language");
     if (code == "zh_CN") {
         return "https://auth.flashforge.com/zh/resetPassword/?channel=Orca";
-    }
+    }else if(code.compare("fr_FR") == 0){
+		return "https://auth.flashforge.com/fr/resetPassword/?channel=Orca";
+	}else if(code.compare("es_ES") == 0){
+		return "https://auth.flashforge.com/es/resetPassword/?channel=Orca";
+	}else if(code.compare("de_DE") == 0){
+		return "https://auth.flashforge.com/de/resetPassword/?channel=Orca";
+	}else if(code.compare("ja_JP") == 0){
+		return "https://auth.flashforge.com/ja/resetPassword/?channel=Orca";
+	}else if(code.compare("ko_KR") == 0){
+		return "https://auth.flashforge.com/ko/resetPassword/?channel=Orca";
+	}else if(code.compare("lt_LT") == 0){
+		return "https://auth.flashforge.com/lt/resetPassword/?channel=Orca";
+	}
     return "https://auth.flashforge.com/en/resetPassword/?channel=Orca";
 }
 

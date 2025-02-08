@@ -35,12 +35,12 @@
 #include "Technologies.hpp"
 #include "Semver.hpp"
 
-#if 1
+#if 0
 // Saves around 32% RAM after slicing step, 6.7% after G-code export (tested on PrusaSlicer 2.2.0 final).
 using coord_t = int32_t;
 #else
 //FIXME At least FillRectilinear2 and std::boost Voronoi require coord_t to be 32bit.
-typedef int64_t coord_t;
+using coord_t = int64_t;
 #endif
 
 using coordf_t = double;
@@ -55,7 +55,16 @@ static constexpr double EPSILON = 1e-4;
 // 0..4294mm with 1nm resolution
 // int32_t fits an interval of (-2147.48mm, +2147.48mm)
 // with int64_t we don't have to worry anymore about the size of the int.
-static constexpr double SCALING_FACTOR = 0.000001;
+
+// Orca todo: might be better to use 1e-5 for all, namometer resolution is not needed for 3D printing
+static constexpr double SCALING_FACTOR_INTERNAL = 0.000001;
+static constexpr double SCALING_FACTOR_INTERNAL_LARGE_PRINTER = 0.00001;
+static constexpr double LARGE_BED_THRESHOLD = 2147;
+
+// Orca: maximum number of extruders is 64. For SEMM printers, it defines maximum filament number.
+static constexpr size_t MAXIMUM_EXTRUDER_NUMBER = 64;
+
+extern double SCALING_FACTOR;
 // for creating circles (for brim_ear)
 #define POLY_SIDES 24
 static constexpr double PI = 3.141592653589793238;
@@ -67,7 +76,7 @@ static constexpr double RESOLUTION = 0.0125;
 static constexpr double SPARSE_INFILL_RESOLUTION = 0.04;
 #define                 SCALED_SPARSE_INFILL_RESOLUTION (SPARSE_INFILL_RESOLUTION / SCALING_FACTOR)
 
-static constexpr double SUPPORT_RESOLUTION = 0.05;
+static constexpr double SUPPORT_RESOLUTION = 0.1;
 #define                 SCALED_SUPPORT_RESOLUTION (SUPPORT_RESOLUTION / SCALING_FACTOR)
 // Maximum perimeter length for the loop to apply the small perimeter speed. 
 #define                 SMALL_PERIMETER_LENGTH(LENGTH)  (((LENGTH) / SCALING_FACTOR) * 2 * PI)
@@ -76,6 +85,7 @@ static constexpr double INSET_OVERLAP_TOLERANCE = 0.4;
 //FIXME This is quite a lot.
 static constexpr double EXTERNAL_INFILL_MARGIN = 3;
 static constexpr double BRIDGE_INFILL_MARGIN = 1;
+static constexpr double WIPE_TOWER_MARGIN = 1.;
 //FIXME Better to use an inline function with an explicit return type.
 //inline coord_t scale_(coordf_t v) { return coord_t(floor(v / SCALING_FACTOR + 0.5f)); }
 #define scale_(val) ((val) / SCALING_FACTOR)

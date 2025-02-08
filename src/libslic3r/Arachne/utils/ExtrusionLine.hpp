@@ -186,36 +186,16 @@ struct ExtrusionLine
      * \param A Start point of the 3-point-straight line
      * \param B Intermediate point of the 3-point-straight line
      * \param C End point of the 3-point-straight line
-     * \param weighted_average_width The weighted average of the widths of the two colinear extrusion segments
      * */
-    static int64_t calculateExtrusionAreaDeviationError(ExtrusionJunction A, ExtrusionJunction B, ExtrusionJunction C, coord_t& weighted_average_width);
+    static int64_t calculateExtrusionAreaDeviationError(ExtrusionJunction A, ExtrusionJunction B, ExtrusionJunction C);
 
     bool is_contour() const;
 
     double area() const;
 };
 
-static inline Slic3r::ThickPolyline to_thick_polyline(const Arachne::ExtrusionLine &line_junctions)
-{
-    assert(line_junctions.size() >= 2);
-    Slic3r::ThickPolyline out;
-    out.points.emplace_back(line_junctions.front().p);
-    out.width.emplace_back(line_junctions.front().w);
-    out.points.emplace_back(line_junctions[1].p);
-    out.width.emplace_back(line_junctions[1].w);
-
-    auto it_prev = line_junctions.begin() + 1;
-    for (auto it = line_junctions.begin() + 2; it != line_junctions.end(); ++it) {
-        out.points.emplace_back(it->p);
-        out.width.emplace_back(it_prev->w);
-        out.width.emplace_back(it->w);
-        it_prev = it;
-    }
-
-    return out;
-}
-
-static inline Slic3r::ThickPolyline to_thick_polyline(const ClipperLib_Z::Path &path)
+template<class PathType>
+static inline Slic3r::ThickPolyline to_thick_polyline(const PathType &path)
 {
     assert(path.size() >= 2);
     Slic3r::ThickPolyline out;
@@ -246,6 +226,15 @@ static inline Polygon to_polygon(const ExtrusionLine &line)
     return out;
 }
 
+static Points to_points(const ExtrusionLine &extrusion_line)
+{
+    Points points;
+    points.reserve(extrusion_line.junctions.size());
+    for (const ExtrusionJunction &junction : extrusion_line.junctions)
+        points.emplace_back(junction.p);
+    return points;
+}
+
 #if 0
 static BoundingBox get_extents(const ExtrusionLine &extrusion_line)
 {
@@ -271,15 +260,6 @@ static BoundingBox get_extents(const std::vector<const ExtrusionLine *> &extrusi
         bbox.merge(get_extents(*extrusion_line));
     }
     return bbox;
-}
-
-static Points to_points(const ExtrusionLine &extrusion_line)
-{
-    Points points;
-    points.reserve(extrusion_line.junctions.size());
-    for (const ExtrusionJunction &junction : extrusion_line.junctions)
-        points.emplace_back(junction.p);
-    return points;
 }
 
 static std::vector<Points> to_points(const std::vector<const ExtrusionLine *> &extrusion_lines)

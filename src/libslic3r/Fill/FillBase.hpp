@@ -19,6 +19,7 @@
 #include "../Flow.hpp"
 #include "../ExtrusionEntity.hpp"
 #include "../ExtrusionEntityCollection.hpp"
+#include "../ShortestPath.hpp"
 
 namespace Slic3r {
 
@@ -93,6 +94,8 @@ public:
     coordf_t    overlap;
     // in radians, ccw, 0 = East
     float       angle;
+    // Orca: enable angle shifting for layer change
+    bool        rotate_angle{ true };
     // In scaled coordinates. Maximum lenght of a perimeter segment connecting two infill lines.
     // Used by the FillRectilinear2, FillGrid2, FillTriangles, FillStars and FillCubic.
     // If left to zero, the links will not be limited.
@@ -106,6 +109,7 @@ public:
     FillAdaptive::Octree* adapt_fill_octree = nullptr;
 
     // PrintConfig and PrintObjectConfig are used by infills that use Arachne (Concentric and FillEnsuring).
+    // Orca: also used by gap fill function.
     const PrintConfig       *print_config        = nullptr;
     const PrintObjectConfig *print_object_config = nullptr;
 
@@ -134,7 +138,7 @@ public:
     // Perform the fill.
     virtual Polylines fill_surface(const Surface *surface, const FillParams &params);
     virtual ThickPolylines fill_surface_arachne(const Surface* surface, const FillParams& params);
-
+    
     // BBS: this method is used to fill the ExtrusionEntityCollection.
     // It call fill_surface by default
     virtual void fill_surface_extrusion(const Surface* surface, const FillParams& params, ExtrusionEntitiesPtr& out);
@@ -148,6 +152,7 @@ protected:
         overlap(0.),
         // Initial angle is undefined.
         angle(FLT_MAX),
+        rotate_angle(true),
         link_max_length(0),
         loop_clipping(0),
         // The initial bounding box is empty, therefore undefined.
@@ -169,9 +174,13 @@ protected:
         ExPolygon                      expolygon,
         ThickPolylines& thick_polylines_out) {}
 
-    virtual float _layer_angle(size_t idx) const { return (idx & 1) ? float(M_PI/2.) : 0; }
+    virtual float _layer_angle(size_t idx) const { return (rotate_angle && (idx & 1)) ? float(M_PI/2.) : 0; }
 
     virtual std::pair<float, Point> _infill_direction(const Surface *surface) const;
+    
+    // Orca: Dedicated function to calculate gap fill lines for the provided surface, according to the print object parameters
+    // and append them to the out ExtrusionEntityCollection.
+    void _create_gap_fill(const Surface* surface, const FillParams& params, ExtrusionEntityCollection* out);
 
 public:
     static void connect_infill(Polylines &&infill_ordered, const ExPolygon &boundary, Polylines &polylines_out, const double spacing, const FillParams &params);

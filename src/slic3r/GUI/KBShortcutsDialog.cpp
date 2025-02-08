@@ -95,8 +95,8 @@ void KBShortcutsDialog::OnSelectTabel(wxCommandEvent &event)
     while (i != m_hash_selector.end()) {
         Select *sel = i->second;
         if (id == sel->m_index) {
-            sel->m_tab_button->SetBackgroundColour(StateColor::darkModeColorFor(wxColour("#FFFFFF")));
-            sel->m_tab_text->SetBackgroundColour(StateColor::darkModeColorFor(wxColour("#FFFFFF")));
+            sel->m_tab_button->SetBackgroundColour(StateColor::darkModeColorFor(wxColour("#BFE1DE"))); // ORCA color for selected tab background
+            sel->m_tab_text->SetBackgroundColour(StateColor::darkModeColorFor(wxColour("#BFE1DE"))); // ORCA color for selected tab background
             sel->m_tab_text->SetFont(::Label::Head_13);
             sel->m_tab_button->Refresh();
             sel->m_tab_text->Refresh();
@@ -196,7 +196,14 @@ void KBShortcutsDialog::fill_shortcuts()
             // Configuration
             { ctrl + "P", L("Preferences") },
             //3D control
+#ifdef __APPLE__
+            { ctrl + "Shift+M", L("Show/Hide 3Dconnexion devices settings dialog") },
+#else
             { ctrl + "M", L("Show/Hide 3Dconnexion devices settings dialog") },
+#endif // __APPLE
+            
+            // Switch table page
+            { ctrl + "Tab", L("Switch table page")},
             //DEL
             #ifdef __APPLE__
                 {"fn+⌫", L("Delete selected")},
@@ -256,7 +263,10 @@ void KBShortcutsDialog::fill_shortcuts()
             { "F", L("Gizmo Place face on bed") },
             { "L", L("Gizmo SLA support points") },
             { "P", L("Gizmo FDM paint-on seam") },
-            { "Tab", L("Swtich between Prepare/Prewview") },
+            { "T", L("Gizmo Text emboss / engrave")},
+            { "I", L("Zoom in")},
+            { "O", L("Zoom out")},
+            { "Tab", L("Switch between Prepare/Preview") },
 
         };
         m_full_shortcuts.push_back({ { _L("Plater"), "" }, plater_shortcuts });
@@ -282,7 +292,7 @@ void KBShortcutsDialog::fill_shortcuts()
             {ctrl + "V", L("Paste from clipboard")},
             {ctrl + "X", L("Cut")},
             {ctrl + "A", L("Select all objects")},
-            {ctrl + "M", L("Clone selected")},
+            {ctrl + "K", L("Clone selected")},
             {ctrl + "Z", L("Undo")},
             {ctrl + "Y", L("Redo")},
             {L("Space"), L("Select the object/part and press space to change the name")},
@@ -298,7 +308,7 @@ void KBShortcutsDialog::fill_shortcuts()
         { L("Arrow Right"), L("Horizontal slider - Move active thumb Right")},
         { "L", L("On/Off one layer mode of the vertical slider")},
         { "C", L("On/Off g-code window")},
-        { "Tab", L("Swtich between Prepare/Prewview") },
+        { "Tab", L("Switch between Prepare/Preview") },
         {L("Shift+Any arrow"), L("Move slider 5x faster")},
         {L("Shift+Mouse wheel"), L("Move slider 5x faster")},
         #ifdef __APPLE__
@@ -308,8 +318,8 @@ void KBShortcutsDialog::fill_shortcuts()
 		    {L("Ctrl+Any arrow"), L("Move slider 5x faster")},
 		    {L("Ctrl+Mouse wheel"), L("Move slider 5x faster")},
        #endif
-
-        
+        { L("Home"),        L("Horizontal slider - Move to start position")},
+        { L("End"),         L("Horizontal slider - Move to last position")},
     };
     m_full_shortcuts.push_back({ { _L("Preview"), "" }, preview_shortcuts });
 }

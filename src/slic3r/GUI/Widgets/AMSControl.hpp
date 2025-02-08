@@ -38,7 +38,7 @@ namespace Slic3r { namespace GUI {
 enum AMSModel {
     NO_AMS              = 0,
     GENERIC_AMS         = 1,
-    EXTRA_AMS              = 2
+    EXTRA_AMS           = 2
 };
 
 enum ActionButton {
@@ -140,6 +140,7 @@ struct Caninfo
     wxString        material_name;
     wxColour        material_colour = {*wxWHITE};
     AMSCanType      material_state;
+    int             ctype=0;
     int             material_remain = 100;
     float           k = 0.0f;
     float           n = 0.0f;
@@ -338,6 +339,7 @@ protected:
     bool            m_hover           = {false};
     bool            m_show_kn         = {false};
     bool            m_support_cali    = {false};
+    bool            transparent_changed     = {false};
 
     double   m_radius = {4};
     wxColour m_border_color;
@@ -381,11 +383,7 @@ public:
     wxColour                     m_road_color;
     void                         Update(AMSinfo amsinfo, Caninfo info, int canindex, int maxcan);
 
-    ScalableBitmap ams_humidity_0;
-    ScalableBitmap ams_humidity_1;
-    ScalableBitmap ams_humidity_2;
-    ScalableBitmap ams_humidity_3;
-    ScalableBitmap ams_humidity_4;
+    std::vector<ScalableBitmap> ams_humidity_img;
 
    
     int      m_humidity = { 0 };
@@ -431,7 +429,7 @@ public:
 protected:
     wxSize   m_cube_size;
     wxColour m_background_colour = {AMS_CONTROL_DEF_BLOCK_BK_COLOUR};
-    int      m_padding           = {6};
+    int      m_padding           = {7};
     int      m_space             = {5};
     bool     m_hover             = {false};
     bool     m_selected          = {false};
@@ -591,7 +589,7 @@ protected:
     wxSimplebook *m_simplebook_bottom      = {nullptr};
 
     wxStaticText *m_tip_right_top            = {nullptr};
-    wxStaticText *m_tip_load_info            = {nullptr};
+    Label        *m_tip_load_info            = {nullptr};
     wxStaticText *m_text_calibration_percent = {nullptr};
     wxWindow *    m_none_ams_panel           = {nullptr};
     wxWindow *    m_panel_top                = {nullptr};
@@ -627,7 +625,6 @@ protected:
     ScalableBitmap m_button_ams_setting_normal;
     ScalableBitmap m_button_ams_setting_hover;
     ScalableBitmap m_button_ams_setting_press;
-    Button *m_button_extrusion_cali= {nullptr};
     Button *m_button_guide = {nullptr};
     Button *m_button_retry = {nullptr};
     wxWindow* m_button_area = {nullptr};
@@ -651,7 +648,7 @@ public:
     void SetAmsModel(AMSModel mode, AMSModel ext_mode) {m_ams_model = mode; m_ext_model = ext_mode;};
 
 	void SetActionState(bool button_status[]);
-    void EnterNoneAMSMode(bool support_vt_load = false);
+    void EnterNoneAMSMode();
     void EnterGenericAMSMode();
     void EnterExtraAMSMode();
 
@@ -669,7 +666,7 @@ public:
 
     void UpdateStepCtrl(bool is_extrusion_exist);
     void CreateAms();
-    void UpdateAms(std::vector<AMSinfo> info, bool keep_selection = true, bool is_reset = false);
+    void UpdateAms(std::vector<AMSinfo> info, bool is_reset = true);
     void AddAms(AMSinfo info);
     void AddAmsItems(AMSinfo info);
     void AddExtraAms(AMSinfo info);

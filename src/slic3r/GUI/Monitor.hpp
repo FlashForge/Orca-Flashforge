@@ -51,6 +51,7 @@
 #include "slic3r/GUI/FlashForge/SingleDeviceState.hpp"
 #include "Widgets/SideTools.hpp"
 #include "SelectMachine.hpp"
+#include <mutex>
 
 namespace Slic3r {
 namespace GUI {
@@ -91,6 +92,7 @@ private:
     //UpgradePanel*       m_upgrade_panel;
     //HMSPanel*           m_hms_panel;
 
+    std::mutex m_mutex;
 	/* side tools */
     SideTools*      m_side_tools{nullptr};
     wxStaticBitmap* m_bitmap_printer_type;
@@ -103,6 +105,7 @@ private:
     int last_wifi_signal = -1;
     int last_status;
     bool m_initialized { false };
+    bool update_flag{false};
     wxTimer* m_refresh_timer = nullptr;
     time_t m_connect_fail_time1;
     time_t   m_connect_fail_time0;
@@ -138,18 +141,27 @@ public:
     void on_select_printer(wxCommandEvent& event);
     void on_printer_clicked(wxMouseEvent &event);
     void on_size(wxSizeEvent &event);
+    void onComWanDevMaintainEvent(ComWanDevMaintainEvent& event);
 
     /* update apis */
     //void update_ams(MachineObject* obj);
     void update_all();
 
+    void update_hms_tag();
     bool Show(bool show);
 
 	void update_side_panel();
     void show_status(int status);
 
+    std::string get_string_from_tab(PrinterTab tab);
+
     MachineObject *obj { nullptr };
     std::string last_conn_type = "undedefined";
+
+    void stop_update() {update_flag = false;};
+    void start_update() {update_flag = true;};
+
+    void jump_to_HMS(wxCommandEvent& e);
 };
 
 

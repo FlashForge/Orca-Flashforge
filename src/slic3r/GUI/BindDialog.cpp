@@ -141,7 +141,8 @@ void RoundImagePanel::CreateRegion(wxDC &dc)
     int y = sz.y / 2;
     dc.SetBrush(*wxBLACK_BRUSH);
     dc.DrawRectangle(0, 0, sz.x, sz.y);
-    dc.SetPen(*wxTRANSPARENT_PEN);
+    //dc.SetPen(*wxTRANSPARENT_PEN);
+    dc.SetPen(wxColor("#000000"));
     dc.SetBrush(*wxRED);
     dc.DrawCircle(x, y, (x < y) ? x : y);
 }
@@ -378,10 +379,12 @@ void BindMachineDialog::on_cancel(wxCommandEvent &event)
 
 void BindMachineDialog::on_destroy()
 {
+    /*
     if (m_bind_job) {
         m_bind_job->cancel();
         m_bind_job->join();
-    }
+    }*/  //by ymd
+
     //if (m_web_request.IsOk()) {
     //    m_web_request.Cancel();
     //}
@@ -396,6 +399,40 @@ void BindMachineDialog::on_result_ok(wxCommandEvent& event)
     } else {
         on_destroy();
         EndModal(wxID_OK);
+    }
+}
+
+void BindMachineDialog::downloadUrlPic(const std::string& url) 
+{
+    if (!url.empty()) {
+        Slic3r::Http http   = Slic3r::Http::get(url);
+        std::string  suffix = url.substr(url.find_last_of(".") + 1);
+        http.header("accept", "image/" + suffix)
+            .on_complete([this](std::string body, unsigned int status) {
+                wxMemoryInputStream stream(body.data(), body.size());
+                wxImage             image(stream, wxBITMAP_TYPE_ANY);
+                if (!image.IsOk()) {
+                    BOOST_LOG_TRIVIAL(error) << "download relogin image is not ok";
+                    return;
+                }
+                wxGetApp().setUsrPic(image);
+                image.Rescale(FromDIP(80), FromDIP(80));
+                m_user_panel->SetImage(image);
+                Layout();
+            })
+            .on_error([=](std::string body, std::string error, unsigned status) {
+                BOOST_LOG_TRIVIAL(info) << " downloadUrlPic: status:" << status << " error:" << error;
+            })
+            .perform();
+    } else {
+        wxImage     tmpimage;
+        std::string name = "login_default_usr_pic";
+        if (tmpimage.LoadFile(Slic3r::GUI::from_u8(Slic3r::var(name + ".png")), wxBITMAP_TYPE_PNG)) {
+            wxGetApp().setUsrPic(tmpimage);
+            tmpimage.Rescale(FromDIP(80), FromDIP(80));
+            m_user_panel->SetImage(tmpimage);
+            Layout();
+        }
     }
 }
 
@@ -460,11 +497,15 @@ void BindMachineDialog::on_bind_printer(wxCommandEvent &event)
     #endif
 
 
-    BOOST_LOG_TRIVIAL(info) << "on_bind_printer: " << m_bind_info->dev_id << "--dev_pid:" << m_bind_info->dev_pid
+    BOOST_LOG_TRIVIAL(info) << "on_bind_printer: " << m_bind_info->dev_id
+                            << "--dev_ip:" << m_bind_info->dev_ip
+                            << "--dev_port:" << m_bind_info->dev_port
+                            << "--dev_pid:" << m_bind_info->dev_pid
                             << "--dev_name: " << m_bind_info->dev_name;
-    m_bind_job = std::make_shared<BindJob>(nullptr, wxGetApp().plater(), m_bind_info->dev_id, m_bind_info->dev_pid, m_bind_info->dev_name);
+    m_bind_job = std::make_shared<BindJob>(m_bind_info->dev_ip, m_bind_info->dev_port,
+        m_bind_info->dev_id, m_bind_info->dev_pid, m_bind_info->dev_name);
     m_bind_job->set_event_handle(this);
-    m_bind_job->start();
+    m_bind_job->process();
 }
 
 void BindMachineDialog::on_dpi_changed(const wxRect &suggested_rect)
@@ -499,7 +540,13 @@ void BindMachineDialog::on_show(wxShowEvent &event)
             bmp = create_scaled_bitmap("adventurer_5m_pro", 0, 80);
         } else if (0x0023 == m_bind_info->dev_pid) { // ad 5m
             bmp = create_scaled_bitmap("adventurer_5m", 0, 80);
-        } else {
+        } else if (0x001F == m_bind_info->dev_pid) { // G3U
+            bmp = create_scaled_bitmap("guider_3_ultra", 0, 80);
+        } else if (0x0026 == m_bind_info->dev_pid) { // ad5x
+            bmp = create_scaled_bitmap("ad5x", 0, 80);
+        } else if (0x0025 == m_bind_info->dev_pid) { // Guider4
+            bmp = create_scaled_bitmap("Guider4", 0, 80);
+        }else {
             auto img_path = m_bind_info->img /*m_device_info->get_printer_thumbnail_img_str()*/;
             if (wxGetApp().dark_mode()) { img_path += "_dark"; }
             bmp = create_scaled_bitmap(img_path, this, FromDIP(80));
@@ -539,40 +586,7 @@ void BindMachineDialog::on_show(wxShowEvent &event)
                 m_user_panel->SetImage(image);
                 Layout();
             } else {
-                Bind(COM_ASYNC_CALL_FINISH_EVENT, [&](ComAsyncCallFinishEvent &event) {
-                    // event.Skip();
-                    if (event.ret == COM_OK) {
-                        if (!m_pic_data.empty()) {
-                            // translate pic data from vector to wxImage object
-                            wxMemoryInputStream stream(m_pic_data.data(), m_pic_data.size());
-                            wxImage             image(stream, wxBITMAP_TYPE_ANY);
-                            if (!image.IsOk()) {
-                                BOOST_LOG_TRIVIAL(error) << "download unbind image is not ok";
-                                return;
-                            }
-                            wxGetApp().setUsrPic(image);
-                            image.Rescale(FromDIP(80), FromDIP(80));
-                            m_user_panel->SetImage(image);
-                            Layout();
-                        }
-                    } else {
-                        BOOST_LOG_TRIVIAL(error) << "download unbind image failed";
-                    }
-                });
-                if (!user_info.headImgUrl.empty()) {
-                    m_pic_data.clear();
-                    m_pic_thread = MultiComUtils::asyncCall(this, [=]() { 
-                        return MultiComUtils::downloadFile(user_info.headImgUrl, m_pic_data, 15000); });
-                } else {
-                    wxImage     tmpimage;
-                    std::string name = "login_default_usr_pic";
-                    if (tmpimage.LoadFile(Slic3r::GUI::from_u8(Slic3r::var(name + ".png")), wxBITMAP_TYPE_PNG)) {
-                        wxGetApp().setUsrPic(tmpimage);
-                        tmpimage.Rescale(FromDIP(80), FromDIP(80));
-                        m_user_panel->SetImage(tmpimage);
-                        Layout();
-                    }
-                }
+                downloadUrlPic(user_info.headImgUrl);
             }
             #endif
             #endif
@@ -736,13 +750,53 @@ void UnBindMachineDialog::on_cancel(wxCommandEvent &event)
 
 void UnBindMachineDialog::on_destroy()
 {
+    /*
     if (m_unbind_job) {
         m_unbind_job->cancel();
         m_unbind_job->join();
-    }
+    }*/ //by ymd
     //if (m_web_request.IsOk()) {
     //    m_web_request.Cancel();
     //}
+}
+
+    //if (m_web_request.IsOk()) {
+    //    m_web_request.Cancel();
+    //}
+}
+
+void UnBindMachineDialog::downloadUrlPic(const std::string& url) 
+{
+    if (!url.empty()) {
+        Slic3r::Http http   = Slic3r::Http::get(url);
+        std::string  suffix = url.substr(url.find_last_of(".") + 1);
+        http.header("accept", "image/" + suffix)
+            .on_complete([this](std::string body, unsigned int status) {
+                wxMemoryInputStream stream(body.data(), body.size());
+                wxImage             image(stream, wxBITMAP_TYPE_ANY);
+                if (!image.IsOk()) {
+                    BOOST_LOG_TRIVIAL(error) << "UnBindMachineDialog download image is not ok";
+                    return;
+                }
+                wxGetApp().setUsrPic(image);
+                image.Rescale(FromDIP(80), FromDIP(80));
+                m_user_panel->SetImage(image);
+                Layout();
+            })
+            .on_error([=](std::string body, std::string error, unsigned status) {
+                BOOST_LOG_TRIVIAL(info) << " UnBindMachineDialog::downloadUrlPic: status:" << status << " error:" << error;
+            })
+            .perform();
+    } else {
+        wxImage     tmpimage;
+        std::string name = "login_default_usr_pic";
+        if (tmpimage.LoadFile(Slic3r::GUI::from_u8(Slic3r::var(name + ".png")), wxBITMAP_TYPE_PNG)) {
+            wxGetApp().setUsrPic(tmpimage);
+            tmpimage.Rescale(FromDIP(80), FromDIP(80));
+            m_user_panel->SetImage(tmpimage);
+            Layout();
+        }
+    }
 }
 
 void UnBindMachineDialog::on_result_ok(wxCommandEvent& event)
@@ -796,9 +850,11 @@ void UnBindMachineDialog::on_unbind_printer(wxCommandEvent &event)
     //    return;
     //}
     //m_unbind_job = std::make_shared<UnbindJob>(m_device_info);
-    m_unbind_job = std::make_shared<UnbindJob>(m_unbind_info->dev_id, m_unbind_info->bind_id);
+
+    
+    m_unbind_job = std::make_shared<UnbindJob>(m_unbind_info->dev_id, m_unbind_info->bind_id, m_unbind_info->nim_account_id);
     m_unbind_job->set_event_handle(this);
-    m_unbind_job->start();
+    m_unbind_job->process();
 }
 
 void UnBindMachineDialog::on_dpi_changed(const wxRect &suggested_rect)
@@ -835,7 +891,14 @@ void UnBindMachineDialog::on_show(wxShowEvent &event)
             bmp = create_scaled_bitmap("adventurer_5m_pro", 0, 80);
         } else if (0x0023 == m_unbind_info->dev_pid) { // ad 5m
             bmp = create_scaled_bitmap("adventurer_5m", 0, 80);
-        } else {
+        }else if(0x001F == m_unbind_info->dev_pid){ //G3U
+            bmp = create_scaled_bitmap("guider_3_ultra", 0, 80);
+        } else if (0x0026 == m_unbind_info->dev_pid) { // ad5x
+            bmp = create_scaled_bitmap("ad5x", 0, 80);
+        } else if (0x0025 == m_unbind_info->dev_pid) { // Guider4
+            bmp = create_scaled_bitmap("Guider4", 0, 80);
+        }
+        else {
             auto img_path = m_unbind_info->img /*m_device_info->get_printer_thumbnail_img_str()*/;
             if (wxGetApp().dark_mode()) { img_path += "_dark"; }
             bmp = create_scaled_bitmap(img_path, this, FromDIP(80));
@@ -874,40 +937,7 @@ void UnBindMachineDialog::on_show(wxShowEvent &event)
                 m_user_panel->SetImage(image);
                 Layout();
             } else {
-                Bind(COM_ASYNC_CALL_FINISH_EVENT, [&](ComAsyncCallFinishEvent &event) {
-                    // event.Skip();
-                    if (event.ret == COM_OK) {
-                        if (!m_pic_data.empty()) {
-                            // translate pic data from vector to wxImage object
-                            wxMemoryInputStream stream(m_pic_data.data(), m_pic_data.size());
-                            wxImage             image(stream, wxBITMAP_TYPE_ANY);                            
-                            if (!image.IsOk()) {
-                                BOOST_LOG_TRIVIAL(error) << "download unbind image is not ok";
-                                return;
-                            }
-                            wxGetApp().setUsrPic(image);
-                            image.Rescale(FromDIP(80), FromDIP(80));
-                            m_user_panel->SetImage(image);
-                            Layout();
-                        }
-                    } else {
-                        BOOST_LOG_TRIVIAL(error) << "download unbind image failed";
-                    }
-                });
-                if (!user_info.headImgUrl.empty()) {
-                    m_pic_data.clear();
-                    m_pic_thread = MultiComUtils::asyncCall(this, [=]() {
-                        return MultiComUtils::downloadFile(user_info.headImgUrl, m_pic_data, 15000); });
-                } else {
-                    wxImage     tmpimage;
-                    std::string name = "login_default_usr_pic";
-                    if (tmpimage.LoadFile(Slic3r::GUI::from_u8(Slic3r::var(name + ".png")), wxBITMAP_TYPE_PNG)) {
-                        wxGetApp().setUsrPic(tmpimage);
-                        tmpimage.Rescale(FromDIP(80), FromDIP(80));
-                        m_user_panel->SetImage(tmpimage);
-                        Layout();
-                    }
-                }
+                downloadUrlPic(user_info.headImgUrl);
             }
             #endif
             #endif
@@ -921,4 +951,4 @@ void UnBindMachineDialog::on_show(wxShowEvent &event)
     }
 }
 
-}} // namespace Slic3r::GUI
+} // namespace Slic3r::GUI

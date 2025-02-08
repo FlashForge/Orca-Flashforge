@@ -9,6 +9,7 @@
 #define ImageGrid_h
 
 #include <wx/window.h>
+#include <wx/timer.h>
 #include <wx/arrstr.h>
 #include <boost/shared_ptr.hpp>
 
@@ -48,6 +49,8 @@ public:
     bool IsSelecting() { return m_selecting; }
 
     void DoActionOnSelection(int action);
+
+    void ShowDownload(bool show);
 
 public:
     void Rescale();
@@ -127,6 +130,7 @@ private:
     // wxBitmap   m_button_background;
 
     bool m_selecting = false;
+    bool m_show_download = false;
 
     enum HitType {
         HIT_NONE,

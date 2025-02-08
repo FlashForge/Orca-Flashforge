@@ -8,8 +8,8 @@
 #include "FlashForge/DeviceData.hpp"
 
 namespace Slic3r { namespace GUI {
-    #if 0
-ConnectPrinterDialog::ConnectPrinterDialog(wxWindow *parent, wxWindowID id, const wxString &title, bool err_hint, const wxPoint &pos, const wxSize &size, long style)
+#if 0
+ConnectPrinterDialog::ConnectPrinterDialog(wxWindow *parent, wxWindowID id, const wxString &title, const wxPoint &pos, const wxSize &size, long style)
     : DPIDialog(parent, id, _L("ConnectPrinter(LAN)"), pos, size, style)
 {
     SetBackgroundColour(*wxWHITE);
@@ -249,8 +249,8 @@ void ConnectPrinterDialog::end_modal(wxStandardID id)
     EndModal(id);
 }
 
-void ConnectPrinterDialog::set_machine_object(MachineObject* obj)
-{
+void ConnectPrinterDialog::set_machine_object(MachineObject* obj) 
+{ 
     m_obj = obj;
 }
 
@@ -285,6 +285,7 @@ void ConnectPrinterDialog::on_button_confirm(wxMouseEvent &event)
     event.Skip();
 }
 
+
 void ConnectPrinterDialog::on_dpi_changed(const wxRect &suggested_rect)
 {
     m_textCtrl_code->GetTextCtrl()->SetSize(wxSize(-1, FromDIP(22)));
@@ -296,4 +297,5 @@ void ConnectPrinterDialog::on_dpi_changed(const wxRect &suggested_rect)
     Layout();
     this->Refresh();
 }
+
 }} // namespace Slic3r::GUI

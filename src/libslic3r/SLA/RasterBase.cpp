@@ -11,11 +11,6 @@
 
 namespace Slic3r { namespace sla {
 
-const RasterBase::TMirroring RasterBase::NoMirror = {false, false};
-const RasterBase::TMirroring RasterBase::MirrorX  = {true, false};
-const RasterBase::TMirroring RasterBase::MirrorY  = {false, true};
-const RasterBase::TMirroring RasterBase::MirrorXY = {true, true};
-
 EncodedRaster PNGRasterEncoder::operator()(const void *ptr, size_t w, size_t h,
                                            size_t      num_components)
 {
@@ -68,15 +63,17 @@ EncodedRaster PPMRasterEncoder::operator()(const void *ptr, size_t w, size_t h,
 }
 
 std::unique_ptr<RasterBase> create_raster_grayscale_aa(
-    const RasterBase::Resolution &res,
-    const RasterBase::PixelDim &  pxdim,
-    double                        gamma,
-    const RasterBase::Trafo &     tr)
+    const Resolution        &res,
+    const PixelDim          &pxdim,
+    double                   gamma,
+    const RasterBase::Trafo &tr)
 {
     std::unique_ptr<RasterBase> rst;
     
     if (gamma > 0)
         rst = std::make_unique<RasterGrayscaleAAGammaPower>(res, pxdim, tr, gamma);
+    else if (std::abs(gamma - 1.) < 1e-6)
+        rst = std::make_unique<RasterGrayscaleAA>(res, pxdim, tr, agg::gamma_none());
     else
         rst = std::make_unique<RasterGrayscaleAA>(res, pxdim, tr, agg::gamma_threshold(.5));
     

@@ -195,6 +195,9 @@ void TempInput::Create(wxWindow *parent, wxString text, wxString label, wxString
     });
     text_ctrl->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent &e) {
         e.Skip();
+        if (m_read_only) {
+            return;
+        }
         OnEdit();
         auto temp = text_ctrl->GetValue();
         if (temp.ToStdString().empty()) return;
@@ -222,7 +225,7 @@ void TempInput::Create(wxWindow *parent, wxString text, wxString label, wxString
         }
     });
     text_ctrl->SetFont(Label::Body_13);
-    text_ctrl->SetForegroundColour(text_color.colorForStates(StateColor::Normal));
+    text_ctrl->SetForegroundColour(StateColor::darkModeColorFor(*wxBLACK));
     if (!normal_icon.IsEmpty()) { this->normal_icon = ScalableBitmap(this, normal_icon.ToStdString(), 16); }
     if (!actice_icon.IsEmpty()) { this->actice_icon = ScalableBitmap(this, actice_icon.ToStdString(), 16); }
     this->degree_icon = ScalableBitmap(this, "degree", 16);
@@ -332,7 +335,7 @@ void TempInput::Warning(bool warn, WarningType type)
 
             wxBoxSizer *sizer_body = new wxBoxSizer(wxVERTICAL);
 
-            auto body = new wxPanel(wdialog, wxID_ANY, wxDefaultPosition, {this->GetSize().x - 4, -1}, wxTAB_TRAVERSAL);
+            auto body = new wxPanel(wdialog, wxID_ANY, wxDefaultPosition, {FromDIP(260), -1}, wxTAB_TRAVERSAL);
             body->SetBackgroundColour(wxColour(0xFFFFFF));
 
 
@@ -399,6 +402,23 @@ void TempInput::SetTextBindInput()
 void TempInput::SetMaxTemp(int temp) { max_temp = temp; }
 
 void TempInput::SetMinTemp(int temp) { min_temp = temp; }
+
+void TempInput::SetNormalIcon(wxString normalIcon) 
+{ 
+    this->normal_icon = ScalableBitmap(this, normalIcon.ToStdString(), 16); 
+}
+
+void TempInput::SetTargetTempVis(bool visible) 
+{
+    if (visible) {
+        target_temp_vis = true;
+        text_ctrl->Show();
+    } else {
+        target_temp_vis = false;
+        text_ctrl->Hide();
+    }
+    Refresh();
+}
 
 void TempInput::SetLabel(const wxString &label)
 {
@@ -575,16 +595,24 @@ void TempInput::render(wxDC &dc)
     dc.SetTextBackground(background_color.colorForStates(states));
     pt.x += labelSize.x + 10;
     pt.y = (size.y - sepSize.y) / 2;
-    dc.DrawText(wxString("/"), pt);
+    if (target_temp_vis) {
+        dc.DrawText(wxString("/"), pt);
 
-    // flag
-    if (degree_icon.bmp().IsOk()) {
-        auto   pos    = text_ctrl->GetPosition();
-        wxSize szIcon = degree_icon.GetBmpSize();
-        pt.y          = (size.y - szIcon.y) / 2;
-        pt.x          = pos.x + text_ctrl->GetSize().x;
-        dc.DrawBitmap(degree_icon.bmp(), pt);
+        // flag
+        if (degree_icon.bmp().IsOk()) {
+            auto   pos    = text_ctrl->GetPosition();
+            wxSize szIcon = degree_icon.GetBmpSize();
+            pt.y          = (size.y - szIcon.y) / 2;
+            pt.x          = pos.x + text_ctrl->GetSize().x;
+            dc.DrawBitmap(degree_icon.bmp(), pt);
+        }
+    } else {
+            // flag
+        if (degree_icon.bmp().IsOk()) {
+            dc.DrawBitmap(degree_icon.bmp(), pt);
+        }
     }
+
 }
 
 
@@ -805,19 +833,19 @@ void IconBottonText::create_panel(
     auto icon_static = new wxStaticBitmap(m_panel_page, wxID_ANY, m_icon);
 
     if (secondIcon.IsEmpty()) {
-        m_dec_btn = new FFPushButton(m_panel_page, wxID_ANY, "push_button_dec_normal", "push_button_dec_hover", "push_button_dec_press","push_button_dec_disable",20);
+        m_dec_btn = new FFPushButton(m_panel_page, wxID_ANY, "push_button_dec_normal", "push_button_dec_hover", "push_button_dec_press","push_button_dec_disable",21);
     } else {
         m_dec_btn = new FFPushButton(m_panel_page, wxID_ANY, "push_button_arrow_inc_normal", "push_button_arrow_inc_hover",
-                                     "push_button_arrow_inc_press", "push_button_arrow_inc_disable",20);
+                                     "push_button_arrow_inc_press", "push_button_arrow_inc_disable",21);
     }
     m_dec_btn->Bind(wxEVT_LEFT_UP, &IconBottonText::onDecBtnClicked, this);
     m_dec_btn->SetBackgroundColour(*wxWHITE);
 
     if (secondIcon.IsEmpty()) {
-        m_inc_btn = new FFPushButton(m_panel_page, wxID_ANY, "push_button_inc_normal", "push_button_inc_hover", "push_button_inc_press","push_button_inc_disable",20);
+        m_inc_btn = new FFPushButton(m_panel_page, wxID_ANY, "push_button_inc_normal", "push_button_inc_hover", "push_button_inc_press","push_button_inc_disable",21);
     } else {
         m_inc_btn = new FFPushButton(m_panel_page, wxID_ANY, "push_button_arrow_dec_normal", "push_button_arrow_dec_hover",
-                                     "push_button_arrow_dec_press", "push_button_arrow_dec_disable",20);
+                                     "push_button_arrow_dec_press", "push_button_arrow_dec_disable",21);
             
     }
     m_inc_btn->Bind(wxEVT_LEFT_UP, &IconBottonText::onIncBtnClicked, this);
@@ -1050,9 +1078,9 @@ void StartFiltering::create_panel(wxWindow* parent)
     sizer->AddSpacer(FromDIP(14));
     sizer->Add(external_circulate_panel, 0, wxEXPAND | wxALIGN_CENTER, 0);
 #ifdef __WIN32__
-    sizer->AddSpacer(FromDIP(140));
+    sizer->AddSpacer(FromDIP(172));
 #else if __APPLE__
-    sizer->AddSpacer(FromDIP(151));
+    sizer->AddSpacer(FromDIP(181));
 #endif
 
     parent->SetSizer(sizer);
@@ -1103,7 +1131,7 @@ TempMixDevice::TempMixDevice(wxWindow* parent,bool idle, wxString nozzleTemp, wx
     connectEvent();
 }
 
-void TempMixDevice::setState(int state)
+void TempMixDevice::setState(int state, bool lampState)
 { 
     if (0 == state) {   //offline
         //图标、解绑
@@ -1123,18 +1151,33 @@ void TempMixDevice::setState(int state)
         Layout();
     } else if(1 == state){  //idle
         m_idle_device_info_button->SetIcon("device_idle_file_info");
-        m_idle_lamp_control_button->SetIcon("device_lamp_control");
-        m_idle_filter_button->SetIcon("device_filter");
+        if (lampState) {
+            m_idle_lamp_control_button->SetIcon("device_lamp_control_press");
+        } else {
+            m_idle_lamp_control_button->SetIcon("device_lamp_control");
+        }
+        if (m_g3uMachine && !m_clearFanPressed) {
+            m_idle_filter_button->SetIcon("device_filter_offline");
+        } else {
+            m_idle_filter_button->SetIcon("device_filter");
+        }
         m_idle_device_info_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onDevInfoBtnClicked, this);
         m_idle_lamp_control_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onLampBtnClicked, this);
         m_idle_filter_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onFilterBtnClicked, this);
         m_idle_device_info_button->Enable(true);
         m_idle_lamp_control_button->Enable(true);
         m_idle_filter_button->Enable(true);
+        m_top_btn->SetTargetTempVis(false);
+        m_bottom_btn->SetTargetTempVis(false);
+        m_mid_btn->SetTargetTempVis(false);
     } else if (2 == state) {   // normal
         m_idle_device_info_button->SetIcon("device_file_info");
         m_idle_lamp_control_button->SetIcon("device_lamp_control");
-        m_idle_filter_button->SetIcon("device_filter");
+        if (m_g3uMachine && !m_clearFanPressed) {
+            m_idle_filter_button->SetIcon("device_filter_offline");
+        } else {
+            m_idle_filter_button->SetIcon("device_filter");
+        }
         m_idle_device_info_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onDevInfoBtnClicked, this);
         m_idle_lamp_control_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onLampBtnClicked, this);
         m_idle_filter_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onFilterBtnClicked, this);
@@ -1151,6 +1194,7 @@ void TempMixDevice::setCurId(int curId)
     }
     m_cur_id = curId;
     m_panel_circula_filter->setCurId(curId);
+    m_clearFanPressed = true;
     reInitPage();
 }
 
@@ -1186,7 +1230,7 @@ void TempMixDevice::setDevProductAuthority(const fnet_dev_product_t &data)
         m_idle_lamp_control_button->SetIcon("device_lamp_offline");
         m_idle_lamp_control_button->Enable(false);
     }
-    if (!fanCtrl) {
+    if (!m_g3uMachine  && !fanCtrl) {
         m_idle_filter_button->SetIcon("device_filter_offline");
         m_idle_filter_button->Enable(false);
         m_idle_filter_button->SetBackgroundColor(wxColour(255, 255, 255));
@@ -1203,36 +1247,111 @@ void TempMixDevice::lostFocusmodifyTemp()
     double bottom_temp;
     double mid_temp;
     bool   bTop = m_top_btn->GetTagTemp().ToDouble(&top_temp);
-    if (!bTop || top_temp < 0) {
-        m_top_btn->SetTagTemp(m_right_target_temp, true);
-        top_temp = m_right_target_temp;
+    bool   bBottom = m_bottom_btn->GetTagTemp().ToDouble(&bottom_temp);
+    bool   bMid    = m_mid_btn->GetTagTemp().ToDouble(&mid_temp);
+    if (!m_g3uMachine) {
+        if (!bTop || top_temp < 0) {
+            m_top_btn->SetTagTemp(m_right_target_temp, true);
+            top_temp = m_right_target_temp;
+        }
+        if (top_temp > 280) {
+            top_temp = 280;
+            m_top_btn->SetTagTemp(top_temp, true);
+            m_right_target_temp = top_temp;
+        } else if (top_temp < 0) {
+            top_temp = 0;
+            m_top_btn->SetTagTemp(top_temp, true);
+            m_right_target_temp = top_temp;
+        }
+        if (!bBottom || bottom_temp < 0) {
+            m_bottom_btn->SetTagTemp(m_plat_target_temp, true);
+            bottom_temp = m_plat_target_temp;
+        }
+        if (bottom_temp > 110) {
+            bottom_temp = 110;
+            m_bottom_btn->SetTagTemp(bottom_temp, true);
+            m_plat_target_temp = bottom_temp;
+        } else if (bottom_temp < 0) {
+            bottom_temp = 0;
+            m_bottom_btn->SetTagTemp(bottom_temp, true);
+            m_plat_target_temp = bottom_temp;
+        }
+        //Slic3r::GUI::ComTempCtrl* tempCtrl = new Slic3r::GUI::ComTempCtrl(bottom_temp, top_temp, 0, mid_temp);
+        //Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, tempCtrl);
+    } else {
+        //right
+        if (!bTop || top_temp < 0) {
+            m_top_btn->SetTagTemp(m_right_target_temp, true);
+            top_temp = m_right_target_temp;
+        }
+        if (top_temp > 350) {
+            top_temp = 350;
+            m_top_btn->SetTagTemp(top_temp, true);
+            m_right_target_temp = top_temp;
+        } else if (top_temp < 0) {
+            top_temp = 0;
+            m_top_btn->SetTagTemp(top_temp, true);
+            m_right_target_temp = top_temp;
+        }
+        //left
+        if (!bBottom || bottom_temp < 0) {
+            m_bottom_btn->SetTagTemp(m_plat_target_temp, true);
+            bottom_temp = m_plat_target_temp;
+        }
+        if (bottom_temp > 350) {
+            bottom_temp = 350;
+            m_bottom_btn->SetTagTemp(bottom_temp, true);
+            m_plat_target_temp = bottom_temp;
+        } else if (bottom_temp < 0) {
+            bottom_temp = 0;
+            m_bottom_btn->SetTagTemp(bottom_temp, true);
+            m_plat_target_temp = bottom_temp;
+        }
+        //bottom
+        if (!bMid || mid_temp < 0) {
+            m_mid_btn->SetTagTemp(m_cavity_target_temp, true);
+            mid_temp = m_cavity_target_temp;
+        }
+        if (mid_temp > 110) {
+            mid_temp = 110;
+            m_mid_btn->SetTagTemp(mid_temp, true);
+            m_cavity_target_temp = mid_temp;
+        } else if (mid_temp < 0) {
+            mid_temp = 0;
+            m_mid_btn->SetTagTemp(mid_temp, true);
+            m_cavity_target_temp = mid_temp;
+        }
+
+        //Slic3r::GUI::ComTempCtrl* tempCtrl = new Slic3r::GUI::ComTempCtrl(mid_temp, top_temp, bottom_temp, 0);
+        //Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, tempCtrl);
     }
-    if (top_temp > 280) {
-        top_temp = 280;
-        m_top_btn->SetTagTemp(top_temp, true);
-        m_right_target_temp = top_temp;
-    } else if (top_temp < 0) {
-        top_temp = 0;
-        m_top_btn->SetTagTemp(top_temp, true);
-        m_right_target_temp = top_temp;
+}
+
+void TempMixDevice::changeMachineType(unsigned short pid)
+{
+    switch (pid) {
+    case 0x0023: //"adventurer_5m"
+    case 0x0024: //"adventurer_5m_pro"
+        m_g3uMachine = false;
+        m_top_btn->SetNormalIcon("device_top_temperature");
+        m_top_btn->SetIconNormal();
+        m_bottom_btn->SetNormalIcon("device_bottom_temperature");
+        m_bottom_btn->SetIconNormal();
+        m_mid_btn->SetNormalIcon("device_mid_temperature");
+        m_mid_btn->SetIconNormal();
+        m_mid_btn->SetReadOnly(true);
+        break;
+    case 0x001F: //"guider_3_ultra"
+        m_g3uMachine = true;
+        m_top_btn->SetNormalIcon("device_right_temperature");
+        m_top_btn->SetIconNormal();
+        m_bottom_btn->SetNormalIcon("device_left_temperature");
+        m_bottom_btn->SetIconNormal();
+        m_mid_btn->SetNormalIcon("device_bottom_temperature");
+        m_mid_btn->SetIconNormal();
+        m_mid_btn->SetReadOnly(false);
+        break;
     }
-    bool bBottom = m_bottom_btn->GetTagTemp().ToDouble(&bottom_temp);
-    if (!bBottom || bottom_temp < 0) {
-        m_bottom_btn->SetTagTemp(m_plat_target_temp, true);
-        bottom_temp = m_plat_target_temp;
-    }
-    if (bottom_temp > 110) {
-        bottom_temp = 110;
-        m_bottom_btn->SetTagTemp(bottom_temp, true);
-        m_plat_target_temp = bottom_temp;
-    } else if (bottom_temp < 0) {
-        bottom_temp = 0;
-        m_bottom_btn->SetTagTemp(bottom_temp, true);
-        m_plat_target_temp = bottom_temp;
-    }
-    bool bMid = m_mid_btn->GetTagTemp().ToDouble(&mid_temp);
-    Slic3r::GUI::ComTempCtrl *tempCtrl = new Slic3r::GUI::ComTempCtrl(bottom_temp, top_temp, 0, mid_temp);
-    Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, tempCtrl);
 }
 
 
@@ -1256,7 +1375,7 @@ void TempMixDevice::create_panel(wxWindow* parent,bool idle, wxString nozzleTemp
                                    wxString("device_top_temperature"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER); 
     m_top_btn->SetMinTemp(20);
     m_top_btn->SetMaxTemp(120);
-    m_top_btn->SetMinSize((wxSize(FromDIP(106), FromDIP(29))));
+    m_top_btn->SetMinSize((wxSize(FromDIP(106), FromDIP(20))));
     m_top_btn->SetBorderWidth(0);
     StateColor tempinput_text_colour(std::make_pair(wxColour(51, 51, 51), (int) StateColor::Disabled),
                                      std::make_pair(wxColour(48, 58, 60), (int) StateColor::Normal));
@@ -1302,7 +1421,7 @@ void TempMixDevice::create_panel(wxWindow* parent,bool idle, wxString nozzleTemp
     //m_bottom_btn->Bind(wxEVT_LEFT_UP, [this](wxMouseEvent &event) { event.Skip(false); });
     m_bottom_btn->SetMinTemp(20);
     m_bottom_btn->SetMaxTemp(120);
-    m_bottom_btn->SetMinSize((wxSize(FromDIP(106), FromDIP(29))));
+    m_bottom_btn->SetMinSize((wxSize(FromDIP(106), FromDIP(20))));
     m_bottom_btn->SetBorderWidth(0);
     m_bottom_btn->SetBorderColor(tempinput_border_colour);
     m_bottom_btn->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent &event) {
@@ -1331,17 +1450,25 @@ void TempMixDevice::create_panel(wxWindow* parent,bool idle, wxString nozzleTemp
                                           wxALIGN_CENTER);
     
 
-    m_mid_btn->Bind(wxEVT_ENTER_WINDOW, [this](wxMouseEvent &event) { event.Skip(false); });
-    m_mid_btn->Bind(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent &event) { event.Skip(false); });
-    m_mid_btn->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &event) { event.Skip(false); });
-    m_mid_btn->Bind(wxEVT_LEFT_UP, [this](wxMouseEvent &event) { event.Skip(false); });
+    //m_mid_btn->Bind(wxEVT_ENTER_WINDOW, [this](wxMouseEvent &event) { event.Skip(false); });
+    //m_mid_btn->Bind(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent &event) { event.Skip(false); });
+    //m_mid_btn->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &event) { event.Skip(false); });
+    //m_mid_btn->Bind(wxEVT_LEFT_UP, [this](wxMouseEvent &event) { event.Skip(false); });
     m_mid_btn->SetMinTemp(20);
     m_mid_btn->SetMaxTemp(120);
-    m_mid_btn->SetMinSize((wxSize(FromDIP(106), FromDIP(29))));
+    m_mid_btn->SetMinSize((wxSize(FromDIP(106), FromDIP(20))));
     m_mid_btn->SetBorderWidth(0);
     m_mid_btn->SetReadOnly(true);
-    m_mid_btn->SetTextBindInput();
+    //m_mid_btn->SetTextBindInput();
     m_mid_btn->SetBorderColor(tempinput_border_colour);
+    m_mid_btn->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& event) {
+        event.Skip();
+        lostFocusmodifyTemp();
+    });
+    m_mid_btn->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent& event) {
+        event.Skip();
+        lostFocusmodifyTemp();
+    });
 
     bSizer_temperature->Add(m_mid_btn, wxSizerFlags(1).Expand());
 
@@ -1354,7 +1481,7 @@ void TempMixDevice::create_panel(wxWindow* parent,bool idle, wxString nozzleTemp
     //添加空白间距
     auto m_panel_separotor5 = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     m_panel_separotor5->SetBackgroundColour(wxColour(240,240,240));
-    m_panel_separotor5->SetMinSize(wxSize(-1, FromDIP(15)));
+    m_panel_separotor5->SetMinSize(wxSize(-1, FromDIP(10)));
 
     idleSizer->Add(m_panel_separotor5,0, wxALL | wxEXPAND, 0);
 
@@ -1417,7 +1544,7 @@ void TempMixDevice::setupLayoutIdleDeviceState(wxBoxSizer *deviceStateSizer, wxP
 //    m_idle_device_info_button->SetBackgroundColor(wxColour(217, 234, 255));
     m_idle_device_info_button->SetBorderColor(wxColour(255, 255, 255));
     // m_idle_device_info_button->SetTextColor(wxColour(51,51,51));
-    m_idle_device_info_button->SetMinSize((wxSize(FromDIP(108), FromDIP(29))));
+    m_idle_device_info_button->SetMinSize((wxSize(FromDIP(108), FromDIP(20))));
     m_idle_device_info_button->SetCornerRadius(0);
     //bSizer_control_lamp->Add(m_idle_device_info_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM , FromDIP(4));
     bSizer_control_lamp->Add(m_idle_device_info_button, wxSizerFlags(1).Expand());
@@ -1430,7 +1557,7 @@ void TempMixDevice::setupLayoutIdleDeviceState(wxBoxSizer *deviceStateSizer, wxP
     m_idle_lamp_control_button->SetBackgroundColor(wxColour(255, 255, 255));
     m_idle_lamp_control_button->SetBorderColor(wxColour(255, 255, 255));
     // m_idle_lamp_control_button->SetTextColor(wxColour(51,51,51));
-    m_idle_lamp_control_button->SetMinSize((wxSize(FromDIP(108), FromDIP(29))));
+    m_idle_lamp_control_button->SetMinSize((wxSize(FromDIP(108), FromDIP(20))));
     m_idle_lamp_control_button->SetCornerRadius(0);
 
     //bSizer_control_lamp->Add(m_idle_lamp_control_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
@@ -1444,7 +1571,7 @@ void TempMixDevice::setupLayoutIdleDeviceState(wxBoxSizer *deviceStateSizer, wxP
     m_idle_filter_button->SetBackgroundColor(wxColour(255, 255, 255));
     m_idle_filter_button->SetBorderColor(wxColour(255, 255, 255));
     // m_idle_filter_button->SetTextColor(wxColour(51,51,51));
-    m_idle_filter_button->SetMinSize((wxSize(FromDIP(108), FromDIP(29))));
+    m_idle_filter_button->SetMinSize((wxSize(FromDIP(108), FromDIP(20))));
     m_idle_filter_button->SetCornerRadius(0);
     //bSizer_control_lamp->Add(m_idle_filter_button, 0, wxALIGN_CENTER_VERTICAL | wxBOTTOM, FromDIP(4));
     bSizer_control_lamp->Add(m_idle_filter_button, wxSizerFlags(1).Expand());
@@ -1525,24 +1652,38 @@ void TempMixDevice::setupLayoutDeviceInfo(wxBoxSizer *deviceInfoSizer, wxPanel *
     serial_number->SetForegroundColour(wxColour(153, 153, 153));
     serial_number->SetBackgroundColour(wxColour(255, 255, 255));
 
+    auto cumulative_print_time = new Label(m_panel_device_info, _L("Printing Time"));
+    // cumulative_print_time->SetFont(wxFont(wxFontInfo(16)));
+    cumulative_print_time->SetForegroundColour(wxColour(153, 153, 153));
+    cumulative_print_time->SetBackgroundColour(wxColour(255, 255, 255));
+
     auto private_material = new Label(m_panel_device_info, _L("Private Material Statistics"));
     //private_material->SetFont(wxFont(wxFontInfo(16)));
     private_material->SetForegroundColour(wxColour(153, 153, 153));
     private_material->SetBackgroundColour(wxColour(255, 255, 255));
 
+    auto ip_addr = new Label(m_panel_device_info, _L("IP-Address"));
+    // ip_addr->SetFont(wxFont(wxFontInfo(16)));
+    ip_addr->SetForegroundColour(wxColour(153, 153, 153));
+    ip_addr->SetBackgroundColour(wxColour(255, 255, 255));
+
     bSizer_device_name->AddSpacer(FromDIP(2));
     bSizer_device_name->Add(machine_type, 0, wxALL | wxEXPAND, 0);
-    bSizer_device_name->AddSpacer(FromDIP(18));
+    bSizer_device_name->AddSpacer(FromDIP(13));
     bSizer_device_name->Add(spray_nozzle, 0, wxALL | wxEXPAND, 0);
-    bSizer_device_name->AddSpacer(FromDIP(18));
+    bSizer_device_name->AddSpacer(FromDIP(13));
     bSizer_device_name->Add(print_size, 0, wxALL | wxEXPAND, 0);
-    bSizer_device_name->AddSpacer(FromDIP(18));
+    bSizer_device_name->AddSpacer(FromDIP(13));
     bSizer_device_name->Add(firmware_version, 0, wxALL | wxEXPAND, 0);
-    bSizer_device_name->AddSpacer(FromDIP(18));
+    bSizer_device_name->AddSpacer(FromDIP(13));
     bSizer_device_name->Add(serial_number, 0, wxALL | wxEXPAND, 0);
-    bSizer_device_name->AddSpacer(FromDIP(18));
+    bSizer_device_name->AddSpacer(FromDIP(13));
+    bSizer_device_name->Add(cumulative_print_time, 0, wxALL | wxEXPAND, 0);
+    bSizer_device_name->AddSpacer(FromDIP(13));
     bSizer_device_name->Add(private_material, 0, wxALL | wxEXPAND, 0);
-    bSizer_device_name->AddSpacer(FromDIP(15));
+    bSizer_device_name->AddSpacer(FromDIP(13));
+    bSizer_device_name->Add(ip_addr, 0, wxALL | wxEXPAND, 0);
+    bSizer_device_name->AddSpacer(FromDIP(12));
     //bSizer_device_name->AddStretchSpacer();
 
     m_panel_device_info->SetSizer(bSizer_device_name);
@@ -1588,27 +1729,41 @@ void TempMixDevice::setupLayoutDeviceInfo(wxBoxSizer *deviceInfoSizer, wxPanel *
     m_serial_number_data->SetForegroundColour(wxColour(51, 51, 51));
     m_serial_number_data->SetBackgroundColour(wxColour(255, 255, 255));
 
+    m_cumulative_print_time = new Label(m_panel_device_data, ("0 hours"));
+    // m_cumulative_print_time->SetFont(wxFont(wxFontInfo(16)));
+    m_cumulative_print_time->SetForegroundColour(wxColour(51, 51, 51));
+    m_cumulative_print_time->SetBackgroundColour(wxColour(255, 255, 255));
+
     m_private_material_data = new Label(m_panel_device_data, ("1600.9 m"));
     //m_private_material_data->SetFont(wxFont(wxFontInfo(16)));
     m_private_material_data->SetForegroundColour(wxColour(51, 51, 51));
     m_private_material_data->SetBackgroundColour(wxColour(255, 255, 255));
 
+    m_ipAddr = new Label(m_panel_device_data, ("127.0.0.0"));
+    // m_ipAddr->SetFont(wxFont(wxFontInfo(16)));
+    m_ipAddr->SetForegroundColour(wxColour(51, 51, 51));
+    m_ipAddr->SetBackgroundColour(wxColour(255, 255, 255));
+
     bSizer_device_data->AddSpacer(FromDIP(2));
     bSizer_device_data->Add(m_machine_type_data, 0, wxALL | wxEXPAND, 0);
-    bSizer_device_data->AddSpacer(FromDIP(18));
+    bSizer_device_data->AddSpacer(FromDIP(13));
     bSizer_device_data->Add(m_spray_nozzle_data, 0, wxALL | wxEXPAND, 0);
-    bSizer_device_data->AddSpacer(FromDIP(18));
+    bSizer_device_data->AddSpacer(FromDIP(13));
     bSizer_device_data->Add(m_print_size_data, 0, wxALL | wxEXPAND, 0);
-    bSizer_device_data->AddSpacer(FromDIP(18));
+    bSizer_device_data->AddSpacer(FromDIP(13));
     bSizer_device_data->Add(m_firmware_version_data, 0, wxALL | wxEXPAND, 0);
-    bSizer_device_data->AddSpacer(FromDIP(18));
+    bSizer_device_data->AddSpacer(FromDIP(13));
     bSizer_device_data->Add(m_serial_number_data, 0, wxALL | wxEXPAND, 0);
-    bSizer_device_data->AddSpacer(FromDIP(18));
+    bSizer_device_data->AddSpacer(FromDIP(13));
+    bSizer_device_data->Add(m_cumulative_print_time, 0, wxALL | wxEXPAND, 0);
+    bSizer_device_data->AddSpacer(FromDIP(13));
     bSizer_device_data->Add(m_private_material_data, 0, wxALL | wxEXPAND, 0);
+    bSizer_device_data->AddSpacer(FromDIP(13));
+    bSizer_device_data->Add(m_ipAddr, 0, wxALL | wxEXPAND, 0);
 #ifdef __WIN32__
-    bSizer_device_data->AddSpacer(FromDIP(15));
+    bSizer_device_data->AddSpacer(FromDIP(12));
 #else if __APPLE__
-    bSizer_device_data->AddSpacer(FromDIP(18));
+    bSizer_device_data->AddSpacer(FromDIP(24));
 #endif
 
     m_panel_device_data->SetSizer(bSizer_device_data);
@@ -1630,12 +1785,16 @@ void TempMixDevice::connectEvent()
 
 void TempMixDevice::onDevInfoBtnClicked(wxMouseEvent &event)
 {
-    event.Skip();
+    //event.Skip();
     if (m_panel_idle_device_info) {
-        m_panel_idle_device_info->Show();
-        m_idle_device_info_button->SetBackgroundColor(wxColour(217, 234, 255));
+        bool bShow = !m_panel_idle_device_info->IsShown();
+        m_panel_idle_device_info->Show(bShow);
         m_panel_idle_device_info->Layout();
-        m_panel_idle_device_info->Refresh();
+        if (bShow) {
+            m_idle_device_info_button->SetBackgroundColor(wxColour(217, 234, 255));
+        } else {
+            m_idle_device_info_button->SetBackgroundColor(wxColour(255, 255, 255));
+        }
     }
     if (m_panel_circula_filter) {
         m_panel_circula_filter->Hide();
@@ -1674,11 +1833,31 @@ void TempMixDevice::onLampBtnClicked(wxMouseEvent &event)
 
 void TempMixDevice::onFilterBtnClicked(wxMouseEvent &event) 
 {
-    event.Skip();
-    if (m_panel_circula_filter) {
-        m_panel_circula_filter->Show();
-        m_idle_filter_button->SetBackgroundColor(wxColour(217, 234, 255));
+    //event.Skip();
+    if (m_g3uMachine) {
+        m_clearFanPressed = !m_clearFanPressed;
+        if (m_clearFanPressed) {
+            m_idle_filter_button->SetIcon("device_filter");
+            Slic3r::GUI::ComClearFanCtrl* clearFan = new Slic3r::GUI::ComClearFanCtrl(OPEN);
+            Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, clearFan);
+        } else {
+            m_idle_filter_button->SetIcon("device_filter_offline");
+            Slic3r::GUI::ComClearFanCtrl* clearFan = new Slic3r::GUI::ComClearFanCtrl(CLOSE);
+            Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, clearFan);
+        }
+    } else {
+        if (m_panel_circula_filter) {
+            bool bShow = !m_panel_circula_filter->IsShown();
+            m_panel_circula_filter->Show(bShow);
+            m_panel_circula_filter->Layout();
+            if (bShow) {
+                m_idle_filter_button->SetBackgroundColor(wxColour(217, 234, 255));
+            } else {
+                m_idle_filter_button->SetBackgroundColor(wxColour(255, 255, 255));
+            }
+        }
     }
+
     if (m_panel_idle_device_info) {
         m_panel_idle_device_info->Hide();
     }
@@ -1710,29 +1889,59 @@ void TempMixDevice::modifyTemp(
         m_top_btn->Enable(true);
         m_bottom_btn->Enable(true);
         m_mid_btn->Enable(true);
-        m_top_btn->SetLabel(nozzleTemp);
-        m_bottom_btn->SetLabel(platformTemp);
-        m_mid_btn->SetLabel(cavityTemp);
-        if (m_right_target_temp != topTemp && !m_top_btn->HasFocus()) {
-            m_right_target_temp = topTemp;
-            m_top_btn->SetTagTemp(topTemp, true);
+        if (!m_g3uMachine) {
+            m_top_btn->SetLabel(nozzleTemp);
+            m_bottom_btn->SetLabel(platformTemp);
+            m_mid_btn->SetLabel(cavityTemp);
+            if (m_right_target_temp != topTemp && !m_top_btn->HasFocus()) {
+                m_right_target_temp = topTemp;
+                m_top_btn->SetTagTemp(topTemp, true);
+            }
+            if (m_plat_target_temp != bottomTemp && !m_bottom_btn->HasFocus()) {
+                m_plat_target_temp = bottomTemp;
+                m_bottom_btn->SetTagTemp(bottomTemp, true);
+            }
+            if (m_cavity_target_temp != chamberTemp && !m_mid_btn->HasFocus()) {
+                m_cavity_target_temp = chamberTemp;
+                m_mid_btn->SetTagTemp(chamberTemp, true);
+            }
+        } else {
+            m_top_btn->SetLabel(nozzleTemp);
+            m_bottom_btn->SetLabel(platformTemp);
+            m_mid_btn->SetLabel(cavityTemp);
+            if (m_right_target_temp != topTemp && !m_top_btn->HasFocus()) {
+                m_right_target_temp = topTemp;
+                m_top_btn->SetTagTemp(topTemp, true);
+            }
+            if (m_plat_target_temp != bottomTemp && !m_bottom_btn->HasFocus()) {
+                m_plat_target_temp = bottomTemp;
+                m_bottom_btn->SetTagTemp(bottomTemp, true);
+            }
+            if (m_cavity_target_temp != chamberTemp && !m_mid_btn->HasFocus()) {
+                m_cavity_target_temp = chamberTemp;
+                m_mid_btn->SetTagTemp(chamberTemp, true);
+            }
         }
-        if (m_plat_target_temp != bottomTemp && !m_bottom_btn->HasFocus()) {
-            m_plat_target_temp = bottomTemp;
-            m_bottom_btn->SetTagTemp(bottomTemp, true);
-        }
-        m_mid_btn->SetTagTemp(chamberTemp, true);
     }
 }
 
-void TempMixDevice::modifyDeviceInfo(wxString machineType, wxString sprayNozzle, wxString printSize, wxString version, wxString number, wxString material)
+void TempMixDevice::modifyDeviceInfo(wxString machineType,
+                                     wxString sprayNozzle,
+                                     wxString printSize,
+                                     wxString version,
+                                     wxString number,
+                                     wxString time,
+                                     wxString material,
+                                     wxString ip)
 {
     m_machine_type_data->SetLabel(machineType);
     m_spray_nozzle_data->SetLabel(sprayNozzle);
     m_print_size_data->SetLabel(printSize);
     m_firmware_version_data->SetLabel(version);
     m_serial_number_data->SetLabel(number);
+    m_cumulative_print_time->SetLabel(time);
     m_private_material_data->SetLabel(material);
+    m_ipAddr->SetLabel(ip);
 }
 
 void TempMixDevice::modifyDeviceLampState(bool bOpen) 
@@ -1751,4 +1960,15 @@ void TempMixDevice::modifyDeviceLampState(bool bOpen)
 void TempMixDevice::modifyDeviceFilterState(bool internalOpen, bool externalOpen) 
 {
     m_panel_circula_filter->setBtnState(internalOpen, externalOpen);
+}
+
+void TempMixDevice::modifyG3UClearFanState(bool bOpen) 
+{
+    if (bOpen) {
+        m_idle_filter_button->SetIcon("device_filter");
+        m_clearFanPressed = true;
+    } else {
+        m_idle_filter_button->SetIcon("device_filter_offline");
+        m_clearFanPressed = false;
+    }
 }

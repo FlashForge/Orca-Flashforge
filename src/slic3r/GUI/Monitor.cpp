@@ -126,29 +126,30 @@ wxDEFINE_EVENT(EVT_SWITCH_TO_DEVICE_STATUS, wxCommandEvent);
     m_select_machine.Bind(EVT_FINISHED_UPDATE_MACHINE_LIST, [this](wxCommandEvent& e) {
         m_side_tools->start_interval();
     });
-    //m_device_list_panel->Bind(EVT_DEVICE_ITEM_SELECTED, [this](wxCommandEvent &event) {
-    Bind(EVT_SWITCH_TO_DEVICE_STATUS, [this](wxCommandEvent &event) {
+#if 0
+    Bind(EVT_ALREADY_READ_HMS, [this](wxCommandEvent& e) {
+        auto key = e.GetString().ToStdString();
+        auto iter = m_hms_panel->temp_hms_list.find(key);
+        if (iter != m_hms_panel->temp_hms_list.end()) {
+            m_hms_panel->temp_hms_list[key].already_read = true;
+        }
+
+        update_hms_tag();
+        e.Skip();
+    });
+    Bind(EVT_JUMP_TO_HMS, &MonitorPanel::jump_to_HMS, this);
+#endif
+    Bind(EVT_SWITCH_TO_DEVICE_STATUS, [this](wxCommandEvent& event) {
         m_tabpanel->SetSelection(1);
         m_status_info_panel_page->setCurId(event.GetInt());
         event.Skip();
     });
-    Bind(EVT_SWITCH_TO_DEVICE_LIST, [this](wxCommandEvent &event) {
+    Bind(EVT_SWITCH_TO_DEVICE_LIST, [this](wxCommandEvent& event) {
         m_tabpanel->SetSelection(0);
         event.Skip();
     });
-    Slic3r::GUI::MultiComMgr::inst()->Bind(COM_WAN_DEV_MAINTAIN_EVENT, [this](ComWanDevMaintainEvent &event) { 
-        event.Skip();
-        if (event.login && !event.online) {
-            if (m_side_tools) {
-                m_side_tools->setAccountState(false);
-            }
-        } else if (event.login && event.online) {
-            if (m_side_tools) {
-                m_side_tools->setAccountState(true);
-            }
-        }
-    });
-    wxGetApp().Bind(EVT_LOGIN_OUT, [this](wxCommandEvent &event) {
+    Slic3r::GUI::MultiComMgr::inst()->Bind(COM_WAN_DEV_MAINTAIN_EVENT, &MonitorPanel::onComWanDevMaintainEvent, this);
+    wxGetApp().Bind(EVT_LOGIN_OUT, [this](wxCommandEvent& event) {
         if (m_side_tools) {
             m_side_tools->setAccountState(true);
         }
@@ -159,6 +160,9 @@ MonitorPanel::~MonitorPanel()
 {
     //m_side_tools->get_panel()->Disconnect(wxEVT_LEFT_DOWN, wxMouseEventHandler(MonitorPanel::on_printer_clicked), NULL, this);
     m_side_tools->get_panel()->Disconnect(EVT_DEV_LIST_BTN_CLICKED, wxMouseEventHandler(MonitorPanel::on_printer_clicked), NULL, this);
+    delete m_side_tools;
+    m_side_tools = nullptr;
+    Slic3r::GUI::MultiComMgr::inst()->Unbind(COM_WAN_DEV_MAINTAIN_EVENT, &MonitorPanel::onComWanDevMaintainEvent, this);
     if (m_refresh_timer)
         m_refresh_timer->Stop();
     delete m_refresh_timer;
@@ -209,7 +213,7 @@ void MonitorPanel::init_tabpanel()
     //m_status_info_panel        = new StatusPanel(m_tabpanel);
     //m_tabpanel->AddPage(m_status_info_panel, _L("Device Status"), "", false);
     m_status_info_panel_page   = new SingleDeviceState(m_tabpanel);
-    m_tabpanel->AddPage(m_status_info_panel_page, _L("Device Status"), "", false);
+    m_tabpanel->AddPage(m_status_info_panel_page, _CTX("Device Status", "Flashforge"), "", false);
 
     //m_media_file_panel = new MediaFilePanel(m_tabpanel);
     //m_tabpanel->AddPage(m_media_file_panel, _L("SD Card"), "", false);
@@ -217,6 +221,9 @@ void MonitorPanel::init_tabpanel()
 
     //m_upgrade_panel = new UpgradePanel(m_tabpanel);
     //m_tabpanel->AddPage(m_upgrade_panel, _L("Update"), "", false);
+
+    //m_hms_panel = new HMSPanel(m_tabpanel);
+    //m_tabpanel->AddPage(m_hms_panel, "HMS","", false);
 
     //m_hms_panel = new HMSPanel(m_tabpanel);
     //m_tabpanel->AddPage(m_hms_panel, _L("HMS"),"", false);
@@ -287,17 +294,20 @@ void MonitorPanel::select_machine(const std::string &machine_sn)
 
 void MonitorPanel::on_update_all(wxMouseEvent &event)
 {
-    update_all();
-    Layout();
-    Refresh();
+    if (update_flag) {
+        update_all();
+        Layout();
+        Refresh();
+    }
 }
 
  void MonitorPanel::on_timer(wxTimerEvent& event)
 {
-    update_all();
-
-    Layout();
-    Refresh();
+     if (update_flag) {
+         update_all();
+         Layout();
+         Refresh();
+     }
 }
 
 void MonitorPanel::on_select_printer(wxCommandEvent &event)
@@ -310,6 +320,10 @@ void MonitorPanel::on_select_printer(wxCommandEvent &event)
 
     Slic3r::DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
     if (!dev) return;
+
+    if ( dev->get_selected_machine() && (dev->get_selected_machine()->dev_id != event.GetString().ToStdString()) && m_hms_panel) {
+        m_hms_panel->clear_hms_tag();
+    }
 
     if (!dev->set_selected_machine(event.GetString().ToStdString()))
         return;*/
@@ -330,11 +344,11 @@ void MonitorPanel::on_printer_clicked(wxMouseEvent &event)
     auto mouse_pos = ClientToScreen(event.GetPosition());
     wxPoint rect = m_side_tools->ClientToScreen(wxPoint(0, 0));
     if (!m_side_tools->is_in_interval()) {
-        wxPoint pos = m_side_tools->ClientToScreen(wxPoint(0, 0));
+        wxPoint pos      = m_side_tools->ClientToScreen(wxPoint(0, 0));
         wxPoint mainPos  = wxGetApp().mainframe->ClientToScreen(wxPoint(0, 0));
         int     toolPosy = pos.y - mainPos.y;
         pos.y += m_side_tools->GetRect().height;
-        //pos.x = pos.x < 0? 0:pos.x;
+        // pos.x = pos.x < 0? 0:pos.x;
         m_select_machine.Move(pos);
 
         wxSize sizeAll = wxGetApp().mainframe->GetSize();   
@@ -359,24 +373,39 @@ void MonitorPanel::on_size(wxSizeEvent &event)
     Refresh();
 }
 
+void MonitorPanel::onComWanDevMaintainEvent(ComWanDevMaintainEvent& event) 
+{
+    std::lock_guard<std::mutex> guard(m_mutex);
+    if (event.login && !event.online) {
+        if (m_side_tools) {
+            m_side_tools->setAccountState(false);
+        }
+    } else if (event.login && event.online) {
+        if (m_side_tools) {
+            m_side_tools->setAccountState(true);
+        }
+    }
+    event.Skip();
+}
+
 void MonitorPanel::update_all()
 {
     DeviceObjectOpr       *devOpr  = wxGetApp().getDeviceObjectOpr();
     if (!devOpr)
         return;
     DeviceObject *obj = devOpr->get_selected_machine();
-
-    // BBS check mqtt connections if user is login
-    //if (wxGetApp().is_user_login()) {
-    //    dev->check_pushing();
-    //    // check mqtt connection and reconnect if disconnected
-    //    try {
-    //        m_agent->refresh_connection();
-    //    } catch (...) {
-    //        ;
-    //    }
-    //}
-
+#if 0
+    //BBS check mqtt connections if user is login
+    if (wxGetApp().is_user_login()) {
+        dev->check_pushing();
+        // check mqtt connection and reconnect if disconnected
+        try {
+            m_agent->refresh_connection();
+        } catch (...) {
+            ;
+        }
+    }
+#endif
     if (obj) {
         //wxGetApp().reset_to_active();
         if (obj->connection_type() != last_conn_type) {
@@ -384,11 +413,13 @@ void MonitorPanel::update_all()
         }
     }
 
-    // m_status_info_panel->obj = obj;
-    // m_status_info_panel->m_media_play_ctrl->SetMachineObject(obj);
-    //m_upgrade_panel->update(obj);
-    //m_media_file_panel->SetMachineObject(obj);
-    //m_side_tools->update_device_status(obj);
+#if 0
+    m_status_info_panel->obj = obj;
+    m_upgrade_panel->update(obj);
+    m_status_info_panel->m_media_play_ctrl->SetMachineObject(obj);
+    m_media_file_panel->SetMachineObject(obj);
+    m_side_tools->update_status(obj);
+#endif
 
     if (!obj && m_side_tools && !m_side_tools->getAccountState()) {
         show_status((int) MONITOR_LOGIN_OFFLINE);
@@ -396,9 +427,12 @@ void MonitorPanel::update_all()
     }
     if (!obj) {
         show_status((int) MONITOR_NO_PRINTER);
+#if 0
+        m_hms_panel->clear_hms_tag();
+        m_tabpanel->GetBtnsListCtrl()->showNewTag(3, false);
+#endif
         return;
     }
-
     if (m_connect_fail_time0 > 0) {
         time_t connect_failed_time2 = time(nullptr);
         if ((connect_failed_time2 - m_connect_fail_time0) /*/ (double)CLOCKS_PER_SEC*/ > 10) {
@@ -439,11 +473,16 @@ void MonitorPanel::update_all()
         return;
     }
 
-    // if (m_status_info_panel->IsShown()) {
-    //     m_status_info_panel->update(obj);
-    // }
+#if 0
+    if (m_status_info_panel->IsShown()) {
+        m_status_info_panel->update(obj);
+    }
 
-    /*if (m_hms_panel->IsShown()) {
+    if (m_status_info_panel->IsShown()) {
+        m_status_info_panel->update(obj);
+    }
+
+    if (m_hms_panel->IsShown() ||  (obj->hms_list.size() != m_hms_panel->temp_hms_list.size())) {
         m_hms_panel->update(obj);
     }
 
@@ -451,7 +490,25 @@ void MonitorPanel::update_all()
     if (m_upgrade_panel->IsShown()) {
         m_upgrade_panel->update(obj);
     }
-#endif*/
+#endif
+
+    update_hms_tag();
+#endif
+}
+
+void MonitorPanel::update_hms_tag()
+{
+#if 0
+    for (auto hmsitem : m_hms_panel->temp_hms_list) {
+        if (!hmsitem.second.already_read) {
+            //show HMS new tag
+            m_tabpanel->GetBtnsListCtrl()->showNewTag(3, true);
+            return;
+        }
+    }
+
+    m_tabpanel->GetBtnsListCtrl()->showNewTag(3, false);
+#endif
 }
 
 bool MonitorPanel::Show(bool show)
@@ -463,6 +520,8 @@ bool MonitorPanel::Show(bool show)
     NetworkAgent* m_agent = wxGetApp().getAgent();
     DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
     if (show) {
+        start_update();
+
         m_refresh_timer->Stop();
         m_refresh_timer->SetOwner(this);
         m_refresh_timer->Start(REFRESH_INTERVAL);
@@ -481,6 +540,7 @@ bool MonitorPanel::Show(bool show)
             }
         }
     } else {
+        stop_update();
         m_refresh_timer->Stop();
     }
     return wxPanel::Show(show);
@@ -511,10 +571,10 @@ void MonitorPanel::show_status(int status)
         NetworkAgent* agent = wxGetApp().getAgent();
         json j;
         j["dev_id"] = obj ? obj->dev_id : "obj_nullptr";
-        if (status & (int)MonitorStatus::MONITOR_DISCONNECTED != 0) {
+        if ((status & (int)MonitorStatus::MONITOR_DISCONNECTED) != 0) {
             j["result"] = "failed";
         }
-        else if (status & (int)MonitorStatus::MONITOR_NORMAL != 0) {
+        else if ((status & (int)MonitorStatus::MONITOR_NORMAL) != 0) {
             j["result"] = "success";
         }
     }*/
@@ -546,10 +606,12 @@ void MonitorPanel::show_status(int status)
         }
         
     };
-    //m_status_info_panel->show_status(status);
-    //m_hms_panel->show_status(status);
-    //m_upgrade_panel->show_status(status);
-    //m_media_file_panel->Enable(status == MonitorStatus::MONITOR_NORMAL);
+#if 0
+    m_status_info_panel->show_status(status);
+    m_hms_panel->show_status(status);
+    m_upgrade_panel->show_status(status);
+    m_media_file_panel->Enable(status == MonitorStatus::MONITOR_NORMAL);
+#endif
 
     if (m_select_machine.IsShown()) {
         wxPoint pos = m_side_tools->ClientToScreen(wxPoint(0, 0));
@@ -580,6 +642,37 @@ void MonitorPanel::show_status(int status)
     Layout();
 //Thaw();
 }
+
+std::string MonitorPanel::get_string_from_tab(PrinterTab tab)
+{
+    switch (tab) {
+    case PT_STATUS :
+        return "status";
+    case PT_MEDIA:
+        return "sd_card";
+    case PT_UPDATE:
+        return "update";
+    case PT_HMS:
+        return "HMS";
+    case PT_DEBUG:
+        return "debug";
+    default:
+        return "";
+    }
+    return "";
+}
+
+void MonitorPanel::jump_to_HMS(wxCommandEvent& e)
+{
+#if 0
+    if (!this->IsShown())
+        return;
+    auto page = m_tabpanel->GetCurrentPage();
+    if (page && page != m_hms_panel)
+        m_tabpanel->SetSelection(PT_HMS);
+#endif
+}
+
 
 } // GUI
 } // Slic3r

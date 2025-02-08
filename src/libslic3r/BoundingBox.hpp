@@ -222,6 +222,8 @@ public:
     friend BoundingBox get_extents_rotated(const Points &points, double angle);
 };
 
+using BoundingBoxes = std::vector<BoundingBox>;
+
 class BoundingBox3  : public BoundingBox3Base<Vec3crd> 
 {
 public:

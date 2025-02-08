@@ -1,5 +1,6 @@
 #include "BuildVolume.hpp"
 #include "ClipperUtils.hpp"
+#include "TriangleMesh.hpp"
 #include "Geometry/ConvexHull.hpp"
 #include "GCode/GCodeProcessor.hpp"
 #include "Point.hpp"
@@ -417,6 +418,17 @@ std::string_view BuildVolume::type_name(BuildVolume_Type type)
     // make visual studio happy
     assert(false);
     return {};
+}
+
+indexed_triangle_set BuildVolume::bounding_mesh(bool scale) const
+{
+    auto max_pt3 = m_bboxf.max;
+    if (scale) {
+        return its_make_cube(scale_(max_pt3.x()), scale_(max_pt3.y()), scale_(max_pt3.z()));
+    }
+    else {
+        return its_make_cube(max_pt3.x(), max_pt3.y(), max_pt3.z());
+    }
 }
 
 } // namespace Slic3r

@@ -1,6 +1,7 @@
 #include "Arrange.hpp"
 #include "Print.hpp"
 #include "BoundingBox.hpp"
+#include "libslic3r.h"
 
 #include <libnest2d/backends/libslic3r/geometries.hpp>
 #include <libnest2d/optimizers/nlopt/subplex.hpp>
@@ -17,6 +18,7 @@
 #define BOOST_NO_CXX17_HDR_STRING_VIEW
 #endif
 
+#include <boost/log/trivial.hpp>
 #include <boost/multiprecision/integer.hpp>
 #include <boost/rational.hpp>
 
@@ -88,10 +90,10 @@ void update_arrange_params(ArrangeParams& params, const DynamicPrintConfig* prin
     params.brim_skirt_distance = skirt_distance;
     params.bed_shrink_x += params.brim_skirt_distance;
     params.bed_shrink_y += params.brim_skirt_distance;
-    // for sequential print, we need to inflate the bed because cleareance_radius is so large
+    // for sequential print, we need to inflate the bed because clearance_radius is so large
     if (params.is_seq_print) {
-        params.bed_shrink_x -= params.cleareance_radius / 2;
-        params.bed_shrink_y -= params.cleareance_radius / 2;
+        params.bed_shrink_x -= params.clearance_radius / 2;
+        params.bed_shrink_y -= params.clearance_radius / 2;
     }
 }
 
@@ -100,8 +102,12 @@ void update_selected_items_inflation(ArrangePolygons& selected, const DynamicPri
     Points      bedpts = get_shrink_bedpts(print_cfg, params);
     BoundingBox bedbb = Polygon(bedpts).bounding_box();
     // set obj distance for auto seq_print
-    if (params.min_obj_distance == 0 && params.is_seq_print)
-        params.min_obj_distance = scaled(params.cleareance_radius + 0.001);
+    if (params.is_seq_print) {
+        if (params.all_objects_are_short)
+            params.min_obj_distance = std::max(params.min_obj_distance, scaled(std::max(MAX_OUTER_NOZZLE_DIAMETER/2.f, params.object_skirt_offset*2)+0.001));
+        else
+            params.min_obj_distance = std::max(params.min_obj_distance, scaled(params.clearance_radius + 0.001)); // +0.001mm to avoid clearance check fail due to rounding error
+    }
     double brim_max = 0;
     bool plate_has_tree_support = false;
     std::for_each(selected.begin(), selected.end(), [&](ArrangePolygon& ap) {
@@ -127,8 +133,8 @@ void update_unselected_items_inflation(ArrangePolygons& unselected, const Dynami
 {
     float exclusion_gap = 1.f;
     if (params.is_seq_print) {
-        // bed_shrink_x is typically (-params.cleareance_radius / 2+5) for seq_print
-        exclusion_gap = std::max(exclusion_gap, params.cleareance_radius / 2 + params.bed_shrink_x + 1.f);  // +1mm gap so the exclusion region is not too close
+        // bed_shrink_x is typically (-params.clearance_radius / 2+5) for seq_print
+        exclusion_gap = std::max(exclusion_gap, params.clearance_radius / 2 + params.bed_shrink_x + 1.f);  // +1mm gap so the exclusion region is not too close
         // dont forget to move the excluded region
         for (auto& region : unselected) {
             if (region.is_virt_object) region.poly.translate(scaled(params.bed_shrink_x), scaled(params.bed_shrink_y));
@@ -228,16 +234,23 @@ void update_selected_items_axis_align(ArrangePolygons& selected, const DynamicPr
                 double c = m02 / m00 - cy * cy;
 
                 //if a and c are close, there is no dominant axis, then do not rotate
-                if (std::abs(a) < 1.5*std::abs(c) && std::abs(c) < 1.5*std::abs(a)) {
+                // ratio is always no more than 1
+                double ratio = std::abs(a) > std::abs(c) ? std::abs(c / a) :
+                    std::abs(c) > 0 ? std::abs(a / c) : 0;
+                if (ratio>0.66) {
                     validResult = false;
                 }
                 else {
                     angle = std::atan2(2 * b, (a - c)) / 2;
+                    angle = PI / 2 - angle;
+                    // if the angle is close to PI or -PI, it means the object is vertical, then do not rotate
+                    if (std::abs(std::abs(angle) - PI) < 0.01)
+                        angle = 0;
                     validResult = true;
                 }
             }
         }
-        if (validResult) { ap.rotation += (PI / 2 - angle); }
+        if (validResult) { ap.rotation += angle; }
     }
 }
 
@@ -323,8 +336,8 @@ static double fixed_overfit_topright_sliding(const std::tuple<double, Box> &resu
     Box pilebb = std::get<1>(result);
 
     auto shift = binbb.maxCorner() - pilebb.maxCorner();
-    shift.x() = std::max(0, shift.x()); // do not allow left shift
-    shift.y() = std::max(0, shift.y()); // do not allow bottom shift
+    shift.x() = std::max((coord_t)0, shift.x()); // do not allow left shift
+    shift.y() = std::max((coord_t)0, shift.y()); // do not allow bottom shift
     pilebb.minCorner() += shift;
     pilebb.maxCorner() += shift;
 
@@ -403,6 +416,18 @@ protected:
             if (dist_corner_y < 0) bindist += 10 * (-dist_corner_y);
             }
         bindist = norm(bindist);
+        return bindist;
+    }
+
+    double dist_to_bin(const Box& ibb, const ClipperLib::IntPoint& origin_pack, typename Packer::PlacementConfig::Alignment starting_point_alignment)
+    {
+        double bindist = 0;
+        if (starting_point_alignment == PConfig::Alignment::BOTTOM_LEFT)
+            bindist = norm(pl::distance(ibb.minCorner(), origin_pack));
+        else if (starting_point_alignment == PConfig::Alignment::TOP_RIGHT)
+            bindist = norm(pl::distance(ibb.maxCorner(), origin_pack));
+        else
+            bindist = norm(pl::distance(ibb.center(), origin_pack));
         return bindist;
     }
 
@@ -488,7 +513,7 @@ protected:
                 score = 0.2 * dist + 0.8 * bindist;
             }
             else {
-                double bindist = norm(pl::distance(ibb.center(), origin_pack));
+                double bindist = dist_to_bin(ibb, origin_pack, m_pconf.starting_point);
                 dist = 0.8 * dist + 0.2 * bindist;
 
 
@@ -520,11 +545,13 @@ protected:
                         auto ascore = 1.0 - (item.area() + parea) / bbarea;
 
                         if (ascore < alignment_score) alignment_score = ascore;
-                        }
                     }
+                }
 
                 density = std::sqrt(norm(fullbb.width()) * norm(fullbb.height()));
                 double R = double(m_remaining.size()) / m_item_count;
+                // alighment score is more important for rectangle items
+                double alignment_weight = std::max(0.3, 0.6 * item.area() / ibb.area());
 
                 // The final mix of the score is the balance between the
                 // distance from the full pile center, the pack density and
@@ -533,8 +560,8 @@ protected:
                     score = 0.50 * dist + 0.50 * density;
                 else
                     // Let the density matter more when fewer objects remain
-                    score = 0.50 * dist + (1.0 - R) * 0.20 * density +
-                    0.30 * alignment_score;
+                    score = (1 - 0.2 - alignment_weight) * dist + (1.0 - R) * 0.20 * density +
+                    alignment_weight * alignment_score;
             }
             break;
         }
@@ -611,27 +638,24 @@ protected:
             score += lambda4 * hasRowHeightConflict + lambda4 * hasLidHeightConflict;
         }
         else {
+            int valid_items_cnt = 0;
+            double height_score = 0;
             for (int i = 0; i < m_items.size(); i++) {
                 Item& p = m_items[i];
-                if (p.is_virt_object) {
-                    // Better not put items above wipe tower
-                    if (p.is_wipe_tower) {
-                        if (ibb.maxCorner().y() > p.boundingBox().maxCorner().y())
-                            score += 1;
-                        else if(m_pilebb.defined)
-                            score += norm(pl::distance(ibb.center(), m_pilebb.center()));
-                    }
-                    else
-                        continue;
-                } else {
+                if (!p.is_virt_object) {
+                    valid_items_cnt++;
                     // 高度接近的件尽量摆到一起
-                    score += (1- std::abs(item.height - p.height) / params.printable_height)
+                    height_score += (1- std::abs(item.height - p.height) / params.printable_height)
                         * norm(pl::distance(ibb.center(), p.boundingBox().center()));
                     //score += LARGE_COST_TO_REJECT * (item.bed_temp - p.bed_temp != 0);
-                    if (!Print::is_filaments_compatible({ item.filament_temp_type,p.filament_temp_type }))
+                    if (!Print::is_filaments_compatible({ item.filament_temp_type,p.filament_temp_type })) {
                         score += LARGE_COST_TO_REJECT;
+                        break;
+                    }
                 }
             }
+            if (valid_items_cnt > 0)
+                score += height_score / valid_items_cnt;
         }
 
         std::set<int> extruder_ids;
@@ -653,9 +677,11 @@ protected:
         }
         // for layered printing, we want extruder change as few as possible
         // this has very weak effect, CAN NOT use a large weight
+        int last_extruder_cnt = extruder_ids.size();
         extruder_ids.insert(item.extrude_ids.begin(), item.extrude_ids.end());
+        int new_extruder_cnt= extruder_ids.size();
         if (!params.is_seq_print) {
-            score += 1 * std::max(0, ((int) extruder_ids.size() - 1));
+            score += 1 * (new_extruder_cnt-last_extruder_cnt);
         }
 
         return std::make_tuple(score, fullbb);
@@ -814,7 +840,8 @@ public:
 
 template<> std::function<double(const Item&, const ItemGroup&)> AutoArranger<Box>::get_objfn()
 {
-    auto origin_pack = m_pconf.starting_point == PConfig::Alignment::CENTER ? m_bin.center() : m_bin.minCorner();
+    auto origin_pack = m_pconf.starting_point == PConfig::Alignment::CENTER ? m_bin.center() :
+        m_pconf.starting_point == PConfig::Alignment::TOP_RIGHT ? m_bin.maxCorner() : m_bin.minCorner();
 
     return [this, origin_pack](const Item &itm, const ItemGroup&) {
         auto result = objfunc(itm, origin_pack);
@@ -913,8 +940,15 @@ template<class Bin> void remove_large_items(std::vector<Item> &items, Bin &&bin)
 
 template<class S> Radians min_area_boundingbox_rotation(const S &sh)
 {
-    return minAreaBoundingBox<S, TCompute<S>, boost::rational<LargeInt>>(sh)
-        .angleToX();
+    try {
+        return minAreaBoundingBox<S, TCompute<S>, boost::rational<LargeInt>>(sh)
+            .angleToX();
+    }
+    catch (const std::exception& e) {
+        // min_area_boundingbox_rotation may throw exception of dividing 0 if the object is already perfectly aligned to X
+        BOOST_LOG_TRIVIAL(error) << "arranging min_area_boundingbox_rotation fails, msg=" << e.what();
+        return 0.0;
+    }
 }
 
 template<class S>
@@ -958,7 +992,7 @@ void _arrange(
     // polygon nesting, a convex hull needs to be calculated.
     if (params.allow_rotations) {
         for (auto &itm : shapes) {
-            itm.rotation(min_area_boundingbox_rotation(itm.rawShape()));
+            itm.rotation(min_area_boundingbox_rotation(itm.transformedShape()));
 
             // If the item is too big, try to find a rotation that makes it fit
             if constexpr (std::is_same_v<BinT, Box>) {

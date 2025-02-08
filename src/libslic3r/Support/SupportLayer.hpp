@@ -1,7 +1,3 @@
-///|/ Copyright (c) Prusa Research 2023 Vojtěch Bubník @bubnikv, Pavel Mikuš @Godrak
-///|/
-///|/ PrusaSlicer is released under the terms of the AGPLv3 or higher
-///|/
 #ifndef slic3r_SupportLayer_hpp_
 #define slic3r_SupportLayer_hpp_
 
@@ -12,7 +8,7 @@
 #include "../ClipperUtils.hpp"
 #include "../Polygon.hpp"
 
-namespace Slic3r::FFFSupport {
+namespace Slic3r {
 
 // Support layer type to be used by SupportGeneratorLayer. This type carries a much more detailed information
 // about the support layer type than the final support layers stored in a PrintObject.

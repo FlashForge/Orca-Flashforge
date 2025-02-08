@@ -1,7 +1,3 @@
-///|/ Copyright (c) Prusa Research 2023 Vojtěch Bubník @bubnikv
-///|/
-///|/ PrusaSlicer is released under the terms of the AGPLv3 or higher
-///|/
 #ifndef slic3r_SupportCommon_hpp_
 #define slic3r_SupportCommon_hpp_
 
@@ -15,8 +11,6 @@ namespace Slic3r {
 
 class PrintObject;
 class SupportLayer;
-
-namespace FFFSupport {
 
 // Remove bridges from support contact areas.
 // To be called if PrintObjectConfig::dont_support_bridges.
@@ -153,8 +147,6 @@ int idx_lower_or_equal(const std::vector<T*> &vec, int idx, FN_LOWER_EQUAL fn_lo
 {
     return idx_lower_or_equal(vec.begin(), vec.end(), idx, fn_lower_equal);
 }
-
-} // namespace FFFSupport
 
 } // namespace Slic3r
 

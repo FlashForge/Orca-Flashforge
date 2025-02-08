@@ -8,6 +8,7 @@
 #include <fstream>
 #include <iostream>
 #include <iomanip>
+#include <regex>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/erase.hpp>
@@ -17,6 +18,7 @@
 #include <boost/config.hpp>
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/log/trivial.hpp>
 #include <boost/nowide/cenv.hpp>
 #include <boost/nowide/iostream.hpp>
 #include <boost/nowide/fstream.hpp>
@@ -308,6 +310,7 @@ ConfigOption* ConfigOptionDef::create_default_option() const
                 opt->keys_map = this->enum_keys_map;
                 return opt;
             }
+            delete dft;
         }
 
         return this->default_value->clone();
@@ -736,6 +739,8 @@ void ConfigBase::setenv_() const
 //BBS
 ConfigSubstitutions ConfigBase::load_string_map(std::map<std::string, std::string>& key_values, ForwardCompatibilitySubstitutionRule compatibility_rule)
 {
+    CNumericLocalesSetter locales_setter;
+
     ConfigSubstitutionContext substitutions_ctxt(compatibility_rule);
     std::map<std::string, std::string>::iterator it;
     for (it = key_values.begin(); it != key_values.end(); it++) {
@@ -782,6 +787,8 @@ int ConfigBase::load_from_json(const std::string &file, ConfigSubstitutionContex
     json j;
     std::list<std::string> different_settings_append;
     std::string new_support_style;
+    std::string is_infill_first;
+    std::string get_wall_sequence;
     bool is_project_settings = false;
 
     CNumericLocalesSetter locales_setter;
@@ -824,6 +831,9 @@ int ConfigBase::load_from_json(const std::string &file, ConfigSubstitutionContex
             else if (boost::iequals(it.key(), BBL_JSON_KEY_FROM)) {
                 key_values.emplace(BBL_JSON_KEY_FROM, it.value());
             }
+            else if (boost::iequals(it.key(), BBL_JSON_KEY_DESCRIPTION)) {
+                key_values.emplace(BBL_JSON_KEY_DESCRIPTION, it.value());
+            }
             else if (boost::iequals(it.key(), BBL_JSON_KEY_INSTANTIATION)) {
                 key_values.emplace(BBL_JSON_KEY_INSTANTIATION, it.value());
             }
@@ -844,6 +854,16 @@ int ConfigBase::load_from_json(const std::string &file, ConfigSubstitutionContex
                             different_settings_append.push_back(opt_key);
                             different_settings_append.push_back("support_style");
                             new_support_style = "tree_hybrid";
+                        }
+                    } else if (opt_key == "wall_infill_order") {
+                        //BBS: check wall_infill order to decide if it be different and append to diff_setting_append
+                        if (it.value() == "outer wall/inner wall/infill" || it.value() == "infill/outer wall/inner wall" || it.value() == "inner-outer-inner wall/infill") {
+                            get_wall_sequence = "wall_seq_diff_to_system";
+                        }
+
+                        if (it.value() == "infill/outer wall/inner wall" || it.value() == "infill/inner wall/outer wall") {
+                            different_settings_append.push_back("is_infill_first");
+                            is_infill_first = "true";
                         }
                     }
                 }
@@ -916,6 +936,12 @@ int ConfigBase::load_from_json(const std::string &file, ConfigSubstitutionContex
                 ConfigOptionEnum<SupportMaterialStyle>* opt = this->option<ConfigOptionEnum<SupportMaterialStyle>>("support_style", true);
                 opt->value = smsTreeHybrid;
             }
+
+            if (!is_infill_first.empty()) {
+                ConfigOptionBool *opt = this->option<ConfigOptionBool>("is_infill_first", true);
+                opt->value = true;
+            }
+
             if (is_project_settings) {
                 std::vector<std::string>& different_settings = this->option<ConfigOptionStrings>("different_settings_to_system", true)->values;
                 size_t size = different_settings.size();
@@ -932,6 +958,25 @@ int ConfigBase::load_from_json(const std::string &file, ConfigSubstitutionContex
                         is_first[index] = true;
                     }
                     else {
+                        // remove unneeded key
+                        if (get_wall_sequence.empty()) {
+                            std::string wall_sqe_string = "wall_sequence";
+                            int pos=different_settings[index].find(wall_sqe_string);
+
+                            if (pos != different_settings[index].npos) {
+                                int erase_len = wall_sqe_string.size();
+                                if (pos + erase_len < different_settings[index].size() && different_settings[index][pos + erase_len] == ';')
+                                    erase_len++;
+                                different_settings[index].erase(pos, erase_len);
+                            }
+
+                        }
+
+                        if (different_settings[index].empty()) {
+                            is_first[index] = true;
+                            continue;
+                        }
+
                         Slic3r::unescape_strings_cstyle(different_settings[index], original_diffs[index]);
                     }
                 }
@@ -944,6 +989,8 @@ int ConfigBase::load_from_json(const std::string &file, ConfigSubstitutionContex
                     if (diff_key == "support_type")
                         index = 0;
                     else if (diff_key == "support_style")
+                        index = 0;
+                    else if (diff_key == "is_infill_first")
                         index = 0;
 
                     //check whether exist firstly
@@ -967,6 +1014,10 @@ int ConfigBase::load_from_json(const std::string &file, ConfigSubstitutionContex
                 }
             }
         }
+        
+        // Do legacy conversion on a completely loaded dictionary.
+        // Perform composite conversions, for example merging multiple keys into one key.
+        this->handle_legacy_composite();
         return 0;
     }
     catch (const std::ifstream::failure &err)  {
@@ -1056,6 +1107,9 @@ ConfigSubstitutions ConfigBase::load(const boost::property_tree::ptree &tree, Fo
             // ignore
         }
     }
+    // Do legacy conversion on a completely loaded dictionary.
+    // Perform composite conversions, for example merging multiple keys into one key.
+    this->handle_legacy_composite();
     return std::move(substitutions_ctxt.substitutions);
 }
 
@@ -1142,7 +1196,10 @@ size_t ConfigBase::load_from_gcode_string_legacy(ConfigBase& config, const char*
         end = start;
     }
 
-    // BBS
+    // Do legacy conversion on a completely loaded dictionary.
+    // Perform composite conversions, for example merging multiple keys into one key.
+    config.handle_legacy_composite();
+
     free(result);
     return num_key_value_pairs;
 }
@@ -1320,6 +1377,10 @@ ConfigSubstitutions ConfigBase::load_from_gcode_file(const std::string &file, Fo
         BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << format("Suspiciously low number of configuration values extracted from %1%: %2%", file, key_value_pairs);
         throw Slic3r::RuntimeError(format("Suspiciously low number of configuration values extracted from %1%: %2%", file, key_value_pairs));
     }
+
+    // Do legacy conversion on a completely loaded dictionary.
+    // Perform composite conversions, for example merging multiple keys into one key.
+    this->handle_legacy_composite();
 
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(":  finished to parse_file %1%") % file.c_str();
     return std::move(substitutions_ctxt.substitutions);

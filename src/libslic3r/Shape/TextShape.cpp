@@ -28,6 +28,8 @@
 #include "BRepPrimAPI_MakePrism.hxx"
 #include "Font_FontMgr.hxx"
 
+#include <boost/log/trivial.hpp>
+
 namespace Slic3r {
 
 static std::map<std::string, std::string> g_occt_fonts_maps; //map<font_name, font_path>
@@ -239,6 +241,9 @@ static void MakeMesh(TopoDS_Shape& theSolid, TriangleMesh& theMesh)
 
 void load_text_shape(const char*text, const char* font, const float text_height, const float thickness, bool is_bold, bool is_italic, TextResult &text_result)
 {
+    if (thickness <= 0)
+        return;
+
     Handle(Font_FontMgr) aFontMgr = Font_FontMgr::GetInstance();
     if (aFontMgr->GetAvailableFonts().IsEmpty())
         aFontMgr->InitFontDataBase();

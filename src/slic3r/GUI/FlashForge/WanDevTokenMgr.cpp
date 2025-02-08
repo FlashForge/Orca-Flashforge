@@ -45,7 +45,7 @@ void WanDevTokenMgr::run()
         }
         boost::unique_lock<boost::shared_mutex> lock(m_tokenMutex);
         com_token_data_t tmpTokenData;
-        ComErrno ret = MultiComUtils::refreshToken(m_tokenData.refreshToken, tmpTokenData);
+        ComErrno ret = MultiComUtils::refreshToken(m_tokenData.refreshToken, tmpTokenData, ComTimeoutWanB);
         if (ret == COM_OK) {
             m_tokenData = tmpTokenData;
         }

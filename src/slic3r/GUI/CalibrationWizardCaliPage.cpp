@@ -21,6 +21,7 @@ CalibrationCaliPage::CalibrationCaliPage(wxWindow* parent, CalibMode cali_mode, 
     create_page(this);
 
     this->SetSizer(m_top_sizer);
+    Layout();
     m_top_sizer->Fit(this);
 }
 
@@ -63,8 +64,6 @@ void CalibrationCaliPage::create_page(wxWindow* parent)
 
     m_printing_panel->get_pause_resume_button()->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(CalibrationCaliPage::on_subtask_pause_resume), NULL, this);
     m_printing_panel->get_abort_button()->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(CalibrationCaliPage::on_subtask_abort), NULL, this);
-
-    Layout();
 }
 
 void CalibrationCaliPage::on_subtask_pause_resume(wxCommandEvent& event)
@@ -101,27 +100,27 @@ void CalibrationCaliPage::set_cali_img()
 {
     if (m_cali_mode == CalibMode::Calib_PA_Line) {
         if (m_cali_method == CalibrationMethod::CALI_METHOD_MANUAL) {
-            m_picture_panel->set_img(create_scaled_bitmap("fd_calibration_manual", nullptr, 400));
+            m_picture_panel->set_bmp(ScalableBitmap(this, "fd_calibration_manual", 400));
         }
         else if (m_cali_method == CalibrationMethod::CALI_METHOD_AUTO) {
-            m_picture_panel->set_img(create_scaled_bitmap("fd_calibration_auto", nullptr, 400));
+            m_picture_panel->set_bmp(ScalableBitmap(this, "fd_calibration_auto", 400));
         }
     }
     else if (m_cali_mode == CalibMode::Calib_Flow_Rate) {
         if (m_cali_method == CalibrationMethod::CALI_METHOD_MANUAL) {
             if (m_page_type == CaliPageType::CALI_PAGE_CALI)
-                m_picture_panel->set_img(create_scaled_bitmap("flow_rate_calibration_coarse", nullptr, 400));
+                m_picture_panel->set_bmp(ScalableBitmap(this, "flow_rate_calibration_coarse", 400));
             if (m_page_type == CaliPageType::CALI_PAGE_FINE_CALI)
-                m_picture_panel->set_img(create_scaled_bitmap("flow_rate_calibration_fine", nullptr, 400));
+                m_picture_panel->set_bmp(ScalableBitmap(this, "flow_rate_calibration_fine", 400));
             else
-                m_picture_panel->set_img(create_scaled_bitmap("flow_rate_calibration_coarse", nullptr, 400));
+                m_picture_panel->set_bmp(ScalableBitmap(this, "flow_rate_calibration_coarse", 400));
         }
         else if (m_cali_method == CalibrationMethod::CALI_METHOD_AUTO) {
-            m_picture_panel->set_img(create_scaled_bitmap("flow_rate_calibration_auto", nullptr, 400));
+            m_picture_panel->set_bmp(ScalableBitmap(this, "flow_rate_calibration_auto", 400));
         }
     }
     else if (m_cali_mode == CalibMode::Calib_Vol_speed_Tower) {
-        m_picture_panel->set_img(create_scaled_bitmap("max_volumetric_speed_calibration", nullptr, 400));
+        m_picture_panel->set_bmp(ScalableBitmap(this, "max_volumetric_speed_calibration", 400));
     }
 }
 
@@ -129,9 +128,9 @@ void CalibrationCaliPage::set_pa_cali_image(int stage)
 {
     if (m_cali_mode == CalibMode::Calib_PA_Line && m_cali_method == CALI_METHOD_MANUAL) {
         if (stage == 0) {
-            m_picture_panel->set_img(create_scaled_bitmap("fd_calibration_manual", nullptr, 400));
+            m_picture_panel->set_bmp(ScalableBitmap(this, "fd_calibration_manual", 400));
         } else if (stage == 1) {
-            m_picture_panel->set_img(create_scaled_bitmap("fd_pattern_manual", nullptr, 400));
+            m_picture_panel->set_bmp(ScalableBitmap(this, "fd_pattern_manual", 400));
         }
     }
 }
@@ -383,7 +382,7 @@ void CalibrationCaliPage::update_subtask(MachineObject* obj)
         m_printing_panel->update_subtask_name(wxString::Format("%s", GUI::from_u8(obj->subtask_name)));
 
         if (obj->get_modeltask() && obj->get_modeltask()->design_id > 0) {
-            m_printing_panel->show_profile_info(true, wxString::FromUTF8(obj->get_modeltask()->profile_name));
+            m_printing_panel->show_profile_info(wxString::FromUTF8(obj->get_modeltask()->profile_name));
         }
         else {
             m_printing_panel->show_profile_info(false);
@@ -395,6 +394,7 @@ void CalibrationCaliPage::update_subtask(MachineObject* obj)
     }
 
     this->Layout();
+    this->Fit();
 }
 
 void CalibrationCaliPage::update_basic_print_data(bool def, float weight, int prediction)
@@ -424,11 +424,12 @@ void CalibrationCaliPage::reset_printing_values()
     m_printing_panel->update_layers_num(true, wxString::Format(_L("Layer: %s"), NA_STR));
     update_basic_print_data(false);
     this->Layout();
+    this->Fit();
 }
 
 void CalibrationCaliPage::on_device_connected(MachineObject* obj)
 {
-    ;
+    reset_printing_values();
 }
 
 void CalibrationCaliPage::set_cali_method(CalibrationMethod method)
@@ -471,6 +472,20 @@ void CalibrationCaliPage::set_cali_method(CalibrationMethod method)
     else {
         assert(false);
     }
+}
+
+bool CalibrationCaliPage::Show(bool show /*= true*/)
+{
+    if (true) {
+        reset_printing_values();
+    }
+    return wxPanel::Show(show);
+}
+
+void CalibrationCaliPage::msw_rescale()
+{
+    CalibrationWizardPage::msw_rescale();
+    m_picture_panel->msw_rescale();
 }
 
 float CalibrationCaliPage::get_selected_calibration_nozzle_dia(MachineObject* obj)

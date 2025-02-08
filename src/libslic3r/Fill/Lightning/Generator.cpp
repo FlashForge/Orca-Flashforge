@@ -76,6 +76,16 @@ Generator::Generator(const PrintObject &print_object, const std::function<void()
     const double               layer_thickness      = scaled<double>(object_config.layer_height.value);
 
     m_infill_extrusion_width = scaled<float>(region_config.sparse_infill_line_width.get_abs_value(max_nozzle_diameter));
+    // Orca: fix lightning infill divide by zero when infill line width is set to 0.
+    // firstly attempt to set it to the default line width. If that is not provided either, set it to a sane default
+    // based on the nozzle diameter.
+    if (m_infill_extrusion_width < EPSILON)
+        m_infill_extrusion_width = scaled<float>(
+            object_config.line_width.get_abs_value(max_nozzle_diameter) < EPSILON ?
+            default_infill_extrusion_width :
+            object_config.line_width.get_abs_value(max_nozzle_diameter)
+        );
+    
     m_supporting_radius = coord_t(m_infill_extrusion_width) * 100 / region_config.sparse_infill_density;
 
     const double lightning_infill_overhang_angle      = M_PI / 4; // 45 degrees
@@ -102,6 +112,15 @@ Generator::Generator(PrintObject* m_object, std::vector<Polygons>& contours, std
     const double               layer_thickness      = scaled<double>(object_config.layer_height.value);
 
     m_infill_extrusion_width = scaled<float>(region_config.sparse_infill_line_width.get_abs_value(max_nozzle_diameter));
+    // Orca: fix lightning infill divide by zero when infill line width is set to 0.
+    // firstly attempt to set it to the default line width. If that is not provided either, set it to a sane default
+    // based on the nozzle diameter.
+    if (m_infill_extrusion_width < EPSILON)
+        m_infill_extrusion_width = scaled<float>(
+            object_config.line_width.get_abs_value(max_nozzle_diameter) < EPSILON ?
+            default_infill_extrusion_width :
+            object_config.line_width.get_abs_value(max_nozzle_diameter)
+        );
     //m_supporting_radius: against to the density of lightning, failures may happen if set to high density
     //higher density lightning makes support harder, more time-consuming on computing and printing, but more reliable on supporting overhangs
     //lower density lightning performs opposite
@@ -158,6 +177,7 @@ const Layer& Generator::getTreesForLayer(const size_t& layer_id) const
 
 void Generator::generateTrees(const PrintObject &print_object, const std::function<void()> &throw_on_cancel_callback)
 {
+    const auto _locator_cell_size = locator_cell_size();
     m_lightning_layers.resize(print_object.layers().size());
     bboxs.resize(print_object.layers().size());
     std::vector<Polygons> infill_outlines(print_object.layers().size(), Polygons());
@@ -174,7 +194,7 @@ void Generator::generateTrees(const PrintObject &print_object, const std::functi
     // For various operations its beneficial to quickly locate nearby features on the polygon:
     const size_t top_layer_id = print_object.layers().size() - 1;
     EdgeGrid::Grid outlines_locator(get_extents(infill_outlines[top_layer_id]).inflated(SCALED_EPSILON));
-    outlines_locator.create(infill_outlines[top_layer_id], locator_cell_size);
+    outlines_locator.create(infill_outlines[top_layer_id], _locator_cell_size);
 
     // For-each layer from top to bottom:
     for (int layer_id = int(top_layer_id); layer_id >= 0; layer_id--) {
@@ -204,11 +224,11 @@ void Generator::generateTrees(const PrintObject &print_object, const std::functi
             below_outlines_bbox.merge(get_extents(current_lightning_layer.tree_roots).inflated(SCALED_EPSILON));
 
         outlines_locator.set_bbox(below_outlines_bbox);
-        outlines_locator.create(below_outlines, locator_cell_size);
+        outlines_locator.create(below_outlines, _locator_cell_size);
 
         std::vector<NodeSPtr>& lower_trees = m_lightning_layers[layer_id - 1].tree_roots;
         for (auto& tree : current_lightning_layer.tree_roots)
-            tree->propagateToNextLayer(lower_trees, below_outlines, outlines_locator, m_prune_length, m_straightening_max_distance, locator_cell_size / 2);
+            tree->propagateToNextLayer(lower_trees, below_outlines, outlines_locator, m_prune_length, m_straightening_max_distance, _locator_cell_size / 2);
     }
 }
 
@@ -219,10 +239,11 @@ void Generator::generateTreesforSupport(std::vector<Polygons>& contours, const s
     m_lightning_layers.resize(contours.size());
     bboxs.resize(contours.size());
 
+    const auto _locator_cell_size = locator_cell_size();
     // For various operations its beneficial to quickly locate nearby features on the polygon:
     const size_t top_layer_id = contours.size() - 1;
     EdgeGrid::Grid outlines_locator(get_extents(contours[top_layer_id]).inflated(SCALED_EPSILON));
-    outlines_locator.create(contours[top_layer_id], locator_cell_size);
+    outlines_locator.create(contours[top_layer_id], _locator_cell_size);
 
     // For-each layer from top to bottom:
     for (int layer_id = int(top_layer_id); layer_id >= 0; layer_id--) {
@@ -252,11 +273,11 @@ void Generator::generateTreesforSupport(std::vector<Polygons>& contours, const s
             below_outlines_bbox.merge(get_extents(current_lightning_layer.tree_roots).inflated(SCALED_EPSILON));
 
         outlines_locator.set_bbox(below_outlines_bbox);
-        outlines_locator.create(below_outlines, locator_cell_size);
+        outlines_locator.create(below_outlines, _locator_cell_size);
 
         std::vector<NodeSPtr>& lower_trees = m_lightning_layers[layer_id - 1].tree_roots;
         for (auto& tree : current_lightning_layer.tree_roots)
-            tree->propagateToNextLayer(lower_trees, below_outlines, outlines_locator, m_prune_length, m_straightening_max_distance, locator_cell_size / 2);
+            tree->propagateToNextLayer(lower_trees, below_outlines, outlines_locator, m_prune_length, m_straightening_max_distance, _locator_cell_size / 2);
     }
 }
 

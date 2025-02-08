@@ -25,6 +25,8 @@
 #include "slic3r/GUI/I18N.hpp"
 #include "slic3r/GUI/MsgDialog.hpp"
 #include "Http.hpp"
+#include "SerialMessage.hpp"
+#include "SerialMessageType.hpp"
 
 namespace fs = boost::filesystem;
 namespace pt = boost::property_tree;
@@ -40,8 +42,8 @@ const char* MKS::get_name() const { return "MKS"; }
 bool MKS::test(wxString& msg) const
 {
 	Utils::TCPConsole console(m_host, m_console_port);
-
-	console.enqueue_cmd("M105");
+	Slic3r::Utils::SerialMessage s("M105", Slic3r::Utils::Command);
+	console.enqueue_cmd(s);
 	bool ret = console.run_queue();
 
 	if (!ret)
@@ -82,7 +84,7 @@ bool MKS::upload(PrintHostUpload upload_data, ProgressFn prorgess_fn, ErrorFn er
 		int err_code = get_err_code_from_body(body);
 		if (err_code != 0) {
 			BOOST_LOG_TRIVIAL(error) << boost::format("MKS: Request completed but error code was received: %1%") % err_code;
-			error_fn(format_error(body, L("Unknown error occured"), 0));
+			error_fn(format_error(body, L("Unknown error occurred"), 0));
 			res = false;
 		}
 		else if (upload_data.post_action == PrintHostPostUploadAction::StartPrint) {
@@ -126,9 +128,10 @@ bool MKS::start_print(wxString& msg, const std::string& filename) const
 	std::this_thread::sleep_for(std::chrono::milliseconds(1500));
 
 	Utils::TCPConsole console(m_host, m_console_port);
-
-	console.enqueue_cmd(std::string("M23 ") + filename);
-	console.enqueue_cmd("M24");
+	Slic3r::Utils::SerialMessage s(std::string("M23 ") + filename, Slic3r::Utils::Command);
+	console.enqueue_cmd(s);
+	s.message = "M24";
+	console.enqueue_cmd(s);
 
 	bool ret = console.run_queue();
 

@@ -8,6 +8,7 @@
 
 namespace Slic3r {
 class Model;
+class ModelObject;
 struct ConfigSubstitutionContext;
 class DynamicPrintConfig;
 class Preset;
@@ -20,6 +21,7 @@ struct ThumbnailData;
 
 #define GCODE_FILE_FORMAT               "Metadata/plate_%1%.gcode"
 #define THUMBNAIL_FILE_FORMAT           "Metadata/plate_%1%.png"
+#define NO_LIGHT_THUMBNAIL_FILE_FORMAT  "Metadata/plate_no_light_%1%.png"
 #define TOP_FILE_FORMAT                 "Metadata/top_%1%.png"
 #define PICK_FILE_FORMAT                "Metadata/pick_%1%.png"
 //#define PATTERN_FILE_FORMAT             "Metadata/plate_%1%_pattern_layer_0.png"
@@ -69,9 +71,12 @@ struct PlateData
     int plate_index;
     std::vector<std::pair<int, int>> objects_and_instances;
     std::map<int, std::pair<int, int>> obj_inst_map;
+    std::string     printer_model_id;
+    std::string     nozzle_diameters;
     std::string     gcode_file;
     std::string     gcode_file_md5;
     std::string     thumbnail_file;
+    std::string     no_light_thumbnail_file;
     ThumbnailData   plate_thumbnail;
     std::string     top_file;
     std::string     pick_file;
@@ -210,6 +215,7 @@ struct StoreParams
     std::vector<Preset*> project_presets;
     DynamicPrintConfig* config;
     std::vector<ThumbnailData*> thumbnail_data;
+    std::vector<ThumbnailData*> no_light_thumbnail_data;
     std::vector<ThumbnailData*> top_thumbnail_data;
     std::vector<ThumbnailData*> pick_thumbnail_data;
     std::vector<ThumbnailData*> calibration_thumbnail_data;
@@ -231,7 +237,7 @@ extern bool load_bbs_3mf(const char* path, DynamicPrintConfig* config, ConfigSub
 
 extern std::string bbs_3mf_get_thumbnail(const char * path);
 
-extern bool load_gcode_3mf_from_stream(std::istream & data, DynamicPrintConfig* config, Model* model, PlateDataPtrs* plate_data_list, 
+extern bool load_gcode_3mf_from_stream(std::istream & data, DynamicPrintConfig* config, Model* model, PlateDataPtrs* plate_data_list,
        Semver* file_version);
 
 

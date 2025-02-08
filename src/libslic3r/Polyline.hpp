@@ -1,13 +1,3 @@
-///|/ Copyright (c) Prusa Research 2016 - 2023 Tomáš Mészáros @tamasmeszaros, Pavel Mikuš @Godrak, Vojtěch Bubník @bubnikv, Lukáš Hejl @hejllukas, Lukáš Matěna @lukasmatena, Oleksandra Iushchenko @YuSanka, Enrico Turri @enricoturri1966
-///|/ Copyright (c) Slic3r 2013 - 2016 Alessandro Ranellucci @alranel
-///|/
-///|/ ported from lib/Slic3r/Polyline.pm:
-///|/ Copyright (c) Prusa Research 2018 Vojtěch Bubník @bubnikv
-///|/ Copyright (c) Slic3r 2011 - 2014 Alessandro Ranellucci @alranel
-///|/ Copyright (c) 2012 Mark Hindess
-///|/
-///|/ PrusaSlicer is released under the terms of the AGPLv3 or higher
-///|/
 #ifndef slic3r_Polyline_hpp_
 #define slic3r_Polyline_hpp_
 
@@ -130,6 +120,7 @@ public:
 //    template <class T> void simplify_by_visibility(const T &area);
     void split_at(Point &point, Polyline* p1, Polyline* p2) const;
     bool split_at_index(const size_t index, Polyline* p1, Polyline* p2) const;
+    bool split_at_length(const double length, Polyline* p1, Polyline* p2) const;
 
     bool is_straight() const;
     bool is_closed() const { return this->points.front() == this->points.back(); }
@@ -163,6 +154,10 @@ public:
 
 extern BoundingBox get_extents(const Polyline &polyline);
 extern BoundingBox get_extents(const Polylines &polylines);
+
+// Return True when erase some otherwise False.
+bool remove_same_neighbor(Polyline &polyline);
+bool remove_same_neighbor(Polylines &polylines);
 
 inline double total_length(const Polylines &polylines) {
     double total = 0;

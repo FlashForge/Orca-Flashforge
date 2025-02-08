@@ -179,6 +179,9 @@ protected:
      */
     bool                    m_is_default_preset {false};
 
+	// just be used for edit filament dialog
+    bool m_just_edit{false};
+
 	ScalableButton*			m_undo_btn;
 	ScalableButton*			m_undo_to_sys_btn;
 	//ScalableButton*			m_question_btn;
@@ -198,6 +201,8 @@ protected:
 	ScalableBitmap 		   *m_bmp_non_system;
 	// Bitmaps to be shown on the "Undo user changes" button next to each input field.
 	ScalableBitmap 			m_bmp_value_revert;
+    // Bitmaps to be shown on the "Undo user changes" button next to each input field.
+    ScalableBitmap 			m_bmp_edit_value;
 
     std::vector<ScalableButton*>	m_scaled_buttons = {};
     std::vector<ScalableBitmap*>	m_scaled_bitmaps = {};
@@ -333,6 +338,7 @@ public:
 	void		OnKeyDown(wxKeyEvent& event);
 
 	void		compare_preset();
+	void		transfer_options(const std::string&name_from, const std::string&name_to, std::vector<std::string> options);
 	//BBS: add project embedded preset relate logic
 	void        save_preset(std::string name = std::string(), bool detach = false, bool save_to_project = false, bool from_input = false, std::string input_name = "");
 	//void		save_preset(std::string name = std::string(), bool detach = false);
@@ -371,6 +377,7 @@ public:
     virtual void    msw_rescale();
     virtual void	sys_color_changed();
 	Field*			get_field(const t_config_option_key& opt_key, int opt_index = -1) const;
+	Line*			get_line(const t_config_option_key& opt_key);
 	std::pair<OG_CustomCtrl*, bool*> get_custom_ctrl_with_blinking_ptr(const t_config_option_key& opt_key, int opt_index = -1);
 
     Field*          get_field(const t_config_option_key &opt_key, Page** selected_page, int opt_index = -1);
@@ -390,7 +397,7 @@ public:
     void            update_wiping_button_visibility();
 	void			activate_option(const std::string& opt_key, const wxString& category);
     void			apply_searcher();
-	void			cache_config_diff(const std::vector<std::string>& selected_options);
+	void			cache_config_diff(const std::vector<std::string>& selected_options, const DynamicPrintConfig* config = nullptr);
 	void			apply_config_from_cache();
     void            show_timelapse_warning_dialog();
 
@@ -405,6 +412,11 @@ public:
 	static bool validate_custom_gcode(const wxString& title, const std::string& gcode);
 	bool        validate_custom_gcodes();
     bool        validate_custom_gcodes_was_shown{ false };
+    void        set_just_edit(bool just_edit);
+
+    void						edit_custom_gcode(const t_config_option_key& opt_key);
+    virtual const std::string&	get_custom_gcode(const t_config_option_key& opt_key);
+    virtual void				set_custom_gcode(const t_config_option_key& opt_key, const std::string& value);
 
 protected:
 	void			create_line_with_widget(ConfigOptionsGroup* optgroup, const std::string& opt_key, const std::string& path, widget_t widget);
@@ -423,6 +435,7 @@ protected:
 
     ConfigManipulation m_config_manipulation;
     ConfigManipulation get_config_manipulation();
+    friend class EditGCodeDialog;
 };
 
 class TabPrint : public Tab
@@ -477,13 +490,30 @@ protected:
 	virtual void	update_custom_dirty() override;
 
 protected:
-	std::vector<std::string> const m_keys;
+	std::vector<std::string> m_keys;
 	PresetCollection m_prints;
 	Tab * m_parent_tab;
 	std::map<ObjectBase *, ModelConfig *> m_object_configs;
 	std::vector<std::string> m_all_keys;
 	std::vector<std::string> m_null_keys;
 	bool m_back_to_sys = false;
+};
+
+
+class TabPrintPlate : public TabPrintModel
+{
+public:
+	//BBS: GUI refactor
+	TabPrintPlate(ParamsPanel* parent);
+	~TabPrintPlate() {}
+	void build() override;
+	void reset_model_config() override;
+	int show_spiral_mode_settings_dialog(bool is_object_config) { return m_config_manipulation.show_spiral_mode_settings_dialog(is_object_config); }
+
+protected:
+	virtual void    on_value_change(const std::string& opt_key, const boost::any& value) override;
+	virtual void    notify_changed(ObjectBase* object) override;
+	virtual void	update_custom_dirty() override;
 };
 
 class TabPrintObject : public TabPrintModel
@@ -524,7 +554,7 @@ private:
 	ogStaticText*	m_cooling_description_line {nullptr};
 
     void            add_filament_overrides_page();
-    void            update_filament_overrides_page();
+    void            update_filament_overrides_page(const DynamicPrintConfig* printers_config);
 	void 			update_volumetric_flow_preset_hints();
 
     std::map<std::string, wxCheckBox*> m_overrides_options;
@@ -542,6 +572,9 @@ public:
 	void		update() override;
 	void		clear_pages() override;
 	bool 		supports_printer_technology(const PrinterTechnology tech) const override { return tech == ptFFF; }
+
+    const std::string&	get_custom_gcode(const t_config_option_key& opt_key) override;
+    void				set_custom_gcode(const t_config_option_key& opt_key, const std::string& value) override;
 };
 
 class TabPrinter : public Tab
@@ -594,7 +627,7 @@ public:
 	bool 		supports_printer_technology(const PrinterTechnology /* tech */) const override { return true; }
 
 	wxSizer*	create_bed_shape_widget(wxWindow* parent);
-	void		cache_extruder_cnt();
+	void		cache_extruder_cnt(const DynamicPrintConfig* config = nullptr);
 	bool		apply_extruder_cnt_from_cache();
 
 };

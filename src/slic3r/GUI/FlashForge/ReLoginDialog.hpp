@@ -48,9 +48,9 @@ class ReLoginDialog : public TitleDialog
 public:
     ReLoginDialog();
     virtual ~ReLoginDialog();
-#ifdef __WIN32__
+#if defined(__WIN32__) || defined(__LINUX__)
     void onLoginoutBtnClicked(wxCommandEvent& event);
-#else if __APPLE__
+#elif defined(__APPLE__)
     void  onLoginoutBtnClicked(wxMouseEvent &event);
 #endif
     void onRelogin2BtnClicked(wxMouseEvent& event);
@@ -62,6 +62,7 @@ protected:
 
 private:
     void onCloseWnd(wxCloseEvent &event);
+    void downloadUrlPic(const std::string& url);
 
 private:
 
@@ -77,9 +78,9 @@ private:
     wxStaticBitmap*  m_usr_pic_staticbitmap;
 
     FFButton* m_re_login_button {nullptr};
-#ifdef __WIN32__
+#if defined(__WIN32__) || defined(__LINUX__)
     wxButton* m_login_out_button {nullptr};
-#else if __APPLE__
+#elif defined(__APPLE__)
     FFButton *m_login_out_button{nullptr};
 #endif
 

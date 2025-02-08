@@ -2,6 +2,7 @@
 #define slic3r_Layer_hpp_
 
 #include "libslic3r.h"
+#include "BoundingBox.hpp"
 #include "Flow.hpp"
 #include "SurfaceCollection.hpp"
 #include "ExtrusionEntityCollection.hpp"
@@ -77,7 +78,7 @@ public:
     void    slices_to_fill_surfaces_clipped();
     void    prepare_fill_surfaces();
     //BBS
-    void    make_perimeters(const SurfaceCollection &slices, SurfaceCollection* fill_surfaces, ExPolygons* fill_no_overlap);
+    void    make_perimeters(const SurfaceCollection &slices, const LayerRegionPtrs &compatible_regions, SurfaceCollection* fill_surfaces, ExPolygons* fill_no_overlap);
     void    process_external_surfaces(const Layer *lower_layer, const Polygons *lower_layer_covered);
     double  infill_area_threshold() const;
     // Trim surfaces by trimming polygons. Used by the elephant foot compensation at the 1st layer.
@@ -277,6 +278,7 @@ public:
 
     // for tree supports
     ExPolygons base_areas;
+    ExPolygons                                overhang_areas;
 
 
     // Is there any valid extrusion assigned to this LayerRegion?
@@ -300,7 +302,6 @@ protected:
     size_t m_interface_id;
 
     // for tree support
-    ExPolygons                                overhang_areas;
     ExPolygons                                roof_areas;
     ExPolygons                                roof_1st_layer; // the layer just below roof. When working with PolySupport, this layer should be printed with regular material
     ExPolygons                                floor_areas;
@@ -312,6 +313,7 @@ protected:
         int        type;
         coordf_t   dist_to_top; // mm dist to top
         bool need_infill = false;
+        bool need_extra_wall = false;
         AreaGroup(ExPolygon *a, int t, coordf_t d) : area(a), type(t), dist_to_top(d) {}
     };
     enum OverhangType { Detected = 0, Enforced };

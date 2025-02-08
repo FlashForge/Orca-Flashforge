@@ -5,20 +5,19 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/thread.hpp>
 #include <wx/event.h>
-#include "ComWanAsyncConn.hpp"
 #include "FlashNetworkIntfc.h"
 #include "MultiComDef.hpp"
 #include "WaitEvent.hpp"
 
 namespace Slic3r { namespace GUI {
 
-struct ReloginEvent : public wxCommandEvent {
+struct ReloginHttpEvent : public wxCommandEvent {
     ComErrno ret;
     std::string uid;
     std::string accessToken;
+    com_user_profile_t userProfile;
     fnet_wan_dev_info_t *devInfos;
     int devCnt;
-    std::unique_ptr<ComWanAsyncConn> wanAsyncConn;
 };
 
 struct GetWanDevEvent : public wxCommandEvent {
@@ -28,7 +27,7 @@ struct GetWanDevEvent : public wxCommandEvent {
     int devCnt;
 };
 
-wxDECLARE_EVENT(RELOGIN_EVENT, ReloginEvent);
+wxDECLARE_EVENT(RELOGIN_HTTP_EVENT, ReloginHttpEvent);
 wxDECLARE_EVENT(GET_WAN_DEV_EVENT, GetWanDevEvent);
 
 class WanDevMaintainThd : public wxEvtHandler
@@ -40,7 +39,7 @@ public:
 
     void setUid(const std::string &uid);
 
-    void setRelogin();
+    void setReloginHttp();
 
     void setUpdateWanDev();
 
@@ -53,7 +52,7 @@ private:
 
     std::string getUid();
 
-    bool relogin(const std::string &uid, const std::string &accessToken);
+    bool reloginHttp(std::string &uid, const std::string &accessToken);
 
     void updateWanDev(const std::string &uid, const std::string &accessToken);
 
@@ -63,7 +62,7 @@ private:
     std::string             m_uid;
     boost::mutex            m_uidMutex;
     WaitEvent               m_loopWaitEvent;
-    std::atomic_bool        m_relogin;
+    std::atomic_bool        m_reloginHttp;
     std::atomic_bool        m_updateWanDev;
     std::atomic_bool        m_updateUserProfile;
     std::atomic_bool        m_exitThread;

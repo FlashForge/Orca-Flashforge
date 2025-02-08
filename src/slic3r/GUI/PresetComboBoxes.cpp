@@ -24,6 +24,7 @@
 #include "libslic3r/libslic3r.h"
 #include "libslic3r/PrintConfig.hpp"
 #include "libslic3r/PresetBundle.hpp"
+#include "libslic3r/Color.hpp"
 
 #include "GUI.hpp"
 #include "GUI_App.hpp"
@@ -35,6 +36,7 @@
 #include "../Utils/ASCIIFolding.hpp"
 #include "../Utils/FixModelByWin10.hpp"
 #include "../Utils/UndoRedo.hpp"
+#include "../Utils/ColorSpaceConvert.hpp"
 #include "BitmapCache.hpp"
 #include "SavePresetDialog.hpp"
 #include "MsgDialog.hpp"
@@ -247,6 +249,7 @@ int PresetComboBox::update_ams_color()
     wxGetApp().plater()->on_config_change(new_cfg);
     //trigger the filament color changed
     wxCommandEvent *evt = new wxCommandEvent(EVT_FILAMENT_COLOR_CHANGED);
+    evt->SetInt(m_filament_idx);
     wxQueueEvent(wxGetApp().plater(), evt);
     return idx;
 }
@@ -381,7 +384,7 @@ void PresetComboBox::add_ams_filaments(std::string selected, bool alias_name)
             std::string filament_id = tray.opt_string("filament_id", 0u);
             if (filament_id.empty()) continue;
             auto iter = std::find_if(filaments.begin(), filaments.end(),
-                [&filament_id](auto &f) { return f.is_compatible && f.is_system && f.filament_id == filament_id; });
+                [&filament_id, this](auto &f) { return f.is_compatible && m_collection->get_preset_base(f) == &f && f.filament_id == filament_id; });
             if (iter == filaments.end()) {
                 auto filament_type = tray.opt_string("filament_type", 0u);
                 if (!filament_type.empty()) {
@@ -631,7 +634,7 @@ bool PresetComboBox::selection_is_changed_according_to_physical_printers()
 PlaterPresetComboBox::PlaterPresetComboBox(wxWindow *parent, Preset::Type preset_type) :
     PresetComboBox(parent, preset_type, wxSize(25 * wxGetApp().em_unit(), 30 * wxGetApp().em_unit() / 10))
 {
-    GetDropDown().SetUseContentWidth(true);
+    GetDropDown().SetUseContentWidth(true,true);
 
     if (m_type == Preset::TYPE_FILAMENT)
     {
@@ -673,12 +676,22 @@ PlaterPresetComboBox::PlaterPresetComboBox(wxWindow *parent, Preset::Type preset
             m_clrData.SetChooseFull(true);
             m_clrData.SetChooseAlpha(false);
 
+            std::vector<std::string> colors = wxGetApp().app_config->get_custom_color_from_config();
+            for (int i = 0; i < colors.size(); i++) {
+                 m_clrData.SetCustomColour(i, string_to_wxColor(colors[i]));
+            }
             wxColourDialog dialog(this, &m_clrData);
             dialog.SetTitle(_L("Please choose the filament colour"));
             if ( dialog.ShowModal() == wxID_OK )
             {
                 m_clrData = dialog.GetColourData();
-
+                if (colors.size() != CUSTOM_COLOR_COUNT) {
+                    colors.resize(CUSTOM_COLOR_COUNT);
+                }
+                for (int i = 0; i < CUSTOM_COLOR_COUNT; i++) {
+                    colors[i] = color_to_string(m_clrData.GetCustomColour(i));
+                }
+                wxGetApp().app_config->save_custom_color_to_config(colors);
                 // get current color
                 DynamicPrintConfig* cfg = &wxGetApp().preset_bundle->project_config;
                 auto colors = static_cast<ConfigOptionStrings*>(cfg->option("filament_colour")->clone());
@@ -698,6 +711,7 @@ PlaterPresetComboBox::PlaterPresetComboBox(wxWindow *parent, Preset::Type preset
                 wxGetApp().plater()->on_config_change(cfg_new);
 
                 wxCommandEvent *evt = new wxCommandEvent(EVT_FILAMENT_COLOR_CHANGED);
+                evt->SetInt(m_filament_idx);
                 wxQueueEvent(wxGetApp().plater(), evt);
             }
         });
@@ -747,6 +761,10 @@ void PlaterPresetComboBox::OnSelect(wxCommandEvent &evt)
     auto marker = reinterpret_cast<Marker>(this->GetClientData(selected_item));
     if (marker >= LABEL_ITEM_MARKER && marker < LABEL_ITEM_MAX) {
         this->SetSelection(m_last_selected);
+        if (LABEL_ITEM_WIZARD_ADD_PRINTERS == marker) {
+            evt.Skip();
+            return;
+        }
         evt.StopPropagation();
         if (marker == LABEL_ITEM_MARKER)
             return;
@@ -781,8 +799,10 @@ bool PlaterPresetComboBox::switch_to_tab()
     //BBS  Select NoteBook Tab params
     if (tab->GetParent() == wxGetApp().params_panel())
         wxGetApp().mainframe->select_tab(MainFrame::tp3DEditor);
-    else
+    else {
         wxGetApp().params_dialog()->Popup();
+        tab->OnActivate();
+    }
     tab->restore_last_select_item();
 
     const Preset* selected_filament_preset = nullptr;
@@ -940,7 +960,8 @@ void PlaterPresetComboBox::update()
     std::map<wxString, wxBitmap*> nonsys_presets;
     //BBS: add project embedded presets logic
     std::map<wxString, wxBitmap*>  project_embedded_presets;
-    std::map<wxString, wxBitmap*>  system_presets;
+    std::map<wxString, wxBitmap *> system_presets;
+    std::map<wxString, wxString>   preset_descriptions;
 
     //BBS:  move system to the end
     wxString selected_system_preset;
@@ -981,13 +1002,15 @@ void PlaterPresetComboBox::update()
         wxBitmap* bmp = get_bmp(preset);
         assert(bmp);
 
-        const std::string name = preset.alias.empty() ? preset.name : preset.alias;
+        const wxString name = get_preset_name(preset);
+        preset_descriptions.emplace(name, from_u8(preset.description));
+
         if (preset.is_default || preset.is_system) {
             //BBS: move system to the end
-            system_presets.emplace(get_preset_name(preset), bmp);
+            system_presets.emplace(name, bmp);
             if (is_selected) {
                 tooltip = get_tooltip(preset);
-                selected_system_preset = get_preset_name(preset);
+                selected_system_preset = name;
             }
             //Append(get_preset_name(preset), *bmp);
             //validate_selection(is_selected);
@@ -998,17 +1021,17 @@ void PlaterPresetComboBox::update()
         //BBS: add project embedded preset logic
         else if (preset.is_project_embedded)
         {
-            project_embedded_presets.emplace(get_preset_name(preset), bmp);
+            project_embedded_presets.emplace(name, bmp);
             if (is_selected) {
-                selected_user_preset = get_preset_name(preset);
+                selected_user_preset = name;
                 tooltip = wxString::FromUTF8(preset.name.c_str());
             }
         }
         else
         {
-            nonsys_presets.emplace(get_preset_name(preset), bmp);
+            nonsys_presets.emplace(name, bmp);
             if (is_selected) {
-                selected_user_preset = get_preset_name(preset);
+                selected_user_preset = name;
                 //BBS set tooltip
                 tooltip = get_tooltip(preset);
             }
@@ -1025,7 +1048,7 @@ void PlaterPresetComboBox::update()
     {
         set_label_marker(Append(separator(L("Project-inside presets")), wxNullBitmap));
         for (std::map<wxString, wxBitmap*>::iterator it = project_embedded_presets.begin(); it != project_embedded_presets.end(); ++it) {
-            Append(it->first, *it->second);
+            SetItemTooltip(Append(it->first, *it->second), preset_descriptions[it->first]);
             validate_selection(it->first == selected_user_preset);
         }
     }
@@ -1033,7 +1056,7 @@ void PlaterPresetComboBox::update()
     {
         set_label_marker(Append(separator(L("User presets")), wxNullBitmap));
         for (std::map<wxString, wxBitmap*>::iterator it = nonsys_presets.begin(); it != nonsys_presets.end(); ++it) {
-            Append(it->first, *it->second);
+            SetItemTooltip(Append(it->first, *it->second), preset_descriptions[it->first]);
             validate_selection(it->first == selected_user_preset);
         }
     }
@@ -1042,7 +1065,7 @@ void PlaterPresetComboBox::update()
     {
         set_label_marker(Append(separator(L("System presets")), wxNullBitmap));
         for (std::map<wxString, wxBitmap*>::iterator it = system_presets.begin(); it != system_presets.end(); ++it) {
-            Append(it->first, *it->second);
+            SetItemTooltip(Append(it->first, *it->second), preset_descriptions[it->first]);
             validate_selection(it->first == selected_system_preset);
         }
     }
@@ -1079,8 +1102,10 @@ void PlaterPresetComboBox::update()
             set_label_marker(Append(separator(L("Add/Remove filaments")), *bmp), LABEL_ITEM_WIZARD_FILAMENTS);
         else if (m_type == Preset::TYPE_SLA_MATERIAL)
             set_label_marker(Append(separator(L("Add/Remove materials")), *bmp), LABEL_ITEM_WIZARD_MATERIALS);
-        else
-            set_label_marker(Append(separator(L("Add/Remove printers")), *bmp), LABEL_ITEM_WIZARD_PRINTERS);
+        else {
+            set_label_marker(Append(separator(L("Select/Remove printers(system presets)")), *bmp), LABEL_ITEM_WIZARD_PRINTERS);
+            set_label_marker(Append(separator(L("Create printer")), *bmp), LABEL_ITEM_WIZARD_ADD_PRINTERS);
+        }
     }
 
     update_selection();
@@ -1189,6 +1214,7 @@ void TabPresetComboBox::update()
     std::map<wxString, std::pair<wxBitmap*, bool>>  project_embedded_presets;
     //BBS:  move system to the end
     std::map<wxString, std::pair<wxBitmap*, bool>>  system_presets;
+    std::map<wxString, wxString>                    preset_descriptions;
 
     wxString selected = "";
     //BBS:  move system to the end
@@ -1215,11 +1241,14 @@ void TabPresetComboBox::update()
         wxBitmap* bmp = get_bmp(preset);
         assert(bmp);
 
+        const wxString name = get_preset_name(preset);
+        preset_descriptions.emplace(name, from_u8(preset.description));
+
         if (preset.is_default || preset.is_system) {
             //BBS: move system to the end
-            system_presets.emplace(get_preset_name(preset), std::pair<wxBitmap *, bool>(bmp, is_enabled));
+            system_presets.emplace(name, std::pair<wxBitmap *, bool>(bmp, is_enabled));
             if (i == idx_selected)
-                selected = get_preset_name(preset);
+                selected = name;
             //int item_id = Append(get_preset_name(preset), *bmp);
             //if (!is_enabled)
             //    set_label_marker(item_id, LABEL_ITEM_DISABLED);
@@ -1229,16 +1258,16 @@ void TabPresetComboBox::update()
         else if (preset.is_project_embedded)
         {
             //std::pair<wxBitmap*, bool> pair(bmp, is_enabled);
-            project_embedded_presets.emplace(get_preset_name(preset), std::pair<wxBitmap *, bool>(bmp, is_enabled));
+            project_embedded_presets.emplace(name, std::pair<wxBitmap *, bool>(bmp, is_enabled));
             if (i == idx_selected)
-                selected = get_preset_name(preset);
+                selected = name;
         }
         else
         {
             std::pair<wxBitmap*, bool> pair(bmp, is_enabled);
-            nonsys_presets.emplace(get_preset_name(preset), std::pair<wxBitmap*, bool>(bmp, is_enabled));
+            nonsys_presets.emplace(name, std::pair<wxBitmap *, bool>(bmp, is_enabled));
             if (i == idx_selected)
-                selected = get_preset_name(preset);
+                selected = name;
         }
         //BBS: move system to the end
         //if (i + 1 == m_collection->num_default_presets())
@@ -1254,6 +1283,7 @@ void TabPresetComboBox::update()
         set_label_marker(Append(separator(L("Project-inside presets")), wxNullBitmap));
         for (std::map<wxString, std::pair<wxBitmap*, bool>>::iterator it = project_embedded_presets.begin(); it != project_embedded_presets.end(); ++it) {
             int item_id = Append(it->first, *it->second.first);
+            SetItemTooltip(item_id, preset_descriptions[it->first]);
             bool is_enabled = it->second.second;
             if (!is_enabled)
                 set_label_marker(item_id, LABEL_ITEM_DISABLED);
@@ -1265,6 +1295,7 @@ void TabPresetComboBox::update()
         set_label_marker(Append(separator(L("User presets")), wxNullBitmap));
         for (std::map<wxString, std::pair<wxBitmap*, bool>>::iterator it = nonsys_presets.begin(); it != nonsys_presets.end(); ++it) {
             int item_id = Append(it->first, *it->second.first);
+            SetItemTooltip(item_id, preset_descriptions[it->first]);
             bool is_enabled = it->second.second;
             if (!is_enabled)
                 set_label_marker(item_id, LABEL_ITEM_DISABLED);
@@ -1277,6 +1308,7 @@ void TabPresetComboBox::update()
         set_label_marker(Append(separator(L("System presets")), wxNullBitmap));
         for (std::map<wxString, std::pair<wxBitmap*, bool>>::iterator it = system_presets.begin(); it != system_presets.end(); ++it) {
             int item_id = Append(it->first, *it->second.first);
+            SetItemTooltip(item_id, preset_descriptions[it->first]);
             bool is_enabled = it->second.second;
             if (!is_enabled)
                 set_label_marker(item_id, LABEL_ITEM_DISABLED);
@@ -1384,7 +1416,7 @@ GUI::CalibrateFilamentComboBox::CalibrateFilamentComboBox(wxWindow *parent)
 : PlaterPresetComboBox(parent, Preset::TYPE_FILAMENT)
 {
     clr_picker->SetBackgroundColour(*wxWHITE);
-    clr_picker->SetBitmap(*get_extruder_color_icon("#FFFFFFFF", "", 20, 20));
+    clr_picker->SetBitmap(*get_extruder_color_icon("#FFFFFFFF", "", FromDIP(20), FromDIP(20)));
     clr_picker->SetToolTip("");
     clr_picker->Bind(wxEVT_BUTTON, [this](wxCommandEvent& e) {});
 }
@@ -1402,7 +1434,7 @@ void GUI::CalibrateFilamentComboBox::load_tray(DynamicPrintConfig &config)
     m_filament_color = config.opt_string("filament_colour", 0u);
     m_filament_exist = config.opt_bool("filament_exist", 0u);
     wxColor clr(m_filament_color);
-    clr_picker->SetBitmap(*get_extruder_color_icon(m_filament_color, m_tray_name, 20, 20));
+    clr_picker->SetBitmap(*get_extruder_color_icon(m_filament_color, m_tray_name, FromDIP(20), FromDIP(20)));
 #ifdef __WXOSX__
     clr_picker->SetLabel(clr_picker->GetLabel()); // Let setBezelStyle: be called
     clr_picker->Refresh();
@@ -1411,12 +1443,12 @@ void GUI::CalibrateFilamentComboBox::load_tray(DynamicPrintConfig &config)
         SetValue(_L("Empty"));
         m_selected_preset = nullptr;
         m_is_compatible = false;
-        clr_picker->SetBitmap(*get_extruder_color_icon("#F0F0F0FF", m_tray_name, 20, 20));
+        clr_picker->SetBitmap(*get_extruder_color_icon("#F0F0F0FF", m_tray_name, FromDIP(20), FromDIP(20)));
     } else {
         auto &filaments = m_collection->get_presets();
         auto  iter      = std::find_if(filaments.begin(), filaments.end(), [this](auto &f) {
             bool is_compatible = m_preset_bundle->calibrate_filaments.find(&f) != m_preset_bundle->calibrate_filaments.end();
-            return is_compatible && f.is_system && f.filament_id == m_filament_id;
+            return is_compatible && f.filament_id == m_filament_id;
             });
         //if (iter == filaments.end() && !m_filament_type.empty()) {
         //    auto filament_type = "Generic " + m_filament_type;
@@ -1451,9 +1483,8 @@ void GUI::CalibrateFilamentComboBox::update()
 
     const Preset* selected_filament_preset = nullptr;
 
-    std::map<wxString, wxBitmap*> nonsys_presets;
-    std::map<wxString, wxBitmap*>  project_embedded_presets;
-    std::map<wxString, wxBitmap*>  system_presets;
+    m_nonsys_presets.clear();
+    m_system_presets.clear();
 
     wxString selected_preset = m_selected_preset ? get_preset_name(*m_selected_preset) : GetValue();
 
@@ -1463,7 +1494,7 @@ void GUI::CalibrateFilamentComboBox::update()
     for (size_t i = presets.front().is_visible ? 0 : m_collection->num_default_presets(); i < presets.size(); ++i)
     {
         const Preset& preset = presets[i];
-        auto name = get_preset_name(preset);
+        auto display_name = get_preset_name(preset);
         bool          is_selected   = m_selected_preset == &preset;
         if (m_preset_bundle->calibrate_filaments.empty()) {
             Thaw();
@@ -1481,27 +1512,28 @@ void GUI::CalibrateFilamentComboBox::update()
         wxBitmap* bmp = get_bmp(preset);
         assert(bmp);
 
-        if (preset.is_default || preset.is_system)
-            system_presets.emplace(name, bmp);
-        else if (preset.is_project_embedded)
-            project_embedded_presets.emplace(name, bmp);
-        else
-            nonsys_presets.emplace(name, bmp);
+        if (preset.is_default || preset.is_system) {
+            m_system_presets.emplace(display_name, std::make_pair( preset.name, bmp ));
+        }
+        else {
+            m_nonsys_presets.emplace(display_name, std::make_pair( preset.name, bmp ));
+        }
+
     }
 
-    if (!nonsys_presets.empty())
+    if (!m_nonsys_presets.empty())
     {
         set_label_marker(Append(separator(L("User presets")), wxNullBitmap));
-        for (std::map<wxString, wxBitmap*>::iterator it = nonsys_presets.begin(); it != nonsys_presets.end(); ++it) {
-            Append(it->first, *it->second);
+        for (auto it = m_nonsys_presets.begin(); it != m_nonsys_presets.end(); ++it) {
+            Append(it->first, *(it->second.second));
             validate_selection(it->first == selected_preset);
         }
     }
-    if (!system_presets.empty())
+    if (!m_system_presets.empty())
     {
         set_label_marker(Append(separator(L("System presets")), wxNullBitmap));
-        for (std::map<wxString, wxBitmap*>::iterator it = system_presets.begin(); it != system_presets.end(); ++it) {
-            Append(it->first, *it->second);
+        for (auto it = m_system_presets.begin(); it != m_system_presets.end(); ++it) {
+            Append(it->first, *(it->second.second));
             validate_selection(it->first == selected_preset);
         }
     }
@@ -1512,19 +1544,39 @@ void GUI::CalibrateFilamentComboBox::update()
     SetToolTip(NULL);
 }
 
+void GUI::CalibrateFilamentComboBox::msw_rescale()
+{
+    if (clr_picker) {
+        clr_picker->SetSize(FromDIP(20), FromDIP(20));
+        clr_picker->SetBitmap(*get_extruder_color_icon(m_filament_color, m_tray_name, FromDIP(20), FromDIP(20)));
+    }
+    // BBS
+    if (edit_btn != nullptr)
+        edit_btn->msw_rescale();
+}
+
 void GUI::CalibrateFilamentComboBox::OnSelect(wxCommandEvent &evt)
 {
     auto marker = reinterpret_cast<Marker>(this->GetClientData(evt.GetSelection()));
     if (marker >= LABEL_ITEM_DISABLED && marker < LABEL_ITEM_MAX) {
         this->SetSelection(evt.GetSelection() + 1);
+        wxCommandEvent event(wxEVT_COMBOBOX);
+        event.SetInt(evt.GetSelection() + 1);
+        event.SetString(GetString(evt.GetSelection() + 1));
+        wxPostEvent(this, event);
         return;
     }
     m_is_compatible = true;
     static_cast<FilamentComboBox*>(m_parent)->Enable(true);
 
-    std::string selected_name = evt.GetString().ToUTF8().data();
-    selected_name             = Preset::remove_suffix_modified(selected_name);
-    std::string preset_name = m_collection->get_preset_name_by_alias(selected_name);
+    wxString display_name = evt.GetString();
+    std::string preset_name;
+    if (m_system_presets.find(evt.GetString()) != m_system_presets.end()) {
+        preset_name = m_system_presets.at(display_name).first;
+    }
+    else if (m_nonsys_presets.find(evt.GetString()) != m_nonsys_presets.end()) {
+        preset_name = m_nonsys_presets.at(display_name).first;
+    }
     m_selected_preset       = m_collection->find_preset(preset_name);
 
     // if the selected preset is null, do not send tray_change event

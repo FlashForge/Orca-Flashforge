@@ -16,6 +16,7 @@
 #include "Widgets/TextInput.hpp"
 #include "BBLStatusBar.hpp"
 #include "BBLStatusBarSend.hpp"
+#include "libslic3r/Semver.hpp"
 
 class wxBoxSizer;
 class wxCheckBox;
@@ -128,6 +129,8 @@ public:
 	virtual ~WarningDialog() = default;
 };
 
+wxString get_wraped_wxString(const wxString& text_in, size_t line_len = 80);
+
 #if 1
 // Generic static line, used intead of wxStaticLine
 //class StaticLine: public wxTextCtrl
@@ -190,7 +193,7 @@ public:
 	}
 
 	wxString	GetCheckBoxText()	const { return m_checkBoxText; }
-	bool		IsCheckBoxChecked() const { return m_checkBoxValue; }
+	bool		IsCheckBoxChecked() const;
 
 // This part o fcode isported from the "wx\msgdlg.h"
 	using wxMD = wxMessageDialogBase;
@@ -372,6 +375,40 @@ private:
     wxString msg;
 };
 
+class DeleteConfirmDialog : public DPIDialog
+{
+public:
+    DeleteConfirmDialog(wxWindow *parent, const wxString &title, const wxString &msg);
+    ~DeleteConfirmDialog();
+    virtual void on_dpi_changed(const wxRect &suggested_rect);
+
+private:
+    wxString      msg;
+    Button *      m_del_btn    = nullptr;
+    Button *      m_cancel_btn = nullptr;
+    wxStaticText *m_msg_text   = nullptr;
+};
+
+class Newer3mfVersionDialog : public DPIDialog
+{
+public:
+    Newer3mfVersionDialog(wxWindow *parent, const Semver* file_version, const Semver* cloud_version, wxString new_keys);
+    ~Newer3mfVersionDialog(){};
+    virtual void on_dpi_changed(const wxRect &suggested_rect){};
+
+private:
+    wxBoxSizer *get_msg_sizer();
+    wxBoxSizer *get_btn_sizer();
+
+
+private:
+    const Semver *m_file_version;
+    const Semver *m_cloud_version;
+    wxString      m_new_keys;
+    Button *      m_update_btn = nullptr;
+    Button *      m_later_btn  = nullptr;
+    wxStaticText *m_msg_text   = nullptr;
+};
 
 }
 }

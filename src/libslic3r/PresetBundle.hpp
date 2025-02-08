@@ -7,9 +7,17 @@
 
 #include <memory>
 #include <unordered_map>
+#include <array>
 #include <boost/filesystem/path.hpp>
 
-#define DEFAULT_USER_FOLDER_NAME     "default"
+#define DEFAULT_USER_FOLDER_NAME "default"
+#define BUNDLE_STRUCTURE_JSON_NAME "bundle_structure.json"
+
+#define VALIDATE_PRESETS_SUCCESS                0
+#define VALIDATE_PRESETS_PRINTER_NOT_FOUND      1
+#define VALIDATE_PRESETS_FILAMENTS_NOT_FOUND    2
+#define VALIDATE_PRESETS_MODIFIED_GCODES        3
+
 
 // define an enum class of vendor type
 enum class VendorType {
@@ -57,6 +65,12 @@ public:
     PresetsConfigSubstitutions load_user_presets(std::string user, ForwardCompatibilitySubstitutionRule rule);
     PresetsConfigSubstitutions load_user_presets(AppConfig &config, std::map<std::string, std::map<std::string, std::string>>& my_presets, ForwardCompatibilitySubstitutionRule rule);
     PresetsConfigSubstitutions import_presets(std::vector<std::string> &files, std::function<int(std::string const &)> override_confirm, ForwardCompatibilitySubstitutionRule rule);
+    bool                       import_json_presets(PresetsConfigSubstitutions &            substitutions,
+                                                   std::string &                           file,
+                                                   std::function<int(std::string const &)> override_confirm,
+                                                   ForwardCompatibilitySubstitutionRule    rule,
+                                                   int &                                   overwrite,
+                                                   std::vector<std::string> &              result);
     void save_user_presets(AppConfig& config, std::vector<std::string>& need_to_delete_list);
     void remove_users_preset(AppConfig &config, std::map<std::string, std::map<std::string, std::string>> * my_presets = nullptr);
     void update_user_presets_directory(const std::string preset_folder);
@@ -64,7 +78,7 @@ public:
     void update_system_preset_setting_ids(std::map<std::string, std::map<std::string, std::string>>& system_presets);
 
     //BBS: add API to get previous machine
-    bool validate_printers(const std::string &name, DynamicPrintConfig& config);
+    int validate_presets(const std::string &file_name, DynamicPrintConfig& config, std::set<std::string>& different_gcodes);
 
     //BBS: add function to generate differed preset for save
     //the pointer should be freed by the caller
@@ -78,6 +92,10 @@ public:
     VendorType get_current_vendor_type();
     // Vendor related handy functions
     bool is_bbl_vendor() { return get_current_vendor_type() == VendorType::Marlin_BBL; }
+    // Whether using bbl network for print upload
+    bool use_bbl_network();
+    // Whether using bbl's device tab
+    bool use_bbl_device_tab();
     bool is_flashforge_vendor();
 
     //BBS: project embedded preset logic
@@ -103,6 +121,18 @@ public:
     void           update_selections(AppConfig &config);
     void set_calibrate_printer(std::string name);
 
+    void set_is_validation_mode(bool mode) { validation_mode = mode; }
+    void set_vendor_to_validate(std::string vendor) { vendor_to_validate = vendor; }
+
+    std::set<std::string> get_printer_names_by_printer_type_and_nozzle(const std::string &printer_type, std::string nozzle_diameter_str);
+    bool                  check_filament_temp_equation_by_printer_type_and_nozzle_for_mas_tray(const std::string &printer_type,
+                                                                                               std::string &      nozzle_diameter_str,
+                                                                                               std::string &      setting_id,
+                                                                                               std::string &      tag_uid,
+                                                                                               std::string &      nozzle_temp_min,
+                                                                                               std::string &      nozzle_temp_max,
+                                                                                               std::string &      preset_setting_id);
+
     PresetCollection            prints;
     PresetCollection            sla_prints;
     PresetCollection            filaments;
@@ -116,6 +146,7 @@ public:
     std::vector<std::string>    filament_presets;
     // BBS: ams
     std::map<int, DynamicPrintConfig> filament_ams_list;
+    std::vector<std::vector<std::string>> ams_multi_color_filment;
     // Calibrate
     Preset const * calibrate_printer = nullptr;
     std::set<Preset const *> calibrate_filaments;
@@ -174,6 +205,7 @@ public:
         // Load a system config bundle.
         LoadSystem,
         LoadVendorOnly,
+        LoadFilamentOnly,
     };
     using LoadConfigBundleAttributes = enum_bitmask<LoadConfigBundleAttribute>;
     // Load the config bundle based on the flags.
@@ -190,7 +222,7 @@ public:
     //void export_current_configbundle(const std::string &path);
     //BBS: add a function to export system presets for cloud-slicer
     //void export_system_configs(const std::string &path);
-    std::vector<std::string> export_current_configs(const std::string &path, std::function<int(std::string const &)> override_confirm, 
+    std::vector<std::string> export_current_configs(const std::string &path, std::function<int(std::string const &)> override_confirm,
         bool include_modify, bool export_system_settings = false);
 
     // Enable / disable the "- default -" preset.
@@ -219,16 +251,36 @@ public:
 
     const std::string&          get_preset_name_by_alias(const Preset::Type& preset_type, const std::string& alias) const;
 
+    const int                   get_required_hrc_by_filament_type(const std::string& filament_type) const;
     // Save current preset of a provided type under a new name. If the name is different from the old one,
     // Unselected option would be reverted to the beginning values
     //BBS: add project embedded preset logic
     void                        save_changes_for_preset(const std::string& new_name, Preset::Type type, const std::vector<std::string>& unselected_options, bool save_to_project = false);
+
+    std::pair<PresetsConfigSubstitutions, std::string> load_system_models_from_json(ForwardCompatibilitySubstitutionRule compatibility_rule);
+    std::pair<PresetsConfigSubstitutions, std::string> load_system_filaments_json(ForwardCompatibilitySubstitutionRule compatibility_rule);
+    VendorProfile                                      get_custom_vendor_models() const;
 
     //BBS: add BBL as default
     static const char *BBL_BUNDLE;
 	static const char *BBL_DEFAULT_PRINTER_MODEL;
 	static const char *BBL_DEFAULT_PRINTER_VARIANT;
 	static const char *BBL_DEFAULT_FILAMENT;
+
+    static std::array<Preset::Type, 3>  types_list(PrinterTechnology pt) {
+        if (pt == ptFFF)
+            return  { Preset::TYPE_PRINTER, Preset::TYPE_PRINT, Preset::TYPE_FILAMENT };
+        return      { Preset::TYPE_PRINTER, Preset::TYPE_SLA_PRINT, Preset::TYPE_SLA_MATERIAL };
+    }
+
+    // Orca: for validation only
+    bool has_errors() const
+    {
+        if (m_errors != 0 || printers.m_errors != 0 || filaments.m_errors != 0 || prints.m_errors != 0)
+            return true;
+        return false;
+    }
+
 private:
     //std::pair<PresetsConfigSubstitutions, std::string> load_system_presets(ForwardCompatibilitySubstitutionRule compatibility_rule);
     //BBS: add json related logic
@@ -252,6 +304,12 @@ private:
 
     DynamicPrintConfig          full_fff_config() const;
     DynamicPrintConfig          full_sla_config() const;
+
+    // Orca: used for validation only
+    bool validation_mode = false;
+    std::string vendor_to_validate = ""; 
+    int m_errors = 0;
+
 };
 
 ENABLE_ENUM_BITMASK_OPERATORS(PresetBundle::LoadConfigBundleAttribute)

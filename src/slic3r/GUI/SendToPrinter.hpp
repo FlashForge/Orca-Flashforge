@@ -42,6 +42,8 @@
 #include "Widgets/FFButton.hpp"
 #include "Widgets/FFToggleButton.hpp"
 #include "Widgets/ProgressBar.hpp"
+#include "Widgets/RadioBox.hpp"
+#include "FlashForge/AmsMappingWidgets.hpp"
 #include "FlashForge/MultiComMgr.hpp"
 #include <wx/simplebook.h>
 #include <wx/hashmap.h>
@@ -53,7 +55,7 @@
 namespace Slic3r {
 namespace GUI {
 
-class ExportSliceJob;
+//class ExportSliceJob; //by ymd
 class MultiSend : public wxEvtHandler
 {
 public:
@@ -64,12 +66,18 @@ public:
         Result_Fail_Canceled,
         Result_Fail_Network,
     };
+    struct wan_send_info {
+        com_id_t comId;
+        std::string serialNumber;
+        std::string nimAccountId;
+    };
 
 public:
     MultiSend(wxWindow* event_handler, int sync_num = 5);
     ~MultiSend();
 
-    bool send_to_printer(int plate_idx, const com_id_list_t& com_ids, const std::string& job_name, bool send_and_print, bool leveling);
+    bool send_to_printer(int plate_idx, const com_id_list_t& com_ids,
+        const com_send_gcode_data_t &send_gcode_data);
     void cancel();
     const com_id_list_t& com_ids() const { return m_com_ids; }
     
@@ -77,17 +85,18 @@ public:
     void reset();
 
 private:
+    typedef std::map<std::string, wan_send_info> wan_ids_to_send_t;
+    //
     bool prepare();
     void bind_com_event(bool bind);
     void remove_temp_path();
     bool export_temp_file();
     void cancel_export_job();
     void send_next_job();
-    void send_wan_job(const std::map<std::string, com_id_t>& com_ids);
-    void do_send_next_job();
+    void send_wan_job(const wan_ids_to_send_t& wan_ids);
     void update_progress();
     Result convert_return_value(ComErrno error);
-    Result convert_wan_error_value(int error);
+    Result convert_wan_error_value(ComCloundJobErrno error);
     void send_event(int code, const wxString& msg);
     void on_cnnection_exit(ComConnectionExitEvent& event);
     void on_send_gcode_finished(ComSendGcodeFinishEvent& event);
@@ -110,14 +119,14 @@ private:
     wxWindow*       m_event_handler {nullptr};
     std::string     m_slice_path;
     std::string     m_thumb_path;
-    std::string     m_slice_job_name;
     com_id_list_t   m_com_ids;
-    std::map<std::string, com_id_t> m_wan_ids_to_send;  // devId, com_id pair
+    com_send_gcode_data_t           m_send_gcode_data;
+    wan_ids_to_send_t               m_wan_ids_to_send;  // devId, <com_id, nimAccountId>
     double                          m_wan_progress {0};
     double                          m_pre_batch_progress {0.0};
     std::deque<com_id_t>            m_lan_ids_to_send;
     std::map<com_id_t, ResultInfo>  m_send_jobs;
-    std::shared_ptr<ExportSliceJob> m_export_job;
+    //std::shared_ptr<ExportSliceJob> m_export_job; //by ymd
 };
 wxDECLARE_EVENT(EVT_MULTI_SEND_COMPLETED, wxCommandEvent);
 wxDECLARE_EVENT(EVT_MULTI_SEND_PROGRESS, wxCommandEvent);
@@ -135,7 +144,8 @@ private:
     wxPanel* createListPanel(wxWindow* parent, const wxStringList& str_list, bool success_flag);
 };
 
-
+wxDECLARE_EVENT(EVT_MACHINE_CHECKED_CHANGED, wxCommandEvent);
+wxDECLARE_EVENT(EVT_MACHINE_RADIO_CHANGED, wxCommandEvent);
 class MachineItem : public wxPanel
 {
 public:
@@ -150,29 +160,38 @@ public:
         MachineData() = default;
         MachineData(const MachineData& data) = default;//: flag(data.flag), model(data.model), name(data.name) {};
     };
+    enum SelectMode { Radio = 0, Check = 1};
 
-public:
+public :
     MachineItem(wxWindow* parent, const MachineData& data);
     ~MachineItem() {};
 
     const MachineData& data() const;
     bool IsChecked() const;
     void SetChecked(bool checked);
+    void SetRadio(bool radio);
     void SetDefaultColor(const wxColor& color);
+    void SetSelectMode(SelectMode mode);
+    SelectMode GetSelectMode();
+    int GetRadioBoxID();
     
 private:
     static void initBitmap();
-    void build();
+    void        prepare_build();
+    void        build_check();
+    void        build_radio();
+    void        onCheckedOrRadioClicked(wxCommandEvent& event);
 
 private:
     wxColour		m_defaultColor { wxColour(255, 255, 255) };
     FFCheckBox*     m_checkBox;
+    RadioButton*    m_radioBox;
     wxPanel*        m_iconPanel;
     wxBoxSizer*     m_iconSizer;
     ThumbnailPanel*	m_thumbnailPanel;
     wxStaticText*   m_nameLbl;
-    wxBoxSizer*     m_mainSizer;
     MachineData     m_data;
+    SelectMode      m_selectMode;
     static std::map<int, wxImage> m_machineBitmapMap;
 };
 
@@ -200,6 +219,7 @@ private:
     int									m_current_filament_id{0};
     int                                 m_print_error_code{0};
     bool								m_is_in_sending_mode{ false };
+    bool                                m_pending_update_machine_list{ false };
     bool								m_is_rename_mode{ false };
     bool								enable_prepare_mode{ true };
     bool								m_need_adaptation_screen{ false };
@@ -229,16 +249,22 @@ private:
     wxPanel*                            m_renamePanel {nullptr};
     wxStaticText*                       m_renameText { nullptr };
     Button*                             m_renameBtn {nullptr};
-    
-    std::vector<FilamentInfo>           m_filaments;
-    MaterialHash                        m_materialList;
-    wxGridSizer*                        m_sizer_material{ nullptr };
-    wxPanel*                            m_material_panel{nullptr};
+
+    wxGridSizer*                        m_sizer_material {nullptr};
+    wxPanel*                            m_material_panel {nullptr};
 	wxBoxSizer*							m_sizer_main {nullptr};
 	wxStaticText*						m_file_name {nullptr};
-    PrintDialogStatus					m_print_status{ PrintStatusInit };
-    FFCheckBox*                         m_levelCkb {nullptr};
+    PrintDialogStatus					m_print_status{PrintStatusInit};
+    wxStaticText*                       m_amsTipLbl {nullptr};
+    wxBoxSizer*                         m_printConfigSizer{ nullptr };
+    FFCheckBox*                         m_levelChk {nullptr};
     wxStaticText*                       m_levelLbl {nullptr};
+    FFCheckBox*                         m_flowCalibrationChk {nullptr};
+    wxStaticText*                       m_flowCalibrationLbl {nullptr};
+    FFCheckBox*                         m_enableAmsChk {nullptr};
+    wxStaticText*                       m_enableAmsLbl {nullptr};
+    wxStaticBitmap*                     m_amsTipWxBmp {nullptr};
+    AmsTipWnd*                          m_amsTipWnd {nullptr};
     wxStaticText*                       m_selectPrinterLbl;
     FFToggleButton*                     m_wlanBtn {nullptr};
     FFToggleButton*                     m_lanBtn {nullptr};
@@ -266,6 +292,7 @@ private:
     wxStaticText*                       m_progressLbl {nullptr};
     FFButton*                           m_progressCancelBtn {nullptr};
 
+    std::vector<MaterialMapWgt*>        m_materialMapItems;
     std::map<std::string, MachineItem::MachineData> m_machineListMap;
     std::vector<MachineItem*>           m_machineItemList;
     std::shared_ptr<MultiSend>          m_multiSend;
@@ -297,17 +324,21 @@ public:
     void on_change_color_mode() { wxGetApp().UpdateDlgDarkUI(this); }
     wxString format_text(wxString& m_msg);
 	std::vector<std::string> sort_string(std::vector<std::string> strArray);
+    void set_progress_info(const wxString& msg);
 
 private:
 	void init_bind();
-    void updateVisible();
+    void updateMaterialMapWidgetsState();
     void updateSendButtonState();
     void clear_machine_list();
     void redirect_window();
+    void update_machine_item_select_mode(bool isChecked);
+
     void on_close(wxCloseEvent& event);
     void on_size(wxSizeEvent& event);
     void onNetworkTypeToggled(wxCommandEvent& event);
     void onMachineSelectionToggled(wxCommandEvent& event);
+    void onMachineRadioBoxClicked(wxCommandEvent& event);
     void onSendClicked(wxCommandEvent& event);
     void on_cancel(wxCommandEvent& event);
     void onConnectionReady(ComConnectionReadyEvent& event);
@@ -315,6 +346,12 @@ private:
     void on_multi_send_progress(wxCommandEvent& event);
     void on_multi_send_completed(wxCommandEvent& event);
     void on_redirect_timer(wxTimerEvent &event);
+    void onLevellingCheckBoxChanged(wxCommandEvent& event);
+    void onFlowCalibrationCheckBoxChanged(wxCommandEvent& event);
+    void onEnableAmsCheckBoxChanged(wxCommandEvent& event);
+    void onEnterAmsTipWidget(wxMouseEvent& event);
+
+    std::vector<std::pair<std::string, MachineItem::MachineData>> sortByName(const std::map<std::string, MachineItem::MachineData>& devList);
 };
 
 }

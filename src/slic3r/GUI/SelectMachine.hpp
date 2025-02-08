@@ -51,8 +51,9 @@ enum PrinterState {
     OFFLINE_WAN,
     IDLE,
     BUSY,
-    ONLINE_LAN,
-    ONLINE_WAN
+    ONLINE_LAN, 
+    ONLINE_WAN,
+    IN_LAN, LOCK, OFFLINE
 };
 
 enum PrinterBindState {
@@ -65,6 +66,34 @@ enum PrintFromType {
     FROM_NORMAL,
     FROM_SDCARD_VIEW,
 };
+
+static int get_brightness_value(wxImage image) {
+
+    wxImage grayImage = image.ConvertToGreyscale();
+
+    int width = grayImage.GetWidth();
+    int height = grayImage.GetHeight();
+
+    int totalLuminance = 0;
+    unsigned char alpha;
+    int num_none_transparent = 0;
+    for (int y = 0; y < height; y += 2) {
+
+        for (int x = 0; x < width; x += 2) {
+
+            alpha = image.GetAlpha(x, y);
+            if (alpha != 0) {
+                wxColour pixelColor = grayImage.GetRed(x, y);
+                totalLuminance += pixelColor.Red();
+                num_none_transparent = num_none_transparent + 1;
+            }
+        }
+    }
+    if (totalLuminance <= 0 || num_none_transparent <= 0) {
+        return 0;
+    }
+    return totalLuminance / num_none_transparent;
+}
 
 class Material
 {
@@ -195,6 +224,27 @@ class MachinePanel
 public:
     wxString mIndex;
     MachineObjectPanel *mPanel;
+};
+
+class PinCodePanel : public wxPanel
+{
+public:
+    PinCodePanel(wxWindow* parent,
+        wxWindowID      winid = wxID_ANY,
+        const wxPoint& pos = wxDefaultPosition,
+        const wxSize& size = wxDefaultSize);
+    ~PinCodePanel() {};
+
+    ScalableBitmap       m_bitmap;
+    bool           m_hover{false};
+
+    void OnPaint(wxPaintEvent& event);
+    void render(wxDC& dc);
+    void doRender(wxDC& dc);
+
+    void on_mouse_enter(wxMouseEvent& evt);
+    void on_mouse_leave(wxMouseEvent& evt);
+    void on_mouse_left_up(wxMouseEvent& evt);
 };
 
 
@@ -375,7 +425,7 @@ private:
     int                                 m_print_plate_idx{0};
     int                                 m_print_plate_total{0};
     int                                 m_timeout_count{0};
-    int                                 m_print_error_code;
+    int                                 m_print_error_code{0};
     bool                                m_is_in_sending_mode{ false };
     bool                                m_ams_mapping_res{ false };
     bool                                m_ams_mapping_valid{ false };
@@ -394,6 +444,7 @@ private:
     wxColour                            m_colour_bold_color{wxColour(38, 46, 48)};
     StateColor                          m_btn_bg_enable;
     
+    std::shared_ptr<int>                m_token = std::make_shared<int>(0);
     std::map<std::string, CheckBox *>   m_checkbox_list;
     //std::map<std::string, bool>         m_checkbox_state_list;
     std::vector<wxString>               m_bedtype_list;
@@ -401,6 +452,7 @@ private:
     std::vector<FilamentInfo>           m_filaments;
     std::vector<FilamentInfo>           m_ams_mapping_result;
     std::shared_ptr<BBLStatusBarSend>   m_status_bar;
+    std::unique_ptr<Worker>             m_worker;
 
     Slic3r::DynamicPrintConfig          m_required_data_config;
     Slic3r::Model                       m_required_data_model; 
@@ -431,6 +483,7 @@ protected:
     wxStaticBitmap*                     m_staticbitmap{ nullptr };
     wxStaticBitmap*                     m_bitmap_last_plate{ nullptr };
     wxStaticBitmap*                     m_bitmap_next_plate{ nullptr };
+    wxStaticBitmap*                     img_amsmapping_tip{nullptr};
     ThumbnailPanel*                     m_thumbnailPanel{ nullptr };
     wxWindow*                           select_bed{ nullptr };
     wxWindow*                           select_flow{ nullptr };
@@ -449,8 +502,8 @@ protected:
     Label*                              m_st_txt_error_code{nullptr};
     Label*                              m_st_txt_error_desc{nullptr};
     Label*                              m_st_txt_extra_info{nullptr};
-    Label *                             m_link_network_state;
     Label*                              m_ams_backup_tip{nullptr};
+    wxHyperlinkCtrl*                    m_link_network_state{ nullptr };
     wxSimplebook*                       m_rename_switch_panel{nullptr};
     wxSimplebook*                       m_simplebook{nullptr};
     wxStaticText*                       m_rename_text{nullptr};
@@ -464,7 +517,6 @@ protected:
     wxStaticText*                       m_statictext_finish{nullptr};
     TextInput*                          m_rename_input{nullptr};
     wxTimer*                            m_refresh_timer{ nullptr };
-    std::shared_ptr<PrintJob>           m_print_job;
     wxScrolledWindow*                   m_scrollable_view;
     wxScrolledWindow*                   m_sw_print_failed_info{nullptr};
     wxHyperlinkCtrl*                    m_hyperlink{nullptr};
@@ -474,11 +526,16 @@ protected:
     ScalableBitmap *                    print_time{nullptr};
     wxStaticBitmap *                    weightimg{nullptr};
     ScalableBitmap *                    print_weight{nullptr};
-    wxStaticBitmap *                    amsmapping_tip{nullptr};
     ScalableBitmap *                    enable_ams_mapping{nullptr};
-    wxStaticBitmap *                    img_ams_tip{nullptr};
+    wxStaticBitmap *                    img_use_ams_tip{nullptr};
     wxStaticBitmap *                    img_ams_backup{nullptr};
     ScalableBitmap *                    enable_ams{nullptr};
+    ThumbnailData                       m_cur_input_thumbnail_data;
+    ThumbnailData                       m_cur_no_light_thumbnail_data;
+    ThumbnailData                       m_preview_thumbnail_data;//when ams map change
+    std::vector<wxColour>               m_preview_colors_in_thumbnail;
+    std::vector<wxColour>               m_cur_colors_in_thumbnail;
+    std::vector<bool>                   m_edge_pixels;
 
 public:
     SelectMachineDialog(Plater *plater = nullptr);
@@ -517,7 +574,15 @@ public:
     void on_set_finish_mapping(wxCommandEvent& evt);
     void on_print_job_cancel(wxCommandEvent& evt);
     void set_default();
-    void set_default_normal();
+    void reset_and_sync_ams_list();
+    void clone_thumbnail_data();
+    void record_edge_pixels_data();
+    wxColour adjust_color_for_render(const wxColour& color);
+    void final_deal_edge_pixels_data(ThumbnailData& data);
+    void updata_thumbnail_data_after_connected_printer();
+    void unify_deal_thumbnail_data(ThumbnailData &input_data, ThumbnailData &no_light_data);
+    void change_default_normal(int old_filament_id, wxColour temp_ams_color);
+    void set_default_normal(const ThumbnailData&);
     void set_default_from_sdcard();
     void update_page_turn_state(bool show);
     void on_timer(wxTimerEvent& event);
@@ -527,6 +592,7 @@ public:
     void Enable_Send_Button(bool en);
     void on_dpi_changed(const wxRect& suggested_rect) override;
     void update_user_machine_list();
+    void update_lan_machine_list();
     void stripWhiteSpace(std::string& str);
     void update_ams_status_msg(wxString msg, bool is_warning = false);
     void update_priner_status_msg(wxString msg, bool is_warning = false);
@@ -537,7 +603,9 @@ public:
     bool has_timelapse_warning();
     void update_timelapse_enable_status();
     bool is_same_printer_model();
-    bool is_blocking_printing();
+    bool is_blocking_printing(MachineObject* obj_);
+    bool is_same_nozzle_diameters(std::string& tag_nozzle_type, std::string& nozzle_diameter);
+    bool is_same_nozzle_type(std::string& filament_type, std::string& tag_nozzle_type);
     bool has_tips(MachineObject* obj);
     bool is_timeout();
     int  update_print_required_data(Slic3r::DynamicPrintConfig config, Slic3r::Model model, Slic3r::PlateDataPtrs plate_data_list, std::string file_name, std::string file_path);
@@ -547,6 +615,7 @@ public:
     bool get_ams_mapping_result(std::string& mapping_array_str, std::string& ams_mapping_info);
 
     PrintFromType get_print_type() {return m_print_type;};
+    wxString    format_steel_name(std::string name);
     wxString    format_text(wxString &m_msg);
     wxWindow*   create_ams_checkbox(wxString title, wxWindow* parent, wxString tooltip);
     wxWindow*   create_item_checkbox(wxString title, wxWindow* parent, wxString tooltip, std::string param);
@@ -585,7 +654,7 @@ public:
 class ThumbnailPanel : public wxPanel
 {
 public:
-    wxBitmap *      m_bitmap{nullptr};
+    wxBitmap       m_bitmap;
     wxStaticBitmap *m_staticbitmap{nullptr};
 
     ThumbnailPanel(wxWindow *      parent,
@@ -597,8 +666,12 @@ public:
     void OnPaint(wxPaintEvent &event);
     void PaintBackground(wxDC &dc);
     void OnEraseBackground(wxEraseEvent &event);
-    void set_thumbnail(wxImage img);
-    
+    void set_thumbnail(wxImage &img);
+    void render(wxDC &dc);
+private:
+    ScalableBitmap m_background_bitmap;
+    wxBitmap bitmap_with_background;
+    int m_brightness_value{ -1 };
 };
 
 }} // namespace Slic3r::GUI

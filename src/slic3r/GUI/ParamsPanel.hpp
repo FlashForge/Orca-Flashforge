@@ -20,6 +20,8 @@
 #include <wx/image.h>
 #include <wx/icon.h>
 #include <wx/button.h>
+#include <wx/timer.h>
+#include <wx/wupdlock.h>
 #include <wx/sizer.h>
 #include <wx/statline.h>
 #include <wx/scrolwin.h>
@@ -90,6 +92,7 @@ class ParamsPanel : public wxPanel
         wxStaticLine* m_staticline_print { nullptr };
         //wxBoxSizer* m_print_sizer { nullptr };
         wxPanel* m_tab_print { nullptr };
+        wxPanel* m_tab_print_plate { nullptr };
         wxPanel* m_tab_print_object { nullptr };
         wxStaticLine* m_staticline_print_object { nullptr };
         wxPanel* m_tab_print_part { nullptr };

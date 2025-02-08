@@ -3,6 +3,10 @@
 
 #include <string>
 #include <functional>
+#include <map>
+
+extern std::string g_log_folder;
+extern std::string g_log_start_time;
 
 namespace BBL {
 
@@ -33,8 +37,8 @@ namespace BBL {
 #define BAMBU_NETWORK_ERR_NO_CORRESPONDING_BUCKET       -24
 #define BAMBU_NETWORK_ERR_GET_INSTANCE_ID_FAILED        -25
 
-    //bind error
-#define BAMBU_NETWORK_ERR_BIND_CREATE_SOCKET_FAILED          -1010 //failed to create socket 
+//bind error
+#define BAMBU_NETWORK_ERR_BIND_CREATE_SOCKET_FAILED          -1010 //failed to create socket
 #define BAMBU_NETWORK_ERR_BIND_SOCKET_CONNECT_FAILED         -1020 //failed to socket connect
 #define BAMBU_NETWORK_ERR_BIND_PUBLISH_LOGIN_REQUEST         -1030 //failed to publish login request
 #define BAMBU_NETWORK_ERR_BIND_GET_PRINTER_TICKET_TIMEOUT    -1040 //timeout to get ticket from printer
@@ -58,17 +62,17 @@ namespace BBL {
 #define BAMBU_NETWORK_ERR_PRINT_WR_UPLOAD_3MF_TO_OSS_FAILED         -2110 //failed to  upload 3mf to oss
 #define BAMBU_NETWORK_ERR_PRINT_WR_POST_TASK_FAILED                 -2120 //failed to post task
 #define BAMBU_NETWORK_ERR_PRINT_WR_UPLOAD_FTP_FAILED                -2130 //failed to upload to ftp
-#define BAMBU_NETWORK_ERR_PRINT_WR_GET_USER_UPLOAD_FAILED           -2140 //failed to get_user_upload  
+#define BAMBU_NETWORK_ERR_PRINT_WR_GET_USER_UPLOAD_FAILED           -2140 //failed to get_user_upload
 
 //start_print  error
-#define BAMBU_NETWORK_ERR_PRINT_SP_REQUEST_PROJECT_ID_FAILED        -3010 //failed to request project id 
+#define BAMBU_NETWORK_ERR_PRINT_SP_REQUEST_PROJECT_ID_FAILED        -3010 //failed to request project id
 #define BAMBU_NETWORK_ERR_PRINT_SP_CHECK_MD5_FAILED                 -3020 //failed to check md5 for upload 3mf to oss
 #define BAMBU_NETWORK_ERR_PRINT_SP_UPLOAD_3MF_CONFIG_TO_OSS_FAILED  -3030 //failed to upload 3mf config to oss
 #define BAMBU_NETWORK_ERR_PRINT_SP_PUT_NOTIFICATION_FAILED          -3040 //failed to put notification
 #define BAMBU_NETWORK_ERR_PRINT_SP_GET_NOTIFICATION_TIMEOUT         -3050 //timeout to get notification
 #define BAMBU_NETWORK_ERR_PRINT_SP_GET_NOTIFICATION_FAILED          -3060 //failed to get notification
 #define BAMBU_NETWORK_ERR_PRINT_SP_FILE_NOT_EXIST                   -3070 //3mf file is not exists
-#define BAMBU_NETWORK_ERR_PRINT_SP_GET_USER_UPLOAD_FAILED           -3080 //failed to get_user_upload 
+#define BAMBU_NETWORK_ERR_PRINT_SP_GET_USER_UPLOAD_FAILED           -3080 //failed to get_user_upload
 #define BAMBU_NETWORK_ERR_PRINT_SP_FILE_OVER_SIZE                   -3090 //the size of the uploaded file cannot exceed 1 GB
 #define BAMBU_NETWORK_ERR_PRINT_SP_UPLOAD_3MF_TO_OSS_FAILED         -3100 //failed to  upload 3mf to oss
 #define BAMBU_NETWORK_ERR_PRINT_SP_PATCH_PROJECT_FAILED             -3110 //failed to patch project
@@ -90,7 +94,8 @@ namespace BBL {
 
 #define BAMBU_NETWORK_LIBRARY               "bambu_networking"
 #define BAMBU_NETWORK_AGENT_NAME            "bambu_network_agent"
-#define BAMBU_NETWORK_AGENT_VERSION         "01.07.06.01"
+
+#define BAMBU_NETWORK_AGENT_VERSION         "01.09.02.05"
 
 //iot preset type strings
 #define IOT_PRINTER_TYPE_STRING     "printer"
@@ -100,12 +105,12 @@ namespace BBL {
 #define IOT_JSON_KEY_VERSION            "version"
 #define IOT_JSON_KEY_NAME               "name"
 #define IOT_JSON_KEY_TYPE               "type"
-#define IOT_JSON_KEY_UPDATE_TIME        "updated_time"
+#define IOT_JSON_KEY_UPDATE_TIME        "update_time"
+#define IOT_JSON_KEY_UPDATED_TIME        "updated_time"
 #define IOT_JSON_KEY_BASE_ID            "base_id"
 #define IOT_JSON_KEY_SETTING_ID         "setting_id"
 #define IOT_JSON_KEY_FILAMENT_ID        "filament_id"
 #define IOT_JSON_KEY_USER_ID            "user_id"
-
 
 // user callbacks
 typedef std::function<void(int online_login, bool login)> OnUserLoginFn;
@@ -117,6 +122,7 @@ typedef std::function<void(std::string dev_id, std::string msg)> OnMessageFn;
 // http callbacks
 typedef std::function<void(unsigned http_code, std::string http_body)> OnHttpErrorFn;
 typedef std::function<std::string()>                GetCountryCodeFn;
+typedef std::function<void(std::string topic)>      GetSubscribeFailureFn;
 // print callbacks
 typedef std::function<void(int status, int code, std::string msg)> OnUpdateStatusFn;
 typedef std::function<bool()>                       WasCancelledFn;
@@ -137,17 +143,18 @@ enum SendingPrintJobStage {
     PrintingStageUpload = 1,
     PrintingStageWaiting = 2,
     PrintingStageSending = 3,
-    PrintingStageRecord = 4,
+    PrintingStageRecord  = 4,
     PrintingStageWaitPrinter = 5,
     PrintingStageFinished = 6,
     PrintingStageERROR = 7,
+    PrintingStageLimit = 8,
 };
 
 enum PublishingStage {
-    PublishingCreate = 0,
-    PublishingUpload = 1,
-    PublishingWaiting = 2,
-    PublishingJumpUrl = 3,
+    PublishingCreate    = 0,
+    PublishingUpload    = 1,
+    PublishingWaiting   = 2,
+    PublishingJumpUrl   = 3,
 };
 
 enum BindJobStage {
@@ -183,9 +190,11 @@ struct PrintParams {
     std::string     connection_type;
     std::string     comments;
     int             origin_profile_id = 0;
+    int             stl_design_id = 0;
     std::string     origin_model_id;
     std::string     print_type;
     std::string     dst_file;
+    std::string     dev_name;
 
     /* access options */
     std::string     dev_ip;
@@ -205,6 +214,14 @@ struct PrintParams {
     std::string     extra_options;
 };
 
+struct TaskQueryParams
+{
+    std::string dev_id;
+    int status = 0;
+    int offset = 0;
+    int limit = 20;
+};
+
 struct PublishParams {
     std::string     project_name;
     std::string     project_3mf_file;
@@ -212,6 +229,14 @@ struct PublishParams {
     std::string     project_model_id;
     std::string     design_id;
     std::string     config_filename;
+};
+
+struct CertificateInformation {
+    std::string     issuer;
+    std::string     sub_name;
+    std::string     start_date;
+    std::string     end_date;
+    std::string     serial_number;
 };
 
 }

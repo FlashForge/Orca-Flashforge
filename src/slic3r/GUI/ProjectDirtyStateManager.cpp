@@ -17,8 +17,7 @@ namespace GUI {
 
 void ProjectDirtyStateManager::update_from_undo_redo_stack(bool dirty)
 {
-    if (!m_plater_dirty)
-        m_plater_dirty = dirty;
+    m_plater_dirty = dirty;
     if (const Plater *plater = wxGetApp().plater(); plater && wxGetApp().initialized())
         wxGetApp().mainframe->update_title();
 }
@@ -35,12 +34,14 @@ void ProjectDirtyStateManager::update_from_presets()
                 if (ConfigOption *color_option = wxGetApp().preset_bundle->project_config.option("filament_colour")) {
                     auto colors = static_cast<ConfigOptionStrings *>(color_option->clone());
                     m_presets_dirty |= m_initial_filament_presets_colors != colors->values;
+                    delete colors;
                 }
             } else {
                 m_presets_dirty |= !m_initial_presets[type].empty() && m_initial_presets[type] != name;
             }
         }
-
+    } else {
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << "project file name is empty";
     }
     m_presets_dirty |= app.has_unsaved_preset_changes();
     m_project_config_dirty = m_initial_project_config != app.preset_bundle->project_config;
@@ -66,6 +67,7 @@ void ProjectDirtyStateManager::reset_initial_presets()
             if (ConfigOption *color_option = wxGetApp().preset_bundle->project_config.option("filament_colour")) {
                 auto colors = static_cast<ConfigOptionStrings *>(color_option->clone());
                 m_initial_filament_presets_colors = colors->values;
+                delete colors;
             }
         } else {
             m_initial_presets[type] = name;

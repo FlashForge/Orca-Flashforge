@@ -25,7 +25,7 @@ public:
         , m_sharedLock(std::move(that.m_sharedLock))
     {
     }
-    void releaseToken()
+    void unlockToken()
     {
         m_sharedLock.unlock();
     }

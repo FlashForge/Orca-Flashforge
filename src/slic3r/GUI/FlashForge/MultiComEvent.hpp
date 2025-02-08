@@ -75,6 +75,55 @@ struct ComDevDetailUpdateEvent : public ComConnectionEvent
     fnet_dev_detail_t *devDetail;
 };
 
+struct ComGetDevGcodeListEvent : public ComConnectionEvent 
+{
+    ComGetDevGcodeListEvent(wxEventType type, com_id_t _id, int _commandId, ComErrno _ret,
+        const com_gcode_list_t &_lanGcodeList, const com_gcode_list_t &_wanGcodeList)
+        : ComConnectionEvent(type, _id, _commandId)
+        , ret(_ret)
+        , lanGcodeList(_lanGcodeList)
+        , wanGcodeList(_wanGcodeList)
+    {
+    }
+    ComGetDevGcodeListEvent *Clone() const
+    {
+        return new ComGetDevGcodeListEvent(GetEventType(), id, commandId, ret, lanGcodeList, wanGcodeList);
+    }
+    ComErrno ret;
+    com_gcode_list_t lanGcodeList;
+    com_gcode_list_t wanGcodeList;
+};
+
+struct ComGetGcodeThumbEvent : public ComConnectionEvent 
+{
+    ComGetGcodeThumbEvent(wxEventType type, com_id_t _id, int _commandId, ComErrno _ret, std::vector<char> &_thumbData)
+        : ComConnectionEvent(type, _id, _commandId)
+        , ret(_ret)
+        , thumbData(std::move(_thumbData))
+    {
+    }
+    ComGetGcodeThumbEvent *MoveClone()
+    {
+        return new ComGetGcodeThumbEvent(GetEventType(), id, commandId, ret, thumbData);
+    }
+    ComErrno ret;
+    std::vector<char> thumbData;
+};
+
+struct ComStartJobEvent : public ComConnectionEvent
+{
+    ComStartJobEvent(wxEventType type, com_id_t _id, int _commandId, ComErrno _ret)
+        : ComConnectionEvent(type, _id, _commandId)
+        , ret(_ret)
+    {
+    }
+    ComStartJobEvent *Clone() const
+    {
+        return new ComStartJobEvent(GetEventType(), id, commandId, ret);
+    }
+    ComErrno ret;
+};
+
 struct ComSendGcodeProgressEvent : public ComConnectionEvent
 {
     ComSendGcodeProgressEvent(wxEventType type, com_id_t _id, int _commandId, double _now, double _total) 
@@ -104,13 +153,12 @@ struct ComSendGcodeFinishEvent : public ComConnectionEvent
         , ret(_ret)
     {
     }
-    ComSendGcodeFinishEvent(wxEventType type, const fnet_clound_job_error_t *errors, int errorCnt, ComErrno _ret)
+    ComSendGcodeFinishEvent(wxEventType type, const std::map<std::string, ComCloundJobErrno> &_errorMap,
+        ComErrno _ret)
         : ComConnectionEvent(type, ComInvalidId, ComInvalidCommandId)
+        , errorMap(_errorMap)
         , ret(_ret)
     {
-        for (int i = 0; i < errorCnt; ++i) {
-            errorMap.emplace(errors[i].devId, errors[i].type);
-        }
     }
     ComSendGcodeFinishEvent *Clone() const
     {
@@ -118,7 +166,7 @@ struct ComSendGcodeFinishEvent : public ComConnectionEvent
         event->errorMap = errorMap;
         return event;
     }
-    std::map<std::string, fnet_clound_job_error_type_t> errorMap;
+    std::map<std::string, ComCloundJobErrno> errorMap;
     ComErrno ret;
 };
 
@@ -176,6 +224,9 @@ wxDECLARE_EVENT(COM_CONNECTION_READY_EVENT, ComConnectionReadyEvent);
 wxDECLARE_EVENT(COM_CONNECTION_EXIT_EVENT, ComConnectionExitEvent);
 wxDECLARE_EVENT(COM_WAN_DEV_INFO_UPDATE_EVENT, ComWanDevInfoUpdateEvent);
 wxDECLARE_EVENT(COM_DEV_DETAIL_UPDATE_EVENT, ComDevDetailUpdateEvent);
+wxDECLARE_EVENT(COM_GET_DEV_GCODE_LIST_EVENT, ComGetDevGcodeListEvent);
+wxDECLARE_EVENT(COM_GET_GCODE_THUMB_EVENT, ComGetGcodeThumbEvent);
+wxDECLARE_EVENT(COM_START_JOB_EVENT, ComStartJobEvent);
 wxDECLARE_EVENT(COM_SEND_GCODE_PROGRESS_EVENT, ComSendGcodeProgressEvent);
 wxDECLARE_EVENT(COM_SEND_GCODE_FINISH_EVENT, ComSendGcodeFinishEvent);
 wxDECLARE_EVENT(COM_WAN_DEV_MAINTAIN_EVENT, ComWanDevMaintainEvent);

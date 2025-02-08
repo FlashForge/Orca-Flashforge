@@ -1,15 +1,3 @@
-///|/ Copyright (c) Prusa Research 2016 - 2023 Vojtěch Bubník @bubnikv, Lukáš Hejl @hejllukas, Enrico Turri @enricoturri1966
-///|/ Copyright (c) Slic3r 2013 - 2016 Alessandro Ranellucci @alranel
-///|/ Copyright (c) 2015 Maksim Derbasov @ntfshard
-///|/ Copyright (c) 2014 Petr Ledvina @ledvinap
-///|/
-///|/ ported from lib/Slic3r/Polyline.pm:
-///|/ Copyright (c) Prusa Research 2018 Vojtěch Bubník @bubnikv
-///|/ Copyright (c) Slic3r 2011 - 2014 Alessandro Ranellucci @alranel
-///|/ Copyright (c) 2012 Mark Hindess
-///|/
-///|/ PrusaSlicer is released under the terms of the AGPLv3 or higher
-///|/
 #include "BoundingBox.hpp"
 #include "Polyline.hpp"
 #include "Exception.hpp"
@@ -309,6 +297,53 @@ bool Polyline::split_at_index(const size_t index, Polyline* p1, Polyline* p2) co
     return true;
 }
 
+bool Polyline::split_at_length(const double length, Polyline* p1, Polyline* p2) const
+{
+    if (this->points.empty()) return false;
+    if (length < 0 || length > this->length()) {
+        return false;
+    }
+
+    if (length < SCALED_EPSILON) {
+        p1->clear();
+        p1->append(this->first_point());
+        *p2 = *this;
+    } else if (is_approx(length, this->length(), SCALED_EPSILON)) {
+        p2->clear();
+        p2->append(this->last_point());
+        *p1 = *this;
+    } else {
+        // 1 find the line to split at
+        size_t line_idx = 0;
+        double acc_length = 0;
+        Point p = this->first_point();
+        for (const auto& l : this->lines()) {
+            p = l.b;
+
+            const double current_length = l.length();
+            if (acc_length + current_length >= length) {
+                p = lerp(l.a, l.b, (length - acc_length) / current_length);
+                break;
+            }
+            acc_length += current_length;
+            line_idx++;
+        }
+
+        //2 judge whether the cloest point is one vertex of polyline.
+        //  and spilit the polyline at different index
+        int index = this->find_point(p);
+        if (index != -1) {
+            this->split_at_index(index, p1, p2);
+        } else {
+            Polyline temp;
+            this->split_at_index(line_idx, p1, &temp);
+            p1->append(p);
+            this->split_at_index(line_idx + 1, &temp, p2);
+            p2->append_before(p);
+        }
+    }
+    return true;
+}
 
 bool Polyline::is_straight() const
 {
@@ -496,6 +531,33 @@ BoundingBox get_extents(const Polylines &polylines)
     }
     return bb;
 }
+
+// Return True when erase some otherwise False.
+bool remove_same_neighbor(Polyline &polyline) {
+    Points &points = polyline.points;
+    if (points.empty())
+        return false;
+    auto last = std::unique(points.begin(), points.end());
+
+    // no duplicits
+    if (last == points.end())
+        return false;
+
+    points.erase(last, points.end());
+    return true;
+}
+
+bool remove_same_neighbor(Polylines &polylines){
+    if (polylines.empty())
+        return false;
+    bool exist = false;
+    for (Polyline &polyline : polylines)
+        exist |= remove_same_neighbor(polyline);
+    // remove empty polylines
+    polylines.erase(std::remove_if(polylines.begin(), polylines.end(), [](const Polyline &p) { return p.points.size() <= 1; }), polylines.end());
+    return exist;
+}
+
 
 const Point& leftmost_point(const Polylines &polylines)
 {

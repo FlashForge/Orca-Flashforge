@@ -4,30 +4,29 @@
 #include "slic3r/GUI/FlashForge/DeviceData.hpp"
 #include "slic3r/GUI/GUI_App.hpp"
 
+
 namespace Slic3r {
 namespace GUI {
 
 wxDEFINE_EVENT(EVT_UNBIND_MACHINE_COMPLETED, wxCommandEvent);
 UnbindJob::UnbindJob(DeviceObject* dev_obj)
-    : PlaterJob{nullptr, wxGetApp().plater()}
-    , m_dev_obj(dev_obj)
+    : m_dev_obj(dev_obj)
 {
 }
 
-UnbindJob::UnbindJob(const std::string &dev_id, const std::string &bind_id) 
-    : PlaterJob{nullptr, wxGetApp().plater()}, 
-    m_dev_id(dev_id) , m_bind_id(bind_id)
+UnbindJob::UnbindJob(const std::string &dev_id, const std::string &bind_id, const std::string &nim_account_id)
+    :  m_dev_id(dev_id) , m_bind_id(bind_id), m_nim_account_id(nim_account_id)
 {}
 
-void UnbindJob::on_exception(const std::exception_ptr &eptr)
-{
-    try {
-        if (eptr)
-            std::rethrow_exception(eptr);
-    } catch (std::exception &e) {
-        Job::on_exception(eptr);
-    }
-}
+//void UnbindJob::on_exception(const std::exception_ptr &eptr)
+//{
+//    try {
+//        if (eptr)
+//            std::rethrow_exception(eptr);
+//    } catch (std::exception &e) {
+//        Job::on_exception(eptr);
+//    }
+//}
 
 void UnbindJob::on_success(std::function<void()> success)
 {
@@ -41,7 +40,7 @@ void UnbindJob::process()
         if (!devOpr) {
             BOOST_LOG_TRIVIAL(error) << "UnbindJob: Invalid parameter: device object opr is null";
         } else {
-            BOOST_LOG_TRIVIAL(error) << "UnbindJob: Invalid parameter: dev id or bind id is empty";
+            BOOST_LOG_TRIVIAL(error) << "UnbindJob: Invalid parameter: dev id / bind id is empty";
         }
         //if (!m_dev_obj) {
         //    BOOST_LOG_TRIVIAL(error) << "UnbindJob: Invalid parameter: device object is null";
@@ -53,20 +52,19 @@ void UnbindJob::process()
         return;
     }
 
-    //ComErrno result = devOpr->unbind_wan_machine(m_dev_obj);
-    ComErrno       result = devOpr->unbind_wan_machine2(m_dev_id, m_bind_id);
+    ComErrno result = devOpr->unbind_wan_machine(m_dev_id, m_bind_id, m_nim_account_id);
     wxCommandEvent event(EVT_UNBIND_MACHINE_COMPLETED);
     event.SetInt(result);
     event.SetEventObject(m_event_handle);
     wxPostEvent(m_event_handle, event);
 }
 
-void UnbindJob::finalize()
-{
-    if (was_canceled()) return;
-
-    Job::finalize();
-}
+//void UnbindJob::finalize()
+//{
+//    if (was_canceled()) return;
+//
+//    Job::finalize();
+//}
 
 void UnbindJob::set_event_handle(wxWindow *hanle)
 {

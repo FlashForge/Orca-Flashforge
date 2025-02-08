@@ -1,11 +1,9 @@
 #ifndef slic3r_GUI_ComConnection_hpp_
 #define slic3r_GUI_ComConnection_hpp_
 
-#include <ctime>
-#include <atomic>
+#include <chrono>
 #include <memory>
 #include <string>
-#include <boost/thread/mutex.hpp>
 #include <boost/thread/thread.hpp>
 #include <wx/event.h>
 #include "ComCommandQue.hpp"
@@ -33,7 +31,7 @@ public:
         fnet::FlashNetworkIntfc *networkIntfc);
     
     ComConnection(com_id_t id, const std::string &uid, const std::string &serialNumber,
-        const std::string &devId, fnet::FlashNetworkIntfc *networkIntfc);
+        const std::string &devId, const std::string &nimAccountId, fnet::FlashNetworkIntfc *networkIntfc);
 
     com_id_t id() const { return m_id; }
 
@@ -43,7 +41,9 @@ public:
 
     const std::string &deviceId() const { return m_deviceId; }
 
-    bool isDisconnect() { return m_exitThread; }
+    const std::string &nimAccountId() const { return m_nimAccountId; }
+
+    bool isDisconnect() { return m_exitThreadEvent.get(); }
 
     void connect();
 
@@ -51,11 +51,13 @@ public:
 
     void joinThread();
 
-    void putCommand(const ComCommandPtr &command, int priority = 3);
+    void putCommand(const ComCommandPtr &command, int priority = 3, bool checkDup = false);
 
     bool abortSendGcode(int commandId);
 
 private:
+    using std_precise_clock = std::chrono::high_resolution_clock;
+
     void run();
 
     ComErrno commandLoop();
@@ -73,8 +75,10 @@ private:
     std::string                     m_checkCode;
     std::string                     m_uid;
     std::string                     m_deviceId;
-    clock_t                         m_getDetailClock;
-    std::atomic_bool                m_exitThread;
+    std::string                     m_nimAccountId;
+    com_command_exec_data_t         m_cmdExecData;
+    std_precise_clock::time_point   m_updateDetailTime;
+    WaitEvent                       m_exitThreadEvent;
     ComCommandQue                   m_commandQue;
     fnet::FlashNetworkIntfc        *m_networkIntfc;
     std::unique_ptr<boost::thread>  m_thread;

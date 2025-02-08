@@ -183,7 +183,7 @@ struct FaceHash {
         return ret;
     }
 
-    static std::string facekey(const Vec3i &face, const std::vector<Vec3f> &vertices)
+    static std::string facekey(const Vec3i32 &face, const std::vector<Vec3f> &vertices)
     {
         // Scale to integer to avoid floating points
         std::array<Vec<3, int64_t>, 3> pts = {
@@ -204,7 +204,7 @@ struct FaceHash {
 
     FaceHash (const indexed_triangle_set &its): facehash(its.indices.size())
     {
-        for (const Vec3i &face : its.indices)
+        for (const Vec3i32 &face : its.indices)
             facehash.insert(facekey(face, its.vertices));
     }
 
@@ -231,7 +231,7 @@ static std::vector<bool> create_exclude_mask(
 
     VertexFaceIndex neighbor_index{its};
 
-    auto exclude_neighbors = [&neighbor_index, &exclude_mask](const Vec3i &face)
+    auto exclude_neighbors = [&neighbor_index, &exclude_mask](const Vec3i32 &face)
     {
         for (int i = 0; i < 3; ++i) {
             const auto &neighbors_range = neighbor_index[face(i)];
@@ -398,14 +398,14 @@ void SLAPrint::Steps::drill_holes(SLAPrintObject &po)
         auto bb = bounding_box(m);
         Eigen::AlignedBox<float, 3> ebb{bb.min.cast<float>(),
                                         bb.max.cast<float>()};
-
-        AABBTreeIndirect::traverse(
-                    tree,
-                    AABBTreeIndirect::intersecting(ebb),
-                    [&part_to_drill, &hollowed_mesh](size_t faceid)
-        {
-            part_to_drill.indices.emplace_back(hollowed_mesh.its.indices[faceid]);
-        });
+        //BBS
+        //AABBTreeIndirect::traverse(
+        //            tree,
+        //            AABBTreeIndirect::intersecting(ebb),
+        //            [&part_to_drill, &hollowed_mesh](size_t faceid)
+        //{
+        //    part_to_drill.indices.emplace_back(hollowed_mesh.its.indices[faceid]);
+        //});
 
         auto cgal_meshpart = MeshBoolean::cgal::triangle_mesh_to_cgal(
             remove_unconnected_vertices(part_to_drill));

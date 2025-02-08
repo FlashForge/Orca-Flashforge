@@ -7,7 +7,7 @@
 #include "MultiComEvent.hpp"
 
 using namespace nlohmann;  // json open source library
-using namespace std;
+//using namespace std;
 
 namespace Slic3r {
 
@@ -36,10 +36,11 @@ enum DeviceType {
 
 struct device_wan_info
 {
-    string name;
-    string bind_dev_id;
+    std::string name;
+    std::string bind_dev_id;
+    std::string nim_account_id;
     int pid;
-    string serialNum;
+    std::string serialNum;
 };
 
 struct id_connect_mode
@@ -52,6 +53,9 @@ struct BindInfo
 {
     std::string    dev_id;
     std::string    bind_id;
+    std::string    nim_account_id;
+    std::string    dev_ip;
+    unsigned short dev_port;
     std::string    dev_name;
     unsigned short dev_pid;
     std::string    img;
@@ -60,7 +64,7 @@ struct BindInfo
 class DeviceObject
 {
 public:
-    DeviceObject(const string& dev_id, const string& dev_name);
+    DeviceObject(const std::string& dev_id, const std::string& dev_name);
     DeviceObject(const fnet_lan_dev_info &devInfo);
     DeviceObject(const device_wan_info &wanInfo);
     ~DeviceObject();
@@ -69,8 +73,8 @@ public:
     bool        is_lan_mode_printer();
     bool        has_access_right();
 
-    void        set_user_access_code(const string& code, bool only_refresh = true);
-    string      get_user_access_code(bool inner = false);
+    void        set_user_access_code(const std::string& code, bool only_refresh = true);
+    std::string get_user_access_code(bool inner = false);
     void        erase_user_access_code();
 
     bool        is_avaliable();
@@ -81,8 +85,8 @@ public:
     void        set_active_state(ActiveState state);
     ActiveState get_active_state();
 
-    void        set_connection_type(const string& connectType);
-    string      connection_type();
+    void        set_connection_type(const std::string& connectType);
+    std::string connection_type();
 
     void        reset_update_time();
 
@@ -93,14 +97,17 @@ public:
 
     void               init_lan_obj();
     void               init_wan_obj();
-    string      get_dev_name();
-    void        set_dev_name(const string& name);
-    string      get_dev_id();  // serialNumber
+    std::string        get_dev_name();
+    void               set_dev_name(const std::string& name);
+    std::string        get_dev_ip();
+    unsigned short     get_dev_port();
+    std::string        get_dev_id(); // serialNumber
     unsigned short     get_dev_pid();
-    string      get_wan_dev_id();
+    std::string        get_wan_dev_id();
+    std::string        get_wan_nim_account_id();
 
-    static bool is_in_printing_status(const string& status);
-    void        set_print_state(const string &status);
+    static bool is_in_printing_status(const std::string& status);
+    void        set_print_state(const std::string& status);
 
     /* common apis */
     bool        is_in_printing();
@@ -111,7 +118,7 @@ public:
     void        set_connected_ready(bool ready);
     bool        is_connected_ready();
 
-    string      get_printer_thumbnail_img_str();
+    std::string get_printer_thumbnail_img_str();
     void        set_device_type(DeviceType type);
     DeviceType  device_type();
 
@@ -122,21 +129,21 @@ public:
 private:
     fnet_lan_dev_info *m_lan_info { nullptr };
     device_wan_info   *m_wan_info { nullptr };
-    string             m_dev_id;
-    string             m_dev_name;
+    std::string        m_dev_id;
+    std::string        m_dev_name;
 
-    string              m_user_access_code;
-    string              m_bind_state; /* free | occupied */
+    std::string                           m_user_access_code;
+    std::string                           m_bind_state;               /* free | occupied */
     ActiveState         m_active_state = NotActive; // 0 - not active, 1 - active, 2 - update-to-date
     bool                m_is_online;
     bool                m_is_connecting { false };
     bool                m_is_connected_ready { true };
-    string              m_dev_connection_type; /* lan | cloud */
+    std::string                           m_dev_connection_type; /* lan | cloud */
     DeviceType          m_deviceType;
     std::chrono::system_clock::time_point last_update_time; /* last received print data from machine */
 
     /* printing status */
-    string m_printStatus; /* enum string: FINISH, SLICING, RUNNING, PAUSE, INIT, FAILED */
+    std::string m_printStatus; /* enum string: FINISH, SLICING, RUNNING, PAUSE, INIT, FAILED */
 };
 
 typedef std::map<std::string, std::string> MacInfoMap;
@@ -206,25 +213,24 @@ public:
     bool my_machine_empty();
 
     /* return machine has access code and user machine if login*/
-    void get_my_machine_list(map<string, DeviceObject *> &devList);
+    void get_my_machine_list(std::map<std::string, DeviceObject*>& devList);
 
     // clear user machine
     void clear_user_machine();
 
-    bool set_selected_machine(const string &dev_id, bool my_machine = false);
+    bool          set_selected_machine(const std::string& dev_id, bool my_machine = false);
     DeviceObject* get_selected_machine();
 
     void unbind_lan_machine(DeviceObject *obj);
-    ComErrno unbind_wan_machine(DeviceObject *obj);
-    ComErrno unbind_wan_machine2(const string &dev_id, const string& bind_id);
-    string find_dev_from_id(id_connect_mode& mode, int connectId);
+    ComErrno unbind_wan_machine(const std::string& dev_id, const std::string& bind_id, const std::string& nim_account_id);
+    std::string find_dev_from_id(id_connect_mode& mode, int connectId);
     
 
 private:
-    DeviceObject *get_scan_device(const string &dev_id);
+    DeviceObject* get_scan_device(const std::string& dev_id);
 
     // before connect, scan machine's access code which hasn't written in config file
-    void get_my_machine_list_v2(map<string, DeviceObject *> &devList, bool my_machine = false);
+    void get_my_machine_list_v2(std::map<std::string, DeviceObject*> & devList, bool my_machine = false);
     
     void sendDeviceListUpdateEvent(const std::string& dev_id, int conn_id, bool wan_offline = false);
 
@@ -236,15 +242,15 @@ private:
     void onConnectWanDevInfoUpdate(ComWanDevInfoUpdateEvent &event);
 
 private:
-    string                            m_selected_machine;       /* dev_id */
-    map<string, DeviceObject *>       m_scan_devices;       /* dev_id -> DeviceObject*, scan in lan (only lan connectMode, and wan connectMode)   */
-    map<string, DeviceObject *>       m_old_devices;
-    map<string, DeviceObject *>       m_user_devices;        /* dev_id -> DeviceObject*, when user login, the user's devices that has bound. And machine connected successfully. */
-    map<string, DeviceObject *>       m_old_user_devices;
-    map<string, DeviceObject*>        m_local_devices;      /* dev_id -> DeviceObject*,  in lan connectMode, device has input access code. Read data from appconfig. */
-    //map<string, com_id_t>             m_dev_connect_map;   /* dev_id -> connectId */
-    map<string, id_connect_mode>      m_lan_dev_connect_map;
-    map<string, id_connect_mode>      m_wan_dev_connect_map;
+    std::string                m_selected_machine; /* dev_id */
+    std::map<std::string, DeviceObject*> m_scan_devices; /* dev_id -> DeviceObject*, scan in lan (only lan connectMode, and wan connectMode)   */
+    std::map<std::string, DeviceObject*> m_old_devices;
+    std::map<std::string, DeviceObject*> m_user_devices; /* dev_id -> DeviceObject*, when user login, the user's devices that has bound. And machine connected successfully. */
+    std::map<std::string, DeviceObject*> m_old_user_devices;
+    std::map<std::string, DeviceObject*> m_local_devices; /* dev_id -> DeviceObject*,  in lan connectMode, device has input access code. Read data from appconfig. */
+    //map<std::string, com_id_t>             m_dev_connect_map;   /* dev_id -> connectId */
+    std::map<std::string, id_connect_mode> m_lan_dev_connect_map;
+    std::map<std::string, id_connect_mode> m_wan_dev_connect_map;
 };
 
 }
