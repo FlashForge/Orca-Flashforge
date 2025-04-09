@@ -178,8 +178,8 @@ then
     echo "done"
     echo "Building Orca-Flashforge ..."
     cmake --build build --target Orca-Flashforge
-    echo "Building Orca-Flashforge_profile_validator .."
-    cmake --build build --target Orca-Flashforge_profile_validator
+    echo "Building OrcaSlicer_profile_validator .."
+    cmake --build build --target OrcaSlicer_profile_validator
     ./run_gettext.sh
     echo "done"
 fi
