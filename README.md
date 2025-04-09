@@ -38,6 +38,11 @@ Orca-Flashforge is an open source slicer for FDM printers.
   - Tools needed: Xcode, Cmake, git, gettext
   - run `build_release_macos.sh`
 
+- Linux (checked on Ubuntu Desktop 22.04 6.8.0-57-generic x86_64)  
+  - Tools needed: [docker](https://docs.docker.com/engine/install/ubuntu/)
+  - run `sh ./DockerBuild.sh`
+  - after successful build run it from docker via `sh DockerRun.sh` or export AppImage from `orcaslicer` container to your local file system
+
 # Note: 
 If you're running Klipper, it's recommended to add the following configuration to your `printer.cfg` file.
 ```
