@@ -1,12 +1,3 @@
-#/|/ Copyright (c) Prusa Research 2018 - 2023 Tomáš Mészáros @tamasmeszaros, David Kocík @kocikdav, Lukáš Matěna @lukasmatena, Enrico Turri @enricoturri1966, Vojtěch Bubník @bubnikv, Pavel Mikuš @Godrak, Filip Sykala @Jony01, Oleksandra Iushchenko @YuSanka, Lukáš Hejl @hejllukas, Vojtěch Král @vojtechkral
-#/|/ Copyright (c) 2023 Pedro Lamas @PedroLamas
-#/|/ Copyright (c) 2020 Sergey Kovalev @RandoMan70
-#/|/ Copyright (c) 2021 Boleslaw Ciesielski
-#/|/ Copyright (c) 2019 Spencer Owen @spuder
-#/|/ Copyright (c) 2019 Stephan Reichhelm @stephanr
-#/|/
-#/|/ PrusaSlicer is released under the terms of the AGPLv3 or higher
-#/|/
 cmake_minimum_required(VERSION 3.13)
 project(libslic3r_gui)
 
@@ -23,6 +14,16 @@ set(SLIC3R_GUI_SOURCES
     GUI/Widgets/Button.hpp
     GUI/Widgets/CheckBox.cpp
     GUI/Widgets/CheckBox.hpp
+    GUI/Widgets/FFCheckBox.cpp
+    GUI/Widgets/FFCheckBox.hpp
+    GUI/Widgets/FFButton.hpp
+    GUI/Widgets/FFButton.cpp
+    GUI/Widgets/FFScrollButton.cpp
+    GUI/Widgets/FFScrollButton.hpp
+    GUI/Widgets/FFToggleButton.hpp
+    GUI/Widgets/FFToggleButton.cpp
+    GUI/Widgets/FFPopupWindow.hpp
+    GUI/Widgets/FFPopupWindow.cpp
     GUI/Widgets/RadioBox.hpp
     GUI/Widgets/RadioBox.cpp
     GUI/Widgets/ProgressDialog.hpp
@@ -111,7 +112,7 @@ set(SLIC3R_GUI_SOURCES
     GUI/GLCanvas3D.hpp
     GUI/GLCanvas3D.cpp
     GUI/SceneRaycaster.hpp
-    GUI/SceneRaycaster.cpp	
+    GUI/SceneRaycaster.cpp
     GUI/OpenGLManager.hpp
     GUI/OpenGLManager.cpp
     GUI/Selection.hpp
@@ -154,6 +155,10 @@ set(SLIC3R_GUI_SOURCES
     #GUI/Gizmos/GLGizmoFaceDetector.hpp
     GUI/Gizmos/GLGizmoMeasure.cpp
     GUI/Gizmos/GLGizmoMeasure.hpp
+    GUI/Gizmos/GLGizmoBrimEars.cpp
+    GUI/Gizmos/GLGizmoBrimEars.hpp
+    GUI/Gizmos/GLGizmoAssembly.cpp
+    GUI/Gizmos/GLGizmoAssembly.hpp
     GUI/Gizmos/GLGizmoSeam.cpp
     GUI/Gizmos/GLGizmoSeam.hpp
     #GUI/Gizmos/GLGizmoText.cpp
@@ -164,6 +169,76 @@ set(SLIC3R_GUI_SOURCES
     GUI/GLSelectionRectangle.hpp
     GUI/Gizmos/GizmoObjectManipulation.cpp
     GUI/Gizmos/GizmoObjectManipulation.hpp
+    GUI/FlashForge/AmsMappingWidgets.cpp
+    GUI/FlashForge/AmsMappingWidgets.hpp
+	GUI/FlashForge/CleanNimData.cpp
+	GUI/FlashForge/CleanNimData.hpp
+    GUI/FlashForge/ComWanNimConn.cpp
+    GUI/FlashForge/ComWanNimConn.hpp
+    GUI/FlashForge/ComCommand.cpp
+    GUI/FlashForge/ComCommand.hpp
+    GUI/FlashForge/ComCommandQue.cpp
+    GUI/FlashForge/ComCommandQue.hpp
+    GUI/FlashForge/ComConnection.cpp
+    GUI/FlashForge/ComConnection.hpp
+    GUI/FlashForge/ComThreadPool.cpp
+    GUI/FlashForge/ComThreadPool.hpp
+    GUI/FlashForge/DeviceData.cpp
+    GUI/FlashForge/DeviceData.hpp
+    GUI/FlashForge/DeviceListPanel.cpp
+    GUI/FlashForge/DeviceListPanel.hpp
+    GUI/FlashForge/DeviceFilterPopup.hpp
+    GUI/FlashForge/DeviceFilterPopup.cpp
+    GUI/FlashForge/FlashNetwork.h
+    GUI/FlashForge/FlashNetworkIntfc.cpp
+    GUI/FlashForge/FlashNetworkIntfc.h
+    GUI/FlashForge/FreeInDestructor.h
+    GUI/FlashForge/FFDownloadTool.cpp
+    GUI/FlashForge/FFDownloadTool.hpp
+    GUI/FlashForge/FFTransientWindow.cpp
+    GUI/FlashForge/FFTransientWindow.hpp
+    GUI/FlashForge/LoginDialog.cpp
+    GUI/FlashForge/LoginDialog.hpp
+    GUI/FlashForge/MaterialStation.hpp
+    GUI/FlashForge/MaterialStation.cpp
+    GUI/FlashForge/MultiComEvent.cpp
+    GUI/FlashForge/MultiComEvent.hpp
+    GUI/FlashForge/MultiComDef.hpp
+    GUI/FlashForge/MultiComMgr.cpp
+    GUI/FlashForge/MultiComMgr.hpp
+    GUI/FlashForge/MultiComUtils.cpp
+    GUI/FlashForge/MultiComUtils.hpp
+    GUI/FlashForge/PasswordCtrl.cpp
+    GUI/FlashForge/PasswordCtrl.hpp
+    GUI/FlashForge/PrintDevLocalFileDlg.cpp
+    GUI/FlashForge/PrintDevLocalFileDlg.hpp
+	GUI/FlashForge/PrinterErrorMsgDlg.cpp
+	GUI/FlashForge/PrinterErrorMsgDlg.hpp
+    GUI/FlashForge/SingleDeviceState.cpp
+    GUI/FlashForge/SingleDeviceState.hpp
+    GUI/FlashForge/Singleton.hpp
+	GUI/FlashForge/TimeLapseVideoPlayDlg.cpp
+	GUI/FlashForge/TimeLapseVideoPlayDlg.hpp
+	GUI/FlashForge/TimeLapseVideoPanel.cpp
+	GUI/FlashForge/TimeLapseVideoPanel.hpp
+	GUI/FlashForge/VideoDownloadErrorDlg.cpp
+	GUI/FlashForge/VideoDownloadErrorDlg.hpp
+    GUI/FlashForge/VideoFileOperatorMsgDlg.cpp
+    GUI/FlashForge/VideoFileOperatorMsgDlg.hpp
+    GUI/FlashForge/WaitEvent.cpp
+    GUI/FlashForge/WaitEvent.hpp
+    GUI/FlashForge/WanDevMaintainThd.cpp
+    GUI/FlashForge/WanDevMaintainThd.hpp
+    GUI/FlashForge/WanDevSendGcodeThd.cpp
+    GUI/FlashForge/WanDevSendGcodeThd.hpp
+    GUI/FlashForge/WanDevTokenMgr.cpp
+    GUI/FlashForge/WanDevTokenMgr.hpp
+    GUI/FlashForge/ReLoginDialog.cpp
+    GUI/FlashForge/ReLoginDialog.hpp
+    GUI/FlashForge/UserNameCtrl.cpp
+    GUI/FlashForge/UserNameCtrl.hpp
+    GUI/FlashForge/VerifyCodeCtrl.cpp
+    GUI/FlashForge/VerifyCodeCtrl.hpp
     GUI/GLModel.hpp
     GUI/GLModel.cpp
     GUI/GLTexture.hpp
@@ -208,6 +283,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/Plater.hpp
     GUI/PartPlate.cpp
     GUI/PartPlate.hpp
+    GUI/UserNotification.cpp
+    GUI/UserNotification.hpp
     GUI/PresetComboBoxes.hpp
     GUI/PresetComboBoxes.cpp
     GUI/BitmapComboBox.hpp
@@ -288,6 +365,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/ConfigManipulation.hpp
     GUI/Field.cpp
     GUI/Field.hpp
+    GUI/FileArchiveDialog.cpp
+    GUI/FileArchiveDialog.hpp
     GUI/OptionsGroup.cpp
     GUI/OptionsGroup.hpp
     GUI/OG_CustomCtrl.cpp
@@ -304,6 +383,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/CameraUtils.hpp
     GUI/wxExtensions.cpp
     GUI/wxExtensions.hpp
+    GUI/ObjColorDialog.cpp
+    GUI/ObjColorDialog.hpp
     GUI/WipeTowerDialog.cpp
     GUI/RammingChart.cpp
     GUI/RammingChart.hpp
@@ -321,8 +402,12 @@ set(SLIC3R_GUI_SOURCES
     GUI/ImGuiWrapper.cpp
     GUI/DeviceManager.hpp
     GUI/DeviceManager.cpp
+    GUI/UserManager.hpp
+    GUI/UserManager.cpp
     GUI/HttpServer.hpp
     GUI/HttpServer.cpp
+    GUI/FFUtils.hpp
+    GUI/FFUtils.cpp
     Config/Snapshot.cpp
     Config/Snapshot.hpp
     Config/Version.cpp
@@ -336,6 +421,10 @@ set(SLIC3R_GUI_SOURCES
     GUI/ConfigWizard_private.hpp
     GUI/MsgDialog.cpp
     GUI/MsgDialog.hpp
+    GUI/Downloader.hpp
+    GUI/Downloader.cpp
+    GUI/DownloaderFileGet.hpp
+    GUI/DownloaderFileGet.cpp
     GUI/DownloadProgressDialog.hpp
     GUI/DownloadProgressDialog.cpp
     GUI/UpdateDialogs.cpp
@@ -371,6 +460,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/Jobs/SendJob.cpp
     GUI/Jobs/BindJob.hpp
     GUI/Jobs/BindJob.cpp
+    GUI/Jobs/UnbindJob.hpp
+    GUI/Jobs/UnbindJob.cpp
     GUI/Jobs/NotificationProgressIndicator.hpp
     GUI/Jobs/NotificationProgressIndicator.cpp
     GUI/Jobs/ThreadSafeQueue.hpp
@@ -399,8 +490,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/ObjectDataViewModel.hpp
     GUI/AuxiliaryDataViewModel.cpp
     GUI/AuxiliaryDataViewModel.hpp
-    #GUI/InstanceCheck.cpp
-    #GUI/InstanceCheck.hpp
+    GUI/InstanceCheck.cpp
+    GUI/InstanceCheck.hpp
     GUI/Search.cpp
     GUI/Search.hpp
     GUI/NotificationManager.cpp
@@ -461,12 +552,32 @@ set(SLIC3R_GUI_SOURCES
     GUI/BonjourDialog.cpp
     GUI/BedShapeDialog.hpp
     GUI/BedShapeDialog.cpp
+    GUI/TitleDialog.hpp
+    GUI/TitleDialog.cpp
     GUI/CreatePresetsDialog.hpp
     GUI/CreatePresetsDialog.cpp
     Utils/json_diff.hpp
     Utils/json_diff.cpp
     GUI/KBShortcutsDialog.hpp
     GUI/KBShortcutsDialog.cpp
+    GUI/MultiMachine.hpp
+    GUI/MultiMachine.cpp
+    GUI/MultiMachinePage.hpp
+    GUI/MultiMachinePage.cpp
+    GUI/MultiMachineManagerPage.cpp
+    GUI/MultiMachineManagerPage.hpp
+    GUI/MultiPrintJob.cpp
+    GUI/MultiPrintJob.hpp
+    GUI/MultiSendMachineModel.hpp
+    GUI/MultiSendMachineModel.cpp
+    GUI/MultiTaskManagerPage.hpp
+    GUI/MultiTaskManagerPage.cpp
+    GUI/MultiTaskModel.hpp
+    GUI/MultiTaskModel.cpp
+    GUI/SendMultiMachinePage.hpp
+    GUI/SendMultiMachinePage.cpp
+    GUI/TaskManager.cpp
+    GUI/TaskManager.hpp
     Utils/Http.cpp
     Utils/Http.hpp
     Utils/FixModelByWin10.cpp
@@ -512,6 +623,10 @@ set(SLIC3R_GUI_SOURCES
     Utils/SerialMessage.hpp
     Utils/MKS.cpp
     Utils/MKS.hpp
+    Utils/ESP3D.cpp
+    Utils/ESP3D.hpp
+    Utils/CrealityPrint.cpp
+    Utils/CrealityPrint.hpp
     Utils/WxFontUtils.cpp
     Utils/WxFontUtils.hpp
     Utils/Duet.cpp
@@ -526,6 +641,7 @@ set(SLIC3R_GUI_SOURCES
     GUI/calib_dlg.cpp
     Utils/CalibUtils.cpp
     Utils/CalibUtils.hpp
+    Utils/ProfileDescription.hpp
     GUI/PrinterCloudAuthDialog.cpp
     GUI/PrinterCloudAuthDialog.hpp
     Utils/Obico.cpp
@@ -539,6 +655,9 @@ set(SLIC3R_GUI_SOURCES
     GUI/Jobs/OAuthJob.hpp
     Utils/SimplyPrint.cpp
     Utils/SimplyPrint.hpp
+    Utils/ElegooLink.hpp
+    Utils/ElegooLink.cpp
+    Utils/WebSocketClient.hpp
 )
 
 if (WIN32)
@@ -558,8 +677,8 @@ if (APPLE)
             GUI/RemovableDriveManagerMM.mm
             GUI/RemovableDriveManagerMM.h
             GUI/Mouse3DHandlerMac.mm
-            #GUI/InstanceCheckMac.mm
-            #GUI/InstanceCheckMac.h
+            GUI/InstanceCheckMac.mm
+            GUI/InstanceCheckMac.h
             GUI/wxMediaCtrl2.mm
             GUI/wxMediaCtrl2.h
         )
@@ -588,8 +707,8 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SLIC3R_GUI_SOURCES})
 
 encoding_check(libslic3r_gui)
 
-target_link_libraries(libslic3r_gui libslic3r cereal::cereal imgui imguizmo minilzo GLEW::GLEW OpenGL::GL hidapi ${wxWidgets_LIBRARIES} glfw libcurl OpenSSL::SSL OpenSSL::Crypto)
-#target_link_libraries(libslic3r_gui libslic3r cereal imgui minilzo GLEW::GLEW OpenGL::GL hidapi libcurl OpenSSL::SSL OpenSSL::Crypto ${wxWidgets_LIBRARIES} glfw)
+find_package(libnoise REQUIRED)
+target_link_libraries(libslic3r_gui libslic3r cereal::cereal imgui imguizmo minilzo GLEW::GLEW OpenGL::GL hidapi ${wxWidgets_LIBRARIES} glfw libcurl OpenSSL::SSL OpenSSL::Crypto noise::noise)
 
 if (MSVC)
     target_link_libraries(libslic3r_gui Setupapi.lib)
@@ -633,8 +752,17 @@ endif ()
 # link these libraries.
 if (UNIX AND NOT APPLE)
     find_package(GTK${SLIC3R_GTK} REQUIRED)
+    if (FLATPAK)
+        # I don't know why this is needed, but for whatever reason slic3r isn't
+        # linking to X11 and webkit2gtk. force it.
+        find_package(X11 REQUIRED)
+        find_package(PkgConfig REQUIRED)
+        pkg_check_modules(webkit2gtk REQUIRED webkit2gtk-4.1)
+        target_link_libraries (libslic3r_gui ${X11_LIBRARIES} ${webkit2gtk_LIBRARIES})
+    endif()
     target_include_directories(libslic3r_gui PRIVATE ${GTK${SLIC3R_GTK}_INCLUDE_DIRS})
     target_link_libraries(libslic3r_gui ${GTK${SLIC3R_GTK}_LIBRARIES} fontconfig)
+
 
     # We add GStreamer for bambu:/// support.
     pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0)

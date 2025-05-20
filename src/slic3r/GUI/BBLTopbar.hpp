@@ -46,6 +46,7 @@ public:
     wxMenu *GetTopMenu();
     wxMenu *GetCalibMenu();
     void SetTitle(wxString title);
+    wxString GetTitle();
     void SetMaximizedSize();
     void SetWindowSize();
 

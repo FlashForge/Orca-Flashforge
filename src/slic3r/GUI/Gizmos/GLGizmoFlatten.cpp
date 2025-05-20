@@ -1,7 +1,3 @@
-///|/ Copyright (c) Prusa Research 2019 - 2023 Oleksandra Iushchenko @YuSanka, Lukáš Matěna @lukasmatena, Enrico Turri @enricoturri1966, Filip Sykala @Jony01, Vojtěch Bubník @bubnikv
-///|/
-///|/ PrusaSlicer is released under the terms of the AGPLv3 or higher
-///|/
 #include "GLGizmoFlatten.hpp"
 #include "slic3r/GUI/GLCanvas3D.hpp"
 #include "slic3r/GUI/GUI_App.hpp"
@@ -147,7 +143,9 @@ void GLGizmoFlatten::set_flattening_data(const ModelObject* model_object, int in
 {
     if (model_object != m_old_model_object || instance_id != m_old_instance_id) {
         m_planes.clear();
-        on_unregister_raycasters_for_picking();
+        if (get_state() == On) { // Only touch the raycasters if it's current
+            on_unregister_raycasters_for_picking();
+        }
     }
 }
 
@@ -176,7 +174,7 @@ void GLGizmoFlatten::update_planes()
     // This part is still performed in mesh coordinate system.
     const int                num_of_facets  = ch.facets_count();
     const std::vector<Vec3f> face_normals   = its_face_normals(ch.its);
-    const std::vector<Vec3i> face_neighbors = its_face_neighbors(ch.its);
+    const std::vector<Vec3i32> face_neighbors = its_face_neighbors(ch.its);
     std::vector<int>         facet_queue(num_of_facets, 0);
     std::vector<bool>        facet_visited(num_of_facets, false);
     int                      facet_queue_cnt = 0;
@@ -199,7 +197,7 @@ void GLGizmoFlatten::update_planes()
             int facet_idx = facet_queue[-- facet_queue_cnt];
             const stl_normal& this_normal = face_normals[facet_idx];
             if (std::abs(this_normal(0) - (*normal_ptr)(0)) < 0.001 && std::abs(this_normal(1) - (*normal_ptr)(1)) < 0.001 && std::abs(this_normal(2) - (*normal_ptr)(2)) < 0.001) {
-                const Vec3i face = ch.its.indices[facet_idx];
+                const Vec3i32 face = ch.its.indices[facet_idx];
                 for (int j=0; j<3; ++j)
                     m_planes.back().vertices.emplace_back(ch.its.vertices[face[j]].cast<double>());
 

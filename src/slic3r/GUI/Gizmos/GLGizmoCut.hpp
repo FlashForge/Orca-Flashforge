@@ -1,7 +1,3 @@
-///|/ Copyright (c) Prusa Research 2019 - 2023 Oleksandra Iushchenko @YuSanka, Lukáš Matěna @lukasmatena, Enrico Turri @enricoturri1966, Filip Sykala @Jony01, Vojtěch Bubník @bubnikv
-///|/
-///|/ PrusaSlicer is released under the terms of the AGPLv3 or higher
-///|/
 #ifndef slic3r_GLGizmoCut_hpp_
 #define slic3r_GLGizmoCut_hpp_
 
@@ -339,7 +335,6 @@ private:
     void set_center(const Vec3d&center, bool update_tbb = false);
     void switch_to_mode(size_t new_mode);
     bool render_cut_mode_combo();
-    bool render_combo(const std::string&label, const std::vector<std::string>&lines, int&selection_idx);
     bool render_double_input(const std::string& label, double& value_in);
     bool render_slider_double_input(const std::string& label, float& value_in, float& tolerance_in, float min_val = -0.1f, float max_tolerance = -0.1f);
     void render_move_center_input(int axis);

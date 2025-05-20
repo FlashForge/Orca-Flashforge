@@ -1,4 +1,4 @@
-FROM docker.io/ubuntu:22.04
+FROM docker.io/ubuntu:24.04
 LABEL maintainer "DeftDawg <DeftDawg@gmail.com>"
 
 # Disable interactive package configuration
@@ -37,6 +37,7 @@ RUN apt-get update && apt-get install  -y \
     libsoup2.4-dev \
     libssl3 \
     libssl-dev \
+    libtool \
     libudev-dev \
     libwayland-dev \
     libwebkit2gtk-4.0-dev \
@@ -67,15 +68,14 @@ WORKDIR OrcaSlicer
 RUN ./BuildLinux.sh -u
 
 # Build dependencies in ./deps
-RUN ./BuildLinux.sh -d; exit 0
+RUN ./BuildLinux.sh -dr
 
-RUN apt-get install -y libcgal-dev
 # Build slic3r
-RUN ./BuildLinux.sh -s
+RUN ./BuildLinux.sh -sr
 
 # Build AppImage
 ENV container podman
-RUN ./BuildLinux.sh -i
+RUN ./BuildLinux.sh -ir
 
 # It's easier to run Orca Slicer as the same username,
 # UID and GID as your workstation.  Since we bind mount

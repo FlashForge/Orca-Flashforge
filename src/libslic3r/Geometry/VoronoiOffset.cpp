@@ -1,14 +1,20 @@
 // Polygon offsetting using Voronoi diagram prodiced by boost::polygon.
 
-#include "Geometry.hpp"
-#include "VoronoiOffset.hpp"
-#include "libslic3r.h"
-
 #include <cmath>
+#include <algorithm>
+#include <array>
+#include <limits>
+#include <tuple>
+#include <utility>
+#include <cassert>
+#include <cstdlib>
+
+#include "libslic3r/Geometry.hpp"
+#include "VoronoiOffset.hpp"
+#include "libslic3r/libslic3r.h"
+#include "libslic3r/Geometry/Voronoi.hpp"
 
 // #define VORONOI_DEBUG_OUT
-
-#include <boost/polygon/detail/voronoi_ctypes.hpp>
 
 #ifdef VORONOI_DEBUG_OUT
 #include <libslic3r/VoronoiVisualUtils.hpp>
@@ -782,9 +788,6 @@ void annotate_inside_outside(VD &vd, const Lines &lines)
 
     for (const VD::edge_type &edge : vd.edges())
         if (edge.vertex1() == nullptr) {
-            if (edge.vertex0() == nullptr)
-                continue;
-
             // Infinite Voronoi edge separating two Point sites or a Point site and a Segment site.
             // Infinite edge is always outside and it references at least one valid vertex.
             assert(edge.is_infinite());
@@ -891,9 +894,6 @@ void annotate_inside_outside(VD &vd, const Lines &lines)
     for (const VD::edge_type &edge : vd.edges()) {
         assert((edge_category(edge) == EdgeCategory::Unknown) == (edge_category(edge.twin()) == EdgeCategory::Unknown));
         if (edge_category(edge) == EdgeCategory::Unknown) {
-            if (!edge.is_finite())
-                continue;
-
             assert(edge.is_finite());
             const VD::cell_type &cell   = *edge.cell();
             const VD::cell_type &cell2  = *edge.twin()->cell();

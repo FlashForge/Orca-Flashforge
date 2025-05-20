@@ -121,9 +121,13 @@ std::string SpiralVase::process_layer(const std::string &gcode, bool last_layer)
     // layer.
     bool  transition_in = m_transition_layer && m_config.use_relative_e_distances.value;
     bool  transition_out = last_layer && m_config.use_relative_e_distances.value;
+
+    float starting_flowrate  = float(m_config.spiral_starting_flow_ratio.value);
+    float finishing_flowrate = float(m_config.spiral_finishing_flow_ratio.value);
+
     float len = 0.f;
     SpiralVase::SpiralPoint last_point = previous_layer != NULL && previous_layer->size() >0? previous_layer->at(previous_layer->size()-1): SpiralVase::SpiralPoint(0,0);
-    m_reader.parse_buffer(gcode, [&new_gcode, &z, total_layer_length, layer_height, transition_in, &len, &current_layer, &previous_layer, &transition_gcode, transition_out, smooth_spiral, &max_xy_dist_for_smoothing, &last_point]
+    m_reader.parse_buffer(gcode, [&new_gcode, &z, total_layer_length, layer_height, transition_in, &len, &current_layer, &previous_layer, &transition_gcode, transition_out, smooth_spiral, &max_xy_dist_for_smoothing, &last_point, starting_flowrate, finishing_flowrate]
         (GCodeReader &reader, GCodeReader::GCodeLine line) {
         if (line.cmd_is("G1")) {
             // Orca: Filter out retractions at layer change
@@ -131,7 +135,7 @@ std::string SpiralVase::process_layer(const std::string &gcode, bool last_layer)
             if (line.has_z() && !line.retracting(reader)) {
                 // If this is the initial Z move of the layer, replace it with a
                 // (redundant) move to the last Z of previous layer.
-                line.set(reader, Z, z);
+                line.set(Z, z);
                 new_gcode += line.raw() + '\n';
                 return;
             } else {
@@ -140,19 +144,22 @@ std::string SpiralVase::process_layer(const std::string &gcode, bool last_layer)
                     if (dist_XY > 0 && line.extruding(reader)) { // Exclude wipe and retract
                         len += dist_XY;
                         float factor = len / total_layer_length;
-                        if (transition_in)
-                            // Transition layer, interpolate the amount of extrusion from zero to the final value.
-                            line.set(reader, E, line.e() * factor, 5 /*decimal_digits*/);
-                        else if (transition_out) {
+                        if (transition_in){
+                            // Transition layer, interpolate the amount of extrusion starting from spiral_vase_starting_flow_rate to 100%.
+                            float starting_e_factor = starting_flowrate + (factor * (1.f - starting_flowrate));
+                            line.set(E, line.e() * starting_e_factor, 5 /*decimal_digits*/);
+                        } else if (transition_out) {
                             // We want the last layer to ramp down extrusion, but without changing z height!
                             // So clone the line before we mess with its Z and duplicate it into a new layer that ramps down E
                             // We add this new layer at the very end
+                            // As with transition_in, the amount is ramped down from 100% to spiral_vase_finishing_flow_rate
                             GCodeReader::GCodeLine transitionLine(line);
-                            transitionLine.set(reader, E, line.e() * (1 - factor), 5 /*decimal_digits*/);
+                            float finishing_e_factor = finishing_flowrate + ((1.f -factor) * (1.f - finishing_flowrate));
+                            transitionLine.set(E, line.e() * finishing_e_factor, 5 /*decimal_digits*/);
                             transition_gcode += transitionLine.raw() + '\n';
                         }
                         // This line is the core of Spiral Vase mode, ramp up the Z smoothly
-                        line.set(reader, Z, z + factor * layer_height);
+                        line.set(Z, z + factor * layer_height);
                         if (smooth_spiral) {
                             // Now we also need to try to interpolate X and Y
                             SpiralVase::SpiralPoint p(line.x(), line.y()); // Get current x/y coordinates
@@ -164,13 +171,19 @@ std::string SpiralVase::process_layer(const std::string &gcode, bool last_layer)
                                 if (found && dist < max_xy_dist_for_smoothing) {
                                     // Interpolate between the point on this layer and the point on the previous layer
                                     SpiralVase::SpiralPoint target = SpiralVaseHelpers::add(SpiralVaseHelpers::scale(nearestp, 1 - factor), SpiralVaseHelpers::scale(p, factor));
-                                    line.set(reader, X, target.x);
-                                    line.set(reader, Y, target.y);
+
+                                    // Remove tiny movement
                                     // We need to figure out the distance of this new line!
                                     float modified_dist_XY = SpiralVaseHelpers::distance(last_point, target);
-                                    // Scale the extrusion amount according to change in length
-                                    line.set(reader, E, line.e() * modified_dist_XY / dist_XY, 5 /*decimal_digits*/);
-                                    last_point = target;
+                                    if (modified_dist_XY < 0.001)
+                                        line.clear();
+                                    else {
+                                        line.set(X, target.x);
+                                        line.set(Y, target.y);
+                                        // Scale the extrusion amount according to change in length
+                                        line.set(E, line.e() * modified_dist_XY / dist_XY, 5 /*decimal_digits*/);
+                                        last_point = target;
+                                    }
                                 } else {
                                     last_point = p;
                                 }

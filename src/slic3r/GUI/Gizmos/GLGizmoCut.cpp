@@ -1,7 +1,3 @@
-///|/ Copyright (c) Prusa Research 2019 - 2023 Oleksandra Iushchenko @YuSanka, Vojtěch Bubník @bubnikv, Lukáš Matěna @lukasmatena, Enrico Turri @enricoturri1966, Filip Sykala @Jony01, Vojtěch Král @vojtechkral
-///|/
-///|/ PrusaSlicer is released under the terms of the AGPLv3 or higher
-///|/
 #include "GLGizmoCut.hpp"
 #include "slic3r/GUI/GLCanvas3D.hpp"
 
@@ -274,7 +270,7 @@ std::string GLGizmoCut3D::get_tooltip() const
 
 bool GLGizmoCut3D::on_mouse(const wxMouseEvent &mouse_event)
 {
-    Vec2i mouse_coord(mouse_event.GetX(), mouse_event.GetY());
+    Vec2i32 mouse_coord(mouse_event.GetX(), mouse_event.GetY());
     Vec2d mouse_pos = mouse_coord.cast<double>();
 
     if (mouse_event.ShiftDown() && mouse_event.LeftDown())
@@ -524,40 +520,6 @@ bool GLGizmoCut3D::render_cut_mode_combo()
     return is_changed;
 }
 
-bool GLGizmoCut3D::render_combo(const std::string& label, const std::vector<std::string>& lines, int& selection_idx)
-{
-    ImGuiWrapper::push_combo_style(m_parent.get_scale());
-    ImGui::AlignTextToFramePadding();
-    m_imgui->text(label);
-    ImGui::SameLine(m_label_width);
-    ImGui::PushItemWidth(m_editing_window_width);
-
-    size_t selection_out = selection_idx;
-
-    const char* selected_str = (selection_idx >= 0 && selection_idx < int(lines.size())) ? lines[selection_idx].c_str() : "";
-    if (ImGui::BBLBeginCombo(("##" + label).c_str(), selected_str, 0)) {
-        for (size_t line_idx = 0; line_idx < lines.size(); ++line_idx) {
-            ImGui::PushID(int(line_idx));
-            if (ImGui::Selectable("", line_idx == selection_idx))
-                selection_out = line_idx;
-
-            ImGui::SameLine();
-            ImGui::Text("%s", lines[line_idx].c_str());
-            ImGui::PopID();
-        }
-
-        ImGui::EndCombo();
-    }
-
-    bool is_changed = selection_idx != selection_out;
-    selection_idx   = selection_out;
-
-    //if (is_changed) update_connector_shape();
-    ImGuiWrapper::pop_combo_style();
-
-    return is_changed;
-}
-
 bool GLGizmoCut3D::render_double_input(const std::string& label, double& value_in)
 {
     ImGui::AlignTextToFramePadding();
@@ -635,7 +597,7 @@ bool GLGizmoCut3D::render_slider_double_input(const std::string& label, float& v
     float min_tolerance = tolerance_in < 0.f ? UndefMinVal : 0.f;
     const float max_tolerance_v = max_tolerance > 0.f ? std::min(max_tolerance, 0.5f * mean_size) : 0.5f * mean_size;
 
-    m_imgui->bbl_slider_float_style(("##tolerance_" + label).c_str(), &tolerance, min_tolerance, max_tolerance_v, format.c_str(), 1.f, true,
+    m_imgui->bbl_slider_float_style("##tolerance_" + label, &tolerance, min_tolerance, max_tolerance_v, format.c_str(), 1.f, true,
                                     _L("Tolerance"));
 
     left_width += (slider_with + item_in_gap);
@@ -703,7 +665,7 @@ bool GLGizmoCut3D::render_reset_button(const std::string& label_id, const std::s
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.4f, 0.4f, 0.4f, 1.0f});
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, {0.4f, 0.4f, 0.4f, 1.0f});
 
-    const bool revert = m_imgui->button(wxString(ImGui::RevertBtn) + "##" + label_id);
+    const bool revert = m_imgui->button(wxString(ImGui::RevertBtn) + "##" + wxString::FromUTF8(label_id));
 
     ImGui::PopStyleColor(3);
 
@@ -2303,7 +2265,7 @@ void GLGizmoCut3D::render_connectors_input_window(CutConnectors &connectors, flo
             m_connector_style = int(CutConnectorStyle::Prism);
             apply_selected_connectors([this, &connectors](size_t idx) { connectors[idx].attribs.style = CutConnectorStyle(m_connector_style); });
         }
-        if (render_combo(m_labels_map["Style"], m_connector_styles, m_connector_style))
+        if (render_combo(m_labels_map["Style"], m_connector_styles, m_connector_style, m_label_width, m_editing_window_width))
             apply_selected_connectors([this, &connectors](size_t idx) { connectors[idx].attribs.style = CutConnectorStyle(m_connector_style); });
     m_imgui->disabled_end();
 
@@ -2312,7 +2274,7 @@ void GLGizmoCut3D::render_connectors_input_window(CutConnectors &connectors, flo
             m_connector_shape_id = int(CutConnectorShape::Circle);
             apply_selected_connectors([this, &connectors](size_t idx) { connectors[idx].attribs.shape = CutConnectorShape(m_connector_shape_id); });
         }
-        if (render_combo(m_labels_map["Shape"], m_connector_shapes, m_connector_shape_id))
+        if (render_combo(m_labels_map["Shape"], m_connector_shapes, m_connector_shape_id, m_label_width, m_editing_window_width))
             apply_selected_connectors([this, &connectors](size_t idx) { connectors[idx].attribs.shape = CutConnectorShape(m_connector_shape_id); });
     m_imgui->disabled_end();
 
@@ -2538,7 +2500,7 @@ void GLGizmoCut3D::render_groove_float_input(const std::string& label, float& in
 
     m_imgui->disabled_begin(is_approx(in_val, init_val) && is_approx(in_tolerance, 0.1f));
         const std::string act_name = _u8L("Reset");
-        if (render_reset_button(("##groove_" + label + act_name).c_str(), act_name)) {
+        if (render_reset_button("##groove_" + label + act_name, act_name)) {
         Plater::TakeSnapshot snapshot(wxGetApp().plater(), GUI::format("%1%: %2%", act_name, label), UndoRedo::SnapshotType::GizmoAction);
             in_val = init_val;
             in_tolerance = 0.1f;
@@ -2578,7 +2540,7 @@ bool GLGizmoCut3D::render_angle_input(const std::string& label, float& in_val, c
     const float old_val = val;
 
     const std::string format = "%.0f " + _u8L("°");
-    m_imgui->bbl_slider_float_style(("##angle_" + label).c_str(), &val, min_val, max_val, format.c_str(), 1.f, true, from_u8(label));
+    m_imgui->bbl_slider_float_style("##angle_" + label, &val, min_val, max_val, format.c_str(), 1.f, true, from_u8(label));
 
     ImGui::SameLine(left_width);
     ImGui::PushItemWidth(input_width);
@@ -2601,7 +2563,7 @@ bool GLGizmoCut3D::render_angle_input(const std::string& label, float& in_val, c
 
     m_imgui->disabled_begin(is_approx(in_val, init_val));
     const std::string act_name = _u8L("Reset");
-    if (render_reset_button(("##angle_" + label + act_name).c_str(), act_name)) {
+    if (render_reset_button("##angle_" + label + act_name, act_name)) {
         Plater::TakeSnapshot snapshot(wxGetApp().plater(), GUI::format("%1%: %2%", act_name, label), UndoRedo::SnapshotType::GizmoAction);
         in_val = init_val;
         is_changed = true;
@@ -2644,7 +2606,7 @@ void GLGizmoCut3D::render_snap_specific_input(const std::string& label, const wx
 
     float val = in_val * 100.f;
     const float old_val = val;
-    m_imgui->bbl_slider_float_style(("##snap_" + label).c_str(), &val, min_val, max_val, format.c_str(), 1.f, true, tooltip);
+    m_imgui->bbl_slider_float_style("##snap_" + label, &val, min_val, max_val, format.c_str(), 1.f, true, tooltip);
 
     ImGui::SameLine(left_width);
     ImGui::PushItemWidth(input_width);
@@ -2659,7 +2621,7 @@ void GLGizmoCut3D::render_snap_specific_input(const std::string& label, const wx
 
     m_imgui->disabled_begin(is_approx(in_val, init_val));
     const std::string act_name = _u8L("Reset");
-    if (render_reset_button(("##snap_" + label + act_name).c_str(), act_name)) {
+    if (render_reset_button("##snap_" + label + act_name, act_name)) {
         in_val = init_val;
         is_changed = true;
     }
@@ -2694,7 +2656,7 @@ void GLGizmoCut3D::render_cut_plane_input_window(CutConnectors &connectors, floa
         const bool is_cut_plane_init = m_rotation_m.isApprox(Transform3d::Identity()) && m_bb_center.isApprox(m_plane_center);
         m_imgui->disabled_begin(is_cut_plane_init);
             std::string act_name = _u8L("Reset cutting plane");
-            if (render_reset_button("cut_plane", into_u8(act_name))) {
+            if (render_reset_button("cut_plane", act_name)) {
                 Plater::TakeSnapshot snapshot(wxGetApp().plater(), act_name, UndoRedo::SnapshotType::GizmoAction);
                 reset_cut_plane();
             }
@@ -2714,7 +2676,7 @@ void GLGizmoCut3D::render_cut_plane_input_window(CutConnectors &connectors, floa
 
             m_imgui->disabled_begin(is_cut_plane_init && !has_connectors);
                 act_name = _u8L("Reset cut");
-                if (m_imgui->button(act_name, _u8L("Reset cutting plane and remove connectors"))) {
+                if (m_imgui->button(wxString::FromUTF8(act_name), _L("Reset cutting plane and remove connectors"))) {
                     Plater::TakeSnapshot snapshot(wxGetApp().plater(), act_name, UndoRedo::SnapshotType::GizmoAction);
                     reset_cut_plane();
                     reset_connectors();
@@ -2776,12 +2738,17 @@ void GLGizmoCut3D::render_cut_plane_input_window(CutConnectors &connectors, floa
         render_part_action_line(_L("Upper part"), "##upper", m_keep_upper, m_place_on_cut_upper, m_rotate_upper);
         render_part_action_line(_L("Lower part"), "##lower", m_keep_lower, m_place_on_cut_lower, m_rotate_lower);
 
-        m_imgui->disabled_begin(has_connectors);
-        m_imgui->bbl_checkbox(_L("Cut to parts"), m_keep_as_parts);
-        if (m_keep_as_parts) {
-            m_keep_upper = true;
-            m_keep_lower = true;
-        }
+        m_imgui->disabled_begin(has_connectors || m_part_selection.valid() || mode == CutMode::cutTongueAndGroove);
+
+            if (m_part_selection.valid())
+                m_keep_as_parts = false;
+
+            m_imgui->bbl_checkbox(_L("Cut to parts"), m_keep_as_parts);
+            if (m_keep_as_parts) {
+                m_keep_upper = m_keep_lower = true;
+                m_place_on_cut_upper = m_place_on_cut_lower = false;
+                m_rotate_upper = m_rotate_lower = false;
+            }
         m_imgui->disabled_end();
     }
 
@@ -2963,10 +2930,10 @@ void GLGizmoCut3D::show_tooltip_information(float x, float y)
 
     caption_max += m_imgui->calc_text_size(std::string_view{": "}).x + 35.f;
 
-    float  font_size   = ImGui::GetFontSize();
-    ImVec2 button_size = ImVec2(font_size * 1.8, font_size * 1.3);
+    float  scale       = m_parent.get_scale();
+    ImVec2 button_size = ImVec2(25 * scale, 25 * scale); // ORCA: Use exact resolution will prevent blur on icon
     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, ImGui::GetStyle().FramePadding.y});
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0}); // ORCA: Dont add padding
     ImGui::ImageButton3(normal_id, hover_id, button_size);
 
     if (ImGui::IsItemHovered()) {

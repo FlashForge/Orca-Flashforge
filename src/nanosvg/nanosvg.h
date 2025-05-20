@@ -326,6 +326,8 @@ static void nsvg__parseElement(char* s,
 		(*endelCb)(ud, name);
 }
 
+static void nsvg__parseStyle2(void *ud, char *&s);
+
 int nsvg__parseXML(char* input,
 				   void (*startelCb)(void* ud, const char* el, const char** attr),
 				   void (*endelCb)(void* ud, const char* el),
@@ -339,6 +341,9 @@ int nsvg__parseXML(char* input,
 		if (*s == '<' && state == NSVG_XML_CONTENT) {
 			// Start of a tag
 			*s++ = '\0';
+            if (strncmp(s, "style", 5) == 0) {
+                nsvg__parseStyle2(ud, s);
+            }
 			nsvg__parseContent(mark, contentCb, ud);
 			mark = s;
 			state = NSVG_XML_TAG;
@@ -455,6 +460,9 @@ typedef struct NSVGparser
 	float dpi;
 	char pathFlag;
 	char defsFlag;
+    char **styleStr;
+    int nstr;
+    int cstr;
 } NSVGparser;
 
 static void nsvg__xformIdentity(float* t)
@@ -687,6 +695,7 @@ static void nsvg__deleteParser(NSVGparser* p)
 		nsvg__deleteGradientData(p->gradients);
 		nsvgDelete(p->image);
 		free(p->pts);
+        free(p->styleStr);
 		free(p);
 	}
 }
@@ -1792,6 +1801,14 @@ static int nsvg__parseAttr(NSVGparser* p, const char* name, const char* value)
 
 	if (strcmp(name, "style") == 0) {
 		nsvg__parseStyle(p, value);
+    } else if (strcmp(name, "class") == 0) {
+        for (int i = 0; i < p->nstr / 2; ++i) {
+            if (strcmp(p->styleStr[2 * i], value) == 0) {
+                char *style = p->styleStr[2 * i + 1];
+                nsvg__parseStyle(p, style);
+                break;
+            }
+        }
 	} else if (strcmp(name, "display") == 0) {
 		if (strcmp(value, "none") == 0)
 			attr->visible = 0;
@@ -1908,6 +1925,40 @@ static void nsvg__parseStyle(NSVGparser* p, const char* str)
 		nsvg__parseNameValue(p, start, end);
 		if (*str) ++str;
 	}
+}
+
+/*处理以下情况：
+  <style> .st0{fill:#231815;stroke:#FFFFFF;}</style>
+  引用时：
+  <rect x="215.9" y="69.1" class="st0" width="157" height="157"/>
+  当前函数提取st0与fill:#231815;stroke:#FFFFFF;
+*/
+static void nsvg__parseStyle2(void *ud, char *&s)
+{
+    NSVGparser *p   = (NSVGparser *) ud;
+    char       *ptr = s;
+    while (true) {
+        while (*ptr != '.' && *ptr != '<')
+            ++ptr;
+        if (*ptr == '<')
+            break;
+        ++ptr;
+        char *key = ptr;
+        while (*ptr != '{')
+            ++ptr;
+        *ptr++ = '\0';
+        char *value = ptr;
+        while (*ptr != '}')
+            ++ptr;
+        *ptr++ = '\0';
+        if (p->nstr + 1 > p->cstr) {
+            p->cstr     = p->cstr ? p->cstr * 2 : 8;
+            p->styleStr = (char **) realloc(p->styleStr, p->cstr * sizeof(char *));
+        }
+        p->styleStr[p->nstr++] = key;
+        p->styleStr[p->nstr++] = value;
+    }
+    s = ptr;
 }
 
 static void nsvg__parseAttribs(NSVGparser* p, const char** attr)

@@ -22,6 +22,7 @@
 #include "GLModel.hpp"
 #include "3DBed.hpp"
 #include "MeshUtils.hpp"
+#include "libslic3r/ParameterUtils.hpp"
 
 class GLUquadric;
 typedef class GLUquadric GLUquadricObject;
@@ -116,6 +117,7 @@ private:
 
     friend class PartPlateList;
 
+    Pointfs m_raw_shape;
     Pointfs m_shape;
     Pointfs m_exclude_area;
     BoundingBoxf3 m_bounding_box;
@@ -139,6 +141,7 @@ private:
     PickingModel m_lock_icon;
     PickingModel m_plate_settings_icon;
     PickingModel m_plate_name_edit_icon;
+    PickingModel m_move_front_icon;
     GLModel m_plate_idx_icon;
     GLTexture m_texture;
 
@@ -195,9 +198,8 @@ private:
     int picking_id_component(int idx) const;
 
 public:
-    static const unsigned int PLATE_BASE_ID = 255 * 255 * 253;
     static const unsigned int PLATE_NAME_HOVER_ID = 6;
-    static const unsigned int GRABBER_COUNT = 7;
+    static const unsigned int GRABBER_COUNT = 8;
 
     static ColorRGBA SELECT_COLOR;
     static ColorRGBA UNSELECT_COLOR;
@@ -244,6 +246,7 @@ public:
     //static const int plate_x_offset = 20; //mm
     //static const double plate_x_gap = 0.2;
     ThumbnailData thumbnail_data;
+    ThumbnailData no_light_thumbnail_data;
     static const int plate_thumbnail_width = 512;
     static const int plate_thumbnail_height = 512;
 
@@ -291,7 +294,9 @@ public:
     // BBS
     Vec2d get_size() const { return Vec2d(m_width, m_depth); }
     ModelObjectPtrs get_objects() { return m_model->objects; }
+    ModelObjectPtrs get_objects_on_this_plate();
     ModelInstance* get_instance(int obj_id, int instance_id);
+    BoundingBoxf3 get_objects_bounding_box();
 
     Vec3d get_origin() { return m_origin; }
     Vec3d estimate_wipe_tower_size(const DynamicPrintConfig & config, const double w, const double d, int plate_extruder_size = 0, bool use_global_objects = false) const;
@@ -335,6 +340,9 @@ public:
     //update object's index caused by original object deleted
     void update_object_index(int obj_idx_removed, int obj_idx_max);
 
+    // set objects configs when enabling spiral vase mode.
+    void set_vase_mode_related_object_config(int obj_id = -1);
+
     //whether it is empty
     bool empty() { return obj_to_instance_set.empty(); }
 
@@ -355,17 +363,20 @@ public:
     bool contains(const BoundingBoxf3& bb) const;
     bool intersects(const BoundingBoxf3& bb) const;
 
-    void render(const Transform3d& view_matrix, const Transform3d& projection_matrix, bool bottom, bool only_body = false, bool force_background_color = false, HeightLimitMode mode = HEIGHT_LIMIT_NONE, int hover_id = -1, bool render_cali = false);
+    void render(const Transform3d& view_matrix, const Transform3d& projection_matrix, bool bottom, bool only_body = false, bool force_background_color = false, HeightLimitMode mode = HEIGHT_LIMIT_NONE, int hover_id = -1, bool render_cali = false, bool show_grid = true);
 
     void set_selected();
     void set_unselected();
     void set_hover_id(int id) { m_hover_id = id; }
     const BoundingBoxf3& get_bounding_box(bool extended = false) { return extended ? m_extended_bounding_box : m_bounding_box; }
     const BoundingBox get_bounding_box_crd();
+    BoundingBoxf3 get_plate_box() {return get_build_volume();}
+    // Orca: support non-rectangular bed
     BoundingBoxf3 get_build_volume()
     {
-        Vec3d up_point = m_bounding_box.max + Vec3d(0, 0, m_origin.z() + m_height);
-        Vec3d low_point = m_bounding_box.min + Vec3d(0, 0, m_origin.z());
+        auto  eps=Slic3r::BuildVolume::SceneEpsilon;
+        Vec3d         up_point  = m_bounding_box.max + Vec3d(eps, eps, m_origin.z() + m_height + eps);
+        Vec3d         low_point = m_bounding_box.min + Vec3d(-eps, -eps, m_origin.z() - eps);
         BoundingBoxf3 plate_box(low_point, up_point);
         return plate_box;
     }
@@ -460,7 +471,9 @@ public:
     int load_pattern_box_data(std::string filename);
 
     std::vector<int> get_first_layer_print_sequence() const;
+    std::vector<LayerPrintSequence> get_other_layers_print_sequence() const;
     void set_first_layer_print_sequence(const std::vector<int> &sorted_filaments);
+    void set_other_layers_print_sequence(const std::vector<LayerPrintSequence>& layer_seq_list);
     void update_first_layer_print_sequence(size_t filament_nums);
 
     void print() const;
@@ -533,6 +546,8 @@ class PartPlateList : public ObjectBase
     GLTexture m_logo_texture;
     GLTexture m_del_texture;
     GLTexture m_del_hovered_texture;
+    GLTexture m_move_front_hovered_texture;
+    GLTexture m_move_front_texture;
     GLTexture m_arrange_texture;
     GLTexture m_arrange_hovered_texture;
     GLTexture m_orient_texture;
@@ -643,9 +658,15 @@ public:
         height = m_plate_height;
     }
 
+    // Pantheon: update plates after moving plate to the front
+    void update_plates();
+
     /*basic plate operations*/
     //create an empty plate and return its index
     int create_plate(bool adjust_position = true);
+
+    // duplicate plate
+    int duplicate_plate(int index);
 
     //destroy print which has the index of print_index
     int destroy_print(int print_index);
@@ -669,11 +690,6 @@ public:
     void set_height_limits_mode(PartPlate::HeightLimitMode mode)
     {
         m_height_limit_mode = mode;
-    }
-
-    // SoftFever
-    const std::string& get_logo_texture_filename() const { 
-        return m_logo_texture_filename;
     }
 
     int get_curr_plate_index() const { return m_current_plate; }
@@ -733,7 +749,7 @@ public:
     int find_instance_belongs(int obj_id, int instance_id);
 
     //notify instance's update, need to refresh the instance in plates
-    int notify_instance_update(int obj_id, int instance_id);
+    int notify_instance_update(int obj_id, int instance_id, bool is_new = false);
 
     //notify instance is removed
     int notify_instance_removed(int obj_id, int instance_id);
@@ -765,7 +781,7 @@ public:
 
     /*rendering related functions*/
     void on_change_color_mode(bool is_dark) { m_is_dark = is_dark; }
-    void render(const Transform3d& view_matrix, const Transform3d& projection_matrix, bool bottom, bool only_current = false, bool only_body = false, int hover_id = -1, bool render_cali = false);
+    void render(const Transform3d& view_matrix, const Transform3d& projection_matrix, bool bottom, bool only_current = false, bool only_body = false, int hover_id = -1, bool render_cali = false, bool show_grid = true);
     void set_render_option(bool bedtype_texture, bool plate_settings);
     void set_render_cali(bool value = true) { render_cali_logo = value; }
     void register_raycasters_for_picking(GLCanvas3D& canvas)

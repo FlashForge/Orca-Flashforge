@@ -11,7 +11,7 @@
 
 #include <libslic3r/enum_bitmask.hpp>
 #include "Http.hpp"
-
+#include <map>
 class wxArrayString;
 
 namespace Slic3r {
@@ -29,6 +29,7 @@ ENABLE_ENUM_BITMASK_OPERATORS(PrintHostPostUploadAction);
 
 struct PrintHostUpload
 {
+    bool use_3mf;
     boost::filesystem::path source_path;
     boost::filesystem::path upload_path;
     
@@ -36,6 +37,9 @@ struct PrintHostUpload
     std::string storage;
 
     PrintHostPostUploadAction post_action { PrintHostPostUploadAction::None };
+
+    // Some extended parameters for different upload methods.
+    std::map<std::string, std::string> extended_info;
 };
 
 class PrintHost
@@ -85,6 +89,7 @@ struct PrintHostJob
 {
     PrintHostUpload upload_data;
     std::unique_ptr<PrintHost> printhost;
+    bool switch_to_device_tab{false};
     bool cancelled = false;
 
     PrintHostJob() {}
@@ -92,6 +97,7 @@ struct PrintHostJob
     PrintHostJob(PrintHostJob &&other)
         : upload_data(std::move(other.upload_data))
         , printhost(std::move(other.printhost))
+        , switch_to_device_tab(other.switch_to_device_tab)
         , cancelled(other.cancelled)
     {}
 
@@ -103,7 +109,8 @@ struct PrintHostJob
     PrintHostJob& operator=(PrintHostJob &&other)
     {
         upload_data = std::move(other.upload_data);
-        printhost = std::move(other.printhost);
+        printhost   = std::move(other.printhost);
+        switch_to_device_tab = other.switch_to_device_tab;
         cancelled = other.cancelled;
         return *this;
     }

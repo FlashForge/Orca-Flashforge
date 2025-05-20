@@ -65,6 +65,9 @@ struct CoolingLine
         TYPE_FORCE_RESUME_FAN   = 1 << 14,
         TYPE_SUPPORT_INTERFACE_FAN_START     = 1 << 15,
         TYPE_SUPPORT_INTERFACE_FAN_END       = 1 << 16,
+        // ORCA: Add support for separate internal bridge fan speed control
+        TYPE_INTERNAL_BRIDGE_FAN_START       = 1 << 17,
+        TYPE_INTERNAL_BRIDGE_FAN_END       = 1 << 18,
     };
 
     CoolingLine(unsigned int type, size_t  line_start, size_t  line_end) :
@@ -151,6 +154,7 @@ struct PerExtruderAdjustments
             }
             time_total += line.time;
         }
+        this->time_total = time_total;
         return time_total;
     }
     // Slow down each adjustable G-code line proportionally by a factor.
@@ -166,6 +170,7 @@ struct PerExtruderAdjustments
             }
             time_total += line.time;
         }
+        this->time_total = time_total;
         return time_total;
     }
 
@@ -204,6 +209,7 @@ struct PerExtruderAdjustments
     // Used by non-proportional slow down.
     void slow_down_to_feedrate(float min_feedrate) {
         assert(this->slow_down_min_speed < min_feedrate + EPSILON);
+        float time_total = 0.f;
         for (size_t i = 0; i < n_lines_adjustable; ++ i) {
             CoolingLine &line = lines[i];
             if (line.feedrate > min_feedrate) {
@@ -211,7 +217,9 @@ struct PerExtruderAdjustments
                 line.feedrate = min_feedrate;
                 line.slowdown = true;
             }
+            time_total += line.time;
         }
+        this->time_total = time_total;
     }
 
     // Extruder, for which the G-code will be adjusted.
@@ -222,6 +230,9 @@ struct PerExtruderAdjustments
     float                       slow_down_layer_time = 0.f;
     // Minimum print speed allowed for this extruder.
     float                       slow_down_min_speed     = 0.f;
+    
+    bool                        dont_slow_down_outer_wall = false;
+
 
     // Parsed lines.
     std::vector<CoolingLine>    lines;
@@ -330,6 +341,8 @@ std::vector<PerExtruderAdjustments> CoolingBuffer::parse_layer_gcode(const std::
         adj.cooling_slow_down_enabled = m_config.slow_down_for_layer_cooling.get_at(extruder_id);
         adj.slow_down_layer_time = float(m_config.slow_down_layer_time.get_at(extruder_id));
         adj.slow_down_min_speed           = float(m_config.slow_down_min_speed.get_at(extruder_id));
+        // ORCA: To enable dont slow down external perimeters feature per filament (extruder)
+        adj.dont_slow_down_outer_wall   = m_config.dont_slow_down_outer_wall.get_at(extruder_id);
         map_extruder_to_per_extruder_adjustment[extruder_id] = i;
     }
 
@@ -340,6 +353,10 @@ std::vector<PerExtruderAdjustments> CoolingBuffer::parse_layer_gcode(const std::
     // Index of an existing CoolingLine of the current adjustment, which holds the feedrate setting command
     // for a sequence of extrusion moves.
     size_t            active_speed_modifier = size_t(-1);
+
+    // Orca: Whether we had our first extrusion in this layer.
+    // Time of any other movements before the first extrusion will be excluded from the layer time.
+    bool layer_had_extrusion = false;
 
     for (; *line_start != 0; line_start = line_end) 
     {
@@ -399,7 +416,19 @@ std::vector<PerExtruderAdjustments> CoolingBuffer::parse_layer_gcode(const std::
                 line.type |= CoolingLine::TYPE_EXTERNAL_PERIMETER;
             if (wipe)
                 line.type |= CoolingLine::TYPE_WIPE;
-            if (boost::contains(sline, ";_EXTRUDE_SET_SPEED") && ! wipe) {
+
+            // Orca: only slow down movements since the first extrusion
+            if (boost::contains(sline, ";_EXTRUDE_SET_SPEED"))
+                layer_had_extrusion = true;
+            
+            // ORCA: Dont slowdown external perimeters for layer time feature
+            // use the adjustment pointer to ensure the value for the current extruder (filament) is used.
+            bool adjust_external = true;
+            if(adjustment->dont_slow_down_outer_wall && external_perimeter) adjust_external = false;
+            
+            // ORCA: Dont slowdown external perimeters for layer time works by not marking the external perimeter as adjustable, 
+            // hence the slowdown algorithm ignores it.
+            if (boost::contains(sline, ";_EXTRUDE_SET_SPEED") && ! wipe && adjust_external) {
                 line.type |= CoolingLine::TYPE_ADJUSTABLE;
                 active_speed_modifier = adjustment->lines.size();
             }
@@ -485,6 +514,10 @@ std::vector<PerExtruderAdjustments> CoolingBuffer::parse_layer_gcode(const std::
             line.type = CoolingLine::TYPE_OVERHANG_FAN_START;
         } else if (boost::starts_with(sline, ";_OVERHANG_FAN_END")) {
             line.type = CoolingLine::TYPE_OVERHANG_FAN_END;
+        } else if (boost::starts_with(sline, ";_INTERNAL_BRIDGE_FAN_START")) { // ORCA: Add support for separate internal bridge fan speed control
+            line.type = CoolingLine::TYPE_INTERNAL_BRIDGE_FAN_START;
+        } else if (boost::starts_with(sline, ";_INTERNAL_BRIDGE_FAN_END")) { // ORCA: Add support for separate internal bridge fan speed control
+            line.type = CoolingLine::TYPE_INTERNAL_BRIDGE_FAN_END;
         } else if (boost::starts_with(sline, ";_SUPP_INTERFACE_FAN_START")) {
             line.type = CoolingLine::TYPE_SUPPORT_INTERFACE_FAN_START;
         } else if (boost::starts_with(sline, ";_SUPP_INTERFACE_FAN_END")) {
@@ -501,67 +534,18 @@ std::vector<PerExtruderAdjustments> CoolingBuffer::parse_layer_gcode(const std::
         } else if (boost::starts_with(sline, ";_FORCE_RESUME_FAN_SPEED")) {
             line.type = CoolingLine::TYPE_FORCE_RESUME_FAN;
         }
+
+        // Orca: For any movements before this layer's first ever extrusion, we exclude them from the layer time calculation.
+        if (!layer_had_extrusion) {
+            assert((line.type & CoolingLine::TYPE_ADJUSTABLE) == 0);
+            line.time = line.time_max = 0;
+        }
+
         if (line.type != 0)
             adjustment->lines.emplace_back(std::move(line));
     }
 
     return per_extruder_adjustments;
-}
-
-// Slow down an extruder range proportionally down to slow_down_layer_time.
-// Return the total time for the complete layer.
-static inline float extruder_range_slow_down_proportional(
-    std::vector<PerExtruderAdjustments*>::iterator it_begin,
-    std::vector<PerExtruderAdjustments*>::iterator it_end,
-    // Elapsed time for the extruders already processed.
-    float elapsed_time_total0,
-    // Initial total elapsed time before slow down.
-    float elapsed_time_before_slowdown,
-    // Target time for the complete layer (all extruders applied).
-    float slow_down_layer_time)
-{
-    // Total layer time after the slow down has been applied.
-    float total_after_slowdown = elapsed_time_before_slowdown;
-    // Now decide, whether the external perimeters shall be slowed down as well.
-    float max_time_nep = elapsed_time_total0;
-    for (auto it = it_begin; it != it_end; ++ it)
-        max_time_nep += (*it)->maximum_time_after_slowdown(false);
-    if (max_time_nep > slow_down_layer_time) {
-        // It is sufficient to slow down the non-external perimeter moves to reach the target layer time.
-        // Slow down the non-external perimeters proportionally.
-        float non_adjustable_time = elapsed_time_total0;
-        for (auto it = it_begin; it != it_end; ++ it)
-            non_adjustable_time += (*it)->non_adjustable_time(false);
-        // The following step is a linear programming task due to the minimum movement speeds of the print moves.
-        // Run maximum 5 iterations until a good enough approximation is reached.
-        for (size_t iter = 0; iter < 5; ++ iter) {
-            float factor = (slow_down_layer_time - non_adjustable_time) / (total_after_slowdown - non_adjustable_time);
-            assert(factor > 1.f);
-            total_after_slowdown = elapsed_time_total0;
-            for (auto it = it_begin; it != it_end; ++ it)
-                total_after_slowdown += (*it)->slow_down_proportional(factor, false);
-            if (total_after_slowdown > 0.95f * slow_down_layer_time)
-                break;
-        }
-    } else {
-        // Slow down everything. First slow down the non-external perimeters to maximum.
-        for (auto it = it_begin; it != it_end; ++ it)
-            (*it)->slowdown_to_minimum_feedrate(false);
-        // Slow down the external perimeters proportionally.
-        float non_adjustable_time = elapsed_time_total0;
-        for (auto it = it_begin; it != it_end; ++ it)
-            non_adjustable_time += (*it)->non_adjustable_time(true);
-        for (size_t iter = 0; iter < 5; ++ iter) {
-            float factor = (slow_down_layer_time - non_adjustable_time) / (total_after_slowdown - non_adjustable_time);
-            assert(factor > 1.f);
-            total_after_slowdown = elapsed_time_total0;
-            for (auto it = it_begin; it != it_end; ++ it)
-                total_after_slowdown += (*it)->slow_down_proportional(factor, true);
-            if (total_after_slowdown > 0.95f * slow_down_layer_time)
-                break;
-        }
-    }
-    return total_after_slowdown;
 }
 
 // Slow down an extruder range to slow_down_layer_time.
@@ -578,8 +562,7 @@ static inline void extruder_range_slow_down_non_proportional(
     for (PerExtruderAdjustments *adj : by_min_print_speed) {
         adj->idx_line_begin = 0;
         adj->idx_line_end   = 0;
-        assert(adj->idx_line_begin < adj->n_lines_adjustable);
-        if (adj->lines[adj->idx_line_begin].feedrate > feedrate)
+        if (adj->idx_line_begin < adj->n_lines_adjustable && adj->lines[adj->idx_line_begin].feedrate> feedrate)
             feedrate = adj->lines[adj->idx_line_begin].feedrate;
     }
     assert(feedrate > 0.f);
@@ -661,12 +644,12 @@ float CoolingBuffer::calculate_layer_slowdown(std::vector<PerExtruderAdjustments
         adj.time_maximum = adj.maximum_time_after_slowdown(true);
         if (adj.cooling_slow_down_enabled && adj.lines.size() > 0) {
             by_slowdown_time.emplace_back(&adj);
-            if (! m_cooling_logic_proportional)
-                // sorts the lines, also sets adj.time_non_adjustable
-                adj.sort_lines_by_decreasing_feedrate();
+            // sorts the lines, also sets adj.time_non_adjustable
+            adj.sort_lines_by_decreasing_feedrate();
         } else
             elapsed_time_total0 += adj.elapsed_time_total();
     }
+
     std::sort(by_slowdown_time.begin(), by_slowdown_time.end(),
         [](const PerExtruderAdjustments *adj1, const PerExtruderAdjustments *adj2)
             { return adj1->slow_down_layer_time < adj2->slow_down_layer_time; });
@@ -687,10 +670,7 @@ float CoolingBuffer::calculate_layer_slowdown(std::vector<PerExtruderAdjustments
             for (auto it = cur_begin; it != by_slowdown_time.end(); ++ it)
                 max_time += (*it)->time_maximum;
             if (max_time > slow_down_layer_time) {
-                if (m_cooling_logic_proportional)
-                    extruder_range_slow_down_proportional(cur_begin, by_slowdown_time.end(), elapsed_time_total0, total, slow_down_layer_time);
-                else
-                    extruder_range_slow_down_non_proportional(cur_begin, by_slowdown_time.end(), slow_down_layer_time - total);
+                extruder_range_slow_down_non_proportional(cur_begin, by_slowdown_time.end(), slow_down_layer_time - total);
             } else {
                 // Slow down to maximum possible.
                 for (auto it = cur_begin; it != by_slowdown_time.end(); ++ it)
@@ -732,9 +712,11 @@ std::string CoolingBuffer::apply_layer_cooldown(
     new_gcode.reserve(gcode.size() * 2);
     bool overhang_fan_control= false;
     int  overhang_fan_speed   = 0;
+    bool internal_bridge_fan_control= false; // ORCA: Add support for separate internal bridge fan speed control
+    int  internal_bridge_fan_speed   = 0; // ORCA: Add support for separate internal bridge fan speed control
     bool supp_interface_fan_control= false;
     int  supp_interface_fan_speed = 0;
-    auto change_extruder_set_fan = [ this, layer_id, layer_time, &new_gcode, &overhang_fan_control, &overhang_fan_speed, &supp_interface_fan_control, &supp_interface_fan_speed](bool immediately_apply) {
+    auto change_extruder_set_fan = [ this, layer_id, layer_time, &new_gcode, &overhang_fan_control, &overhang_fan_speed, &internal_bridge_fan_control, &internal_bridge_fan_speed, &supp_interface_fan_control, &supp_interface_fan_speed](bool immediately_apply) {
 #define EXTRUDER_CONFIG(OPT) m_config.OPT.get_at(m_current_extruder)
         float fan_min_speed = EXTRUDER_CONFIG(fan_min_speed);
         float fan_speed_new = EXTRUDER_CONFIG(reduce_fan_stop_start_freq) ? fan_min_speed : 0;
@@ -776,15 +758,27 @@ std::string CoolingBuffer::apply_layer_cooldown(
             supp_interface_fan_speed = EXTRUDER_CONFIG(support_material_interface_fan_speed);
             supp_interface_fan_control = supp_interface_fan_speed >= 0;
 
+            overhang_fan_control = overhang_fan_speed > fan_speed_new;
+            
+            // ORCA: Add support for separate internal bridge fan speed control
+            internal_bridge_fan_speed   = EXTRUDER_CONFIG(internal_bridge_fan_speed);
+            internal_bridge_fan_control = internal_bridge_fan_speed >=0;
+            
+            if( internal_bridge_fan_speed < 0 ) { // ORCA: Backwards compatibility setting for Orca internal bridge fan speed setting - if set at -1 (which is the default) use the overhang fan speed settings.
+                internal_bridge_fan_speed = overhang_fan_speed;
+                internal_bridge_fan_control = overhang_fan_control;
+            }
 #undef EXTRUDER_CONFIG
-            overhang_fan_control= overhang_fan_speed > fan_speed_new;
+            
         } else {
-            overhang_fan_control= false;
+            overhang_fan_control = false;
             overhang_fan_speed   = 0;
             fan_speed_new      = 0;
             additional_fan_speed_new = 0;
-            supp_interface_fan_control= false;
+            supp_interface_fan_control = false; 
             supp_interface_fan_speed   = 0;
+            internal_bridge_fan_control = false; // ORCA: Add support for separate internal bridge fan speed control
+            internal_bridge_fan_speed = 0; // ORCA: Add support for separate internal bridge fan speed control
         }
         if (fan_speed_new != m_fan_speed) {
             m_fan_speed = fan_speed_new;
@@ -807,6 +801,7 @@ std::string CoolingBuffer::apply_layer_cooldown(
     // Orca: Reduce set fan commands by deferring the GCodeWriter::set_fan calls. Inspired by SuperSlicer
     // define fan_speed_change_requests and initialize it with all possible types fan speed change requests
     std::unordered_map<int, bool> fan_speed_change_requests = {{CoolingLine::TYPE_OVERHANG_FAN_START, false},
+                                                               {CoolingLine::TYPE_INTERNAL_BRIDGE_FAN_START, false}, // ORCA: Add support for separate internal bridge fan speed control
                                                                {CoolingLine::TYPE_SUPPORT_INTERFACE_FAN_START, false},
                                                                {CoolingLine::TYPE_FORCE_RESUME_FAN, false}};
     bool need_set_fan = false;
@@ -834,6 +829,16 @@ std::string CoolingBuffer::apply_layer_cooldown(
         } else if (line->type & CoolingLine::TYPE_OVERHANG_FAN_END) {
             if (overhang_fan_control && fan_speed_change_requests[CoolingLine::TYPE_OVERHANG_FAN_START]) {
                 fan_speed_change_requests[CoolingLine::TYPE_OVERHANG_FAN_START] = false;
+            }
+            need_set_fan = true;
+        } else if (line->type & CoolingLine::TYPE_INTERNAL_BRIDGE_FAN_START) { // ORCA: Add support for separate internal bridge fan speed control
+            if (internal_bridge_fan_control && !fan_speed_change_requests[CoolingLine::TYPE_INTERNAL_BRIDGE_FAN_START]) {
+                need_set_fan = true;
+                fan_speed_change_requests[CoolingLine::TYPE_INTERNAL_BRIDGE_FAN_START] = true;
+           }
+        } else if (line->type & CoolingLine::TYPE_INTERNAL_BRIDGE_FAN_END) { // ORCA: Add support for separate internal bridge fan speed control
+            if (internal_bridge_fan_control && fan_speed_change_requests[CoolingLine::TYPE_INTERNAL_BRIDGE_FAN_START]) {
+                fan_speed_change_requests[CoolingLine::TYPE_INTERNAL_BRIDGE_FAN_START] = false;
             }
             need_set_fan = true;
         } else if (line->type & CoolingLine::TYPE_SUPPORT_INTERFACE_FAN_START) {
@@ -944,6 +949,9 @@ std::string CoolingBuffer::apply_layer_cooldown(
             if (fan_speed_change_requests[CoolingLine::TYPE_OVERHANG_FAN_START]){
                 new_gcode += GCodeWriter::set_fan(m_config.gcode_flavor, overhang_fan_speed);
                 m_current_fan_speed = overhang_fan_speed;
+            } else if (fan_speed_change_requests[CoolingLine::TYPE_INTERNAL_BRIDGE_FAN_START]){ // ORCA: Add support for separate internal bridge fan speed control
+                new_gcode += GCodeWriter::set_fan(m_config.gcode_flavor, internal_bridge_fan_speed);
+                m_current_fan_speed = internal_bridge_fan_speed;
             }
             else if (fan_speed_change_requests[CoolingLine::TYPE_SUPPORT_INTERFACE_FAN_START]){
                 new_gcode += GCodeWriter::set_fan(m_config.gcode_flavor, supp_interface_fan_speed);

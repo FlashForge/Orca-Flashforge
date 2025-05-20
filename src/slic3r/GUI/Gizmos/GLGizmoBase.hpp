@@ -1,7 +1,3 @@
-///|/ Copyright (c) Prusa Research 2019 - 2023 Oleksandra Iushchenko @YuSanka, Lukáš Matěna @lukasmatena, Enrico Turri @enricoturri1966, Filip Sykala @Jony01, Vojtěch Bubník @bubnikv
-///|/
-///|/ PrusaSlicer is released under the terms of the AGPLv3 or higher
-///|/
 #ifndef slic3r_GLGizmoBase_hpp_
 #define slic3r_GLGizmoBase_hpp_
 
@@ -12,6 +8,7 @@
 #include "slic3r/GUI/GLModel.hpp"
 #include "slic3r/GUI/MeshUtils.hpp"
 #include "slic3r/GUI/SceneRaycaster.hpp"
+#include "slic3r/GUI/3DScene.hpp"
 
 #include <cereal/archives/binary.hpp>
 
@@ -35,6 +32,7 @@ class ImGuiWrapper;
 class GLCanvas3D;
 enum class CommonGizmosDataID;
 class CommonGizmosDataPool;
+class Selection;
 
 class GLGizmoBase
 {
@@ -152,6 +150,9 @@ protected:
 
     bool m_is_dark_mode = false;
 
+    bool render_combo(const std::string &label, const std::vector<std::string> &lines,
+        int &selection_idx, float label_width, float item_width);
+
 public:
     GLGizmoBase(GLCanvas3D& parent,
                 const std::string& icon_filename,
@@ -185,6 +186,13 @@ public:
 
     virtual bool apply_clipping_plane() { return true; }
 
+    /// <summary>
+    /// Implement when want to process mouse events in gizmo
+    /// Click, Right click, move, drag, ...
+    /// </summary>
+    /// <param name="mouse_event">Keep information about mouse click</param>
+    /// <returns>Return True when use the information and don't want to propagate it otherwise False.</returns>
+    virtual bool on_mouse(const wxMouseEvent &mouse_event) { return false; }
     unsigned int get_sprite_id() const { return m_sprite_id; }
 
     int get_hover_id() const { return m_hover_id; }
@@ -212,14 +220,6 @@ public:
     /// Is called when data (Selection) is changed
     /// </summary>
     virtual void data_changed(bool is_serializing){};
-
-    /// <summary>
-    /// Implement when want to process mouse events in gizmo
-    /// Click, Right click, move, drag, ...
-    /// </summary>
-    /// <param name="mouse_event">Keep information about mouse click</param>
-    /// <returns>Return True when use the information and don't want to propagate it otherwise False.</returns>
-    virtual bool on_mouse(const wxMouseEvent &mouse_event) { return false; }
 
     void register_raycasters_for_picking()   { register_grabbers_for_picking(); on_register_raycasters_for_picking(); }
     void unregister_raycasters_for_picking() { unregister_grabbers_for_picking(); on_unregister_raycasters_for_picking(); }

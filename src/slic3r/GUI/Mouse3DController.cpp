@@ -29,7 +29,7 @@ static const std::vector<int> _3DCONNEXION_VENDORS =
     0x256F   // 3DCONNECTION = 9583 // 3Dconnexion
 };
 
-// See: https://github.com/FreeSpacenav/spacenavd/blob/a9eccf34e7cac969ee399f625aef827f4f4aaec6/src/dev.c#L202
+// See: https://github.com/FreeSpacenav/spacenavd/blob/39856625a6de1e8c4b57c5938e1bf29d13cf1a9f/src/dev.c#L63
 static const std::vector<int> _3DCONNEXION_DEVICES =
 {
     0xc603,	/* 50691 spacemouse plus XT */
@@ -43,6 +43,7 @@ static const std::vector<int> _3DCONNEXION_DEVICES =
     0xc628,	/* 50728 space navigator for notebooks*/
     0xc629,	/* 50729 space pilot pro*/
     0xc62b,	/* 50731 space mouse pro*/
+    0xc640,	/* 50752 nulooq */
     0xc62e,	/* 50734 spacemouse wireless (USB cable) *TESTED* */
     0xc62f,	/* 50735 spacemouse wireless receiver */
     0xc631,	/* 50737 spacemouse pro wireless *TESTED* */
@@ -50,7 +51,7 @@ static const std::vector<int> _3DCONNEXION_DEVICES =
     0xc633,	/* 50739 spacemouse enterprise */
     0xc635,	/* 50741 spacemouse compact *TESTED* */
     0xc636,	/* 50742 spacemouse module */
-    0xc640,	/* 50752 nulooq */
+    0xc63a,	/* 60060 spacemouse wireless (Bluetooth) */
     0xc652, /* 50770 3Dconnexion universal receiver *TESTED* */
 };
 
@@ -146,11 +147,13 @@ static std::string format_device_string(int vid, int pid)
 static std::string detect_attached_device()
 {
     std::string ret;
-
     // Initialize the hidapi library
     int res = hid_init();
     if (res != 0)
         BOOST_LOG_TRIVIAL(error) << "Unable to initialize hidapi library";
+    else if (wxGetApp().app_config->get("skip_3dmouse_detect") == "true") {
+        BOOST_LOG_TRIVIAL(info) << "do not detect 3d Mouse";
+    }
     else {
         // Enumerates devices
         hid_device_info* devices = hid_enumerate(0, 0);
@@ -404,8 +407,8 @@ void Mouse3DController::load_config(const AppConfig &appconfig)
 	    params.zoom.scale = Params::DefaultZoomScale * std::clamp(zoom_speed, 0.1, 10.0);
         params.swap_yz = swap_yz;
         params.invert_x = invert_x;
-        params.invert_y = invert_x;
-        params.invert_z = invert_x;
+        params.invert_y = invert_y;
+        params.invert_z = invert_z;
         params.invert_yaw = invert_yaw;
         params.invert_pitch = invert_pitch;
         params.invert_roll = invert_roll;
@@ -927,7 +930,7 @@ void Mouse3DController::run()
 
 bool Mouse3DController::connect_device()
 {
-    if (m_stop)
+    if (m_stop || wxGetApp().app_config->get("skip_3dmouse_detect") == "true")
     	return false;
 
     {

@@ -6,7 +6,7 @@
                 "resolution_supported":  [ "720p" ],
                 "liveview": {
                     "local": "local",
-                    "remote": "enabled"
+                    "remote": "tutk"
                 }
             },
             "support_motor_noise_cali":true,
@@ -28,7 +28,6 @@
             "support_print_all":false,
             "support_print_without_sd":false,
             "support_flow_calibration":true,
-            "support_build_plate_marker_detect":false,
             "support_lidar_calibration":false,
             "support_ai_monitoring":false,
             "support_first_layer_inspect":false,
@@ -54,7 +53,7 @@
         "print": {
             "ipcam": {
                 "file": {
-                    "remote": "enabled"
+                    "remote": "tutk"
                 }
             }
         }

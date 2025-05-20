@@ -1,7 +1,3 @@
-///|/ Copyright (c) Prusa Research 2019 - 2023 Enrico Turri @enricoturri1966, Oleksandra Iushchenko @YuSanka, Filip Sykala @Jony01, Lukáš Matěna @lukasmatena, Vojtěch Bubník @bubnikv
-///|/
-///|/ PrusaSlicer is released under the terms of the AGPLv3 or higher
-///|/
 #ifndef slic3r_GUI_Selection_hpp_
 #define slic3r_GUI_Selection_hpp_
 
@@ -212,6 +208,7 @@ public:
     EMode get_mode() const { return m_mode; }
     void set_mode(EMode mode) { m_mode = mode; }
 
+    int query_real_volume_idx_from_other_view(unsigned int object_idx, unsigned int instance_idx, unsigned int model_volume_idx);
     void add(unsigned int volume_idx, bool as_single_selection = true, bool check_for_already_contained = false);
     void remove(unsigned int volume_idx);
 
@@ -233,6 +230,7 @@ public:
     void remove_curr_plate();
     void clone(int numbers = 1);
     void center();
+    void drop();
     void center_plate(const int plate_idx);
     void set_printable(bool printable);
 
@@ -346,6 +344,10 @@ public:
 
     void translate(unsigned int object_idx, const Vec3d& displacement);
     void translate(unsigned int object_idx, unsigned int instance_idx, const Vec3d& displacement);
+    void translate(unsigned int object_idx, unsigned int instance_idx, unsigned int volume_idx, const Vec3d &displacement);
+
+    void rotate(unsigned int object_idx, unsigned int instance_idx, const Transform3d &overwrite_tran);
+    void rotate(unsigned int object_idx, unsigned int instance_idx, unsigned int volume_idx, const Transform3d &overwrite_tran);
     //BBS: add partplate related logic
     void notify_instance_update(int object_idx, int instance_idx);
     // BBS

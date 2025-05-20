@@ -1,7 +1,3 @@
-///|/ Copyright (c) Prusa Research 2021 - 2022 Vojtěch Bubník @bubnikv
-///|/
-///|/ PrusaSlicer is released under the terms of the AGPLv3 or higher
-///|/
 #ifndef slic3r_TriangleMeshSlicer_hpp_
 #define slic3r_TriangleMeshSlicer_hpp_
 
@@ -111,6 +107,7 @@ void slice_mesh_slabs(
     const Transform3d                &trafo,
     std::vector<Polygons>            *out_top,
     std::vector<Polygons>            *out_bottom,
+    std::vector<std::pair<Vec3f, Vec3f>>   *vertical_points,
     std::function<void()>             throw_on_cancel);
 
 // Project mesh upwards pointing surfaces / downwards pointing surfaces into 2D polygons.

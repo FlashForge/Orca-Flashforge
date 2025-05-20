@@ -7,6 +7,8 @@ BEGIN_EVENT_TABLE(Button, StaticBox)
 
 EVT_LEFT_DOWN(Button::mouseDown)
 EVT_LEFT_UP(Button::mouseReleased)
+EVT_ENTER_WINDOW(Button::mouseEnter)
+EVT_LEAVE_WINDOW(Button::mouseLeave)
 EVT_MOUSE_CAPTURE_LOST(Button::mouseCaptureLost)
 EVT_KEY_DOWN(Button::keyDownUp)
 EVT_KEY_UP(Button::keyDownUp)
@@ -143,6 +145,11 @@ void Button::SetValue(bool state)
 
 bool Button::GetValue() const { return state_handler.states() & StateHandler::Checked; }
 
+void Button::SetCenter(bool isCenter)
+{
+    this->isCenter = isCenter;
+}
+
 void Button::Rescale()
 {
     if (this->active_icon.bmp().IsOk())
@@ -152,6 +159,16 @@ void Button::Rescale()
         this->inactive_icon.msw_rescale();
 
     messureSize();
+}
+
+void Button::SetFlashForge(bool bFlashForge) 
+{
+    m_flashforge = bFlashForge; 
+}
+
+void Button::SetPureText(bool bPureText) 
+{
+    m_pure_text = bPureText;
 }
 
 void Button::paintEvent(wxPaintEvent& evt)
@@ -189,8 +206,10 @@ void Button::render(wxDC& dc)
         }
         szIcon = icon.GetBmpSize();
         szContent.x += szIcon.x;
-        if (szIcon.y > szContent.y)
+        if (szIcon.y > szContent.y) {
             szContent.y = szIcon.y;
+            //szContent.y += 10; 
+        }
         if (szContent.x > size.x) {
             int d = std::min(padding, szContent.x - size.x);
             padding -= d;
@@ -199,9 +218,11 @@ void Button::render(wxDC& dc)
     }
     // move to center
     wxRect rcContent = { {0, 0}, size };
-    wxSize offset = (size - szContent) / 2;
-    if (offset.x < 0) offset.x = 0;
-    rcContent.Deflate(offset.x, offset.y);
+    if (isCenter) {
+        wxSize offset = (size - szContent) / 2;
+        if (offset.x < 0) offset.x = 0;
+        rcContent.Deflate(offset.x, offset.y);
+    }
     // start draw
     wxPoint pt = rcContent.GetLeftTop();
     if (icon.bmp().IsOk()) {
@@ -245,6 +266,8 @@ void Button::messureSize()
             szContent.y = szIcon.y;
     }
     wxSize size = szContent + paddingSize * 2;
+    //size.SetHeight(size.GetHeight() + 10);
+    //minSize.SetHeight(minSize.GetHeight() + 10);
     if (minSize.GetHeight() > 0)
         size.SetHeight(minSize.GetHeight());
 
@@ -258,6 +281,15 @@ void Button::mouseDown(wxMouseEvent& event)
 {
     event.Skip();
     pressedDown = true;
+    if (m_flashforge) {
+        SetBorderWidth(0);
+        SetBorderColor(wxColour(255, 255, 255));
+        SetBackgroundColor(wxColour(217, 234, 255));
+    }
+    if (m_pure_text) {
+        SetBorderColor(wxColour(17, 111, 223));
+        SetTextColor(wxColour(17, 111, 223));
+    }
     if (canFocus)
         SetFocus();
     if (!HasCapture())
@@ -269,10 +301,42 @@ void Button::mouseReleased(wxMouseEvent& event)
     event.Skip();
     if (pressedDown) {
         pressedDown = false;
+        if (m_flashforge) {
+            SetBorderWidth(0);
+            SetBorderColor(wxColour(255, 255, 255));
+            SetBackgroundColor(wxColour(255, 255, 255));
+        }
         if (HasCapture())
             ReleaseMouse();
         if (wxRect({0, 0}, GetSize()).Contains(event.GetPosition()))
             sendButtonEvent();
+    }
+}
+
+void Button::mouseEnter(wxMouseEvent &event)
+{ 
+    event.Skip(); 
+    if (m_flashforge) {
+        SetBorderWidth(1);
+        SetBorderColor(wxColour(50, 141, 251));
+    }
+    if (m_pure_text) {
+        SetBorderColor(wxColour(149, 197, 255));
+        SetTextColor(wxColour(149, 197, 255));
+    }
+}
+
+void Button::mouseLeave(wxMouseEvent &event) 
+{
+    event.Skip();
+    if (m_flashforge) {
+        SetBorderWidth(0);
+        SetBorderColor(wxColour(255, 255, 255));
+        SetBackgroundColor(wxColour(255, 255, 255));
+    }
+    if (m_pure_text) {
+        SetBorderColor(wxColour(50, 141, 251));
+        SetTextColor(wxColour(50, 141, 251));
     }
 }
 
@@ -303,6 +367,82 @@ void Button::sendButtonEvent()
     wxCommandEvent event(wxEVT_COMMAND_BUTTON_CLICKED, GetId());
     event.SetEventObject(this);
     GetEventHandler()->ProcessEvent(event);
+}
+
+TempButton::TempButton(wxWindow *parent, wxString text, wxString icon, long style, int iconSize, wxWindowID btn_id) 
+    : Button(parent, text, icon, style, iconSize, btn_id)
+{ 
+    
+}
+
+void TempButton::doRender(wxDC &dc)
+{ 
+    wxSize size   = GetSize();
+    int    states = StateColor::Enabled;
+    if (background_color2.count() == 0) {
+        if ((border_width && border_color.count() > 0) || background_color.count() > 0) {
+            wxRect rc(0, 0, size.x, size.y);
+            if (border_width && border_color.count() > 0) {
+                if (dc.GetContentScaleFactor() == 1.0) {
+                    int d  = floor(border_width / 2.0);
+                    int d2 = floor(border_width - 1);
+                    rc.x += d;
+                    rc.width -= d2;
+                    rc.y += d;
+                    rc.height -= d2;
+                } else {
+                    int d = 1;
+                    rc.x += d;
+                    rc.width -= d;
+                    rc.y += d;
+                    rc.height -= d;
+                }
+                dc.SetPen(wxPen(border_color.colorForStates(states), border_width));
+            } else {
+                dc.SetPen(wxPen(background_color.colorForStates(states)));
+            }
+            if (background_color.count() > 0)
+                dc.SetBrush(wxBrush(background_color.colorForStates(states)));
+            else
+                dc.SetBrush(wxBrush(GetBackgroundColour()));
+            if (radius == 0) {
+                dc.DrawRectangle(rc);
+            } else {
+                dc.DrawRoundedRectangle(rc, radius - border_width);
+            }
+        }
+    } else {
+        wxColor start = background_color.colorForStates(states);
+        wxColor stop  = background_color2.colorForStates(states);
+        int     r = start.Red(), g = start.Green(), b = start.Blue();
+        int     dr = (int) stop.Red() - r, dg = (int) stop.Green() - g, db = (int) stop.Blue() - b;
+        int     lr = 0, lg = 0, lb = 0;
+        for (int y = 0; y < size.y; ++y) {
+            dc.SetPen(wxPen(wxColor(r, g, b)));
+            dc.DrawLine(0, y, size.x, y);
+            lr += dr;
+            while (lr >= size.y) {
+                ++r, lr -= size.y;
+            }
+            while (lr <= -size.y) {
+                --r, lr += size.y;
+            }
+            lg += dg;
+            while (lg >= size.y) {
+                ++g, lg -= size.y;
+            }
+            while (lg <= -size.y) {
+                --g, lg += size.y;
+            }
+            lb += db;
+            while (lb >= size.y) {
+                ++b, lb -= size.y;
+            }
+            while (lb <= -size.y) {
+                --b, lb += size.y;
+            }
+        }
+    }
 }
 
 #ifdef __WIN32__

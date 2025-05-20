@@ -303,12 +303,18 @@ function FilterModelList(keyword) {
 function SelectPrinterAll( sVendor )
 {
 	$("input[vendor='"+sVendor+"']").prop("checked", true);
+	$("input[vendor='"+sVendor+"']").each(function() {
+		CheckBoxOnclick(this);
+	});
 }
 
 
 function SelectPrinterNone( sVendor )
 {
 	$("input[vendor='"+sVendor+"']").prop("checked", false);
+	$("input[vendor='"+sVendor+"']").each(function() {
+		CheckBoxOnclick(this);
+	});
 }
 
 function OnExitFilter() {
@@ -427,7 +433,7 @@ function CancelSelect()
 
 function ConfirmSelect()
 {
-	let nChoose=OnExitFilter();
+	let nChoose=OnExit();
 	
 	if(nChoose>0)
     {

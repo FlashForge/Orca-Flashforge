@@ -95,7 +95,7 @@ namespace BBL {
 #define BAMBU_NETWORK_LIBRARY               "bambu_networking"
 #define BAMBU_NETWORK_AGENT_NAME            "bambu_network_agent"
 
-#define BAMBU_NETWORK_AGENT_VERSION         "01.08.04.01"
+#define BAMBU_NETWORK_AGENT_VERSION         "01.10.01.01"
 
 //iot preset type strings
 #define IOT_PRINTER_TYPE_STRING     "printer"
@@ -138,6 +138,9 @@ typedef std::function<void(int result, std::string info)> ResultFn;
 typedef std::function<bool()> CancelFn;
 typedef std::function<bool(std::map<std::string, std::string> info)> CheckFn;
 
+//err callbacks
+typedef std::function<void(std::string url, int status)> OnServerErrFn;
+
 enum SendingPrintJobStage {
     PrintingStageCreate = 0,
     PrintingStageUpload = 1,
@@ -147,6 +150,7 @@ enum SendingPrintJobStage {
     PrintingStageWaitPrinter = 5,
     PrintingStageFinished = 6,
     PrintingStageERROR = 7,
+    PrintingStageLimit = 8,
 };
 
 enum PublishingStage {
@@ -171,6 +175,17 @@ enum ConnectStatus {
     ConnectStatusLost = 2,
 };
 
+struct detectResult {
+    std::string    result_msg;
+    std::string    command;
+    std::string    dev_id;
+    std::string    model_id;
+    std::string    dev_name;
+    std::string    version;
+    std::string    bind_state;
+    std::string    connect_type;
+};
+
 /* print job*/
 struct PrintParams {
     /* basic info */
@@ -193,6 +208,7 @@ struct PrintParams {
     std::string     origin_model_id;
     std::string     print_type;
     std::string     dst_file;
+    std::string     dev_name;
 
     /* access options */
     std::string     dev_ip;
@@ -210,6 +226,14 @@ struct PrintParams {
     bool            task_use_ams;
     std::string     task_bed_type;
     std::string     extra_options;
+};
+
+struct TaskQueryParams
+{
+    std::string dev_id;
+    int status = 0;
+    int offset = 0;
+    int limit = 20;
 };
 
 struct PublishParams {

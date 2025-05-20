@@ -38,6 +38,7 @@ struct Camera
     int  requires_zoom_to_plate{ REQUIRES_ZOOM_TO_PLATE_IDLE };
 
 private:
+    bool m_prevent_auto_type = true;
     EType m_type{ EType::Perspective };
     bool m_update_config_on_type_change_enabled{ false };
     Vec3d m_target{ Vec3d::Zero() };
@@ -65,6 +66,7 @@ public:
     // valid values for type: "false" -> ortho, "true" -> perspective
     void set_type(const std::string& type) { set_type((type == "true") ? EType::Perspective : EType::Ortho); }
     void select_next_type();
+    void auto_type(EType preferred_type);
 
     void enable_update_config_on_type_change(bool enable) { m_update_config_on_type_change_enabled = enable; }
 
@@ -150,7 +152,7 @@ public:
 
     // returns true if the camera z axis (forward) is pointing in the negative direction of the world z axis
     bool is_looking_downward() const { return get_dir_forward().dot(Vec3d::UnitZ()) < 0.0; }
-
+    bool is_looking_front() const { return abs(get_dir_up().dot(Vec3d::UnitZ())-1) < 0.001; }
     // forces camera right vector to be parallel to XY plane
     void recover_from_free_camera() {
         if (std::abs(get_dir_right()(2)) > EPSILON)

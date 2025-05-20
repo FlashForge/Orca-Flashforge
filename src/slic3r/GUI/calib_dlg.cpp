@@ -6,7 +6,20 @@
 #include "MainFrame.hpp"
 #include <string>
 namespace Slic3r { namespace GUI {
-    
+
+namespace {
+
+void ParseStringValues(std::string str, std::vector<double> &vec)
+{
+    vec.clear();
+    std::replace(str.begin(), str.end(), ',', ' ');
+    std::istringstream inss(str);
+    std::copy_if(std::istream_iterator<int>(inss), std::istream_iterator<int>(), std::back_inserter(vec),
+                 [](int x){ return x > 0; });
+}
+
+}
+
 wxBoxSizer* create_item_checkbox(wxString title, wxWindow* parent, bool* value, CheckBox*& checkbox)
 {
     wxBoxSizer* m_sizer_checkbox = new wxBoxSizer(wxHORIZONTAL);
@@ -59,14 +72,18 @@ PA_Calibration_Dlg::PA_Calibration_Dlg(wxWindow* parent, wxWindowID id, Plater* 
     wxString start_pa_str = _L("Start PA: ");
     wxString end_pa_str = _L("End PA: ");
     wxString PA_step_str = _L("PA step: ");
+    wxString sp_accel_str = _L("Accelerations: ");
+    wxString sp_speed_str = _L("Speeds: ");
 	auto text_size = wxWindow::GetTextExtent(start_pa_str);
 	text_size.IncTo(wxWindow::GetTextExtent(end_pa_str));
 	text_size.IncTo(wxWindow::GetTextExtent(PA_step_str));
-	text_size.x = text_size.x * 1.5;
+    text_size.IncTo(wxWindow::GetTextExtent(sp_accel_str));
+    text_size.IncTo(wxWindow::GetTextExtent(sp_speed_str));
+    text_size.x = text_size.x * 1.1;
 	wxStaticBoxSizer* settings_sizer = new wxStaticBoxSizer(wxVERTICAL, this, _L("Settings"));
 
 	auto st_size = FromDIP(wxSize(text_size.x, -1));
-	auto ti_size = FromDIP(wxSize(90, -1));
+    auto ti_size = FromDIP(wxSize(140, -1));
     // start PA
     auto start_PA_sizer = new wxBoxSizer(wxHORIZONTAL);
     auto start_pa_text = new wxStaticText(this, wxID_ANY, start_pa_str, wxDefaultPosition, st_size, wxALIGN_LEFT);
@@ -97,6 +114,27 @@ PA_Calibration_Dlg::PA_Calibration_Dlg(wxWindow* parent, wxWindowID id, Plater* 
 
 	settings_sizer->Add(create_item_checkbox(_L("Print numbers"), this, &m_params.print_numbers, m_cbPrintNum));
     m_cbPrintNum->SetValue(false);
+
+    wxTextValidator val_list_validator(wxFILTER_INCLUDE_CHAR_LIST);
+    val_list_validator.SetCharIncludes(wxString("0123456789,"));
+
+    auto sp_accel_sizer = new wxBoxSizer(wxHORIZONTAL);
+    auto sp_accel_text = new wxStaticText(this, wxID_ANY, sp_accel_str, wxDefaultPosition, st_size, wxALIGN_LEFT);
+    m_tiBMAccels = new TextInput(this, "", "", "", wxDefaultPosition, ti_size, wxTE_PROCESS_ENTER);
+    m_tiBMAccels->SetToolTip(_L("Comma-separated list of printing accelerations"));
+    m_tiBMAccels->GetTextCtrl()->SetValidator(val_list_validator);
+    sp_accel_sizer->Add(sp_accel_text, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
+    sp_accel_sizer->Add(m_tiBMAccels, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
+    settings_sizer->Add(sp_accel_sizer);
+
+    auto sp_speed_sizer = new wxBoxSizer(wxHORIZONTAL);
+    auto sp_speed_text = new wxStaticText(this, wxID_ANY, sp_speed_str, wxDefaultPosition, st_size, wxALIGN_LEFT);
+    m_tiBMSpeeds = new TextInput(this, "", "", "", wxDefaultPosition, ti_size, wxTE_PROCESS_ENTER);
+    m_tiBMSpeeds->SetToolTip(_L("Comma-separated list of printing speeds"));
+    m_tiBMSpeeds->GetTextCtrl()->SetValidator(val_list_validator);
+    sp_speed_sizer->Add(sp_speed_text, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
+    sp_speed_sizer->Add(m_tiBMSpeeds, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
+    settings_sizer->Add(sp_speed_sizer);
 
     v_sizer->Add(settings_sizer);
 	v_sizer->Add(0, FromDIP(10), 0, wxEXPAND, 5);
@@ -146,6 +184,8 @@ void PA_Calibration_Dlg::reset_params() {
             m_tiPAStep->GetTextCtrl()->SetValue(wxString::FromDouble(0.002));
             m_cbPrintNum->SetValue(true);
             m_cbPrintNum->Enable(true);
+            m_tiBMAccels->Enable(false);
+            m_tiBMSpeeds->Enable(false);
             break;
         case 2:
             m_params.mode = CalibMode::Calib_PA_Pattern;
@@ -153,6 +193,8 @@ void PA_Calibration_Dlg::reset_params() {
             m_tiPAStep->GetTextCtrl()->SetValue(wxString::FromDouble(0.005));
             m_cbPrintNum->SetValue(true);
             m_cbPrintNum->Enable(false);
+            m_tiBMAccels->Enable(true);
+            m_tiBMSpeeds->Enable(true);
             break;
         default:
             m_params.mode = CalibMode::Calib_PA_Tower;
@@ -160,6 +202,8 @@ void PA_Calibration_Dlg::reset_params() {
             m_tiPAStep->GetTextCtrl()->SetValue(wxString::FromDouble(0.002));
             m_cbPrintNum->SetValue(false);
             m_cbPrintNum->Enable(false);
+            m_tiBMAccels->Enable(false);
+            m_tiBMSpeeds->Enable(false);
             break;
     }
 
@@ -197,6 +241,8 @@ void PA_Calibration_Dlg::on_start(wxCommandEvent& event) {
     }
 
     m_params.print_numbers = m_cbPrintNum->GetValue();
+    ParseStringValues(m_tiBMAccels->GetTextCtrl()->GetValue().ToStdString(), m_params.accelerations);
+    ParseStringValues(m_tiBMSpeeds->GetTextCtrl()->GetValue().ToStdString(), m_params.speeds);
 
     m_plater->calib_pa(m_params);
     EndModal(wxID_OK);
@@ -227,6 +273,7 @@ enum FILAMENT_TYPE : int
     tPLA = 0,
     tABS_ASA,
     tPETG,
+    tPCTG,
     tTPU,
     tPA_CF,
     tPET_CF,
@@ -240,7 +287,7 @@ Temp_Calibration_Dlg::Temp_Calibration_Dlg(wxWindow* parent, wxWindowID id, Plat
     SetSizer(v_sizer);
     wxBoxSizer* choice_sizer = new wxBoxSizer(wxHORIZONTAL);
 
-    wxString m_rbFilamentTypeChoices[] = { _L("PLA"), _L("ABS/ASA"), _L("PETG"), _L("TPU"), _L("PA-CF"), _L("PET-CF"), _L("Custom") };
+    wxString m_rbFilamentTypeChoices[] = { _L("PLA"), _L("ABS/ASA"), _L("PETG"), _L("PCTG"), _L("TPU"), _L("PA-CF"), _L("PET-CF"), _L("Custom") };
     int m_rbFilamentTypeNChoices = sizeof(m_rbFilamentTypeChoices) / sizeof(wxString);
     m_rbFilamentType = new wxRadioBox(this, wxID_ANY, _L("Filament type"), wxDefaultPosition, wxDefaultSize, m_rbFilamentTypeNChoices, m_rbFilamentTypeChoices, 2, wxRA_SPECIFY_COLS);
     m_rbFilamentType->SetSelection(0);
@@ -384,6 +431,10 @@ void Temp_Calibration_Dlg::on_filament_type_changed(wxCommandEvent& event) {
             start = 250;
             end = 230;
             break;
+	case tPCTG:
+            start = 240;
+            end = 280;
+            break;
         case tTPU:
             start = 240;
             end = 210;
@@ -435,8 +486,11 @@ MaxVolumetricSpeed_Test_Dlg::MaxVolumetricSpeed_Test_Dlg(wxWindow* parent, wxWin
     text_size.x = text_size.x * 1.5;
     wxStaticBoxSizer* settings_sizer = new wxStaticBoxSizer(wxVERTICAL, this, _L("Settings"));
 
+    wxString input_str = _L("mm³/s");
+    auto input_text_size = wxWindow::GetTextExtent(input_str);
+
     auto st_size = FromDIP(wxSize(text_size.x, -1));
-    auto ti_size = FromDIP(wxSize(90, -1));
+    auto ti_size = FromDIP(wxSize(input_text_size.x + 90, -1));
     // start vol
     auto start_vol_sizer = new wxBoxSizer(wxHORIZONTAL);
     auto start_vol_text = new wxStaticText(this, wxID_ANY, start_vol_str, wxDefaultPosition, st_size, wxALIGN_LEFT);
@@ -540,8 +594,11 @@ VFA_Test_Dlg::VFA_Test_Dlg(wxWindow* parent, wxWindowID id, Plater* plater)
     text_size.x = text_size.x * 1.5;
     wxStaticBoxSizer* settings_sizer = new wxStaticBoxSizer(wxVERTICAL, this, _L("Settings"));
 
+    wxString input_str = _L("mm/s");
+    auto input_text_size = wxWindow::GetTextExtent(input_str);
+
     auto st_size = FromDIP(wxSize(text_size.x, -1));
-    auto ti_size = FromDIP(wxSize(90, -1));
+    auto ti_size = FromDIP(wxSize(input_text_size.x + 90, -1));
     // start vol
     auto start_vol_sizer = new wxBoxSizer(wxHORIZONTAL);
     auto start_vol_text = new wxStaticText(this, wxID_ANY, start_str, wxDefaultPosition, st_size, wxALIGN_LEFT);
@@ -646,8 +703,11 @@ Retraction_Test_Dlg::Retraction_Test_Dlg(wxWindow* parent, wxWindowID id, Plater
     text_size.x = text_size.x * 1.5;
     wxStaticBoxSizer* settings_sizer = new wxStaticBoxSizer(wxVERTICAL, this, _L("Settings"));
 
+    wxString input_text_str = _L("mm/mm");
+    auto input_text_size = wxWindow::GetTextExtent(input_text_str);
+
     auto st_size = FromDIP(wxSize(text_size.x, -1));
-    auto ti_size = FromDIP(wxSize(90, -1));
+    auto ti_size = FromDIP(wxSize(input_text_size.x + 90, -1));
     // start length
     auto start_length_sizer = new wxBoxSizer(wxHORIZONTAL);
     auto start_length_text = new wxStaticText(this, wxID_ANY, start_length_str, wxDefaultPosition, st_size, wxALIGN_LEFT);
@@ -670,7 +730,7 @@ Retraction_Test_Dlg::Retraction_Test_Dlg(wxWindow* parent, wxWindowID id, Plater
     // length step
     auto length_step_sizer = new wxBoxSizer(wxHORIZONTAL);
     auto length_step_text = new wxStaticText(this, wxID_ANY, length_step_str, wxDefaultPosition, st_size, wxALIGN_LEFT);
-    m_tiStep = new TextInput(this, wxString::FromDouble(0.1), _L("mm/mm"), "", wxDefaultPosition, ti_size, wxTE_CENTRE);
+    m_tiStep = new TextInput(this, wxString::FromDouble(0.1), _L("mm/mm"), "", wxDefaultPosition, ti_size, wxTE_RIGHT);
     m_tiStart->GetTextCtrl()->SetValidator(wxTextValidator(wxFILTER_NUMERIC));
     length_step_sizer->Add(length_step_text, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
     length_step_sizer->Add(m_tiStep, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);

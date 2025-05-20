@@ -8,7 +8,8 @@
 #include <boost/log/trivial.hpp>
 #include <boost/format.hpp>
 #include <mutex>
-
+    // for minidump
+#include <DbgHelp.h> 
 static std::string g_log_folder;
 static std::atomic<int> g_crash_log_count = 0;
 static std::mutex g_dump_mutex;
@@ -46,6 +47,41 @@ CBaseException::~CBaseException(void)
 	}
 }
 
+
+// generate the minidump for windows system
+void make_minidump(EXCEPTION_POINTERS *e)
+{
+    auto hDbgHelp = LoadLibraryA("dbghelp");
+    if (hDbgHelp == nullptr)
+        return;
+
+    auto pMiniDumpWriteDump = (decltype(&MiniDumpWriteDump)) GetProcAddress(hDbgHelp, "MiniDumpWriteDump");
+    if (pMiniDumpWriteDump == nullptr)
+        return;
+
+    char name[MAX_PATH];
+    {
+        auto       nameEnd = name + GetModuleFileNameA(GetModuleHandleA(0), name, MAX_PATH);
+        SYSTEMTIME t;
+        GetSystemTime(&t);
+        wsprintfA(nameEnd - strlen(".exe"), "_%4d%02d%02d_%02d%02d%02d.dmp", t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond);
+    }
+
+    auto hFile = CreateFileA(name, GENERIC_WRITE, FILE_SHARE_READ, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+    if (hFile == INVALID_HANDLE_VALUE)
+        return;
+
+    MINIDUMP_EXCEPTION_INFORMATION exception_info;
+    exception_info.ExceptionPointers = e;
+    exception_info.ThreadId          = GetCurrentThreadId();
+    exception_info.ClientPointers    = FALSE;
+
+    auto dumped = pMiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), hFile,
+                                     MINIDUMP_TYPE(MiniDumpWithIndirectlyReferencedMemory | MiniDumpScanMemory),
+                                     e ? &exception_info : nullptr, nullptr, nullptr);
+
+    CloseHandle(hFile);
+}
 
 //BBS set crash log folder
 void CBaseException::set_log_folder(std::string log_folder)
@@ -275,6 +311,7 @@ LONG WINAPI CBaseException::UnhandledExceptionFilter(PEXCEPTION_POINTERS pExcept
     g_dump_mutex.lock();
 	CBaseException base(GetCurrentProcess(), GetCurrentProcessId(), NULL, pExceptionInfo);
 	base.ShowExceptionInformation();
+    make_minidump(pExceptionInfo);
     g_dump_mutex.unlock();
 
 	return EXCEPTION_CONTINUE_SEARCH;
@@ -329,7 +366,7 @@ BOOL CBaseException::GetLogicalAddress(
 
 void CBaseException::ShowRegistorInformation(PCONTEXT pCtx)
 {
-#ifdef _M_IX86  // Intel Only!
+#if defined(_M_IX86) // Intel Only!
 	OutputString( _T("\nRegisters:\r\n") );
 
 	OutputString(_T("EAX:%08X\r\nEBX:%08X\r\nECX:%08X\r\nEDX:%08X\r\nESI:%08X\r\nEDI:%08X\r\n"),
@@ -339,7 +376,19 @@ void CBaseException::ShowRegistorInformation(PCONTEXT pCtx)
 	OutputString( _T("SS:ESP:%04X:%08X  EBP:%08X\r\n"),pCtx->SegSs, pCtx->Esp, pCtx->Ebp );
 	OutputString( _T("DS:%04X  ES:%04X  FS:%04X  GS:%04X\r\n"), pCtx->SegDs, pCtx->SegEs, pCtx->SegFs, pCtx->SegGs );
 	OutputString( _T("Flags:%08X\r\n"), pCtx->EFlags );
+#elif defined(_M_X64)
+    OutputString(_T("\nRegisters:\r\n"));
 
+	OutputString(_T("RAX:%016llX\r\nRBX:%016llX\r\nRCX:%016llX\r\nRDX:%016llX\r\nRSI:%016llX\r\nRDI:%016llX\r\n"),
+		pCtx->Rax, pCtx->Rbx, pCtx->Rcx, pCtx->Rdx, pCtx->Rsi, pCtx->Rdi );
+
+	OutputString(_T("R8:%016llX\r\nR9:%016llX\r\nR10:%016llX\r\nR11:%016llX\r\nR12:%016llX\r\nR13:%016llX\r\nR14:%016llX\r\nR15:%016llX\r\n"),
+		pCtx->R8, pCtx->R9, pCtx->R10, pCtx->R11, pCtx->R12, pCtx->R13, pCtx->R14, pCtx->R15 );
+
+    OutputString(_T("CS:RIP:%04X:%016llX\r\n"), pCtx->SegCs, pCtx->Rip);
+    OutputString(_T("SS:RSP:%04X:%016llX  RBP:%016llX\r\n"), pCtx->SegSs, pCtx->Rsp, pCtx->Rbp);
+    OutputString(_T("DS:%04X  ES:%04X  FS:%04X  GS:%04X\r\n"), pCtx->SegDs, pCtx->SegEs, pCtx->SegFs, pCtx->SegGs);
+    OutputString(_T("Flags:%08X\r\n"), pCtx->EFlags);
 #endif
 
 	OutputString( _T("\r\n") );
