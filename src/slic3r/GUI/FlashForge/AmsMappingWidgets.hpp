@@ -18,7 +18,7 @@ class SlotInfoWgt : public wxPanel
 public:
     SlotInfoWgt(wxWindow *parent);
 
-    enum Type { AMS = 0, U1 = 1 };
+    enum Type { TYPE_GENERAL, TYPE_U1};
 
     void setInfo(int slotId, wxColour color, wxString name, bool empty, wxString mappingName);
 
@@ -30,24 +30,25 @@ public:
 
 private:
     void onPaint(wxPaintEvent &evt);
+    void renderGeneral();
+    void renderU1();
 
 private:
-    int      m_slotId;
-    wxColour m_color;
-    wxString m_name;
-    bool     m_empty;
-    bool     m_hover;
+    Type           m_type;
+    int            m_slotId;
+    wxColour       m_color;
+    wxString       m_name;
+    bool           m_empty;
+    bool           m_hover;
     ScalableBitmap m_transBmp;
     ScalableBitmap m_transStrokeBmp;
     ScalableBitmap m_unknownBmp;
     ScalableBitmap m_emptyBmp;
-
-    bool           m_empty_nozzle;
-    ScalableBitmap m_unknow_bmp;
-    ScalableBitmap m_empty_bmp;
-    ScalableBitmap m_empty_nozzle_bmp;
-
-    Type m_type{Type::AMS};
+    //
+    bool           m_u1EmptyNozzle;
+    ScalableBitmap m_u1UnknowBmp;
+    ScalableBitmap m_u1EmptyBmp;
+    ScalableBitmap m_u1EmptyNozzleBmp;
 };
 
 struct SlotSelectEvent : public wxCommandEvent {

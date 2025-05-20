@@ -13,6 +13,7 @@
 
 namespace Slic3r {
 namespace GUI {
+wxDEFINE_EVENT(EVT_DOWNLOADED_RELOGIN_IMAGE, StdStringEvent);
 RoundImage::RoundImage(wxWindow *parent, const wxSize &size /*=wxDefaultSize*/)
     : wxPanel(parent, wxID_ANY, wxDefaultPosition, size)
 {
@@ -126,6 +127,21 @@ ReLoginDialog::ReLoginDialog() : TitleDialog(static_cast<wxWindow *>(wxGetApp().
     #endif
 
     Bind(wxEVT_CLOSE_WINDOW, &ReLoginDialog::onCloseWnd, this);
+    Bind(EVT_DOWNLOADED_RELOGIN_IMAGE, [&](StdStringEvent& event) {
+        std::string         body = event.str;
+        wxMemoryInputStream stream(body.data(), body.size());
+        wxImage             image(stream, wxBITMAP_TYPE_ANY);
+        if (!image.IsOk()) {
+            BOOST_LOG_TRIVIAL(error) << "download relogin image is not ok";
+            return;
+        }
+        wxGetApp().setUsrPic(image);
+        image.Rescale(FromDIP(80), FromDIP(80));
+        if (m_user_panel) {
+            m_user_panel->SetImage(image);
+        }
+        Layout();
+    });
     #if 0
     Bind(wxEVT_WEBREQUEST_STATE, [this](wxWebRequestEvent &evt) {
         switch (evt.GetState()) {
@@ -236,9 +252,6 @@ ReLoginDialog::ReLoginDialog() : TitleDialog(static_cast<wxWindow *>(wxGetApp().
 
 ReLoginDialog::~ReLoginDialog()
 {
-    if(m_pic_thread){
-        MultiComUtils::killAsyncCall(m_pic_thread);
-    }
 }
 #if defined(__WIN32__) || defined(__LINUX__)
 void ReLoginDialog::onLoginoutBtnClicked(wxCommandEvent& event)
@@ -383,19 +396,11 @@ void ReLoginDialog::downloadUrlPic(const std::string& url)
         Slic3r::Http http   = Slic3r::Http::get(url);
         std::string  suffix = url.substr(url.find_last_of(".") + 1);
         http.header("accept", "image/" + suffix)
-            .on_complete([this](std::string body, unsigned int status) {
-                wxMemoryInputStream stream(body.data(), body.size());
-                wxImage             image(stream, wxBITMAP_TYPE_ANY);
-                if (!image.IsOk()) {
-                    BOOST_LOG_TRIVIAL(error) << "download relogin image is not ok";
-                    return;
-                }
-                wxGetApp().setUsrPic(image);
-                image.Rescale(FromDIP(80), FromDIP(80));
-                if (m_user_panel) {
-                    m_user_panel->SetImage(image);
-                }
-                Layout();
+            .on_complete([this](std::string body, unsigned int status) { 
+                auto event = new StdStringEvent;
+                event->SetEventType(EVT_DOWNLOADED_RELOGIN_IMAGE);
+                event->str = body;
+                wxQueueEvent(this, event);
             })
             .on_error([=](std::string body, std::string error, unsigned status) {
                 BOOST_LOG_TRIVIAL(info) << " ReLoginDialog::downloadUrlPic: status:" << status << " error:" << error;

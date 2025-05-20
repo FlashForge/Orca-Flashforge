@@ -21,6 +21,9 @@ wxString FFUtils::getBitmapFileName(unsigned short pid)
     case 0x0026:
         str = "ad5x";
         break;
+    case 0x0027: 
+        str = "Guider4Pro"; 
+        break;
     case 0x001F:
         str = "guider_3_ultra";
         break;
@@ -44,6 +47,9 @@ std::string FFUtils::getPrinterName(unsigned short pid)
     case 0x0026:
         str = "Flashforge AD5X";
         break;
+    case 0x0027: 
+        str = "Flashforge Guider4 Pro"; 
+        break;
     case 0x001F:
         str = "Guider 3 Ultra";
         break;
@@ -62,10 +68,13 @@ std::string FFUtils::getPrinterModelId(unsigned short pid)
 		str = "Flashforge-Adventurer-5M-Pro";
 		break;
     case 0x0025: 
-        str = "Flashforge-Guider-4"; 
+        str = "Flashforge-Guider4"; 
         break;
     case 0x0026:
         str = "Flashforge-AD5X";
+        break;
+    case 0x0027: 
+        str = "Flashforge-Guider4-Pro"; 
         break;
     case 0x001F:
         str = "Flashforge-Guider-3-Ultra";
@@ -76,15 +85,23 @@ std::string FFUtils::getPrinterModelId(unsigned short pid)
 
 bool FFUtils::isPrinterSupportAms(const std::string &modelId)
 {
-    if (modelId == "Flashforge-AD5X" || modelId == "Flashforge-Guider-4") {
+    if (modelId == "Flashforge-AD5X" || modelId == "Flashforge-Guider4" || modelId == "Flashforge-Guider4-Pro") {
         return true;
     }
     return false;
 }
 
-bool FFUtils::isPrinterSupportFlowCalibration(const std::string &modelId)
+bool FFUtils::isPrinterSupportCoolingFan(const std::string& modelId)
 {
-    if (modelId == "Flashforge-Guider-4") {
+    if (modelId != "Flashforge-AD5X") {
+        return true;
+    }
+    return false;
+}
+
+bool FFUtils::isPrinterSupportDeviceFilter(const std::string& modelId)
+{
+    if (modelId != "Flashforge-Guider4-Pro") {
         return true;
     }
     return false;
@@ -157,7 +174,7 @@ wxString FFUtils::convertStatus(const std::string& status, wxColour& color)
 
 wxString FFUtils::converDeviceError(const std::string &error) 
 {
-    wxString st = _L("The printer move out of range.Please go home again!");
+    wxString st;
     if ("E0001" == error) {
         st = _L("The printer move out of range.Please go home again!");
     } else if ("E0002" == error) {
@@ -194,6 +211,8 @@ wxString FFUtils::converDeviceError(const std::string &error)
         st = _L("Move queue overflow");
     } else if ("E0018" == error) {
         st = _L("No filament");
+    } else if ("E0115" == error) {
+        st = _L("Lidar focus failure detected. Please check the Lidar.");
     }
     return st;
 }

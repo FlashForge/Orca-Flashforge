@@ -263,13 +263,24 @@ DeviceInfoItemPanel::DeviceInfoItemPanel(wxWindow *parent, const DeviceInfo& inf
     m_icon->SetMinSize(wxSize(FromDIP(112), FromDIP(112)));
     m_icon->SetMaxSize(wxSize(FromDIP(112), FromDIP(112)));
     m_icon->SetBackgroundColour(m_bg_color);
-    //m_icon->SetBitmap(create_scaled_bitmap("device_Ad5m", nullptr, FromDIP(112)));
+
+    m_warning_icon = new wxStaticBitmap(this, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_warning_icon->SetMinSize(wxSize(FromDIP(16), FromDIP(16)));
+    m_warning_icon->SetMaxSize(wxSize(FromDIP(16), FromDIP(16)));
+    m_warning_icon->SetBackgroundColour(m_bg_color);
+    m_warning_icon->SetBitmap(create_scaled_bitmap("ff_warning", this, 16));
+
     m_placement_text = new wxStaticText(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     m_placement_text->SetBackgroundColour(m_bg_color);
     m_status_text = new wxStaticText(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     m_status_text->SetBackgroundColour(m_bg_color);
     m_progress_text = new wxStaticText(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxHL_ALIGN_RIGHT);
     m_progress_text->SetBackgroundColour(m_bg_color);
+
+    wxBoxSizer* top_sizer = new wxBoxSizer(wxHORIZONTAL);
+    top_sizer->Add(m_name_text, 0, wxEXPAND | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL);
+    top_sizer->AddStretchSpacer(1);
+    top_sizer->Add(m_warning_icon, 0, wxEXPAND | wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL);
 
     wxBoxSizer* status_sizer = new wxBoxSizer(wxHORIZONTAL);
     status_sizer->Add(m_status_text, 0, wxEXPAND | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL);
@@ -278,7 +289,7 @@ DeviceInfoItemPanel::DeviceInfoItemPanel(wxWindow *parent, const DeviceInfo& inf
 
     m_main_sizer->AddSpacer(2);
     m_main_sizer->AddStretchSpacer(1);    
-    m_main_sizer->Add(m_name_text, 0, wxEXPAND | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(10));
+    m_main_sizer->Add(top_sizer, 0, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(10));
     m_main_sizer->AddSpacer(FromDIP(3));
     m_main_sizer->Add(m_icon, 0, wxALIGN_CENTER | wxLEFT | wxRIGHT, FromDIP(10));
     m_main_sizer->AddSpacer(FromDIP(3));
@@ -401,6 +412,9 @@ void DeviceInfoItemPanel::updateStatus()
     if (m_info.conn_id < 0) {
         m_info.status = "offline";
     }
+    // build plate detect, first-layer defect
+    m_warning_icon->Show("error" == m_info.status && ("E0088" == m_info.errorCode || "E0089" == m_info.errorCode));
+
     wxColour color("#00CD6D");
     wxString status = FFUtils::convertStatus(m_info.status, color);
     m_status_text->SetLabel(status);
@@ -1179,6 +1193,9 @@ void DeviceListPanel::copyDeviceInfo(DeviceInfoItemPanel::DeviceInfo& dest, cons
     if (dest.conn_id < 0) {
         dest.status = "offline";
     }
+    if (dest.status != "offline") {
+        dest.errorCode = source.errorCode;
+    }
     dest.progress = source.progress;
 }
 
@@ -1341,6 +1358,7 @@ bool DeviceListPanel::getDeviceInfo(DeviceInfoItemPanel::DeviceInfo& info, int c
             if (data.devDetail){
                 info.placement = data.devDetail->location;
                 info.status    = data.devDetail->status;
+                info.errorCode = data.devDetail->errorCode;
                 info.name      = data.devDetail->name;
                 info.progress  = data.devDetail->printProgress * 100;
             } else {
@@ -1357,6 +1375,7 @@ bool DeviceListPanel::getDeviceInfo(DeviceInfoItemPanel::DeviceInfo& info, int c
             info.placement = data.wanDevInfo.location;
             info.status = data.wanDevInfo.status;
             if (data.devDetail) {
+                info.errorCode = data.devDetail->errorCode;
                 info.progress = data.devDetail->printProgress * 100;
             } else {
                 info.progress = 0;
@@ -1390,7 +1409,8 @@ void DeviceListPanel::updateDeviceInfo(const std::string& dev_id, const DeviceIn
             }
             if (status_changed || placement_changed || type_changed
                 || dev_info.conn_id != info.conn_id || dev_info.lanFlag != info.lanFlag
-                || dev_info.name != info.name || dev_info.progress != info.progress) {
+                || dev_info.name != info.name || dev_info.progress != info.progress
+                || dev_info.errorCode != info.errorCode) {
                 iter->second->updateInfo(info);
             }
             if (info.lanFlag && (dev_info.name != info.name || dev_info.placement != info.placement)) {
@@ -1438,6 +1458,7 @@ void DeviceListPanel::onComDevDetailUpdate(ComDevDetailUpdateEvent& event)
             info.pid = data.devDetail->pid;
             info.placement = data.devDetail->location;
             info.status = data.devDetail->status;
+            info.errorCode = data.devDetail->errorCode;
             info.progress = data.devDetail->printProgress * 100;
         }
         std::string dev_id = info.lanFlag ? data.lanDevInfo.serialNumber : data.wanDevInfo.serialNumber;
@@ -1463,6 +1484,7 @@ void DeviceListPanel::onComWanDeviceInfoUpdate(ComWanDevInfoUpdateEvent& event)
         info.status = data.wanDevInfo.status;
         if (data.devDetail) {
             info.pid = data.devDetail->pid;
+            info.errorCode = data.devDetail->errorCode;
             info.progress = data.devDetail->printProgress * 100;
         }
         updateDeviceInfo(data.wanDevInfo.serialNumber, info);

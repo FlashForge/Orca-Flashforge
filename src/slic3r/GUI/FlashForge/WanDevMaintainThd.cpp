@@ -68,12 +68,13 @@ void WanDevMaintainThd::run()
             continue;
         }
         std::string uid = getUid();
-        ScopedWanDevToken token = WanDevTokenMgr::inst()->getScopedToken();
         if (m_reloginHttp) {
-            if (reloginHttp(uid, token.accessToken())) {
+            ScopedWanDevToken token = WanDevTokenMgr::inst()->getScopedToken();
+            if (reloginHttp(uid, token)) {
                 m_reloginHttp = false;
             }
         } else {
+            ScopedWanDevToken token = WanDevTokenMgr::inst()->getScopedToken();
             if (m_updateWanDev) {
                 updateWanDev(uid, token.accessToken());
                 m_updateWanDev = false;
@@ -92,26 +93,29 @@ std::string WanDevMaintainThd::getUid()
     return m_uid;
 }
 
-bool WanDevMaintainThd::reloginHttp(std::string &uid, const std::string &accessToken)
+bool WanDevMaintainThd::reloginHttp(const std::string &uid, ScopedWanDevToken &scopedToken)
 {
     ComErrno ret = MultiComUtils::fnetRet2ComErrno(m_networkIntfc->checkToken(
-        accessToken.c_str(), ComTimeoutWanB));
+        scopedToken.accessToken().c_str(), ComTimeoutWanB));
+    if (m_reloginHttp && ret == COM_UNAUTHORIZED) {
+        ret = WanDevTokenMgr::inst()->refreshToken(scopedToken);
+    }
     fnet_wan_dev_info_t *devInfos = nullptr;
     int devCnt = 0;
     if (m_reloginHttp && ret == COM_OK) {
         ret = MultiComUtils::fnetRet2ComErrno(m_networkIntfc->getWanDevList(
-            uid.c_str(), accessToken.c_str(), &devInfos, &devCnt, ComTimeoutWanB));
+            uid.c_str(), scopedToken.accessToken().c_str(), &devInfos, &devCnt, ComTimeoutWanB));
     }
     com_user_profile_t userProfile;
     if (m_reloginHttp && ret == COM_OK) {
-        ret = MultiComUtils::getUserProfile(accessToken, userProfile, ComTimeoutWanB);
+        ret = MultiComUtils::getUserProfile(scopedToken.accessToken(), userProfile, ComTimeoutWanB);
     }
     if (m_reloginHttp) {
         ReloginHttpEvent *event = new ReloginHttpEvent;
         event->SetEventType(RELOGIN_HTTP_EVENT);
         event->ret = ret;
         event->uid = uid;
-        event->accessToken = accessToken;
+        event->accessToken = scopedToken.accessToken();
         event->userProfile = userProfile;
         event->devInfos = devInfos;
         event->devCnt = devCnt;

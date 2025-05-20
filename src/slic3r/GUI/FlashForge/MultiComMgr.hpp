@@ -22,6 +22,10 @@
 #include "WanDevMaintainThd.hpp"
 #include "WanDevSendGcodeThd.hpp"
 
+namespace boost { namespace interprocess {
+    class file_lock;
+}}
+
 namespace Slic3r { namespace GUI {
 
 class MultiComMgr : public wxEvtHandler, public Singleton<MultiComMgr>
@@ -72,6 +76,8 @@ private:
     typedef boost::bimap<com_id_t, ComConnection*> com_ptr_map_t;
 
     typedef boost::bimap<com_id_t, ComConnection*>::value_type com_ptr_map_val_t;
+    
+    typedef std::unique_ptr<boost::interprocess::file_lock> interprocess_file_lock_ptr_t;
 
     void initConnection(const com_ptr_t &comPtr, const com_dev_data_t &devData);
 
@@ -91,6 +97,8 @@ private:
 
     void onGetDevGcodeList(const ComGetDevGcodeListEvent &event);
 
+    void onGetDevTimeLapseVideoList(const ComGetTimeLapseVideoListEvent &event);
+
     void onCommandFailed(const CommandFailedEvent &event);
 
     void onWanConnStatus(const WanConnStatusEvent &event);
@@ -103,13 +111,15 @@ private:
 
     com_dev_data_t makeWanDevData(const fnet_wan_dev_info_t *wanDevInfo);
 
-    void maintianWanDev(ComErrno ret);
+    void maintianWanDev(ComErrno ret, bool repeatLogin, bool unregisterUser);
 
     void setWanDevOffline();
 
     void subscribeWanDevNimStatus();
 
     void updateWanDevDetail();
+
+    std::string getNimAppDir(const std::string &dataDir);
 
     const int SubscribeDevStatusSecond = 10000;
 
@@ -131,13 +141,17 @@ private:
     std::list<com_dev_data_t>                m_pendingWanDevDatas;
     wxTimer                                  m_loopCheckTimer;
     std_precise_clock::time_point            m_subscribeTime;
-    std::atomic_bool                         m_commandFailedUpdating;
+    std::atomic_bool                         m_blockCommandFailedUpdate;
     std_precise_clock::time_point            m_commandFailedUpdateTime;
     std::unique_ptr<WanDevMaintainThd>       m_wanDevMaintainThd;
     std::unique_ptr<WanDevSendGcodeThd>      m_sendGcodeThd;
     std::unique_ptr<fnet::FlashNetworkIntfc> m_networkIntfc;
     std::unique_ptr<ComThreadPool>           m_threadPool;
     WaitEvent                                m_threadExitEvent;
+    interprocess_file_lock_ptr_t             m_nimDataDirFileLock;
+    bool                                     m_blockShowNimDataBaseError;
+    std_precise_clock::time_point            m_showNimDataBaseErrorTime;
+    const char                              *m_nimDataFileLockName;
 };
 
 }} // namespace Slic3r::GUI

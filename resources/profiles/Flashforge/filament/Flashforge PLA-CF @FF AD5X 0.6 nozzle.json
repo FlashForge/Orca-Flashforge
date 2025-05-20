@@ -1,4 +1,13 @@
 {
+    "cool_plate_temp": [
+        "45"
+    ],
+    "cool_plate_temp_initial_layer": [
+        "45"
+    ],
+    "filament_flow_ratio": [
+        "0.98"
+    ],
     "filament_settings_id": [
         "Flashforge PLA-CF @FF AD5X 0.6 nozzle"
     ],
@@ -25,6 +34,12 @@
     ],
     "nozzle_temperature_initial_layer": [
         "215"
+    ],
+    "textured_cool_plate_temp": [
+        "45"
+    ],
+    "textured_cool_plate_temp_initial_layer": [
+        "45"
     ],
     "version": "2.1.1.0"
 }

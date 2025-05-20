@@ -130,7 +130,7 @@ ComErrno ComConnection::commandLoop()
                     || ret != COM_ABORTED_BY_USER && ++errorCnt > 5) {
                 if (m_connectMode == COM_CONNECT_LAN) {
                     return ret;
-                } else if (ret != COM_NIM_SEND_ERROR) {
+                } else if (ret != COM_NIM_SEND_ERROR && ret != COM_NIM_DATA_BASE_ERROR) {
                     QueueEvent(new CommandFailedEvent(COMMAND_FAILED_EVENT, ret, false));
                     errorCnt = 0;
                 }
@@ -198,6 +198,18 @@ void ComConnection::processCommand(ComCommand *command, ComErrno ret)
         ComGetGcodeThumb *getGcodeThumb = (ComGetGcodeThumb *)command;
         QueueEvent(new ComGetGcodeThumbEvent(COM_GET_GCODE_THUMB_EVENT, m_id,
             getGcodeThumb->commandId(), ret, getGcodeThumb->thumbData()));
+        return;
+    }
+    if (commandTypeId == typeid(ComGetTimeLapseVideoList)) {
+        ComGetTimeLapseVideoList *getTimeLapseVideoList = (ComGetTimeLapseVideoList *)command;
+        int commandId = getTimeLapseVideoList->commandId();
+        QueueEvent(new ComGetTimeLapseVideoListEvent(COM_GET_TIME_LAPSE_VIDEO_LIST_EVENT, m_id,
+            commandId, ret, getTimeLapseVideoList->wanTimeLapseVideoList()));
+        return;
+    }
+    if (commandTypeId == typeid(ComDeleteTimeLapseVideo)) {
+        QueueEvent(new ComDeleteTimeLapseVideoEvent(COM_DELETE_TIME_LAPSE_VIDEO_EVENT, m_id,
+            command->commandId(), ret));
         return;
     }
     if (commandTypeId == typeid(ComStartJob)) {

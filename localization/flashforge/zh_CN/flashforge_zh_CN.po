@@ -561,9 +561,6 @@ msgstr "未知"
 msgid "Color Library"
 msgstr "颜色库"
 
-msgid "Flow Calibration"
-msgstr "流量校准"
-
 msgid "Enable IFS"
 msgstr "启用IFS"
 
@@ -605,11 +602,68 @@ msgstr "累计打印时长"
 msgid "IP-Address"
 msgstr "IP地址"
 
-msgid "When using Orca-Flashforge V1.3.0, please update Flash Maker to V2.0.0, and ensure that your device's firmware is updated to the latest version (V3.1.x)."
-msgstr "使用Orca-Flashforge V1.3.0时，请同步更新Flash Maker 至V2.0.0版本，同时设备固件版本必须更新至最新版(V3.1.x)。"
+msgid "When using Orca-Flashforge V%s, please update Flash Maker to V2.0.2, and also update your device firmware to the latest version."
+msgstr "使用Orca-Flashforge V%s时，请同步更新Flash Maker 至V2.0.2版本，同时设备固件请更新至最新版本"
 
 msgid "Do not show again"
 msgstr "不再显示"
+
+msgid "Non-Flashforge build plate detected. Print quality may not be guaranteed."
+msgstr "检测到未使用官方钢板，可能无法保证打印质量。"
+
+msgid "Continue printing"
+msgstr "继续打印"
+
+msgid "Stop printing (replace the build plate)"
+msgstr "停止打印（更换钢板）"
+
+msgid "Lidar detected first-layer defects. Please check and decide whether to continue printing."
+msgstr "激光雷达检测到首层缺陷，请检查并决定是否继续打印。"
+
+msgid "Continue printing (defects acceptable)"
+msgstr "继续打印（可以接受缺陷）"
+
+msgid "Stop printing"
+msgstr "停止打印"
+
+msgctxt "Flashforge"
+msgid "Flow Calibration"
+msgstr "流量校准"
+
+msgctxt "Flashforge"
+msgid "First Layer Inspection"
+msgstr "首层检测"
+
+msgid "Time-Lapse Video"
+msgstr "延时摄影"
+
+msgctxt "Flashforge"
+msgid "Downloading"
+msgstr "下载中"
+
+msgid "Unable to download some videos. Please try again later!"
+msgstr "部分视频下载失败，请稍后重试!"
+
+msgid "Failed videos:"
+msgstr "失败视频:"
+
+msgid "Delete selected file(s)?"
+msgstr "是否删除已选文件"
+
+msgid "Download complete."
+msgstr "下载完成。"
+
+msgid "Download failed. Please try again later!"
+msgstr "下载失败，请稍后重试！"
+
+msgid "The network is unstable. Please try again."
+msgstr "网络不稳定，请重试。"
+
+msgid "Lidar focus failure detected. Please check the Lidar."
+msgstr "检测到激光雷达对焦失败，请检查激光雷达"
+
+msgid "For an improved experience, please restart Orca-Flashforge to load resources."
+msgstr "为优化您的使用体验，请重启Orca-Flashforge以加载资源"
 
 #: resources/data/hints.ini: [hint:Chamber temperature]
 msgid ""

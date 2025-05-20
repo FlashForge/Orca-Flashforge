@@ -561,9 +561,6 @@ msgstr "알수없음"
 msgid "Color Library"
 msgstr "색상 라이브러리"
 
-msgid "Flow Calibration"
-msgstr "유량 교정"
-
 msgid "Enable IFS"
 msgstr "IFS 활성화"
 
@@ -605,11 +602,68 @@ msgstr "출력 시간"
 msgid "IP-Address"
 msgstr "IP-주소"
 
-msgid "When using Orca-Flashforge V1.3.0, please update Flash Maker to V2.0.0, and ensure that your device's firmware is updated to the latest version (V3.1.x)."
-msgstr "Orca-Flashforge V1.3.0을 사용할 때, Flash Maker를 V2.0.0으로 업데이트하고, 장치의 펌웨어도 최신 버전(V3.1.x)으로 업데이트하십시오."
+msgid "When using Orca-Flashforge V%s, please update Flash Maker to V2.0.2, and also update your device firmware to the latest version."
+msgstr "Orca-Flashforge V%s을 사용할 때, Flash Maker를 V2.0.2으로 업데이트하고, 기기 펌웨어도 최신 버전으로 업데이트해 주세요."
 
 msgid "Do not show again"
 msgstr "다시 표시하지 않음"
+
+msgid "Non-Flashforge build plate detected. Print quality may not be guaranteed."
+msgstr "비 플래시포지 빌드 플레이트가 감지되었습니다. 인쇄 품질을 보장하지 못할 수도 있습니다."
+
+msgid "Continue printing"
+msgstr "계속 인쇄"
+
+msgid "Stop printing (replace the build plate)"
+msgstr "인쇄 중지(빌드 플레이트를 교체)"
+
+msgid "Lidar detected first-layer defects. Please check and decide whether to continue printing."
+msgstr "라이다가 첫 번째 레이어 결함을 감지했습니다. 인쇄를 계속할지 여부를 확인하고 결정해 주십시오."
+
+msgid "Continue printing (defects acceptable)"
+msgstr "계속 인쇄(수용 가능 결함)"
+
+msgid "Stop printing"
+msgstr "인쇄 중지"
+
+msgctxt "Flashforge"
+msgid "Flow Calibration"
+msgstr "유량 보정"
+
+msgctxt "Flashforge"
+msgid "First Layer Inspection"
+msgstr "첫 번째 레이어 검사"
+
+msgid "Time-Lapse Video"
+msgstr "타임랩스 영상"
+
+msgctxt "Flashforge"
+msgid "Downloading"
+msgstr "다운로딩 중"
+
+msgid "Unable to download some videos. Please try again later!"
+msgstr "일부 영상을 다운로드하지 못했습니다. 이후에 다시 시도해 주십시오!"
+
+msgid "Failed videos:"
+msgstr "다운로드하지 못한 영상:"
+
+msgid "Delete selected file(s)?"
+msgstr "선택한 파일(들)을 삭제하시겠습니까?"
+
+msgid "Download complete."
+msgstr "다운로드 완료."
+
+msgid "Download failed. Please try again later!"
+msgstr "다운로드 실패. 나중에 다시 시도해 주세요!"
+
+msgid "The network is unstable. Please try again."
+msgstr "네트워크가 불안정합니다. 다시 시도해 주세요."
+
+msgid "Lidar focus failure detected. Please check the Lidar."
+msgstr "라이다 초점 고장이 감지되었습니다. 라이다를 점검해 주십시오."
+
+msgid "For an improved experience, please restart Orca-Flashforge to load resources."
+msgstr "더 나은 경험을 위해 Orca-Flashforge를 재시작하여 리소스를 로드하십시오."
 
 #: resources/data/hints.ini: [hint:Chamber temperature]
 msgid ""

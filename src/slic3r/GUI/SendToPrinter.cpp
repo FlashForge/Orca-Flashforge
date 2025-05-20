@@ -56,6 +56,8 @@ bool MultiSend::send_to_printer(int plate_idx, const com_id_list_t& com_ids, con
         << ", printNow: " << send_gcode_data.printNow
         << ", levelingBeforePrint: " << send_gcode_data.levelingBeforePrint
         << ", flowCalibration: " << send_gcode_data.flowCalibration
+        << ", firstLayerInspection: " << send_gcode_data.firstLayerInspection
+        << ", timeLapseVideo: " << send_gcode_data.timeLapseVideo
         << ", useMatlStation" << send_gcode_data.useMatlStation
         << ", materialMappings size" << send_gcode_data.materialMappings.size();
     if (m_is_sending) {
@@ -831,6 +833,7 @@ void MachineItem::initBitmap()
     m_machineBitmapMap[0x0024] = create_scaled_bitmap("adventurer_5m_pro", 0, 46).ConvertToImage();
     m_machineBitmapMap[0x0025] = create_scaled_bitmap("Guider4", 0, 46).ConvertToImage();
     m_machineBitmapMap[0x0026] = create_scaled_bitmap("ad5x", 0, 46).ConvertToImage();
+    m_machineBitmapMap[0x0027] = create_scaled_bitmap("Guider4Pro", 0, 46).ConvertToImage();
     m_machineBitmapMap[0x001F] = create_scaled_bitmap("guider_3_ultra", 0, 46).ConvertToImage();
 }
 
@@ -839,8 +842,7 @@ void MachineItem::initBitmap()
 
 wxDEFINE_EVENT(EVT_UPDATE_USER_MACHINE_LIST, wxCommandEvent);
 SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/)
-    //: TitleDialog(static_cast<wxWindow *>(wxGetApp().mainframe), wxID_ANY, _L("Send to Printer SD card"), wxDefaultPosition, wxDefaultSize, wxCAPTION | wxCLOSE_BOX)
-    : TitleDialog(static_cast<wxWindow *>(wxGetApp().mainframe), _L("Send printing tasks to"), 6)
+    : DPIDialog(static_cast<wxWindow *>(wxGetApp().mainframe), wxID_ANY, _L("Send printing tasks to"), wxDefaultPosition, wxDefaultSize, wxCAPTION | wxCLOSE_BOX)
     , m_plater(plater), m_export_3mf_cancel(false)
     , m_amsTipWnd(new AmsTipWnd(this))
     , m_multiSend(std::make_shared<MultiSend>(this))
@@ -853,15 +855,13 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/)
     SetFont(wxGetApp().normal_font());
 
     // icon
-    //std::string icon_path = (boost::format("%1%/images/Orca-FlashforgeTitle.ico") % resources_dir()).str();
-    //SetIcon(wxIcon(encode_path(icon_path.c_str()), wxBITMAP_TYPE_ICO));
+    std::string icon_path = (boost::format("%1%/images/Orca-FlashforgeTitle.ico") % resources_dir()).str();
+    SetIcon(wxIcon(encode_path(icon_path.c_str()), wxBITMAP_TYPE_ICO));
 
     Freeze();
     SetBackgroundColour(m_colour_def_color);
 
-    //m_sizer_main = new wxBoxSizer(wxVERTICAL);
-    m_sizer_main = MainSizer();
-
+    m_sizer_main = new wxBoxSizer(wxVERTICAL);
     m_sizer_main->SetMinSize(wxSize(0, -1));
 
     m_topPanel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
@@ -1001,6 +1001,7 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/)
     m_material_panel->SetSizer(m_sizer_material);
 
     m_amsTipLbl = new wxStaticText(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(-1, FromDIP(34)));
+    m_amsTipLbl->SetLabelText(_L("Please click the filament and select its corresponding slot\nbefore sending the print job."));
     m_amsTipLbl->SetForegroundColour(wxColour("#F59A23"));
     m_amsTipLbl->SetMinSize(wxSize(-1, FromDIP(34)));
     m_amsTipLbl->SetMaxSize(wxSize(-1, FromDIP(34)));
@@ -1008,21 +1009,16 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/)
     auto line_materia = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 1), wxTAB_TRAVERSAL);
     line_materia->SetForegroundColour(wxColour("#DDDDDD"));
     line_materia->SetBackgroundColour(wxColour("#DDDDDD"));
-    auto line_print_config = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 1), wxTAB_TRAVERSAL);
-    line_print_config->SetForegroundColour(wxColour("#DDDDDD"));
-    line_print_config->SetBackgroundColour(wxColour("#DDDDDD"));
+    auto line_machine = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 1), wxTAB_TRAVERSAL);
+    line_machine->SetForegroundColour(wxColour("#DDDDDD"));
+    line_machine->SetBackgroundColour(wxColour("#DDDDDD"));
 
+    m_printConfigSizer = new wxFlexGridSizer(3, FromDIP(10), FromDIP(10));
     m_levelChk = new FFCheckBox(this);
     m_levelChk->SetValue(false);
     m_levelChk->Bind(wxEVT_TOGGLEBUTTON, &SendToPrinterDialog::onLevellingCheckBoxChanged,this);
     m_levelLbl = new wxStaticText(this, wxID_ANY, _L("Levelling"));
     m_levelLbl->SetForegroundColour(wxColour("#333333"));
-
-    m_flowCalibrationChk = new FFCheckBox(this);
-    m_flowCalibrationChk->SetValue(false);
-    m_flowCalibrationChk->Bind(wxEVT_TOGGLEBUTTON, &SendToPrinterDialog::onFlowCalibrationCheckBoxChanged, this);
-    m_flowCalibrationLbl = new wxStaticText(this, wxID_ANY, _L("Flow Calibration"));
-    m_flowCalibrationLbl->SetForegroundColour(wxColour("#333333"));
 
     m_enableAmsChk = new FFCheckBox(this);
     m_enableAmsChk->SetValue(false);
@@ -1035,10 +1031,46 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/)
     m_amsTipWxBmp->Bind(wxEVT_ENTER_WINDOW, &SendToPrinterDialog::onEnterAmsTipWidget, this);
     m_amsTipWxBmp->Bind(wxEVT_LEAVE_WINDOW, &SendToPrinterDialog::onEnterAmsTipWidget, this);
 
-    m_printConfigSizer = new wxBoxSizer(wxHORIZONTAL);
+    m_flowCalibrationChk = new FFCheckBox(this);
+    m_flowCalibrationChk->SetValue(false);
+    m_flowCalibrationChk->Bind(wxEVT_TOGGLEBUTTON, &SendToPrinterDialog::onFlowCalibrationCheckBoxChanged, this);
+    m_flowCalibrationLbl = new wxStaticText(this, wxID_ANY, _CTX("Flow Calibration", "Flashforge"));
+    m_flowCalibrationLbl->SetForegroundColour(wxColour("#333333"));
+
+    m_firstLayerInspectionChk = new FFCheckBox(this);
+    m_firstLayerInspectionChk->SetValue(false);
+    m_firstLayerInspectionChk->Bind(wxEVT_TOGGLEBUTTON, &SendToPrinterDialog::onFirstLayerInspectionCheckBoxChanged, this);
+    m_firstLayerInspectionLbl = new wxStaticText(this, wxID_ANY, _CTX("First Layer Inspection", "Flashforge"));
+    m_firstLayerInspectionLbl->SetForegroundColour(wxColour("#333333"));
+
+    m_timeLapseVideoChk = new FFCheckBox(this);
+    m_timeLapseVideoChk->SetValue(false);
+    m_timeLapseVideoChk->Bind(wxEVT_TOGGLEBUTTON, &SendToPrinterDialog::onTimeLapseVideoCheckBoxChanged, this);
+    m_timeLapseVideoLbl = new wxStaticText(this, wxID_ANY, _L("Time-Lapse Video"));
+    m_timeLapseVideoLbl->SetForegroundColour(wxColour("#333333"));
 
     wxPanel* network_panel = new wxPanel(this);
+    network_panel->SetBackgroundColour(*wxWHITE);
     m_selectPrinterLbl = new wxStaticText(network_panel, wxID_ANY, _L("Select Printer"));
+    StateColor btn_bg_green(std::pair<wxColour, int>(wxColour(0, 137, 123), StateColor::Pressed),
+                            std::pair<wxColour, int>(wxColour(38, 166, 154), StateColor::Hovered),
+                            std::pair<wxColour, int>(wxColour(0, 150, 136), StateColor::Normal));
+
+    StateColor btn_bg_white(std::pair<wxColour, int>(wxColour(206, 206, 206), StateColor::Pressed),
+                            std::pair<wxColour, int>(wxColour(238, 238, 238), StateColor::Hovered),
+                            std::pair<wxColour, int>(*wxWHITE, StateColor::Normal));
+
+    auto refresh_btn = new Button(network_panel, _L("Refresh"));
+    refresh_btn->SetBackgroundColor(btn_bg_green);
+    refresh_btn->SetBorderColor(*wxWHITE);
+    refresh_btn->SetTextColor(wxColour("#FFFFFE"));
+    refresh_btn->SetFont(Label::Body_12);
+    refresh_btn->SetSize(wxSize(FromDIP(58), FromDIP(24)));
+    refresh_btn->SetMinSize(wxSize(FromDIP(58), FromDIP(24)));
+    refresh_btn->SetCornerRadius(FromDIP(12));
+    refresh_btn->Bind(wxEVT_BUTTON, [&](wxCommandEvent& event) { 
+        update_user_machine_list();
+    });
     m_wlanBtn = new FFToggleButton(network_panel, _L("Network"));
     m_wlanBtn->SetBackgroundColour(*wxWHITE);
     m_wlanBtn->SetWindowStyle(m_wlanBtn->GetWindowStyle() | wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL);
@@ -1053,6 +1085,7 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/)
 
     wxBoxSizer* networkSizer = new wxBoxSizer(wxHORIZONTAL);
     networkSizer->Add(m_selectPrinterLbl, 0, wxLEFT | wxALIGN_LEFT | wxALIGN_BOTTOM, FromDIP(10));
+    networkSizer->Add(refresh_btn, 0, wxLEFT | wxALIGN_LEFT | wxALIGN_BOTTOM, FromDIP(10));
     networkSizer->AddStretchSpacer(1);
     networkSizer->Add(m_wlanBtn, 0, wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL | wxRIGHT, FromDIP(5));
     networkSizer->Add(networkLine, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(3));
@@ -1137,7 +1170,7 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/)
     noMachineSizer->Add(m_machineLine, 0, wxEXPAND | wxLEFT | wxRIGHT, 0);
     noMachineSizer->AddSpacer(FromDIP(20));
     noMachineSizer->Add(textSizer, 0, wxALIGN_LEFT);
-    noMachineSizer->AddSpacer(FromDIP(50));
+    noMachineSizer->AddSpacer(FromDIP(20));
     m_noMachinePanel->SetSizer(noMachineSizer);
     m_noMachinePanel->Layout();
     //m_noMachinePanel->Fit();
@@ -1222,27 +1255,26 @@ SendToPrinterDialog::SendToPrinterDialog(Plater *plater/*=nullptr*/)
     m_sizer_main->AddSpacer(FromDIP(12));
     m_sizer_main->Add(line_materia, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
     m_sizer_main->AddSpacer(FromDIP(12));
-    m_sizer_main->Add(m_printConfigSizer, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
-    m_sizer_main->AddSpacer(FromDIP(12));
-    m_sizer_main->Add(line_print_config, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
-    m_sizer_main->AddSpacer(FromDIP(12));
     m_sizer_main->Add(network_panel, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
     m_sizer_main->AddSpacer(FromDIP(12));
     m_sizer_main->Add(m_machineBook, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
-    m_sizer_main->AddSpacer(FromDIP(10));
+    m_sizer_main->AddSpacer(FromDIP(12));
+    m_sizer_main->Add(line_machine, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
+    m_sizer_main->AddSpacer(FromDIP(12));
+    m_sizer_main->Add(m_printConfigSizer, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(40));
+    m_sizer_main->AddSpacer(FromDIP(45));
     m_sizer_main->Add(m_sendBook, 0, wxEXPAND | wxALIGN_LEFT | wxLEFT | wxRIGHT, FromDIP(40));
     m_sizer_main->AddSpacer(FromDIP(45));
     m_redirect_timer = new wxTimer();
     //m_redirect_timer->SetOwner(this);
 
-    //SetSizer(m_sizer_main);
+    SetSizer(m_sizer_main);
     Layout();
     Fit();
     Thaw();
 
     init_bind();
-    // CenterOnParent();
-    Centre(wxBOTH);
+    CenterOnParent();
     wxGetApp().UpdateDlgDarkUI(this);
 }
 
@@ -1421,12 +1453,14 @@ void SendToPrinterDialog::init_bind()
     m_redirect_timer->Bind(wxEVT_TIMER, &SendToPrinterDialog::on_redirect_timer, this);
     MultiComMgr::inst()->Bind(COM_CONNECTION_READY_EVENT, &SendToPrinterDialog::onConnectionReady, this);
     MultiComMgr::inst()->Bind(COM_CONNECTION_EXIT_EVENT, &SendToPrinterDialog::onConnectionExit, this);
+    MultiComMgr::inst()->Bind(COM_DEV_DETAIL_UPDATE_EVENT, &SendToPrinterDialog::onDevDetailUpdate, this);
 }
 
 void SendToPrinterDialog::update_user_machine_list()
 {
     m_selectAll->SetValue(false);
     m_machineListMap.clear();
+    m_machineInfoMap.clear();
     com_id_list_t idList = MultiComMgr::inst()->getReadyDevList();
     PresetBundle* preset_bundle = wxGetApp().preset_bundle;
     if(preset_bundle == nullptr) {
@@ -1459,7 +1493,9 @@ void SendToPrinterDialog::update_user_machine_list()
                 if (!status.empty() && status == "ready") {
                     auto iter = m_machineListMap.find(dev_id);
                     if (iter == m_machineListMap.end()) {
-                        m_machineListMap.emplace(dev_id, mdata);    
+                        MachineInfo machineInfo = { data.devDetail->lidar, data.devDetail->camera };
+                        m_machineListMap.emplace(dev_id, mdata);
+                        m_machineInfoMap.emplace(mdata.comId, machineInfo);
                     } else if (COM_CONNECT_LAN == data.connectMode) {
                         iter->second = mdata;
                     }
@@ -1498,9 +1534,8 @@ void SendToPrinterDialog::update_user_printer()
         size_t rows = (cnt + 1) / 2;
         size_t visual_cnt = 0;
         m_machineListSizer->SetRows(rows);
-        auto m_machineNew = sortByName(m_machineListMap);
-        //for (auto& m : m_machineListMap)
-        for (auto& m : m_machineNew) {
+        auto machineNew = sortByName(m_machineListMap);
+        for (auto& m : machineNew) {
             if (m.second.flag == COM_CONNECT_WAN) {
                 wlanFlag = true;
                 if (!m_wlanBtn->GetValue()) continue;
@@ -1574,10 +1609,11 @@ void SendToPrinterDialog::update_user_printer()
     //m_machineBook->Fit();
     //m_sendPanel->Layout();
     //m_sendBook->Layout();
-    Layout();
-    Fit();
     //MainSizer()->Fit(this);
     Thaw();
+    setup_print_config();
+    Layout();
+    Fit();
     updateMaterialMapWidgetsState();
     updateSendButtonState();
 }
@@ -1646,12 +1682,6 @@ void SendToPrinterDialog::set_default()
     } else {
         m_levelChk->SetValue(wxGetApp().app_config->get("levelling") == "true");
     }
-    //flow calibration
-    if (wxGetApp().app_config->get("flowCalibration").empty()) {
-        m_flowCalibrationChk->SetValue(false);
-    } else {
-        m_flowCalibrationChk->SetValue(wxGetApp().app_config->get("flowCalibration") == "true");
-    }
 
     //wxBitmap bitmap;
     ThumbnailData &data   = m_plater->get_partplate_list().get_curr_plate()->thumbnail_data;
@@ -1717,39 +1747,7 @@ void SendToPrinterDialog::set_default()
     }
     m_sizer_material->SetCols(std::min((int)extruders.size(), 4));
 
-    //print configuration
-    bool isPrinterSupportAms = FFUtils::isPrinterSupportAms(modelId);
-    bool isPrinterSupportFlowCalibration = FFUtils::isPrinterSupportFlowCalibration(modelId);
-    m_amsTipLbl->SetLabelText(_L("Please click the filament and select its corresponding slot\nbefore sending the print job."));
-    m_amsTipLbl->Show(isPrinterSupportAms);
-    m_flowCalibrationChk->SetValue(isPrinterSupportFlowCalibration);
-    m_flowCalibrationChk->Show(isPrinterSupportFlowCalibration);
-    m_flowCalibrationLbl->Show(isPrinterSupportFlowCalibration);
-    m_enableAmsChk->SetValue(isPrinterSupportAms);
-    m_enableAmsChk->Show(isPrinterSupportAms);
-    m_enableAmsLbl->Show(isPrinterSupportAms);
-    m_amsTipWxBmp->Show(isPrinterSupportAms);
-
-    m_printConfigSizer->Clear();
-    m_printConfigSizer->Add(m_levelChk, 0, wxLEFT | wxALIGN_LEFT, FromDIP(10));
-    m_printConfigSizer->Add(m_levelLbl, 0, wxLEFT | wxALIGN_LEFT, FromDIP(10));
-    if (isPrinterSupportFlowCalibration) {
-        m_printConfigSizer->AddStretchSpacer(1);
-        m_printConfigSizer->Add(m_flowCalibrationChk, 0, wxLEFT | wxALIGN_LEFT, FromDIP(10));
-        m_printConfigSizer->Add(m_flowCalibrationLbl, 0, wxLEFT | wxALIGN_LEFT, FromDIP(10));
-    }
-    if (isPrinterSupportAms) {
-        m_printConfigSizer->AddStretchSpacer(1);
-        m_printConfigSizer->Add(m_enableAmsChk, 0, wxLEFT | wxALIGN_LEFT, FromDIP(10));
-        m_printConfigSizer->Add(m_enableAmsLbl, 0, wxLEFT | wxALIGN_LEFT, FromDIP(10));
-        m_printConfigSizer->Add(m_amsTipWxBmp, 0, wxLEFT | wxALIGN_LEFT, FromDIP(10));
-    }
-    if (isPrinterSupportFlowCalibration && isPrinterSupportAms) {
-        m_printConfigSizer->AddSpacer(FromDIP(10));
-    } else {
-        m_printConfigSizer->AddStretchSpacer(1);
-    }
-
+    setup_print_config(true);
     m_material_panel->Layout();
     m_material_panel->Fit();
     m_topPanel->Layout();
@@ -1774,6 +1772,103 @@ void SendToPrinterDialog::set_default()
 
     m_stext_time->SetLabel(time);
     m_stext_weight->SetLabel(weight);
+}
+
+void SendToPrinterDialog::setup_print_config(bool isInit /* = false */)
+{
+    PresetBundle* presetBundle = wxGetApp().preset_bundle;
+    if (presetBundle == nullptr) {
+        return;
+    }
+    std::string modelId = presetBundle->printers.get_edited_preset().get_printer_type(presetBundle);
+    bool isPrinterSupportAms = FFUtils::isPrinterSupportAms(modelId);
+    bool isPrinterSupportLidar = false;
+    bool isPrinterSupportCamera = false;
+    for (auto &item : m_machineItemList) {
+        if (item->IsChecked()) {
+            bool valid;
+            const com_dev_data_t &devData = MultiComMgr::inst()->devData(item->data().comId, &valid);
+            if (valid) {
+                if (devData.devDetail->lidar == 1) {
+                    isPrinterSupportLidar = true;
+                }
+                if (devData.devDetail->camera == 1) {
+                    isPrinterSupportCamera = true;
+                }
+            }
+        }
+    }
+    if (!isInit && isPrinterSupportLidar == m_is_printer_support_lidar
+     && isPrinterSupportCamera == m_is_printer_support_camera) {
+        return;
+    }
+    m_is_printer_support_lidar = isPrinterSupportLidar;
+    m_is_printer_support_camera = isPrinterSupportCamera;
+    if (isInit) {
+        if (isPrinterSupportAms) {
+            m_amsTipLbl->SetLabelText(_L("Please click the filament and select its corresponding slot\nbefore sending the print job."));
+        } else {
+            m_amsTipLbl->SetLabelText(_L("IFS not enabled, unable to select the slot"));
+        }
+        m_amsTipLbl->Show(isPrinterSupportAms);
+        m_enableAmsChk->SetValue(isPrinterSupportAms);
+        m_enableAmsChk->Show(isPrinterSupportAms);
+        m_enableAmsLbl->Show(isPrinterSupportAms);
+        m_amsTipWxBmp->Show(isPrinterSupportAms);
+    }
+    m_flowCalibrationChk->Show(isPrinterSupportLidar);
+    m_flowCalibrationLbl->Show(isPrinterSupportLidar);
+    m_firstLayerInspectionChk->Show(isPrinterSupportLidar);
+    m_firstLayerInspectionLbl->Show(isPrinterSupportLidar);
+    m_timeLapseVideoChk->Show(isPrinterSupportCamera);
+    m_timeLapseVideoLbl->Show(isPrinterSupportCamera);
+
+    if (!isPrinterSupportLidar) {
+        m_flowCalibrationChk->SetValue(false);
+    } else {
+        std::string value = wxGetApp().app_config->get("flowCalibration");
+        m_flowCalibrationChk->SetValue(value.empty() || value == "true");
+    }
+    if (!isPrinterSupportLidar) {
+        m_firstLayerInspectionChk->SetValue(false);
+    } else {
+        std::string value = wxGetApp().app_config->get("firstLayerInspection");
+        m_firstLayerInspectionChk->SetValue(value.empty() || value == "true");
+    }
+    if (!isPrinterSupportCamera || wxGetApp().app_config->get("timeLapseVideo").empty()) {
+        m_timeLapseVideoChk->SetValue(false);
+    } else {
+        m_timeLapseVideoChk->SetValue(wxGetApp().app_config->get("timeLapseVideo") == "true");
+    }
+
+    std::vector<std::pair<FFCheckBox*, wxStaticText*>> configPairs;
+    configPairs.emplace_back(m_levelChk, m_levelLbl);
+    if (isPrinterSupportAms) {
+        configPairs.emplace_back(m_enableAmsChk, m_enableAmsLbl);
+    }
+    if (isPrinterSupportLidar) {
+        configPairs.emplace_back(m_flowCalibrationChk, m_flowCalibrationLbl);
+    }
+    if (isPrinterSupportLidar) {
+        configPairs.emplace_back(m_firstLayerInspectionChk, m_firstLayerInspectionLbl);
+    }
+    if (isPrinterSupportCamera) {
+        configPairs.emplace_back(m_timeLapseVideoChk, m_timeLapseVideoLbl);
+    }
+    m_printConfigSizer->Clear();
+    for (size_t i = 0; i < configPairs.size(); ++i) {
+        wxBoxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
+        sizer->Add(configPairs[i].first, 0, wxALIGN_LEFT);
+        sizer->Add(configPairs[i].second, 0, wxLEFT | wxALIGN_LEFT, FromDIP(10));
+        if (configPairs[i].first == m_enableAmsChk) {
+            sizer->Add(m_amsTipWxBmp, 0, wxLEFT | wxALIGN_LEFT, FromDIP(10));
+        }
+        m_printConfigSizer->Add(sizer);
+    }
+    m_printConfigSizer->SetCols(configPairs.size() >= 3 ? 3 : 2);
+    m_printConfigSizer->AddGrowableCol(0, 1);
+    m_printConfigSizer->AddGrowableCol(1, 1);
+    m_printConfigSizer->Layout();
 }
 
 void SendToPrinterDialog::redirect_window()
@@ -1920,6 +2015,13 @@ void SendToPrinterDialog::onMachineSelectionToggled(wxCommandEvent& event)
         }
         m_selectAll->SetValue(all_select);
     }
+    if (!m_is_in_sending_mode) {
+        setup_print_config();
+        Layout();
+        Fit();
+    } else {
+        m_pending_setup_print_config = true;
+    }
     updateMaterialMapWidgetsState();
     updateSendButtonState();
 }
@@ -1940,6 +2042,13 @@ void SendToPrinterDialog::onMachineRadioBoxClicked(wxCommandEvent& event)
             item->resetSlot();
             item->setComId(comId);
         }
+    }
+    if (!m_is_in_sending_mode) {
+        setup_print_config();
+        Layout();
+        Fit();
+    } else {
+        m_pending_setup_print_config = true;
     }
     updateSendButtonState();
 }
@@ -1968,6 +2077,8 @@ void SendToPrinterDialog::onSendClicked(wxCommandEvent& event)
     sendGcodeData.printNow = m_send_and_print;
     sendGcodeData.levelingBeforePrint = m_levelChk->GetValue();
     sendGcodeData.flowCalibration = m_flowCalibrationChk->GetValue();
+    sendGcodeData.firstLayerInspection = m_firstLayerInspectionChk->GetValue();
+    sendGcodeData.timeLapseVideo = m_timeLapseVideoChk->GetValue();
     sendGcodeData.useMatlStation = m_enableAmsChk->GetValue();
     if (sendGcodeData.useMatlStation) {
         for (size_t i = 0; i < m_materialMapItems.size(); ++i) {
@@ -2049,17 +2160,6 @@ void SendToPrinterDialog::onLevellingCheckBoxChanged(wxCommandEvent& event)
     event.Skip();
 }
 
-void SendToPrinterDialog::onFlowCalibrationCheckBoxChanged(wxCommandEvent& event)
-{
-    bool bChecked = m_flowCalibrationChk->GetValue();
-    if (bChecked) {
-        wxGetApp().app_config->set("flowCalibration", "true");
-    } else {
-        wxGetApp().app_config->set("flowCalibration", "false");
-    }
-    event.Skip();
-}
-
 void SendToPrinterDialog::onEnableAmsCheckBoxChanged(wxCommandEvent& event)
 {
     if (event.IsChecked()) {
@@ -2068,6 +2168,13 @@ void SendToPrinterDialog::onEnableAmsCheckBoxChanged(wxCommandEvent& event)
         m_amsTipLbl->SetLabelText(_L("IFS not enabled, unable to select the slot"));
     }
     update_machine_item_select_mode(event.IsChecked());
+    if (!m_is_in_sending_mode) {
+        setup_print_config();
+        Layout();
+        Fit();
+    } else {
+        m_pending_setup_print_config = true;
+    }
     updateMaterialMapWidgetsState();
     updateSendButtonState();
     event.Skip();
@@ -2082,6 +2189,39 @@ void SendToPrinterDialog::onEnterAmsTipWidget(wxMouseEvent& event)
         m_amsTipWnd->Show(true);
     } else {
         m_amsTipWnd->Show(false);
+    }
+    event.Skip();
+}
+
+void SendToPrinterDialog::onFlowCalibrationCheckBoxChanged(wxCommandEvent& event)
+{
+    bool bChecked = m_flowCalibrationChk->GetValue();
+    if (bChecked) {
+        wxGetApp().app_config->set("flowCalibration", "true");
+    } else {
+        wxGetApp().app_config->set("flowCalibration", "false");
+    }
+    event.Skip();
+}
+
+void SendToPrinterDialog::onFirstLayerInspectionCheckBoxChanged(wxCommandEvent& event)
+{
+    bool bChecked = m_firstLayerInspectionChk->GetValue();
+    if (bChecked) {
+        wxGetApp().app_config->set("firstLayerInspection", "true");
+    } else {
+        wxGetApp().app_config->set("firstLayerInspection", "false");
+    }
+    event.Skip();
+}
+
+void SendToPrinterDialog::onTimeLapseVideoCheckBoxChanged(wxCommandEvent& event)
+{
+    bool bChecked = m_timeLapseVideoChk->GetValue();
+    if (bChecked) {
+        wxGetApp().app_config->set("timeLapseVideo", "true");
+    } else {
+        wxGetApp().app_config->set("timeLapseVideo", "false");
     }
     event.Skip();
 }
@@ -2118,6 +2258,40 @@ void SendToPrinterDialog::onConnectionExit(ComConnectionExitEvent& event)
     event.Skip();
 }
 
+void SendToPrinterDialog::onDevDetailUpdate(ComDevDetailUpdateEvent& event)
+{
+    event.Skip();
+
+    bool valid;
+    const fnet_dev_detail_t *devDetail = MultiComMgr::inst()->devData(event.id, &valid).devDetail;
+    if (!valid) {
+        return;
+    }
+    auto infoIt = m_machineInfoMap.find(event.id);
+    if (infoIt == m_machineInfoMap.end()
+     || infoIt->second.lidar == devDetail->lidar && infoIt->second.camera == devDetail->camera) {
+        return;
+    }
+    infoIt->second.lidar = devDetail->lidar;
+    infoIt->second.camera = devDetail->camera;
+
+    PresetBundle* presetBundle = wxGetApp().preset_bundle;
+    if (presetBundle == nullptr) {
+        return;
+    }
+    std::string modelId = presetBundle->printers.get_edited_preset().get_printer_type(presetBundle);
+    if (FFUtils::getPrinterModelId(devDetail->pid) != modelId) {
+        return;
+    }
+    if (!m_is_in_sending_mode) {
+        setup_print_config();
+        Layout();
+        Fit();
+    } else {
+        m_pending_setup_print_config = true;
+    }
+}
+
 void SendToPrinterDialog::on_multi_send_progress(wxCommandEvent& event)
 {
     if (m_is_in_sending_mode) {
@@ -2142,6 +2316,10 @@ void SendToPrinterDialog::on_multi_send_completed(wxCommandEvent& event)
     if (m_pending_update_machine_list) {
         update_user_machine_list();
         m_pending_update_machine_list = false;
+    }
+    if (m_pending_setup_print_config) {
+        setup_print_config();
+        m_pending_setup_print_config = false;
     }
     std::map<com_id_t, MultiSend::Result> send_result;
     m_multiSend->get_multi_send_result(send_result);
@@ -2312,6 +2490,9 @@ void SendToPrinterDialog::updateSendButtonState()
 
 SendToPrinterDialog::~SendToPrinterDialog()
 {
+    if (m_is_in_sending_mode && m_multiSend) {
+        m_multiSend->cancel();
+    }
     delete m_redirect_timer;
 }
 

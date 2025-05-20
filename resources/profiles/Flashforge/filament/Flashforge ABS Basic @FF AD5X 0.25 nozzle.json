@@ -1,10 +1,10 @@
 {
     "type": "filament",
     "cool_plate_temp": [
-        "100"
+        "0"
     ],
     "cool_plate_temp_initial_layer": [
-        "100"
+        "0"
     ],
     "eng_plate_temp": [
         "100"
@@ -19,19 +19,13 @@
         "20"
     ],
     "filament_flow_ratio": [
-        "0.98"
-    ],
-    "filament_load_time": [
-        "29"
+        "0.96"
     ],
     "filament_max_volumetric_speed": [
         "8"
     ],
     "filament_settings_id": [
         "Flashforge ABS Basic @FF AD5X 0.25 nozzle"
-    ],
-    "filament_unload_time": [
-        "29"
     ],
     "from": "system",
     "setting_id": "GFSA04_02",
@@ -53,6 +47,12 @@
     ],
     "pressure_advance": [
         "0.04"
+    ],
+    "textured_cool_plate_temp": [
+        "0"
+    ],
+    "textured_cool_plate_temp_initial_layer": [
+        "0"
     ],
     "textured_plate_temp": [
         "100"

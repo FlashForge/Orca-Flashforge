@@ -53,7 +53,7 @@
         "0"
     ],
     "machine_end_gcode": "G1 E-3 F3600\nG0 X50 Y50 F30000\nM104 S0 ; turn off temperature",
-    "machine_load_filament_time": "0",
+    "machine_load_filament_time": "50",
     "machine_max_acceleration_e": [
         "5000",
         "5000"
@@ -123,8 +123,9 @@
         "0"
     ],
     "machine_pause_gcode": "M25",
-    "machine_start_gcode": "START_GCODE\nM190 S[bed_temperature_initial_layer_single]\nM109 S[nozzle_temperature_initial_layer]\nG90\nM83\nG1 Z2 F6000\nG1 X2 Y150 F1800\nG1 Z0.3 F6000\nG1 Y2 E30 F1800",
-    "machine_unload_filament_time": "0",
+    "machine_start_gcode": "START_GCODE\nM190 S[bed_temperature_initial_layer_single]\nM109 S[nozzle_temperature_initial_layer]\nG90\nM83\nG1 Z2 F6000\nG1 X2 Y150 F1800\nG1 Z0.3 F6000\nG1 Y2 E30 F1800\nT[initial_no_support_extruder]",
+    "machine_tool_change_time": "0",
+    "machine_unload_filament_time": "50",
     "manual_filament_change": "0",
     "max_layer_height": [
         "0.28"
@@ -134,13 +135,14 @@
     ],
     "name": "Flashforge Guider4 Pro 0.4 HF nozzle",
     "nozzle_diameter": [
-        "0.4"
+        "0.4HF"
     ],
     "nozzle_height": "4",
     "nozzle_hrc": "0",
     "nozzle_type": "stainless_steel",
     "nozzle_volume": "0",
     "parking_pos_retraction": "0",
+    "pellet_modded_printer": "0",
     "preferred_orientation": "0",
     "printable_area": [
         "0x0",
@@ -154,7 +156,7 @@
     "printer_settings_id": "Flashforge Guider4 Pro 0.4 HF nozzle",
     "printer_structure": "undefine",
     "printer_technology": "FFF",
-    "printer_variant": "0.4",
+    "printer_variant": "0.4HF",
     "printhost_authorization_type": "key",
     "printhost_ssl_ignore_revoke": "0",
     "printing_by_object_gcode": "",
@@ -163,7 +165,7 @@
         "100%"
     ],
     "retract_length_toolchange": [
-        "5"
+        "2.5"
     ],
     "retract_lift_above": [
         "0"
@@ -178,7 +180,7 @@
         "0"
     ],
     "retract_restart_extra_toolchange": [
-        "-5"
+        "0"
     ],
     "retract_when_changing_layer": [
         "1"
@@ -200,12 +202,15 @@
     "single_extruder_multi_material": "1",
     "support_air_filtration": "1",
     "support_chamber_temp_control": "1",
-    "support_multi_bed_types": "0",
+    "support_multi_bed_types": "1",
     "template_custom_gcode": "",
     "thumbnails": "140x110/PNG",
     "thumbnails_format": "PNG",
     "time_cost": "0",
     "time_lapse_gcode": "",
+    "travel_slope": [
+        "3"
+    ],
     "upward_compatible_machine": [],
     "use_firmware_retraction": "0",
     "use_relative_e_distances": "1",

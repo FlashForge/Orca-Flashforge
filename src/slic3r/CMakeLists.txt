@@ -18,6 +18,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/Widgets/FFCheckBox.hpp
     GUI/Widgets/FFButton.hpp
     GUI/Widgets/FFButton.cpp
+    GUI/Widgets/FFScrollButton.cpp
+    GUI/Widgets/FFScrollButton.hpp
     GUI/Widgets/FFToggleButton.hpp
     GUI/Widgets/FFToggleButton.cpp
     GUI/Widgets/FFPopupWindow.hpp
@@ -153,6 +155,10 @@ set(SLIC3R_GUI_SOURCES
     #GUI/Gizmos/GLGizmoFaceDetector.hpp
     GUI/Gizmos/GLGizmoMeasure.cpp
     GUI/Gizmos/GLGizmoMeasure.hpp
+    GUI/Gizmos/GLGizmoBrimEars.cpp
+    GUI/Gizmos/GLGizmoBrimEars.hpp
+    GUI/Gizmos/GLGizmoAssembly.cpp
+    GUI/Gizmos/GLGizmoAssembly.hpp
     GUI/Gizmos/GLGizmoSeam.cpp
     GUI/Gizmos/GLGizmoSeam.hpp
     #GUI/Gizmos/GLGizmoText.cpp
@@ -163,34 +169,38 @@ set(SLIC3R_GUI_SOURCES
     GUI/GLSelectionRectangle.hpp
     GUI/Gizmos/GizmoObjectManipulation.cpp
     GUI/Gizmos/GizmoObjectManipulation.hpp
-	GUI/FlashForge/AmsPrintFileDlg.cpp
-	GUI/FlashForge/AmsPrintFileDlg.hpp
-	GUI/FlashForge/AmsMappingWidgets.cpp
-	GUI/FlashForge/AmsMappingWidgets.hpp
+    GUI/FlashForge/AmsMappingWidgets.cpp
+    GUI/FlashForge/AmsMappingWidgets.hpp
+	GUI/FlashForge/CleanNimData.cpp
+	GUI/FlashForge/CleanNimData.hpp
     GUI/FlashForge/ComWanNimConn.cpp
     GUI/FlashForge/ComWanNimConn.hpp
     GUI/FlashForge/ComCommand.cpp
     GUI/FlashForge/ComCommand.hpp
     GUI/FlashForge/ComCommandQue.cpp
     GUI/FlashForge/ComCommandQue.hpp
-	GUI/FlashForge/ComConnection.cpp
-	GUI/FlashForge/ComConnection.hpp
-	GUI/FlashForge/ComThreadPool.cpp
-	GUI/FlashForge/ComThreadPool.hpp
-	GUI/FlashForge/DeviceData.cpp
-	GUI/FlashForge/DeviceData.hpp
+    GUI/FlashForge/ComConnection.cpp
+    GUI/FlashForge/ComConnection.hpp
+    GUI/FlashForge/ComThreadPool.cpp
+    GUI/FlashForge/ComThreadPool.hpp
+    GUI/FlashForge/DeviceData.cpp
+    GUI/FlashForge/DeviceData.hpp
     GUI/FlashForge/DeviceListPanel.cpp
     GUI/FlashForge/DeviceListPanel.hpp
     GUI/FlashForge/DeviceFilterPopup.hpp
     GUI/FlashForge/DeviceFilterPopup.cpp
     GUI/FlashForge/FlashNetwork.h
     GUI/FlashForge/FlashNetworkIntfc.cpp
-	GUI/FlashForge/FlashNetworkIntfc.h
-	GUI/FlashForge/FreeInDestructor.h
-	GUI/FlashForge/FFTransientWindow.cpp
-	GUI/FlashForge/FFTransientWindow.hpp
-	GUI/FlashForge/LoginDialog.cpp
+    GUI/FlashForge/FlashNetworkIntfc.h
+    GUI/FlashForge/FreeInDestructor.h
+    GUI/FlashForge/FFDownloadTool.cpp
+    GUI/FlashForge/FFDownloadTool.hpp
+    GUI/FlashForge/FFTransientWindow.cpp
+    GUI/FlashForge/FFTransientWindow.hpp
+    GUI/FlashForge/LoginDialog.cpp
     GUI/FlashForge/LoginDialog.hpp
+    GUI/FlashForge/MaterialStation.hpp
+    GUI/FlashForge/MaterialStation.cpp
     GUI/FlashForge/MultiComEvent.cpp
     GUI/FlashForge/MultiComEvent.hpp
     GUI/FlashForge/MultiComDef.hpp
@@ -198,28 +208,38 @@ set(SLIC3R_GUI_SOURCES
     GUI/FlashForge/MultiComMgr.hpp
     GUI/FlashForge/MultiComUtils.cpp
     GUI/FlashForge/MultiComUtils.hpp
+    GUI/FlashForge/PasswordCtrl.cpp
+    GUI/FlashForge/PasswordCtrl.hpp
+    GUI/FlashForge/PrintDevLocalFileDlg.cpp
+    GUI/FlashForge/PrintDevLocalFileDlg.hpp
+	GUI/FlashForge/PrinterErrorMsgDlg.cpp
+	GUI/FlashForge/PrinterErrorMsgDlg.hpp
     GUI/FlashForge/SingleDeviceState.cpp
     GUI/FlashForge/SingleDeviceState.hpp
-    GUI/FlashForge/MaterialStation.hpp
-    GUI/FlashForge/MaterialStation.cpp
     GUI/FlashForge/Singleton.hpp
+	GUI/FlashForge/TimeLapseVideoPlayDlg.cpp
+	GUI/FlashForge/TimeLapseVideoPlayDlg.hpp
+	GUI/FlashForge/TimeLapseVideoPanel.cpp
+	GUI/FlashForge/TimeLapseVideoPanel.hpp
+	GUI/FlashForge/VideoDownloadErrorDlg.cpp
+	GUI/FlashForge/VideoDownloadErrorDlg.hpp
+    GUI/FlashForge/VideoFileOperatorMsgDlg.cpp
+    GUI/FlashForge/VideoFileOperatorMsgDlg.hpp
     GUI/FlashForge/WaitEvent.cpp
     GUI/FlashForge/WaitEvent.hpp
     GUI/FlashForge/WanDevMaintainThd.cpp
     GUI/FlashForge/WanDevMaintainThd.hpp
-	GUI/FlashForge/WanDevSendGcodeThd.cpp
-	GUI/FlashForge/WanDevSendGcodeThd.hpp
-	GUI/FlashForge/WanDevTokenMgr.cpp
-	GUI/FlashForge/WanDevTokenMgr.hpp
+    GUI/FlashForge/WanDevSendGcodeThd.cpp
+    GUI/FlashForge/WanDevSendGcodeThd.hpp
+    GUI/FlashForge/WanDevTokenMgr.cpp
+    GUI/FlashForge/WanDevTokenMgr.hpp
     GUI/FlashForge/ReLoginDialog.cpp
     GUI/FlashForge/ReLoginDialog.hpp
     GUI/FlashForge/UserNameCtrl.cpp
     GUI/FlashForge/UserNameCtrl.hpp
     GUI/FlashForge/VerifyCodeCtrl.cpp
     GUI/FlashForge/VerifyCodeCtrl.hpp
-    GUI/FlashForge/PasswordCtrl.cpp
-    GUI/FlashForge/PasswordCtrl.hpp
-	GUI/GLModel.hpp
+    GUI/GLModel.hpp
     GUI/GLModel.cpp
     GUI/GLTexture.hpp
     GUI/GLTexture.cpp
@@ -635,6 +655,9 @@ set(SLIC3R_GUI_SOURCES
     GUI/Jobs/OAuthJob.hpp
     Utils/SimplyPrint.cpp
     Utils/SimplyPrint.hpp
+    Utils/ElegooLink.hpp
+    Utils/ElegooLink.cpp
+    Utils/WebSocketClient.hpp
 )
 
 if (WIN32)
@@ -684,7 +707,8 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SLIC3R_GUI_SOURCES})
 
 encoding_check(libslic3r_gui)
 
-target_link_libraries(libslic3r_gui libslic3r cereal::cereal imgui imguizmo minilzo GLEW::GLEW OpenGL::GL hidapi ${wxWidgets_LIBRARIES} glfw libcurl OpenSSL::SSL OpenSSL::Crypto)
+find_package(libnoise REQUIRED)
+target_link_libraries(libslic3r_gui libslic3r cereal::cereal imgui imguizmo minilzo GLEW::GLEW OpenGL::GL hidapi ${wxWidgets_LIBRARIES} glfw libcurl OpenSSL::SSL OpenSSL::Crypto noise::noise)
 
 if (MSVC)
     target_link_libraries(libslic3r_gui Setupapi.lib)

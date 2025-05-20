@@ -8,6 +8,7 @@
 #include "FlashNetworkIntfc.h"
 #include "MultiComDef.hpp"
 #include "WaitEvent.hpp"
+#include "WanDevTokenMgr.hpp"
 
 namespace Slic3r { namespace GUI {
 
@@ -52,7 +53,7 @@ private:
 
     std::string getUid();
 
-    bool reloginHttp(std::string &uid, const std::string &accessToken);
+    bool reloginHttp(const std::string &uid, ScopedWanDevToken &scopedToken);
 
     void updateWanDev(const std::string &uid, const std::string &accessToken);
 

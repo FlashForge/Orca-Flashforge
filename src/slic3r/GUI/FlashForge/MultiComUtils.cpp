@@ -1,35 +1,8 @@
 #include "MultiComUtils.hpp"
-#include <wx/thread.h>
 #include "FreeInDestructor.h"
 #include "MultiComMgr.hpp"
 
 namespace Slic3r { namespace GUI {
-
-wxDEFINE_EVENT(COM_ASYNC_CALL_FINISH_EVENT, ComAsyncCallFinishEvent);
-
-class ComAsyncThread : public wxThread
-{
-public:
-    ComAsyncThread()
-        : wxThread(wxTHREAD_JOINABLE)
-    {
-    }
-    ExitCode Entry()
-    {
-        ComAsyncCallFinishEvent *event = new ComAsyncCallFinishEvent;
-        event->SetEventType(COM_ASYNC_CALL_FINISH_EVENT);
-        event->ret = func();
-        evtHandler->QueueEvent(event);
-        evtHandler->CallAfter([this]() {
-            com_thread_ptr_t scopedThreadPtr = std::move(threadPtr);
-            Wait();
-        });
-        return 0;
-    }
-    wxEvtHandler *evtHandler;
-    com_async_call_func_t func;
-    com_thread_ptr_t threadPtr;
-};
 
 ComErrno MultiComUtils::getLanDevList(std::vector<fnet_lan_dev_info> &devInfos)
 {
@@ -220,19 +193,36 @@ ComErrno MultiComUtils::getNimData(const std::string &uid, const std::string &ac
     return COM_OK;
 }
 
-ComErrno MultiComUtils::downloadFile(const std::string &url, std::vector<char> &bytes, int msTimeout)
+ComErrno MultiComUtils::downloadFileMem(const std::string &url, std::vector<char> &bytes,
+    fnet_progress_callback_t callback, void *callbackData, int msConnectTimeout, int msTimeout)
 {
     fnet::FlashNetworkIntfc *intfc = MultiComMgr::inst()->networkIntfc();
     if (intfc == nullptr) {
         return COM_ERROR;
     }
     fnet_file_data_t *fileData;
-    int fnetRet = intfc->downloadFile(url.c_str(), &fileData, nullptr, nullptr, msTimeout);
+    int fnetRet = intfc->downloadFileMem(
+        url.c_str(), &fileData, callback, callbackData, msConnectTimeout, msTimeout);
     if (fnetRet != FNET_OK) {
         return fnetRet2ComErrno(fnetRet);
     }
     fnet::FreeInDestructor freeFileData(fileData, intfc->freeFileData);
     bytes.assign(fileData->data, fileData->data + fileData->size);
+    return COM_OK;
+}
+
+ComErrno MultiComUtils::downloadFileDisk(const std::string &url, const wxString &saveName,
+    fnet_progress_callback_t callback, void *callbackData, int msConnectTimeout, int msTimeout)
+{
+    fnet::FlashNetworkIntfc *intfc = MultiComMgr::inst()->networkIntfc();
+    if (intfc == nullptr) {
+        return COM_ERROR;
+    }
+    int fnetRet = intfc->downloadFileDisk(
+        url.c_str(), saveName.ToUTF8().data(), callback, callbackData, msConnectTimeout, msTimeout);
+    if (fnetRet != FNET_OK) {
+        return fnetRet2ComErrno(fnetRet);
+    }
     return COM_OK;
 }
 
@@ -257,25 +247,11 @@ ComErrno MultiComUtils::fnetRet2ComErrno(int networkRet)
         return COM_DEVICE_HAS_BEEN_BOUND;
     case FNET_NIM_SEND_ERROR:
         return COM_NIM_SEND_ERROR;
+    case FNET_NIM_DATA_BASE_ERROR:
+        return COM_NIM_DATA_BASE_ERROR;
     default:
         return COM_ERROR;
     }
-}
-
-com_thread_ptr_t MultiComUtils::asyncCall(wxEvtHandler *evtHandler, const com_async_call_func_t &func)
-{
-    ComAsyncThread *thread = new ComAsyncThread;
-    thread->evtHandler = evtHandler;
-    thread->func = func;
-    thread->threadPtr.reset(thread);
-    thread->Run();
-    return thread->threadPtr;
-}
-
-void MultiComUtils::killAsyncCall(const com_thread_ptr_t &thread)
-{
-    thread->Kill();
-    thread->threadPtr.reset();
 }
 
 std::vector<fnet_material_mapping_t> MultiComUtils::comMaterialMappings2Fnet(

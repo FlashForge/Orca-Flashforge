@@ -41,7 +41,7 @@
 
 class FFButton;
 namespace Slic3r { namespace GUI {
-class ComAsyncThread;
+
 struct MemoryStruct
 {
     char * memory;
@@ -113,7 +113,6 @@ private:
     BindInfo                *m_bind_info{nullptr};
     std::shared_ptr<BindJob>          m_bind_job;
     std::vector<char>        m_pic_data;
-    std::shared_ptr<ComAsyncThread> m_pic_thread{nullptr};
 public:
     BindMachineDialog();
     ~BindMachineDialog();
@@ -158,7 +157,6 @@ private:
     BindInfo                  *m_unbind_info{nullptr};
     std::shared_ptr<UnbindJob>        m_unbind_job;
     std::vector<char>          m_pic_data;
-    std::shared_ptr<ComAsyncThread> m_pic_thread{nullptr};
 public:
     UnBindMachineDialog();
     ~UnBindMachineDialog();

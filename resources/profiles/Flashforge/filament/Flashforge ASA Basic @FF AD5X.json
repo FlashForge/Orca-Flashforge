@@ -1,9 +1,9 @@
 {
     "cool_plate_temp": [
-        "100"
+        "0"
     ],
     "cool_plate_temp_initial_layer": [
-        "100"
+        "0"
     ],
     "eng_plate_temp": [
         "100"
@@ -11,17 +11,14 @@
     "eng_plate_temp_initial_layer": [
         "100"
     ],
-    "filament_load_time": [
-        "29"
+    "filament_flow_ratio": [
+        "0.96"
     ],
     "filament_max_volumetric_speed": [
         "20"
     ],
     "filament_settings_id": [
         "Flashforge ASA Basic @FF AD5X"
-    ],
-    "filament_unload_time": [
-        "29"
     ],
     "from": "system",
     "setting_id": "GFSA04",
@@ -40,6 +37,12 @@
     "name": "Flashforge ASA Basic @FF AD5X",
     "nozzle_temperature": [
         "260"
+    ],
+    "textured_cool_plate_temp": [
+        "0"
+    ],
+    "textured_cool_plate_temp_initial_layer": [
+        "0"
     ],
     "textured_plate_temp": [
         "100"

@@ -30,6 +30,7 @@
 #include "BindDialog.hpp"
 #include "FlashForge/DeviceListPanel.hpp"
 #include "FlashForge/DeviceData.hpp"
+#include "FlashForge/SingleDeviceState.hpp"
 
 namespace Slic3r {
 namespace GUI {
@@ -203,6 +204,9 @@ void MonitorPanel::init_tabpanel()
             //auto title = m_tabpanel->GetPageText(m_tabpanel->GetSelection());
             //m_media_file_panel->SwitchStorage(title == _L("SD Card"));
         //}
+        if (page == m_status_info_panel_page) {
+            m_status_info_panel_page->checkPrinterStatus();
+        }
         page->SetFocus();
     }, m_tabpanel->GetId());
 

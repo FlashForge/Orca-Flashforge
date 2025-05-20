@@ -1,7 +1,10 @@
 {
     "type": "filament",
+    "cool_plate_temp": [
+        "50"
+    ],
     "cool_plate_temp_initial_layer": [
-        "60"
+        "50"
     ],
     "eng_plate_temp_initial_layer": [
         "60"
@@ -9,17 +12,11 @@
     "filament_flow_ratio": [
         "0.96"
     ],
-    "filament_load_time": [
-        "29"
-    ],
     "filament_settings_id": [
         "Flashforge PLA Silk @FF AD5X"
     ],
     "filament_type": [
         "SILK"
-    ],
-    "filament_unload_time": [
-        "29"
     ],
     "from": "system",
     "instantiation": "true",
@@ -44,6 +41,12 @@
     ],
     "pressure_advance": [
         "0.027"
+    ],
+    "textured_cool_plate_temp": [
+        "50"
+    ],
+    "textured_cool_plate_temp_initial_layer": [
+        "50"
     ],
     "textured_plate_temp_initial_layer": [
         "60"

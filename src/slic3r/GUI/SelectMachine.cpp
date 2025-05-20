@@ -2480,30 +2480,6 @@ void SelectMachineDialog::init_bind()
                 m_comboBox_printer->SetValue(obj->dev_name + "(LAN)");
             }
         }
-        /*else if (e.GetInt() == 1 && (m_print_type == PrintFromType::FROM_SDCARD_VIEW)) {
-            on_send_print();
-        }
-        else if (e.GetInt() == -2 && (m_print_type == PrintFromType::FROM_SDCARD_VIEW)) {
-            show_status(PrintDialogStatus::PrintStatusInit);
-            prepare_mode();
-            MessageDialog msg_wingow(nullptr, _L("Printer local connection failed, please try again."), "", wxAPPLY | wxOK);
-            msg_wingow.ShowModal();
-        }
-        else if (e.GetInt() == 5 && (m_print_type == PrintFromType::FROM_SDCARD_VIEW)) {
-            show_status(PrintDialogStatus::PrintStatusInit);
-            prepare_mode();
-
-            DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
-            if (!dev) return;
-            ConnectPrinterDialog dlg(wxGetApp().mainframe, wxID_ANY, _L("Input access code"));
-            dlg.go_connect_printer(false);
-            if (dev->get_selected_machine()) {
-                dlg.set_machine_object(dev->get_selected_machine());
-                if (dlg.ShowModal() == wxID_OK) {
-                    this->connect_printer_mqtt();
-                }
-            }
-        }*/
     });
 
     m_bitmap_last_plate->Bind(wxEVT_LEFT_DOWN, [this](auto& e) {
@@ -2596,10 +2572,10 @@ wxWindow *SelectMachineDialog::create_ams_checkbox(wxString title, wxWindow *par
     sizer_check->Add(check, 0, wxBOTTOM | wxEXPAND | wxTOP, FromDIP(5));
 
     sizer_checkbox->Add(sizer_check, 0, wxEXPAND, FromDIP(5));
-    sizer_checkbox->Add(0, 0, 0, wxEXPAND | wxLEFT, FromDIP(11));
+    sizer_checkbox->Add(0, 0, 0, wxEXPAND | wxLEFT, FromDIP(7));
 
     auto text = new wxStaticText(checkbox, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, 0);
-    text->SetFont(::Label::Body_13);
+    text->SetFont(::Label::Body_12);
     text->SetForegroundColour(StateColor::darkModeColorFor(wxColour("#323A3C")));
     text->Wrap(-1);
     sizer_checkbox->Add(text, 0, wxALIGN_CENTER, 0);
@@ -4708,7 +4684,7 @@ bool SelectMachineDialog::is_show_timelapse()
         return false;
     };
 
-    std::string standard_version = "01.04.00.00";
+    std::string standard_version = "2.2.0";
     PartPlate *plate      = m_plater->get_partplate_list().get_curr_plate();
     fs::path   gcode_path = plate->get_tmp_gcode_path();
 
@@ -4726,7 +4702,7 @@ bool SelectMachineDialog::is_show_timelapse()
                 }
                 break;
             }
-            if (line == "BambuStudio")
+            if (line == "OrcaSlicer")
                 is_version = true;
         }
     }
@@ -5611,16 +5587,21 @@ void SelectMachineDialog::sys_color_changed()
 
 bool SelectMachineDialog::Show(bool show)
 {
-    show_status(PrintDialogStatus::PrintStatusInit);
-
     // set default value when show this dialog
     if (show) {
+        m_refresh_timer->Start(LIST_REFRESH_INTERVAL);
+        show_status(PrintDialogStatus::PrintStatusInit);
         wxGetApp().UpdateDlgDarkUI(this);
         wxGetApp().reset_to_active();
         set_default();
         update_user_machine_list();
+
+        Layout();
+        Fit();
+        CenterOnParent();
     }
     else {
+        m_refresh_timer->Stop();
         DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
         if (dev) {
             MachineObject* obj_ = dev->get_selected_machine();
@@ -5632,15 +5613,6 @@ bool SelectMachineDialog::Show(bool show)
             }
         }
     }
-
-    if (show) {
-        m_refresh_timer->Start(LIST_REFRESH_INTERVAL);
-    } else {
-        m_refresh_timer->Stop();
-    }
-    Layout();
-    Fit();
-    if (show) { CenterOnParent(); }
     return DPIDialog::Show(show);
 }
 
@@ -5886,7 +5858,7 @@ void EditDevNameDialog::on_edit_name(wxCommandEvent &e)
 
  ThumbnailPanel::~ThumbnailPanel() {}
 
- PinCodePanel::PinCodePanel(wxWindow* parent, wxWindowID winid /*= wxID_ANY*/, const wxPoint& pos /*= wxDefaultPosition*/, const wxSize& size /*= wxDefaultSize*/)
+ PinCodePanel::PinCodePanel(wxWindow* parent, int type, wxWindowID winid /*= wxID_ANY*/, const wxPoint& pos /*= wxDefaultPosition*/, const wxSize& size /*= wxDefaultSize*/)
  {
      wxPanel::Create(parent, winid, pos, SELECT_MACHINE_ITEM_SIZE);
      Bind(wxEVT_PAINT, &PinCodePanel::OnPaint, this);
@@ -5894,6 +5866,7 @@ void EditDevNameDialog::on_edit_name(wxCommandEvent &e)
      SetMaxSize(SELECT_MACHINE_ITEM_SIZE);
      SetMinSize(SELECT_MACHINE_ITEM_SIZE);
 
+     m_type = type;
      m_bitmap = ScalableBitmap(this, "bind_device_ping_code",10);
      
      this->Bind(wxEVT_ENTER_WINDOW, &PinCodePanel::on_mouse_enter, this);
@@ -5931,12 +5904,15 @@ void EditDevNameDialog::on_edit_name(wxCommandEvent &e)
  void PinCodePanel::doRender(wxDC& dc)
  {
      auto size = GetSize();
-     dc.DrawBitmap(m_bitmap.bmp(), wxPoint(FromDIP(20), (size.y - m_bitmap.GetBmpSize().y) / 2));
+     dc.DrawBitmap(m_bitmap.bmp(), wxPoint(FromDIP(12), (size.y - m_bitmap.GetBmpSize().y) / 2));
      dc.SetFont(::Label::Head_13);
      dc.SetTextForeground(StateColor::darkModeColorFor(wxColour("#262E30"))); // ORCA fix text not visible on dark theme
-     wxString txt = _L("Bind with Pin Code");
+     wxString txt;
+     if (m_type == 0) { txt = _L("Bind with Pin Code"); }
+     else if (m_type == 1) { txt = _L("Bind with Access Code"); }
+
      auto txt_size = dc.GetTextExtent(txt);
-     dc.DrawText(txt, wxPoint(FromDIP(40), (size.y - txt_size.y) / 2));
+     dc.DrawText(txt, wxPoint(FromDIP(28), (size.y - txt_size.y) / 2));
 
      if (m_hover) {
          dc.SetPen(SELECT_MACHINE_BRAND);
@@ -5959,7 +5935,13 @@ void EditDevNameDialog::on_edit_name(wxCommandEvent &e)
 
  void PinCodePanel::on_mouse_left_up(wxMouseEvent& evt)
  {
-     wxGetApp().popup_ping_bind_dialog();
+     if (m_type == 0) {
+         wxGetApp().popup_ping_bind_dialog();
+     }
+     else if (m_type == 1) {
+         InputIpAddressDialog dlgo;
+         dlgo.ShowModal();
+     }
  }
 
  }} // namespace Slic3r::GUI

@@ -193,7 +193,8 @@ public:
             m_thumbData.assign(fileData->data, fileData->data + fileData->size);
             return COM_OK;
         } else {
-            return MultiComUtils::downloadFile(m_fileNameOrThumbUrl, m_thumbData, ComTimeoutWanB);
+            return MultiComUtils::downloadFileMem(
+                m_fileNameOrThumbUrl, m_thumbData, nullptr, nullptr, ComTimeoutWanB, ComTimeoutWanB);
         }
     }
     std::vector<char> &thumbData()
@@ -204,6 +205,62 @@ public:
 private:
     std::string m_fileNameOrThumbUrl;
     std::vector<char> m_thumbData;
+};
+
+class ComGetTimeLapseVideoList : public ComCommand
+{
+public:
+    ComGetTimeLapseVideoList()
+    {
+        m_wanTimeLapseVideoList.videoCnt = 0;
+        m_wanTimeLapseVideoList.videoDatas = nullptr;
+    }
+    ComErrno exec(const com_command_exec_data_t &data)
+    {
+        int ret;
+        if (data.connectMode == COM_CONNECT_LAN) {
+            ret = FNET_ERROR;
+        } else {
+            ret = data.networkIntfc->getWanDevTimeLapseVideoList(
+                data.uid, data.accessToken, data.deviceId, 15, &m_wanTimeLapseVideoList.videoDatas,
+                &m_wanTimeLapseVideoList.videoCnt, ComTimeoutWanA);
+        }
+        return MultiComUtils::fnetRet2ComErrno(ret);
+    }
+    const com_time_lapse_video_list_t &wanTimeLapseVideoList()
+    {
+        return m_wanTimeLapseVideoList;
+    }
+
+private:
+    com_time_lapse_video_list_t m_wanTimeLapseVideoList;
+};
+
+class ComDeleteTimeLapseVideo : public ComCommand
+{
+public:
+    ComDeleteTimeLapseVideo(const std::vector<std::string> &jobIds)
+        : m_jobIds(jobIds)
+    {
+    }
+    ComErrno exec(const com_command_exec_data_t &data)
+    {
+        int ret;
+        if (data.connectMode == COM_CONNECT_LAN) {
+            ret = FNET_ERROR;
+        } else {
+            std::vector<const char *> jobIdPtrs(m_jobIds.size());
+            for (size_t i = 0; i < m_jobIds.size(); ++i) {
+                jobIdPtrs[i] = m_jobIds[i].c_str();
+            }
+            ret = data.networkIntfc->deleteTimeLapseVideo(
+                data.uid, data.accessToken, jobIdPtrs.data(), jobIdPtrs.size(), ComTimeoutWanA);
+        }
+        return MultiComUtils::fnetRet2ComErrno(ret);
+    }
+
+private:
+    std::vector<std::string> m_jobIds;
 };
 
 class ComStartJob : public ComCommand
@@ -218,6 +275,9 @@ public:
         m_jobData.fileName = m_comJobData.fileName.c_str();
         m_jobData.printNow = m_comJobData.printNow;
         m_jobData.levelingBeforePrint = m_comJobData.levelingBeforePrint;
+        m_jobData.flowCalibration = m_comJobData.flowCalibration;
+        m_jobData.firstLayerInspection = m_comJobData.firstLayerInspection;
+        m_jobData.timeLapseVideo = m_comJobData.timeLapseVideo;
         m_jobData.useMatlStation = m_comJobData.useMatlStation;
         m_jobData.gcodeToolCnt = (int)m_comJobData.materialMappings.size();
         m_jobData.materialMappings = m_materialMappings.data();
@@ -265,6 +325,8 @@ public:
         m_sendGcodeData.printNow = m_comSendGcodeData.printNow;
         m_sendGcodeData.levelingBeforePrint = m_comSendGcodeData.levelingBeforePrint;
         m_sendGcodeData.flowCalibration = m_comSendGcodeData.flowCalibration;
+        m_sendGcodeData.firstLayerInspection = m_comSendGcodeData.firstLayerInspection;
+        m_sendGcodeData.timeLapseVideo = m_comSendGcodeData.timeLapseVideo;
         m_sendGcodeData.useMatlStation = m_comSendGcodeData.useMatlStation;
         m_sendGcodeData.gcodeToolCnt = (int)m_comSendGcodeData.materialMappings.size();
         m_sendGcodeData.materialMappings = m_materialMappings.data();
@@ -538,6 +600,54 @@ public:
 private:
     std::string m_action;
     fnet_state_ctrl_t m_stateCtrl;
+};
+
+class ComPlateDetectCtrl : public ComCommand
+{
+public:
+    ComPlateDetectCtrl(const std::string &action)
+        : m_action(action)
+    {
+        m_plateDetectCtrl.action = m_action.c_str();
+    }
+    ComErrno exec(const com_command_exec_data_t &data)
+    {
+        if (data.connectMode == COM_CONNECT_LAN) {
+            int ret = data.networkIntfc->ctrlLanDevPlateDetect(data.ip, data.port, data.serialNumber,
+                data.checkCode, &m_plateDetectCtrl, ComTimeoutLanA);
+            return MultiComUtils::fnetRet2ComErrno(ret);
+        } else {
+            return ComWanNimConn::inst()->sendPlateDetectCtrl(data.nimAccountId, m_plateDetectCtrl);
+        }
+    }
+
+private:
+    std::string m_action;
+    fnet_plate_detect_ctrl_t m_plateDetectCtrl;
+};
+
+class ComFirstLayerDetectCtrl : public ComCommand
+{
+public:
+    ComFirstLayerDetectCtrl(const std::string &action)
+        : m_action(action)
+    {
+        m_firstLayerDetectCtrl.action = m_action.c_str();
+    }
+    ComErrno exec(const com_command_exec_data_t &data)
+    {
+        if (data.connectMode == COM_CONNECT_LAN) {
+            int ret = data.networkIntfc->ctrlLanDevFirstLayerDetect(data.ip, data.port, data.serialNumber,
+                data.checkCode, &m_firstLayerDetectCtrl, ComTimeoutLanA);
+            return MultiComUtils::fnetRet2ComErrno(ret);
+        } else {
+            return ComWanNimConn::inst()->sendFirstLayerDetectCtrl(data.nimAccountId, m_firstLayerDetectCtrl);
+        }
+    }
+
+private:
+    std::string m_action;
+    fnet_first_layer_detect_ctrl_t m_firstLayerDetectCtrl;
 };
 
 class ComCameraStreamCtrl : public ComCommand

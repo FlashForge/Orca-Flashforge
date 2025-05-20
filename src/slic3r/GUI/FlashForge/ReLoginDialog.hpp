@@ -26,7 +26,6 @@
 namespace Slic3r { 
 namespace GUI {
 
-class ComAsyncThread;
 class RoundImage : public wxPanel
 {
 public:
@@ -42,6 +41,14 @@ private:
 private:
     wxImage m_image{wxNullImage};
 };
+
+class StdStringEvent : public wxCommandEvent
+{
+public:
+    std::string str;
+};
+
+wxDECLARE_EVENT(EVT_DOWNLOADED_RELOGIN_IMAGE, StdStringEvent);
 
 class ReLoginDialog : public TitleDialog
 {
@@ -86,7 +93,6 @@ private:
 
     wxWebView * m_user_pic_view {nullptr};
     std::vector<char> m_pic_data;
-    std::shared_ptr<ComAsyncThread> m_pic_thread{nullptr};
 };
 } // namespace GUI
 } // namespace Slic3r

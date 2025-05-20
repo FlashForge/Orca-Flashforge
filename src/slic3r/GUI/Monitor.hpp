@@ -48,7 +48,6 @@
 #include "slic3r/GUI/UpgradePanel.hpp"
 #include "slic3r/GUI/HMSPanel.hpp"
 #include "slic3r/GUI/AmsWidgets.hpp"
-#include "slic3r/GUI/FlashForge/SingleDeviceState.hpp"
 #include "Widgets/SideTools.hpp"
 #include "SelectMachine.hpp"
 #include <mutex>
@@ -58,6 +57,7 @@ namespace GUI {
 
 class MediaFilePanel;
 class DeviceListPanel;
+class SingleDeviceState;
 
 class AddMachinePanel : public wxPanel
 {

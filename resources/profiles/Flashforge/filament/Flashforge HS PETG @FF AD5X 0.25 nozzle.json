@@ -1,10 +1,10 @@
 {
     "type": "filament",
     "cool_plate_temp": [
-        "75"
+        "0"
     ],
     "cool_plate_temp_initial_layer": [
-        "75"
+        "0"
     ],
     "eng_plate_temp": [
         "75"
@@ -15,17 +15,14 @@
     "fan_max_speed": [
         "100"
     ],
-    "filament_load_time": [
-        "29"
+    "filament_flow_ratio": [
+        "0.98"
     ],
     "filament_max_volumetric_speed": [
         "8"
     ],
     "filament_settings_id": [
         "Flashforge HS PETG @FF AD5X 0.25 nozzle"
-    ],
-    "filament_unload_time": [
-        "29"
     ],
     "from": "system",
     "setting_id": "GFSA04_12",
@@ -53,6 +50,12 @@
     ],
     "slow_down_min_speed": [
         "30"
+    ],
+    "textured_cool_plate_temp": [
+        "75"
+    ],
+    "textured_cool_plate_temp_initial_layer": [
+        "75"
     ],
     "textured_plate_temp": [
         "75"

@@ -160,6 +160,15 @@ namespace pt = boost::property_tree;
 namespace Slic3r {
 namespace GUI {
 
+struct AsyncLoginFinishedEvent : public wxCommandEvent {
+    AsyncLoginFinishedEvent(wxEventType type, ComErrno _ret, com_token_data_t _token_data)
+        : wxCommandEvent(type), ret(_ret), token_data(_token_data) {
+    }
+    ComErrno ret;
+    com_token_data_t token_data;
+};
+
+wxDEFINE_EVENT(EVT_ASYNC_LOGIN_FINISHED, AsyncLoginFinishedEvent);
 wxDEFINE_EVENT(EVT_START_LOGIN, wxCommandEvent);
 wxDEFINE_EVENT(EVT_LOGIN_FAILED, wxCommandEvent);
 wxDEFINE_EVENT(EVT_LOGIN_SUCCEED, wxCommandEvent);
@@ -520,7 +529,8 @@ static const FileWildcards file_wildcards_by_type[FT_SIZE] = {
     /* FT_OBJ */     { "OBJ files"sv,       { ".obj"sv } },
     /* FT_AMF */     { "AMF files"sv,       { ".amf"sv, ".zip.amf"sv, ".xml"sv } },
     /* FT_3MF */     { "3MF files"sv,       { ".3mf"sv } },
-    /* FT_GCODE */   { "G-code files"sv,    { ".gcode"sv } },
+    /* FT_GCODE_3MF */ {"Gcode 3MF files"sv, {".gcode.3mf"sv}},
+    /* FT_GCODE */   { "G-code files"sv,    { ".gcode"sv} },
 #ifdef __APPLE__
     /* FT_MODEL */
     {"Supported files"sv, {".3mf"sv, ".stl"sv, ".oltp"sv, ".stp"sv, ".step"sv, ".svg"sv, ".amf"sv, ".obj"sv, ".usd"sv, ".usda"sv, ".usdc"sv, ".usdz"sv, ".abc"sv, ".ply"sv}},
@@ -806,17 +816,6 @@ void GUI_App::post_init()
     if (! this->initialized())
         throw Slic3r::RuntimeError("Calling post_init() while not yet initialized");
 
-    if (app_config->get("sync_user_preset") == "true") {
-        // BBS loading user preset
-        // Always async, not such startup step
-        // BOOST_LOG_TRIVIAL(info) << "Loading user presets...";
-        // scrn->SetText(_L("Loading user presets..."));
-        if (m_agent) { start_sync_user_preset(); }
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " sync_user_preset: true";
-    } else {
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " sync_user_preset: false";
-    }
-
     m_open_method = "double_click";
     bool switch_to_3d = false;
 
@@ -972,6 +971,20 @@ void GUI_App::post_init()
         }
     }
 
+    // Start preset sync after project opened, otherwise we could have preset change during project opening which could cause crash 
+    if (app_config->get("sync_user_preset") == "true") {
+        // BBS loading user preset
+        // Always async, not such startup step
+        // BOOST_LOG_TRIVIAL(info) << "Loading user presets...";
+        // scrn->SetText(_L("Loading user presets..."));
+        if (m_agent) {
+            start_sync_user_preset();
+        }
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " sync_user_preset: true";
+    } else {
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " sync_user_preset: false";
+    }
+
     // The extra CallAfter() is needed because of Mac, where this is the only way
     // to popup a modal dialog on start without screwing combo boxes.
     // This is ugly but I honestly found no better way to do it.
@@ -1041,8 +1054,10 @@ void GUI_App::post_init()
            for (auto& it : boost::filesystem::directory_iterator(log_folder)) {
                auto temp_path = it.path();
                try {
-                   std::time_t lw_t = boost::filesystem::last_write_time(temp_path) ;
-                   files_vec.push_back({ lw_t, temp_path.filename().string() });
+                   if (it.status().type() == boost::filesystem::regular_file) {
+                       std::time_t lw_t = boost::filesystem::last_write_time(temp_path) ;
+                       files_vec.push_back({ lw_t, temp_path.filename().string() });
+                   }
                } catch (const std::exception &) {
                }
            }
@@ -1128,10 +1143,6 @@ void GUI_App::shutdown()
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": destroy flashforge relogin dialog");
         delete m_re_login_dlg;
         m_re_login_dlg = nullptr;
-    }
-    
-    if(m_pic_thread){
-        MultiComUtils::killAsyncCall(m_pic_thread);
     }
 
     if (m_is_recreating_gui) return;
@@ -1628,6 +1639,33 @@ void GUI_App::init_networking_callbacks()
         //    GUI::wxGetApp().request_user_handle(online_login);
         //    });
 
+        m_agent->set_server_callback([this](std::string url, int status) {
+
+            CallAfter([this]() {
+                if (!m_server_error_dialog) {
+                    /*m_server_error_dialog->EndModal(wxCLOSE);
+                    m_server_error_dialog->Destroy();
+                    m_server_error_dialog = nullptr;*/
+                    m_server_error_dialog = new NetworkErrorDialog(mainframe);
+                }
+
+                if(plater()->get_select_machine_dialog() && plater()->get_select_machine_dialog()->IsShown()){
+                    return;
+                }
+
+                if (m_server_error_dialog->m_show_again) {
+                    return;
+                }
+
+                if (m_server_error_dialog->IsShown()) {
+                    return;
+                }
+
+                m_server_error_dialog->ShowModal();
+            });
+        });
+
+
         m_agent->set_on_server_connected_fn([this](int return_code, int reason_code) {
             if (m_is_closing) {
             return;
@@ -1725,11 +1763,11 @@ void GUI_App::init_networking_callbacks()
                                 event.SetString(obj->dev_id);
                                 GUI::wxGetApp().sidebar().load_ams_list(obj->dev_id, obj);
                             } else if (state == ConnectStatus::ConnectStatusFailed) {
-                                obj->set_access_code("");
-                                obj->erase_user_access_code();
                                 m_device_manager->set_selected_machine("", true);
                                 wxString text;
                                 if (msg == "5") {
+                                    obj->set_access_code("");
+                                    obj->erase_user_access_code();
                                     text = wxString::Format(_L("Incorrect password"));
                                     wxGetApp().show_dialog(text);
                                 } else {
@@ -1738,9 +1776,6 @@ void GUI_App::init_networking_callbacks()
                                 }
                                 event.SetInt(-1);
                             } else if (state == ConnectStatus::ConnectStatusLost) {
-                                obj->set_access_code("");
-                                obj->erase_user_access_code();
-                                m_device_manager->localMachineList.erase(obj->dev_id);
                                 m_device_manager->set_selected_machine("", true);
                                 event.SetInt(-1);
                                 BOOST_LOG_TRIVIAL(info) << "set_on_local_connect_fn: state = lost";
@@ -1878,6 +1913,11 @@ GUI_App::~GUI_App()
         delete preset_updater;
         preset_updater = nullptr;
     }
+
+    if (m_auto_login_thread.joinable()) {
+        m_auto_login_thread.join();
+    }
+    LoginDialog::waitGetSmsCode();
     Slic3r::GUI::MultiComMgr::inst()->uninitalize();
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": exit");
 }
@@ -2176,7 +2216,8 @@ bool GUI_App::OnInit()
 {
     try {
         return on_init_inner();
-    } catch (const std::exception&) {
+    } catch (const std::exception& e) {
+        BOOST_LOG_TRIVIAL(fatal) << "OnInit Got Fatal error: " << e.what();
         generic_exception_handle();
         return false;
     }
@@ -2251,19 +2292,21 @@ class wxBoostLog : public wxLog
 
 bool GUI_App::on_init_inner()
 {
-#if 0
-    if (app_config->get("flashforge_machine_update") != "1.2.0") {
+    if (app_config->get("flashforge_profile_version") != Orca_Flashforge_VERSION
+     || app_config->get("version") != SLIC3R_VERSION) {
+        updateVenderInfo();
+        updateFilamentInfo();
         updateMachineInfo();
-        app_config->set("flashforge_machine_update", "1.2.0");
+        updateProcessInfo();
+        app_config->set("flashforge_profile_version", Orca_Flashforge_VERSION);
     }
- #endif
-    updateMachineInfo();
-    updateProcessInfo();
 
     wxLog::SetActiveTarget(new wxBoostLog());
 #if BBL_RELEASE_TO_PUBLIC
     wxLog::SetLogLevel(wxLOG_Message);
 #endif
+
+    ::Label::initSysFont();
 
     // Set initialization of image handlers before any UI actions - See GH issue #7469
     wxInitAllImageHandlers();
@@ -2288,7 +2331,6 @@ bool GUI_App::on_init_inner()
     //BBS set crash log folder
     CBaseException::set_log_folder(data_dir());
 #endif
-    m_timer.Bind(wxEVT_TIMER, &GUI_App::onTimer, this);
     wxGetApp().Bind(wxEVT_QUERY_END_SESSION, [this](auto & e) {
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< "received wxEVT_QUERY_END_SESSION";
         if (mainframe) {
@@ -2305,7 +2347,7 @@ bool GUI_App::on_init_inner()
     });
     Bind(EVT_START_LOGIN, &GUI_App::onAutoStartLogin,this);
     Bind(EVT_LOGIN_SUCCEED, [this](auto &event) {
-      m_connecting = false;
+        m_auto_connecting = false;
         if (m_logout_tip && m_logout_tip->IsShown()) {
           m_logout_tip->Close();
         }
@@ -2322,7 +2364,7 @@ bool GUI_App::on_init_inner()
 #endif
     });
     Bind(EVT_LOGIN_FAILED, [this](auto &event) {
-       if (m_connecting) {
+       if (m_auto_connecting) {
            if (!m_logout_tip) {
                m_logout_tip = new ShowTip(_L("Account Auto Connect Failed!"));
            }
@@ -2346,7 +2388,7 @@ bool GUI_App::on_init_inner()
     }
 #endif
         
-        m_connecting    = false;
+        m_auto_connecting = false;
         m_login_success = false;
     });
 
@@ -2604,6 +2646,8 @@ bool GUI_App::on_init_inner()
     // Suppress the '- default -' presets.
     preset_bundle->set_default_suppressed(true);
 
+    preset_bundle->backup_user_folder();
+
     Bind(EVT_SET_SELECTED_MACHINE, &GUI_App::on_set_selected_machine, this);
     Bind(EVT_UPDATE_MACHINE_LIST, &GUI_App::on_update_machine_list, this);
     Bind(EVT_USER_LOGIN, &GUI_App::on_user_login, this);
@@ -2786,6 +2830,29 @@ bool GUI_App::on_init_inner()
     //BBS: delete splash screen
     delete scrn;
     return true;
+}
+
+void GUI_App::updateVenderInfo()
+{
+    fs::path src_path = (fs::path(resources_dir()) / "profiles/Flashforge.json").make_preferred();
+    const auto dst_path = (boost::filesystem::path(Slic3r::data_dir()) / PRESET_SYSTEM_DIR / "Flashforge.json").make_preferred();
+    std::string error_message;
+    copy_file(src_path.string(), dst_path.string(), error_message, false);
+}
+
+void GUI_App::updateFilamentInfo()
+{
+    fs::path   src_path   = (fs::path(resources_dir()) / "profiles/Flashforge/filament").make_preferred();
+    const auto vendor_dir = (boost::filesystem::path(Slic3r::data_dir()) / PRESET_SYSTEM_DIR / "Flashforge/filament").make_preferred();
+    if (fs::exists(vendor_dir)) {
+        fs::remove_all(vendor_dir);
+        fs::create_directories(vendor_dir);
+    }
+    auto file_filter = [](const std::string name) {
+        return boost::iends_with(name, ".stl") || boost::iends_with(name, ".png") || boost::iends_with(name, ".svg") ||
+            boost::iends_with(name, ".jpeg") || boost::iends_with(name, ".jpg") || boost::iends_with(name, ".3mf");
+    };
+    copy_directory_recursively(src_path, vendor_dir, file_filter);
 }
 
 void GUI_App::updateMachineInfo() 
@@ -3398,6 +3465,23 @@ void GUI_App::link_to_network_check()
     wxLaunchDefaultBrowser(url);
 }
 
+void GUI_App::link_to_lan_only_wiki()
+{
+    std::string url;
+    std::string country_code = app_config->get_country_code();
+
+    if (country_code == "US") {
+        url = "https://wiki.bambulab.com/en/knowledge-sharing/enable-lan-mode";
+    }
+    else if (country_code == "CN") {
+        url = "https://wiki.bambulab.com/zh/knowledge-sharing/enable-lan-mode";
+    }
+    else {
+        url = "https://wiki.bambulab.com/en/knowledge-sharing/enable-lan-mode";
+    }
+    wxLaunchDefaultBrowser(url);
+}
+
 bool GUI_App::tabs_as_menu() const
 {
     return false;
@@ -3594,7 +3678,7 @@ void GUI_App::ShowUserLogin(bool show)
             return;
         }
         */
-        if (m_connecting) {
+        if (m_auto_connecting) {
             if (!m_logout_tip) {
                 m_logout_tip = new ShowTip(_L("Account Auto Connecting..."));
             }
@@ -3899,6 +3983,65 @@ bool GUI_App::check_login()
     return result;
 }
 
+void GUI_App::auto_login_flashforge()
+{
+    std::string access_token = app_config->get("access_token");
+    std::string refresh_token = app_config->get("refresh_token");
+    std::string token_expire_time = app_config->get("token_expire_time");
+    std::string token_start_time = app_config->get("token_start_time");
+    std::string usr_uid = app_config->get("usr_uid");
+    std::string usr_pic = app_config->get("usr_pic");
+    std::string usr_name = app_config->get("usr_name");
+    if (usr_name.empty()) {
+        usr_name = app_config->get("usr_input_name");
+    }
+    // 切换语言时此接口也会被调用，这种情况直接显示登录成功
+    if (m_restart_app && m_login_success) {
+        handle_login_result(usr_pic, usr_name);
+        LoginDialog::SetToken(access_token, refresh_token);
+        LoginDialog::SetUsrInfo(com_user_profile_t{ usr_uid, usr_name, usr_pic });
+        return;
+    }
+    // 没有保存登录状态，不做处理
+    if (access_token.empty() || refresh_token.empty()) {
+        return;
+    }
+    m_auto_connecting = true;
+    wxCommandEvent event(EVT_START_LOGIN);
+    event.SetEventObject(this);
+    wxPostEvent(this, event);
+    Bind(EVT_ASYNC_LOGIN_FINISHED, // 只在软件打开时执行一次，否则会重复Bind
+        [this, usr_uid, usr_name, usr_pic](const AsyncLoginFinishedEvent &event) {
+            if (mainframe != nullptr && !mainframe->is_shutdown()) { // 关闭窗口后执行 GUI::wxGetApp().run_script 可能出现崩溃
+                if (event.ret == COM_OK) {
+                    BOOST_LOG_TRIVIAL(info) << "user login succeed";
+                    on_connect_event();
+                    handle_login_result(usr_pic, usr_name);
+                    LoginDialog::SetToken(event.token_data.accessToken, event.token_data.refreshToken);
+                    LoginDialog::SetUsrInfo(com_user_profile_t{ usr_uid, usr_name, usr_pic });
+                    wxCommandEvent event(EVT_LOGIN_SUCCEED);
+                    event.SetEventObject(this);
+                    wxPostEvent(this, event);
+                } else {
+                    BOOST_LOG_TRIVIAL(warning) << boost::format("user login failed");
+                    wxCommandEvent event(EVT_LOGIN_FAILED);
+                    event.SetEventObject(this);
+                    wxPostEvent(this, event);
+                }
+            }
+        });
+    m_auto_login_thread = Slic3r::create_thread([=] {
+        com_token_data_t token_data;
+        token_data.expiresIn = atoi(token_expire_time.c_str());
+        token_data.accessToken = access_token;
+        token_data.refreshToken = refresh_token;
+        token_data.startTime = atoll(token_start_time.c_str());
+        ComErrno ret = Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data, 2, 200);
+        wxQueueEvent(this, new AsyncLoginFinishedEvent(EVT_ASYNC_LOGIN_FINISHED, ret, token_data));
+        BOOST_LOG_TRIVIAL(warning) << boost::format("MultiComMgr::inst()->addWanDev: %d") % ret;
+    });
+}
+
 void GUI_App::request_user_handle(int online_login)
 {
     auto evt = new wxCommandEvent(EVT_USER_LOGIN_HANDLE);
@@ -3917,7 +4060,7 @@ void GUI_App::request_user_logout()
 {
     if (m_agent && m_agent->is_user_login()) {
         // Update data first before showing dialogs
-        m_agent->user_logout();
+        m_agent->user_logout(true);
         m_agent->set_user_selected_machine("");
         /* delete old user settings */
         bool     transfer_preset_changes = false;
@@ -3980,96 +4123,10 @@ std::string GUI_App::handle_web_request(std::string cmd)
                 }
             }
             else if (command_str.compare("get_login_info") == 0) {
-                CallAfter([this] 
-                        {
-                        //查看token是否存在，若存在，则直接登录
-                        std::string access_token = app_config->get("access_token");
-                        std::string refresh_token = app_config->get("refresh_token");
-                        std::string usr_name = app_config->get("usr_name");
-                        if (usr_name.empty()) {
-                            usr_name = app_config->get("usr_input_name");
-                        }
-                        std::string usr_uid = app_config->get("usr_uid");
-                        std::string usr_pic = app_config->get("usr_pic");
-                        std::string token_expire_time = app_config->get("token_expire_time");
-                        std::string token_start_time = app_config->get("token_start_time");
-                        if(!access_token.empty() && !refresh_token.empty()){
-                            //判断时间是否过期，当前有效期31天
-                            //判断是否有网络(连接官网)
-                             wxURL url(_T("http://www.flashforge.com/en"));
-                            std::string region = app_config->get("region");
-                             if(region.compare("China") == 0){
-                                url.SetURL(_T("http://www.sz3dp.com/"));
-                             }
-                             if(!url.IsOk()){
-                                return;
-                             }
-                            //未过期，自动登录
-                            //校验token是否有效
-                             ComErrno login_result = ComErrno::COM_OK;// MultiComUtils::checkToken(access_token, ComTimeoutWanA);
-                            //语言切换且切换前已经登录，直接显示登录成功
-                            if (m_restart_app && m_login_success) {
-                                handle_login_result(usr_pic, usr_name);
-                                BOOST_LOG_TRIVIAL(info) << "usr login succeed 444 : GUI_App::handle_web_request";
-                                LoginDialog::SetToken(access_token, refresh_token);
-                                LoginDialog::SetUsrInfo(com_user_profile_t{usr_uid, usr_name, usr_pic});
-                                return;
-                            }
-                            boost::thread get_print_info_thread = Slic3r::create_thread([=] {
-                                m_connecting = true;
-                                wxCommandEvent event(EVT_START_LOGIN);
-                                event.SetEventObject(this);
-                                wxPostEvent(this, event);
-                                com_token_data_t token_data{atoi(token_expire_time.c_str()), access_token, refresh_token, atoll(token_start_time.c_str())};
-                                ComErrno add_dev_result = Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data, 2, 200);
-                                if (login_result == ComErrno::COM_OK && add_dev_result == COM_OK) {
-                                    on_connect_event();
-                                    handle_login_result(usr_pic, usr_name);
-                                    startTimer();
-                                    BOOST_LOG_TRIVIAL(info) << "usr login succeed 555 : GUI_App::handle_web_request";
-                                    LoginDialog::SetToken(access_token, refresh_token);
-                                    LoginDialog::SetUsrInfo(com_user_profile_t{usr_uid, usr_name, usr_pic});
-                                    wxCommandEvent event(EVT_LOGIN_SUCCEED);
-                                    event.SetEventObject(this);
-                                    wxPostEvent(this, event);
-                                    return;
-                                } else if (login_result != ComErrno::COM_OK && add_dev_result == COM_OK) {
-                                    // 尝试更新token值，若还是无效，则清空已有信息
-                                    com_token_data_t token_data{atoi(token_expire_time.c_str()), access_token, refresh_token, atoll(token_start_time.c_str())};
-                                    ComErrno relogin_refresh_token = MultiComUtils::refreshToken(refresh_token, token_data, ComTimeoutWanA);
-                                    if (relogin_refresh_token == ComErrno::COM_OK) {
-                                        on_connect_event();
-                                        handle_login_result(usr_pic, usr_name);
-                                        startTimer();
-                                        BOOST_LOG_TRIVIAL(info) << "usr login succeed 666 : GUI_App::handle_web_request";
-                                        LoginDialog::SetToken(token_data.accessToken, token_data.refreshToken);
-                                        LoginDialog::SetUsrInfo(com_user_profile_t{usr_uid, usr_name, usr_pic});
-                                        app_config->set("access_token", token_data.accessToken);
-                                        app_config->set("refresh_token", token_data.refreshToken);
-                                        app_config->set("token_expire_time", std::to_string(token_data.expiresIn));
-                                        app_config->set("token_start_time", std::to_string(token_data.startTime));
-                                        wxCommandEvent event(EVT_LOGIN_SUCCEED);
-                                        event.SetEventObject(this);
-                                        wxPostEvent(this, event);
-                                        return;
-                                    } else {
-                                        wxCommandEvent event(EVT_LOGIN_FAILED);
-                                        event.SetEventObject(this);
-                                        wxPostEvent(this, event);
-                                    }
-                                } else {
-                                    // addWanDev接口所在服务器连接失败
-                                    BOOST_LOG_TRIVIAL(warning) << boost::format("Slic3r::GUI::MultiComMgr::inst()->addWanDev Failed!");
-                                    wxCommandEvent event(EVT_LOGIN_FAILED);
-                                    event.SetEventObject(this);
-                                    wxPostEvent(this, event);
-                                }
-                            });
-                        }
-                        //get_login_info();
-                    });
-            } else if (command_str.compare("homepage_received_login") == 0) {
-                stopTimer();
+                CallAfter([this]() {
+                    auto_login_flashforge();
+                    //get_login_info();
+                });
             }
             else if (command_str.compare("homepage_login_or_register") == 0) {
                 CallAfter([this] {
@@ -4287,21 +4344,6 @@ void GUI_App::handle_login_out()
     wxCommandEvent event(EVT_LOGIN_OUT);
     event.SetEventObject(this);
     wxPostEvent(this, event);
-}
-
-void GUI_App::onTimer(wxTimerEvent& event) 
-{
-    event.Skip();
-    if (m_login_success) {
-        std::string usr_name = app_config->get("usr_name");
-        std::string usr_pic  = app_config->get("usr_pic");
-        if (usr_pic.empty()) {
-            usr_pic = "default.jpg";
-        }
-        handle_login_result(usr_pic, usr_name);
-    } else {
-        stopTimer();
-    }
 }
 
 void GUI_App::handle_script_message(std::string msg)
@@ -4580,7 +4622,7 @@ void GUI_App::on_user_login(wxCommandEvent &evt)
 void GUI_App::wan_dev_maintain(ComWanDevMaintainEvent& event)
 {
     event.Skip();
-    if (event.ret == COM_UNREGISTER_USER || event.ret == COM_REPEAT_LOGIN || !event.login) {
+    if (!event.login) {
         // login out
         handle_login_out();
         if (app_config) {
@@ -4750,7 +4792,7 @@ void GUI_App::check_new_version_sf(bool show_tips, int by_user)
             (void) body;
             BOOST_LOG_TRIVIAL(error) << format("Error getting: `%1%`: HTTP %2%, %3%", "check_new_version_sf", http_status, error);
         })
-        .timeout_connect(1)
+        .timeout_connect(5)
         .on_complete([this, by_user, check_stable_only](std::string body, unsigned http_status) {
             // Http response OK
             if (http_status != 200)
@@ -4781,7 +4823,6 @@ void GUI_App::check_new_version_sf(bool show_tips, int by_user)
                     for (std::regex_iterator it = std::sregex_iterator(tag.begin(), tag.end(), reg_num); it != std::sregex_iterator(); ++it)
                 {} Semver tag_version = get_version(tag, matcher); if (root.get<bool>("prerelease")) { if (best_pre < tag_version) { best_pre
                 = tag_version; best_pre_url     = root.get<std::string>("html_url"); best_pre_content = root.get<std::string>("body");
-                            best_pre.set_prerelease("Preview");
                         }
                     } else {
                         if (best_release < tag_version) {
@@ -4844,7 +4885,7 @@ void GUI_App::check_new_version_sf(bool show_tips, int by_user)
                     introUrls.push_back(it->second.get_value<std::string>());
                 }
                 Semver latest_version = get_version(win64Ver, matcher);
-                if (current_version == latest_version) {
+                if (current_version >= latest_version) {
                     if (by_user) {
                         wxMessageBox(_L("Already the newest version!"), _L("Info"), wxOK | wxICON_INFORMATION);
                     }
@@ -5289,7 +5330,7 @@ void GUI_App::start_sync_user_preset(bool with_progress_dlg)
     m_sync_update_thread = Slic3r::create_thread(
         [this, progressFn, cancelFn, finishFn, t = std::weak_ptr<int>(m_user_sync_token)] {
             // get setting list, update setting list
-            std::string version = preset_bundle->get_vendor_profile_version(PresetBundle::BBL_BUNDLE).to_string();
+            std::string version = preset_bundle->get_vendor_profile_version(PresetBundle::ORCA_DEFAULT_BUNDLE).to_string();
             int ret = m_agent->get_setting_list2(version, [this](auto info) {
                 auto type = info[BBL_JSON_KEY_TYPE];
                 auto name = info[BBL_JSON_KEY_NAME];
@@ -6155,7 +6196,8 @@ bool GUI_App::check_and_save_current_preset_changes(const wxString& caption, con
         if (remember_choice)
             act_buttons |= ActionButtons::REMEMBER_CHOISE;
         UnsavedChangesDialog dlg(caption, header, "", act_buttons);
-        if (dlg.ShowModal() == wxID_CANCEL)
+        bool no_need_change = dlg.getUpdateItemCount() == 0 ? true : false;
+        if (!no_need_change && dlg.ShowModal() == wxID_CANCEL)
             return false;
 
         if (dlg.save_preset())  // save selected changes
@@ -6203,7 +6245,8 @@ bool GUI_App::check_and_keep_current_preset_changes(const wxString& caption, con
         bool is_called_from_configwizard = postponed_apply_of_keeped_changes != nullptr;
 
         UnsavedChangesDialog dlg(caption, header, "", action_buttons);
-        if (dlg.ShowModal() == wxID_CANCEL)
+        bool no_need_change = dlg.getUpdateItemCount() == 0 ? true : false;
+        if (!no_need_change && dlg.ShowModal() == wxID_CANCEL)
             return false;
 
         auto reset_modifications = [this, is_called_from_configwizard]() {
@@ -6218,7 +6261,7 @@ bool GUI_App::check_and_keep_current_preset_changes(const wxString& caption, con
             load_current_presets(false);
         };
 
-        if (dlg.discard())
+        if (dlg.discard() || no_need_change)
             reset_modifications();
         else  // save selected changes
         {

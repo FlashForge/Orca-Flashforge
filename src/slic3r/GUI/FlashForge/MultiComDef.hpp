@@ -20,8 +20,6 @@ constexpr int ComTimeoutWanB = 15000;
 enum ComErrno {
     COM_OK,
     COM_ERROR,
-    COM_UNREGISTER_USER,
-    COM_REPEAT_LOGIN,
     COM_ABORTED_BY_USER,
     COM_DEVICE_IS_BUSY,
     COM_GCODE_NOT_FOUND,
@@ -30,6 +28,7 @@ enum ComErrno {
     COM_INVALID_VALIDATION,     // invalid userName/password/SMSCode
     COM_DEVICE_HAS_BEEN_BOUND,
     COM_NIM_SEND_ERROR,
+    COM_NIM_DATA_BASE_ERROR,
 };
 
 enum ComConnectMode {
@@ -81,6 +80,11 @@ struct com_gcode_list_t {
     fnet_gcode_data_t *gcodeDatas;
 };
 
+struct com_time_lapse_video_list_t {
+    int videoCnt;
+    fnet_time_lapse_video_data_t *videoDatas;
+};
+
 struct com_dev_data_t {
     ComConnectMode connectMode;
     fnet_lan_dev_info_t lanDevInfo;
@@ -89,6 +93,7 @@ struct com_dev_data_t {
     fnet_dev_detail_t *devDetail;
     com_gcode_list_t lanGcodeList;
     com_gcode_list_t wanGcodeList;
+    com_time_lapse_video_list_t wanTimeLapseVideoList;
     bool devDetailUpdated;
 };
 
@@ -105,6 +110,8 @@ struct com_local_job_data_t {
     bool printNow;
     bool levelingBeforePrint;
     bool flowCalibration;
+    bool firstLayerInspection;
+    bool timeLapseVideo;
     bool useMatlStation;
     std::vector<com_material_mapping_t> materialMappings;
 };
@@ -116,6 +123,8 @@ struct com_send_gcode_data_t {
     bool printNow;
     bool levelingBeforePrint;
     bool flowCalibration;
+    bool firstLayerInspection;
+    bool timeLapseVideo;
     bool useMatlStation;
     std::vector<com_material_mapping_t> materialMappings;
 };

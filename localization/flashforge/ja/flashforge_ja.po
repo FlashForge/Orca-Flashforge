@@ -558,9 +558,6 @@ msgstr "不明"
 msgid "Color Library"
 msgstr "カラ―ライブラリ"
 
-msgid "Flow Calibration"
-msgstr "フィラメント流量キャリブレーション"
-
 msgid "Enable IFS"
 msgstr "IFSを有効にする"
 
@@ -608,11 +605,68 @@ msgstr "印刷時間"
 msgid "IP-Address"
 msgstr "IPアドレス"
 
-msgid "When using Orca-Flashforge V1.3.0, please update Flash Maker to V2.0.0, and ensure that your device's firmware is updated to the latest version (V3.1.x)."
-msgstr "Orca-Flashforge V1.3.0を使用する際は、Flash MakerをV2.0.0に更新し、デバイスのファームウェアも最新バージョン（V3.1.x）に更新してください。"
+msgid "When using Orca-Flashforge V%s, please update Flash Maker to V2.0.2, and also update your device firmware to the latest version."
+msgstr "Orca-Flashforge V%sを使用する際は、Flash MakerをV2.0.2に更新し、デバイスのファームウェアも最新バージョンに更新してください。"
 
 msgid "Do not show again"
 msgstr "再度表示しない"
+
+msgid "Non-Flashforge build plate detected. Print quality may not be guaranteed."
+msgstr "Flashforge以外のビルドプレートが検出されました。印刷品質は保証されない場合があります。"
+
+msgid "Continue printing"
+msgstr "印刷の続行"
+
+msgid "Stop printing (replace the build plate)"
+msgstr "印刷の中止（ビルドプレートの交換）"
+
+msgid "Lidar detected first-layer defects. Please check and decide whether to continue printing."
+msgstr "Lidarは第一レイヤーの欠陥を検出しました。確認して、印刷を続行するか決定してください。"
+
+msgid "Continue printing (defects acceptable)"
+msgstr "印刷の続行（欠陥は許容範囲）"
+
+msgid "Stop printing"
+msgstr "印刷の中止"
+
+msgctxt "Flashforge"
+msgid "Flow Calibration"
+msgstr "フローの校正"
+
+msgctxt "Flashforge"
+msgid "First Layer Inspection"
+msgstr "第一レイヤーの検査"
+
+msgid "Time-Lapse Video"
+msgstr "タイムラプスビデオ"
+
+msgctxt "Flashforge"
+msgid "Downloading"
+msgstr "ダウンロードしています"
+
+msgid "Unable to download some videos. Please try again later!"
+msgstr "一部のビデオはダウンロードできませんでした。後に再度お試しください。"
+
+msgid "Failed videos:"
+msgstr "ダウンロードできなかったビデオ："
+
+msgid "Delete selected file(s)?"
+msgstr "選択したファイルを削除しますか？"
+
+msgid "Download complete."
+msgstr "ダウンロード完了。"
+
+msgid "Download failed. Please try again later!"
+msgstr "ダウンロードに失敗しました。しばらくしてからもう一度お試しください。"
+
+msgid "The network is unstable. Please try again."
+msgstr "ネットワークが不安定です。もう一度お試しください。"
+
+msgid "Lidar focus failure detected. Please check the Lidar."
+msgstr "Lidarのフォーカス不良が検出されました。Lidarを確認してください。"
+
+msgid "For an improved experience, please restart Orca-Flashforge to load resources."
+msgstr "より良い体験のために、Orca-Flashforgeを再起動してリソースを読み込んでください。"
 
 #: resources/data/hints.ini: [hint:Chamber temperature]
 msgid ""

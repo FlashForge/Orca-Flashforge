@@ -56,7 +56,7 @@
         "0"
     ],
     "machine_end_gcode": "G1 E-3 F3600\nG0 X50 Y50 F30000\nM104 S0 ; turn off temperature",
-    "machine_load_filament_time": "39",
+    "machine_load_filament_time": "50",
     "machine_max_acceleration_e": [
         "5000",
         "5000"
@@ -126,9 +126,9 @@
         "0"
     ],
     "machine_pause_gcode": "M25",
-    "machine_start_gcode": "M190 S[bed_temperature_initial_layer_single]\nM104 S[nozzle_temperature_initial_layer]\nG90\nM83\nG1 Z2 F6000\nG1 X50 Y220 Z0.25 F4800\nG1 X70 E1.8 F900\nG1 X200 E6 F1800\nG0 Y219.6\nG1 X130 E3 F1800\nG92 E0",
+    "machine_start_gcode": "M190 S[bed_temperature_initial_layer_single]\nM104 S[nozzle_temperature_initial_layer]\nG90\nM83\nG1 Z2 F6000\nG1 X50 Y-1 Z0.25 F9000\nG1 X70 E1.8 F900\nG1 X200 E6 F1800\nG0 Y-1.4\nG1 X130 E3 F1800\nG92 E0\nT[initial_no_support_extruder]",
     "machine_tool_change_time": "0",
-    "machine_unload_filament_time": "39",
+    "machine_unload_filament_time": "50",
     "manual_filament_change": "0",
     "max_layer_height": [
         "0.14"
@@ -167,7 +167,7 @@
         "100%"
     ],
     "retract_length_toolchange": [
-        "5"
+        "2"
     ],
     "retract_lift_above": [
         "0"
@@ -182,7 +182,7 @@
         "0"
     ],
     "retract_restart_extra_toolchange": [
-        "-3"
+        "0"
     ],
     "retract_when_changing_layer": [
         "1"
@@ -216,7 +216,7 @@
     "upward_compatible_machine": [],
     "use_firmware_retraction": "0",
     "use_relative_e_distances": "1",
-    "version": "2.1.1.0",
+    "version": "2.2.0.0",
     "wipe": [
         "1"
     ],

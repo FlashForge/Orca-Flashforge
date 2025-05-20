@@ -196,7 +196,7 @@ private:
 };
 
 
-class SendToPrinterDialog : public TitleDialog//public DPIDialog
+class SendToPrinterDialog : public DPIDialog
 {
 private:
     enum SendResultType
@@ -213,6 +213,11 @@ private:
         SendResultType  result;
         double          progress;
     };
+    
+    struct MachineInfo {
+        int lidar;
+        int camera;
+    };
 
 private:
 	int									m_print_plate_idx{0};
@@ -220,13 +225,16 @@ private:
     int                                 m_print_error_code{0};
     bool								m_is_in_sending_mode{ false };
     bool                                m_pending_update_machine_list{ false };
+    bool                                m_pending_setup_print_config{ false };
     bool								m_is_rename_mode{ false };
     bool								enable_prepare_mode{ true };
     bool								m_need_adaptation_screen{ false };
     bool								m_export_3mf_cancel{ false };
     bool								m_is_canceled{ false };
     bool                                m_send_and_print { false };
-    bool                                m_need_redirect {false};
+    bool                                m_need_redirect{ false };
+    bool                                m_is_printer_support_lidar{ false };
+    bool                                m_is_printer_support_camera{ false };
     std::string                         m_print_error_msg;
     std::string                         m_print_error_extra;
     std::string							m_print_info;
@@ -256,15 +264,19 @@ private:
 	wxStaticText*						m_file_name {nullptr};
     PrintDialogStatus					m_print_status{PrintStatusInit};
     wxStaticText*                       m_amsTipLbl {nullptr};
-    wxBoxSizer*                         m_printConfigSizer{ nullptr };
+    wxFlexGridSizer*                    m_printConfigSizer{ nullptr };
     FFCheckBox*                         m_levelChk {nullptr};
     wxStaticText*                       m_levelLbl {nullptr};
-    FFCheckBox*                         m_flowCalibrationChk {nullptr};
-    wxStaticText*                       m_flowCalibrationLbl {nullptr};
     FFCheckBox*                         m_enableAmsChk {nullptr};
     wxStaticText*                       m_enableAmsLbl {nullptr};
+    FFCheckBox*                         m_flowCalibrationChk{ nullptr };
+    wxStaticText*                       m_flowCalibrationLbl{ nullptr };
     wxStaticBitmap*                     m_amsTipWxBmp {nullptr};
     AmsTipWnd*                          m_amsTipWnd {nullptr};
+    FFCheckBox*                         m_firstLayerInspectionChk {nullptr};
+    wxStaticText*                       m_firstLayerInspectionLbl {nullptr};
+    FFCheckBox*                         m_timeLapseVideoChk {nullptr};
+    wxStaticText*                       m_timeLapseVideoLbl {nullptr};
     wxStaticText*                       m_selectPrinterLbl;
     FFToggleButton*                     m_wlanBtn {nullptr};
     FFToggleButton*                     m_lanBtn {nullptr};
@@ -294,6 +306,7 @@ private:
 
     std::vector<MaterialMapWgt*>        m_materialMapItems;
     std::map<std::string, MachineItem::MachineData> m_machineListMap;
+    std::map<com_id_t, MachineInfo>     m_machineInfoMap;
     std::vector<MachineItem*>           m_machineItemList;
     std::shared_ptr<MultiSend>          m_multiSend;
 
@@ -318,6 +331,7 @@ public:
     void update_print_status_msg(wxString msg, bool is_warning = false, bool is_printer = true);
 	void update_printer_list(wxCommandEvent& event);
 	void set_default();
+    void setup_print_config(bool isInit = false);
 	void on_dpi_changed(const wxRect& suggested_rect) override;
     void update_user_machine_list();
     void update_print_error_info(int code, std::string msg, std::string extra);
@@ -343,13 +357,16 @@ private:
     void on_cancel(wxCommandEvent& event);
     void onConnectionReady(ComConnectionReadyEvent& event);
     void onConnectionExit(ComConnectionExitEvent& event);
+    void onDevDetailUpdate(ComDevDetailUpdateEvent& event);
     void on_multi_send_progress(wxCommandEvent& event);
     void on_multi_send_completed(wxCommandEvent& event);
     void on_redirect_timer(wxTimerEvent &event);
     void onLevellingCheckBoxChanged(wxCommandEvent& event);
-    void onFlowCalibrationCheckBoxChanged(wxCommandEvent& event);
     void onEnableAmsCheckBoxChanged(wxCommandEvent& event);
     void onEnterAmsTipWidget(wxMouseEvent& event);
+    void onFlowCalibrationCheckBoxChanged(wxCommandEvent& event);
+    void onFirstLayerInspectionCheckBoxChanged(wxCommandEvent& event);
+    void onTimeLapseVideoCheckBoxChanged(wxCommandEvent& event);
 
     std::vector<std::pair<std::string, MachineItem::MachineData>> sortByName(const std::map<std::string, MachineItem::MachineData>& devList);
 };

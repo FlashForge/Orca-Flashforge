@@ -39,16 +39,21 @@ FlashNetworkIntfc::FlashNetworkIntfc(const char *libraryPath, const char *server
     INIT_FUNC_PTR(ctrlLanDevLight, fnet_ctrlLanDevLight);
     INIT_FUNC_PTR(ctrlLanDevAirFilter, fnet_ctrlLanDevAirFilter);
     INIT_FUNC_PTR(ctrlLanDevClearFan, fnet_ctrlLanDevClearFan);
+    INIT_FUNC_PTR(ctrlLanDevMove, fnet_ctrlLanDevMove);
+    INIT_FUNC_PTR(ctrlLanDevHoming, fnet_ctrlLanDevHoming);
     INIT_FUNC_PTR(ctrlLanDevMatlStation, fnet_ctrlLanDevMatlStation);
     INIT_FUNC_PTR(ctrlLanDevIndepMatl, fnet_ctrlLanDevIndepMatl);
     INIT_FUNC_PTR(ctrlLanDevPrint, fnet_ctrlLanDevPrint);
     INIT_FUNC_PTR(ctrlLanDevJob, fnet_ctrlLanDevJob);
     INIT_FUNC_PTR(ctrlLanDevState, fnet_ctrlLanDevState);
+    INIT_FUNC_PTR(ctrlLanDevPlateDetect, fnet_ctrlLanDevPlateDetect);
+    INIT_FUNC_PTR(ctrlLanDevFirstLayerDetect, fnet_ctrlLanDevFirstLayerDetect);
     INIT_FUNC_PTR(configLanDevMatlStation, fnet_configLanDevMatlStation);
     INIT_FUNC_PTR(configLanDevIndepMatl, fnet_configLanDevIndepMatl);
     INIT_FUNC_PTR(lanDevSendGcode, fnet_lanDevSendGcode);
     INIT_FUNC_PTR(notifyLanDevWanBind, fnet_notifyLanDevWanBind);
-    INIT_FUNC_PTR(downloadFile, fnet_downloadFile);
+    INIT_FUNC_PTR(downloadFileMem, fnet_downloadFileMem);
+    INIT_FUNC_PTR(downloadFileDisk, fnet_downloadFileDisk);
     INIT_FUNC_PTR(freeFileData, fnet_freeFileData);
     INIT_FUNC_PTR(getTokenByPassword, fnet_getTokenByPassword);
     INIT_FUNC_PTR(refreshToken, fnet_refreshToken);
@@ -68,6 +73,9 @@ FlashNetworkIntfc::FlashNetworkIntfc(const char *libraryPath, const char *server
     INIT_FUNC_PTR(freeWanDevList, fnet_freeWanDevList);
     INIT_FUNC_PTR(getWanDevProductDetail, fnet_getWanDevProductDetail);
     INIT_FUNC_PTR(getWanDevGcodeList, fnet_getWanDevGcodeList);
+    INIT_FUNC_PTR(getWanDevTimeLapseVideoList, fnet_getWanDevTimeLapseVideoList);
+    INIT_FUNC_PTR(freeTimeLapseVideoList, fnet_freeTimeLapseVideoList);
+    INIT_FUNC_PTR(deleteTimeLapseVideo, fnet_deleteTimeLapseVideo);
     INIT_FUNC_PTR(wanDevAddJob, fnet_wanDevAddJob);
     INIT_FUNC_PTR(freeAddJobResult, fnet_freeAddJobResult);
     INIT_FUNC_PTR(wanDevSendGcodeClound, fnet_wanDevSendGcodeClound);
@@ -84,7 +92,7 @@ FlashNetworkIntfc::FlashNetworkIntfc(const char *libraryPath, const char *server
     INIT_FUNC_PTR(connectionSubscribe, fnet_connectionSubscribe);
     INIT_FUNC_PTR(connectionUnsubscribe, fnet_connectionUnsubscribe);
     INIT_FUNC_PTR(freeString, fnet_freeString);
-    if (initlize(serverSettingsPath, &logSettings) == FNET_OK && strcmp(getVersion(), "2.0.1") == 0) {
+    if (initlize(serverSettingsPath, &logSettings) == FNET_OK && strcmp(getVersion(), "2.2.0") == 0) {
         m_isOk = true;
     }
 }

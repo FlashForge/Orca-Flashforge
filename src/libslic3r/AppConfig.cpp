@@ -121,11 +121,6 @@ void AppConfig::set_defaults()
             set_bool("background_processing", false);
 #endif
 
-#ifdef SUPPORT_SHOW_DROP_PROJECT
-        if (get("show_drop_project_dialog").empty())
-            set_bool("show_drop_project_dialog", true);
-#endif
-
         if (get("drop_project_action").empty())
             set_bool("drop_project_action", true);
 
@@ -181,6 +176,9 @@ void AppConfig::set_defaults()
 
     if (get("use_perspective_camera").empty())
         set_bool("use_perspective_camera", true);
+
+    if (get("auto_perspective").empty())
+        set_bool("auto_perspective", false);
 
     if (get("use_free_camera").empty())
         set_bool("use_free_camera", false);
@@ -354,7 +352,11 @@ void AppConfig::set_defaults()
     if (get("mouse_wheel").empty()) {
         set("mouse_wheel", "0");
     }
-    
+
+    if (get(SETTING_PROJECT_LOAD_BEHAVIOUR).empty()) {
+        set(SETTING_PROJECT_LOAD_BEHAVIOUR, OPTION_PROJECT_LOAD_BEHAVIOUR_ASK_WHEN_RELEVANT);
+    }
+
     if (get("max_recent_count").empty()) {
         set("max_recent_count", "18");
     }
@@ -663,7 +665,7 @@ std::string AppConfig::load()
                     if (j_machine.find("dev_pid") != j_machine.end()) {
                         info.emplace(std::make_pair("dev_pid", j_machine["dev_pid"].get<std::string>()));
                     }
-                    m_local_machines.push_back(info);
+                    m_local_machines_ff.push_back(info);
                 }
             } else {
                 if (it.value().is_object()) {
@@ -843,7 +845,7 @@ void AppConfig::save()
     }
     
     // write binding machines
-    for (const auto &mac : m_local_machines) {
+    for (const auto &mac : m_local_machines_ff) {
         json j_mac;
         auto it = mac.find("dev_id");
         if (it != mac.end())
@@ -867,7 +869,7 @@ void AppConfig::save()
     // WIN32 specific: The final "rename_file()" call is not safe in case of an application crash, there is no atomic "rename file" API
     // provided by Windows (sic!). Therefore we save a MD5 checksum to be able to verify file corruption. In addition,
     // we save the config file into a backup first before moving it to the final destination.
-    c << appconfig_md5_hash_line({j.dump(4)});
+    c << appconfig_md5_hash_line(j.dump(4));
 #endif
 
     c.close();
@@ -1345,14 +1347,14 @@ bool AppConfig::is_engineering_region(){
 
 void AppConfig::get_local_mahcines(LocalMacInfo& local_machines)
 {
-    local_machines.assign(m_local_machines.begin(), m_local_machines.end());
+    local_machines.assign(m_local_machines_ff.begin(), m_local_machines_ff.end());
 }
 
 void AppConfig::save_bind_machine_to_config(const std::string& dev_id, const std::string& dev_name, const std::string& placement, const unsigned short& pid, bool modifyPlacement)
 {
     bool update = false;
     std::string pid_str = std::to_string(pid);
-    for (auto& mac : m_local_machines) {
+    for (auto& mac : m_local_machines_ff) {
         auto it = mac.find("dev_id");
         if (it != mac.end() && it->second == dev_id) {
             mac["dev_name"] = dev_name;
@@ -1371,21 +1373,21 @@ void AppConfig::save_bind_machine_to_config(const std::string& dev_id, const std
         macInfo.emplace(std::make_pair("dev_name", dev_name));
         macInfo.emplace(std::make_pair("dev_placement", placement));
         macInfo.emplace(std::make_pair("dev_pid", pid_str));
-        m_local_machines.emplace_back(macInfo);
+        m_local_machines_ff.emplace_back(macInfo);
     }
     m_dirty = true;
 }
 
 void AppConfig::erase_local_machine(const std::string &dev_id, const std::string &dev_name)
 {
-    auto it_mac = m_local_machines.begin();
-    for (; it_mac != m_local_machines.end(); ++it_mac) {
+    auto it_mac = m_local_machines_ff.begin();
+    for (; it_mac != m_local_machines_ff.end(); ++it_mac) {
         const MacInfoMap &macInfo = *it_mac;
         auto        it_id   = macInfo.find("dev_id");
         auto        it_name = macInfo.find("dev_name");
         if (it_id != macInfo.end() && it_name != macInfo.end()) {
             if (it_id->second == dev_id && it_name->second == dev_name) {
-                m_local_machines.erase(it_mac);
+                m_local_machines_ff.erase(it_mac);
                 m_dirty = true;
                 break;
             }

@@ -3,8 +3,11 @@
     "complete_print_exhaust_fan_speed": [
         "80"
     ],
+    "cool_plate_temp": [
+        "45"
+    ],
     "cool_plate_temp_initial_layer": [
-        "60"
+        "45"
     ],
     "during_print_exhaust_fan_speed": [
         "60"
@@ -12,17 +15,14 @@
     "eng_plate_temp_initial_layer": [
         "60"
     ],
-    "filament_load_time": [
-        "29"
+    "filament_flow_ratio": [
+        "0.98"
     ],
     "filament_max_volumetric_speed": [
         "8"
     ],
     "filament_settings_id": [
         "Flashforge PLA Color Change @FF AD5X 0.25 nozzle"
-    ],
-    "filament_unload_time": [
-        "29"
     ],
     "from": "system",
     "setting_id": "GFSA04_19",
@@ -53,6 +53,12 @@
     ],
     "slow_down_min_speed": [
         "20"
+    ],
+    "textured_cool_plate_temp": [
+        "45"
+    ],
+    "textured_cool_plate_temp_initial_layer": [
+        "45"
     ],
     "textured_plate_temp_initial_layer": [
         "60"

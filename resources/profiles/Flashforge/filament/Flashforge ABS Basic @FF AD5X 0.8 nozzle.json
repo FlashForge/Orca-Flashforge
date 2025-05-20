@@ -1,9 +1,9 @@
 {
     "cool_plate_temp": [
-        "105"
+        "0"
     ],
     "cool_plate_temp_initial_layer": [
-        "105"
+        "0"
     ],
     "eng_plate_temp": [
         "105"
@@ -11,8 +11,8 @@
     "eng_plate_temp_initial_layer": [
         "105"
     ],
-    "filament_load_time": [
-        "29"
+    "filament_flow_ratio": [
+        "0.96"
     ],
     "filament_max_volumetric_speed": [
         "18"
@@ -20,24 +20,21 @@
     "filament_settings_id": [
         "Flashforge ABS Basic @FF AD5X 0.8 nozzle"
     ],
-    "filament_unload_time": [
-        "29"
-    ],
     "from": "system",
     "setting_id": "GFSA04",
     "instantiation": "true",
     "compatible_printers": [
       "Flashforge AD5X 0.8 nozzle"
     ],
-    "hot_plate_temp": [
-        "100"
-    ],
-    "hot_plate_temp_initial_layer": [
-        "100"
-    ],
     "inherits": "Flashforge Generic ABS",
     "is_custom_defined": "0",
     "name": "Flashforge ABS Basic @FF AD5X 0.8 nozzle",
+    "textured_cool_plate_temp": [
+        "0"
+    ],
+    "textured_cool_plate_temp_initial_layer": [
+        "0"
+    ],
     "textured_plate_temp": [
         "105"
     ],

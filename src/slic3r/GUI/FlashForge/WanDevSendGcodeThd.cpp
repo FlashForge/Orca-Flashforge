@@ -51,6 +51,8 @@ bool WanDevSendGcodeThd::startSendGcode(const std::string &uid, const std::vecto
     m_sendGcodeData.printNow = m_comSendGcodeData.printNow;
     m_sendGcodeData.levelingBeforePrint = m_comSendGcodeData.levelingBeforePrint;
     m_sendGcodeData.flowCalibration = m_comSendGcodeData.flowCalibration;
+    m_sendGcodeData.firstLayerInspection = m_comSendGcodeData.firstLayerInspection;
+    m_sendGcodeData.timeLapseVideo = m_comSendGcodeData.timeLapseVideo;
     m_sendGcodeData.useMatlStation = m_comSendGcodeData.useMatlStation;
     m_sendGcodeData.gcodeToolCnt = (int)m_comSendGcodeData.materialMappings.size();
     m_sendGcodeData.materialMappings = m_materialMappings.data();
@@ -134,6 +136,8 @@ int WanDevSendGcodeThd::startCloundJob(const char *accessToken, const fnet_cloun
     jobData.printNow = m_sendGcodeData.printNow;
     jobData.levelingBeforePrint = m_sendGcodeData.levelingBeforePrint;
     jobData.flowCalibration = m_sendGcodeData.flowCalibration;
+    jobData.firstLayerInspection = m_sendGcodeData.firstLayerInspection;
+    jobData.timeLapseVideo = m_sendGcodeData.timeLapseVideo;
     jobData.useMatlStation = m_sendGcodeData.useMatlStation;
     jobData.gcodeToolCnt = m_sendGcodeData.gcodeToolCnt;
     jobData.materialMappings = m_sendGcodeData.materialMappings;

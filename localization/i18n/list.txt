@@ -172,15 +172,4 @@ src/slic3r/Utils/SimplyPrint.cpp
 src/slic3r/Utils/Flashforge.cpp
 src/slic3r/GUI/Jobs/OAuthJob.cpp
 src/slic3r/GUI/BackgroundSlicingProcess.cpp
-src/slic3r/Utils/CalibUtils.cpp
-src/slic3r/GUI/FlashForge/LoginDialog.cpp
-src/slic3r/GUI/FlashForge/VerifyCodeCtrl.cpp
-src/slic3r/GUI/FlashForge/UserNameCtrl.cpp
-src/slic3r/GUI/FlashForge/DeviceListPanel.cpp
-src/slic3r/GUI/FlashForge/ReLoginDialog.cpp
-src/slic3r/GUI/FlashForge/SingleDeviceState.cpp
-src/slic3r/GUI/FlashForge/MaterialStation.cpp
-src/slic3r/GUI/FlashForge/AmsMappingWidgets.cpp
-src/slic3r/GUI/FlashForge/AmsPrintFileDlg.cpp
-src/slic3r/GUI/Widgets/TempInput.cpp
-src/slic3r/GUI/FFUtils.cpp
+src/slic3r/GUI/Gizmos/GLGizmoBrimEars.cpp

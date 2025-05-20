@@ -12,7 +12,8 @@ public:
 
 	bool Enable(bool enable = true) override;
     void SetEnable(bool enable = true);
-	void SetLabel(const wxString & label) override;
+	void SetLabel(const wxString& label) override;
+	void SetLabel(const wxString& label, int minWidth, int minHeight);
 	void SetFontColor(const wxColour& color);
 	void SetFontHoverColor(const wxColour& color);
 	void SetFontPressColor(const wxColour& color);
@@ -36,7 +37,7 @@ private:
 	void updateState();
 	void sendEvent();
 
-private:
+protected:
 	bool		m_hoverFlag;
 	bool		m_pressFlag;
 	bool		m_borderFlag;

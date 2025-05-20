@@ -594,9 +594,6 @@ msgstr "Desconocido"
 msgid "Color Library"
 msgstr "Biblioteca de colores"
 
-msgid "Flow Calibration"
-msgstr "Calibrado del caudal"
-
 msgid "Enable IFS"
 msgstr "Habilitar IFS"
 
@@ -644,11 +641,68 @@ msgstr "Tiempo de impresión"
 msgid "IP-Address"
 msgstr "Dirección IP"
 
-msgid "When using Orca-Flashforge V1.3.0, please update Flash Maker to V2.0.0, and ensure that your device's firmware is updated to the latest version (V3.1.x)."
-msgstr "Cuando utilice Orca-Flashforge V1.3.0, actualice Flash Maker a la versión V2.0.0 y asegúrese de que el firmware de su dispositivo esté actualizado a la última versión (V3.1.x)."
+msgid "When using Orca-Flashforge V%s, please update Flash Maker to V2.0.2, and also update your device firmware to the latest version."
+msgstr "Cuando utilice Orca-Flashforge V%s, actualice Flash Maker a la versión V2.0.2 y por favor, actualiza también el firmware de tu dispositivo a la última versión."
 
 msgid "Do not show again"
 msgstr "No mostrar de nuevo"
+
+msgid "Non-Flashforge build plate detected. Print quality may not be guaranteed."
+msgstr "Se ha detectado una placa de construcción no Flashforge. La calidad de impresión puede no estar garantizada."
+
+msgid "Continue printing"
+msgstr "Continuar imprimiendo"
+
+msgid "Stop printing (replace the build plate)"
+msgstr "Detener la impresión (reemplazar la placa de construcción)"
+
+msgid "Lidar detected first-layer defects. Please check and decide whether to continue printing."
+msgstr "Lidar detectó defectos de primera capa. Por favor, compruebe y decida si continuar la impresión."
+
+msgid "Continue printing (defects acceptable)"
+msgstr "Continuar imprimiendo (defectos aceptables)"
+
+msgid "Stop printing"
+msgstr "Detener la impresión"
+
+msgctxt "Flashforge"
+msgid "Flow Calibration"
+msgstr "Calibración de flujo"
+
+msgctxt "Flashforge"
+msgid "First Layer Inspection"
+msgstr "Inspección de la primera capa"
+
+msgid "Time-Lapse Video"
+msgstr "Vídeo de lapso de tiempo"
+
+msgctxt "Flashforge"
+msgid "Downloading"
+msgstr "Descargando"
+
+msgid "Unable to download some videos. Please try again later!"
+msgstr "Error al descargar algunos videos. ¡Por favor, inténtalo de nuevo más tarde!"
+
+msgid "Failed videos:"
+msgstr "Videos fallidos:"
+
+msgid "Delete selected file(s)?"
+msgstr "Si desea borrar archivo(s) seleccionado(s)?"
+
+msgid "Download complete."
+msgstr "Descarga completada."
+
+msgid "Download failed. Please try again later!"
+msgstr "Error en la descarga. Por favor, inténtalo de nuevo más tarde."
+
+msgid "The network is unstable. Please try again."
+msgstr "La red es inestable. Por favor, inténtalo de nuevo."
+
+msgid "Lidar focus failure detected. Please check the Lidar."
+msgstr "Fallo de enfoque Lidar detectado. Por favor, compruebe el Lidar."
+
+msgid "For an improved experience, please restart Orca-Flashforge to load resources."
+msgstr "Para una experiencia mejorada, reinicie Orca-Flashforge para cargar los recursos."
 
 #: resources/data/hints.ini: [hint:Chamber temperature]
 msgid ""

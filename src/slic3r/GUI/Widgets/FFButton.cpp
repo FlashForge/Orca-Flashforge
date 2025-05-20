@@ -60,13 +60,25 @@ void FFButton::SetEnable(bool enable)
 void FFButton::SetLabel(const wxString & label)
 {
 	wxWindow::SetLabel(label);
+
 	wxScreenDC dc;
-	//font = wx.Font(14, wx.DEFAULT, wx.NORMAL, wx.NORMAL)
-	//wxPaintDC dc(this);
 	dc.SetFont(GetFont());
-	auto textSize = dc.GetTextExtent(label);
-	SetMinSize(textSize+wxSize(40, 14));
+	wxSize textSize = dc.GetTextExtent(label);
+	SetMinSize(textSize + wxSize(FromDIP(32), FromDIP(12)));
 	Refresh();
+}
+
+void FFButton::SetLabel(const wxString& label, int minWidth, int minHeight)
+{
+    wxWindow::SetLabel(label);
+
+    wxScreenDC dc;
+    dc.SetFont(GetFont());
+	wxSize textSize = dc.GetTextExtent(label);
+	int width = std::max(textSize.GetWidth() + FromDIP(32), minWidth);
+	int height = std::max(textSize.GetHeight() + FromDIP(12), minHeight);
+    SetMinSize(wxSize(width, height));
+    Refresh();
 }
 
 void FFButton::SetFontColor(const wxColour& color)

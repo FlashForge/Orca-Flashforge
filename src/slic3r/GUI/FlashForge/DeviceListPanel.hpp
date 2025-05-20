@@ -91,6 +91,7 @@ public:
         std::string name;
         std::string placement;
         std::string status;
+        std::string errorCode;
         int progress {0};
     };
 
@@ -111,6 +112,7 @@ private:
     DeviceInfo      m_info;
     wxStaticText*   m_name_text {nullptr};
     wxStaticBitmap* m_icon {nullptr};
+    wxStaticBitmap* m_warning_icon {nullptr};
     wxStaticText*   m_placement_text {nullptr};
     wxStaticText*   m_status_text {nullptr};
     wxStaticText*   m_progress_text {nullptr};

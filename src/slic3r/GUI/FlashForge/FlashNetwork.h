@@ -48,11 +48,15 @@ typedef enum fnet_conn_write_data_type {
     FNET_CONN_WRITE_LIGHT_CTRL,         // data, fnet_light_ctrl_t
     FNET_CONN_WRITE_AIR_FILTER_CTRL,    // data, fnet_air_filter_ctrl_t
     FNET_CONN_WRITE_CLEAR_FAN_CTRL,     // data, fnet_clear_fan_ctrl_t
+    FNET_CONN_WRITE_MOVE_CTRL,          // data, fnet_move_ctrl_t
+    FNET_CONN_WRITE_HOMING_CTRL,        // data, nullptr
     FNET_CONN_WRITE_MATL_STATION_CTRL,  // data, fnet_matl_station_ctrl_t
     FNET_CONN_WRITE_INDEP_MATL_CTRL,    // data, fnet_indep_matl_ctrl_t
     FNET_CONN_WRITE_PRINT_CTRL,         // data, fnet_print_ctrl_t
     FNET_CONN_WRITE_JOB_CTRL,           // data, fnet_job_ctrl_t
     FNET_CONN_WRITE_STATE_CTRL,         // data, fnet_state_ctrl_t
+    FNET_CONN_WRITE_PLATE_DETECT_CTRL,  // data, fnet_plate_detect_ctrl_t
+    FNET_CONN_WRITE_FIRST_LAYER_DETECT_CTRL, // data, fnet_first_layer_detect_ctrl_t
     FNET_CONN_WRITE_CAMERA_STREAM_CTRL, // data, fnet_camera_stream_ctrl_t
     FNET_CONN_WRITE_MATL_STATION_CONFIG,// data, fnet_matl_station_config_t
     FNET_CONN_WRITE_INDEP_MATL_CONFIG,  // data, fnet_indep_matl_config_t
@@ -105,6 +109,8 @@ typedef struct fnet_send_gcode_data {
     int printNow;                       // 1 true, 0 false
     int levelingBeforePrint;            // 1 true, 0 false
     int flowCalibration;                // 1 true, 0 false
+    int firstLayerInspection;           // 1 true, 0 false
+    int timeLapseVideo;                 // 1 true, 0 false
     int useMatlStation;                 // 1 true, 0 false
     int gcodeToolCnt;
     const fnet_material_mapping_t *materialMappings;
@@ -134,6 +140,8 @@ typedef struct fnet_clound_job_data {
     int printNow;                       // 1 true, 0 false
     int levelingBeforePrint;            // 1 true, 0 false
     int flowCalibration;                // 1 true, 0 false
+    int firstLayerInspection;           // 1 true, 0 false
+    int timeLapseVideo;                 // 1 true, 0 false
     int useMatlStation;                 // 1 true, 0 false
     int gcodeToolCnt;
     const fnet_material_mapping_t *materialMappings;
@@ -146,6 +154,8 @@ typedef struct fnet_local_job_data {
     int printNow;                       // 1 true, 0 false
     int levelingBeforePrint;            // 1 true, 0 false
     int flowCalibration;                // 1 true, 0 false
+    int firstLayerInspection;           // 1 true, 0 false
+    int timeLapseVideo;                 // 1 true, 0 false
     int useMatlStation;                 // 1 true, 0 false
     int gcodeToolCnt;
     const fnet_material_mapping_t *materialMappings;
@@ -200,6 +210,11 @@ typedef struct fnet_clear_fan_ctrl {
     const char *clearFanStatus;     // "open", "close"
 } fnet_clear_fan_ctrl_t;
 
+typedef struct fnet_move_ctrl {
+    const char *axis;
+    double delta;
+} fnet_move_ctrl_t;
+
 typedef struct fnet_matl_station_ctrl {
     int slotId;
     int action;                     // 0 load filament, 1 unload filament
@@ -225,6 +240,14 @@ typedef struct fnet_job_ctrl {
 typedef struct fnet_state_ctrl {
     const char *action;             // "setClearPlatform"
 } fnet_state_ctrl_t;
+
+typedef struct fnet_plate_detect_ctrl {
+    const char *action;             // "continue", "stop"
+} fnet_plate_detect_ctrl_t;
+
+typedef struct fnet_first_layer_detect_ctrl {
+    const char *action;             // "continue", "stop"
+} fnet_first_layer_detect_ctrl_t;
 
 typedef struct fnet_camera_stream_ctrl {
     const char *action;             // "open", "close"
@@ -324,6 +347,7 @@ typedef struct fnet_indep_matl_info {
 } fnet_indep_matl_info_t;
 
 typedef struct fnet_dev_detail {
+    char *protocolVersion;
     int pid;
     int nozzleCnt;
     int nozzleStyle;            // 0 independent, 1 non-independent
@@ -333,8 +357,11 @@ typedef struct fnet_dev_detail {
     char *macAddr;
     char *ipAddr;
     char *name;
+    int lidar;                  // 1 enable, 2 disable, 0 unknown
+    int camera;                 // 1 enable, 2 disable, 0 unknown
     char *location;
     char *status;               // "ready", "busy", "calibrate_doing", "error", "heating", "printing", "pausing", "pause", "canceling", "cancel", "completed"
+    double coordinate[3];       // mm
     char *jobId;
     char *printFileName;
     char *printFileThumbUrl;
@@ -404,6 +431,15 @@ typedef struct fnet_gcode_data {
     fnet_gcode_tool_data_t *gcodeToolDatas;
 } fnet_gcode_data_t;
 
+typedef struct fnet_time_lapse_video_data {
+    char *jobId;
+    char *fileName;
+    char *videoUrl;
+    char *thumbUrl;
+    int width;
+    int height;
+} fnet_time_lapse_video_data_t;
+
 typedef struct fnet_add_job_result {
     char *jobId;
     char *thumbUrl;
@@ -449,6 +485,7 @@ typedef struct fnet_conn_read_data {
 #define FNET_INVALID_VALIDATION 2002    // invalid userName/password/SMSCode
 #define FNET_DEVICE_HAS_BEEN_BOUND 2003
 #define FNET_NIM_SEND_ERROR 3001
+#define FNET_NIM_DATA_BASE_ERROR 3002
 
 #ifdef __cplusplus
 extern "C" {
@@ -497,6 +534,12 @@ FNET_API int fnet_ctrlLanDevAirFilter(const char *ip, unsigned short port, const
 FNET_API int fnet_ctrlLanDevClearFan(const char *ip, unsigned short port, const char *serialNumber,
     const char *checkCode, const fnet_clear_fan_ctrl_t *clearFanCtrl, int msTimeout);
 
+FNET_API int fnet_ctrlLanDevMove(const char *ip, unsigned short port, const char *serialNumber,
+    const char *checkCode, const fnet_move_ctrl_t *moveCtrl, int msTimeout);
+
+FNET_API int fnet_ctrlLanDevHoming(const char *ip, unsigned short port, const char *serialNumber,
+    const char *checkCode, int msTimeout);
+
 FNET_API int fnet_ctrlLanDevMatlStation(const char *ip, unsigned short port, const char *serialNumber,
     const char *checkCode, const fnet_matl_station_ctrl_t *matlStationCtrl, int msTimeout);
 
@@ -512,6 +555,12 @@ FNET_API int fnet_ctrlLanDevJob(const char *ip, unsigned short port, const char 
 FNET_API int fnet_ctrlLanDevState(const char *ip, unsigned short port, const char *serialNumber,
     const char *checkCode, const fnet_state_ctrl_t *stateCtrl, int msTimeout);
 
+FNET_API int fnet_ctrlLanDevPlateDetect(const char *ip, unsigned short port, const char *serialNumber,
+    const char *checkCode, const fnet_plate_detect_ctrl_t *plateDetectCtrl, int msTimeout);
+
+FNET_API int fnet_ctrlLanDevFirstLayerDetect(const char *ip, unsigned short port, const char *serialNumber,
+    const char *checkCode, const fnet_first_layer_detect_ctrl_t *firstLayerDetectCtrl, int msTimeout);
+
 FNET_API int fnet_configLanDevMatlStation(const char *ip, unsigned short port, const char *serialNumber,
     const char *checkCode, const fnet_matl_station_config_t *matlStatoinConfig, int msTimeout);
 
@@ -519,13 +568,16 @@ FNET_API int fnet_configLanDevIndepMatl(const char *ip, unsigned short port, con
     const char *checkCode, const fnet_indep_matl_config_t *indepMatlConfig, int msTimeout);
 
 FNET_API int fnet_lanDevSendGcode(const char *ip, unsigned short port, const char *serialNumber,
-    const char *checkCode, const fnet_send_gcode_data_t *sendGcodeData, int msTimeout);
+    const char *checkCode, const fnet_send_gcode_data_t *sendGcodeData, int msConnectTimeout);
 
 FNET_API int fnet_notifyLanDevWanBind(const char *ip, unsigned short port, const char *serialNumber,
     int msTimeout);
 
-FNET_API int fnet_downloadFile(const char *url, fnet_file_data_t **fileData,
-    fnet_progress_callback_t callback, void *callbackData, int msTimeout);
+FNET_API int fnet_downloadFileMem(const char *url, fnet_file_data_t **fileData,
+    fnet_progress_callback_t callback, void *callbackData, int msConnectTimeout, int msTimeout);
+
+FNET_API int fnet_downloadFileDisk(const char *url, const char *saveName,
+    fnet_progress_callback_t callback, void *callbackData, int msConnectTimeout, int msTimeout);
 
 FNET_API void fnet_freeFileData(fnet_file_data_t *fileData);
 
@@ -575,6 +627,14 @@ FNET_API int fnet_getWanDevProductDetail(const char *uid, const char *accessToke
 
 FNET_API int fnet_getWanDevGcodeList(const char *uid, const char *accessToken, const char *devId,
     fnet_gcode_data_t **gcodeDatas, int *gcodeCnt, int msTimeout);
+
+FNET_API int fnet_getWanDevTimeLapseVideoList(const char *uid, const char *accessToken, const char *devId,
+    int maxVideoCnt, fnet_time_lapse_video_data_t **videoDatas, int *videoCnt, int msTimeout);
+
+FNET_API void fnet_freeTimeLapseVideoList(fnet_time_lapse_video_data_t *videoDatas, int videoCnt);
+
+FNET_API int fnet_deleteTimeLapseVideo(const char *uid, const char *accessToken, const char **jobIds,
+    int jobCnt, int msTimeout);
 
 FNET_API int fnet_wanDevAddJob(const char *uid, const char *accessToken, const char *devId,
     const fnet_local_job_data_t *jobData, fnet_add_job_result_t **result, int msTimeout);

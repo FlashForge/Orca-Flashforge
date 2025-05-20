@@ -1,9 +1,11 @@
 #ifndef slic3r_GUI_SingleDeviceState_hpp_
 #define slic3r_GUI_SingleDeviceState_hpp_
 
+#include <ctime>
 #include <wx/wx.h>
 #include <wx/intl.h>
 #include <wx/panel.h>
+#include <wx/timer.h>
 #include "wx/webview.h"
 #include <wx/simplebook.h>
 
@@ -20,12 +22,13 @@
 #include "slic3r/GUI/Widgets/ProgressBar.hpp"
 #include "slic3r/GUI/Widgets/ScrolledWindow.hpp"
 #include "slic3r/GUI/Widgets/TempInput.hpp"
-//#include "slic3r/GUI/Widgets/StaticLine.hpp"
 #include "slic3r/GUI/Widgets/FFButton.hpp"
+#include "slic3r/GUI/Widgets/FFScrollButton.hpp"
 #include "slic3r/GUI/SelectMachine.hpp"
 #include "MultiComDef.hpp"
 #include "MultiComEvent.hpp"
 #include "MaterialStation.hpp"
+#include "TimeLapseVideoPanel.hpp"
 #include <mutex>
 
 namespace Slic3r { 
@@ -33,7 +36,6 @@ namespace GUI {
 
 wxDECLARE_EVENT(EVT_SWITCH_TO_FILETER, wxCommandEvent);
 
-class ComAsyncThread;
 class MaterialImagePanel : public wxPanel
 {
 public:
@@ -181,8 +183,10 @@ protected:
 
 private:
     void create_panel(wxWindow* parent);
-    wxImage getImageByType(const std::string& type);
-    std::string getImageNameByType(const std::string& type);
+
+public:
+    static wxImage getImageByType(const std::string& type);
+    static std::string getImageNameByType(const std::string& type);
 
 protected:
     bool        m_hovered{false};
@@ -206,6 +210,14 @@ private:
     wxBoxSizer*     m_mainSizer;
 };
 
+class StdStringEvent : public wxCommandEvent
+{
+public:
+    std::string str;
+};
+
+wxDECLARE_EVENT(EVT_DOWNLOADED_MODEL_IMAGE, StdStringEvent);
+
 class SingleDeviceState : public wxScrolledWindow
 {
 public:
@@ -221,6 +233,7 @@ public:
     void reInitUI();
     void reInitMaterialPic();
     void reInitPage();
+    void getImageForHttp(StdStringEvent& event);
     void setDevProductAuthority(const fnet_dev_product_t &data);
     void setG3UProductAuthority(const fnet_dev_product_t& data);
     void reInitProductState();
@@ -254,11 +267,10 @@ public:
     void onFileListPrintBtnClicked(wxMouseEvent& event);
     void onFileSendFinished(ComStartJobEvent& event);
     void onLanThumbDownloadFinished(ComGetGcodeThumbEvent& event);
+    void onTimeLapseVideoBtnClicked(wxMouseEvent& event);
 
     void setTipMessage(const wxString &title = "", const std::string &titleColor = "", const wxString &info = "", bool showInfo = false, bool showBtn = false);
-
-protected:
-    void onMouseLeftUp(wxMouseEvent& evt);
+    void checkPrinterStatus();
 
 private:
     wxString convertSecondsToHMS(int totalSeconds);
@@ -291,11 +303,11 @@ protected:
     wxPanel*    m_machine_idle_panel{nullptr};
     MaterialStation* m_material_station{nullptr};
 
-    Label*      m_staticText_device_name{nullptr};
-    Label*      m_staticText_device_position{nullptr};
-    Label*      m_staticText_device_tip{nullptr};
-    FFButton*   m_staticText_device_info{nullptr};
-    Button*     m_clear_button{nullptr};
+    Label*          m_staticText_device_name{nullptr};
+    Label*          m_staticText_device_position{nullptr};
+    Label*          m_staticText_device_tip{nullptr};
+    FFScrollButton* m_staticText_device_info{nullptr};
+    Button*         m_clear_button{nullptr};
 
     wxStaticBitmap*     m_material_weight_staticbitmap{nullptr};
     MaterialImagePanel* m_material_picture{nullptr};
@@ -370,13 +382,7 @@ protected:
     double              m_plat_target_temp;
     double              m_chamber_target_temp;
     std::string         m_cur_serial_number;
-    std::vector<std::shared_ptr<ComAsyncThread>> m_download_pic_thread;
 
-    //wxSimplebook*       m_fileBook{nullptr};
-    //wxPanel*            m_filePanel{nullptr};
-    //wxScrolledWindow*   m_fileListWindow{nullptr};
-    //wxPanel*            m_fileListPanel{nullptr};
-    //wxGridSizer*        m_fileListSizer{nullptr};
     std::vector<FileItem*> m_fileItemList;
     FFButton*           m_printBtn{nullptr};
     Button*             m_refreshBtn{nullptr};
@@ -395,7 +401,14 @@ protected:
     std::string            m_cur_pic;
     std::string            m_last_pic;
 
+    Button*                m_timeLapseVideoBtn;
+    TimeLapseVideoPanel*   m_timeLapseVideoPnl;
+
     std::mutex             m_mutex;
+    wxTimer                m_check_printer_status_timer;
+    bool                   m_block_status_check{false};
+    time_t                 m_status_check_message_show_time{0};
+    std::string            m_status_check_error_code;
 };
 
 

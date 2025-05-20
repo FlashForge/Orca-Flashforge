@@ -1,23 +1,11 @@
 #ifndef slic3r_GUI_MultiComUtils_hpp_
 #define slic3r_GUI_MultiComUtils_hpp_
 
-#include <functional>
-#include <memory>
 #include <string>
-#include <wx/event.h>
 #include "FlashNetworkIntfc.h"
 #include "MultiComDef.hpp"
 
 namespace Slic3r { namespace GUI {
-
-struct ComAsyncCallFinishEvent : public wxCommandEvent {
-    ComErrno ret;
-};
-wxDECLARE_EVENT(COM_ASYNC_CALL_FINISH_EVENT, ComAsyncCallFinishEvent);
-
-class ComAsyncThread;
-typedef std::shared_ptr<ComAsyncThread> com_thread_ptr_t;
-typedef std::function<ComErrno()> com_async_call_func_t;
 
 class MultiComUtils
 {
@@ -47,13 +35,13 @@ public:
     static ComErrno getNimData(const std::string &uid, const std::string &accessToken,
         com_nim_data_t &nimData, int msTimeout);
 
-    static ComErrno downloadFile(const std::string &url, std::vector<char> &bytes, int msTimeout);
+    static ComErrno downloadFileMem(const std::string &url, std::vector<char> &bytes,
+        fnet_progress_callback_t callback, void *callbackData, int msConnectTimeout, int msTimeout);
+
+    static ComErrno downloadFileDisk(const std::string &url, const wxString &saveName,
+        fnet_progress_callback_t callback, void *callbackData, int msConnectTimeout, int msTimeout);
 
     static ComErrno fnetRet2ComErrno(int networkRet);
-
-    static com_thread_ptr_t asyncCall(wxEvtHandler *evtHandler, const com_async_call_func_t &func);
-
-    static void killAsyncCall(const com_thread_ptr_t &thread); // wouldn't be safe and would probably leak resources
 
     static std::vector<fnet_material_mapping_t> comMaterialMappings2Fnet(
         const std::vector<com_material_mapping_t> &comMaterialMappings);

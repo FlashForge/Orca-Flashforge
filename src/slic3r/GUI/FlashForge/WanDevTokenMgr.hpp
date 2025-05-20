@@ -33,6 +33,12 @@ public:
     {
         return m_accessToken;
     }
+    ScopedWanDevToken &operator=(ScopedWanDevToken &&that) noexcept
+    {
+        m_accessToken = std::move(that.m_accessToken);
+        m_sharedLock = std::move(that.m_sharedLock);
+        return *this;
+    }
 
 private:
     std::string m_accessToken;
@@ -48,10 +54,13 @@ public:
 
     ScopedWanDevToken getScopedToken();
 
-    bool tokenExpired(const std::string &accessToken);
+    // The original token will be unlocked, and if the token refresh fails, it will become unavailable.
+    ComErrno refreshToken(ScopedWanDevToken &scopedToken);
 
 private:
     void run();
+
+    ComErrno doRefreshToken();
 
 private:
     com_token_data_t                m_tokenData;

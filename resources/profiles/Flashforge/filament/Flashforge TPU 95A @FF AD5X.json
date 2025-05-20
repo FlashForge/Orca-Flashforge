@@ -1,52 +1,43 @@
 {
     "type": "filament",
     "cool_plate_temp": [
-        "50"
+        "40"
     ],
     "cool_plate_temp_initial_layer": [
-        "50"
+        "40"
     ],
     "eng_plate_temp": [
-        "50"
+        "45"
     ],
     "eng_plate_temp_initial_layer": [
-        "50"
+        "45"
     ],
-    "filament_load_time": [
-        "29"
+    "fan_cooling_layer_time": [
+        "30"
     ],
     "filament_max_volumetric_speed": [
-        "5"
+        "3.6"
     ],
     "filament_settings_id": [
         "Flashforge TPU 95A @FF AD5X"
     ],
-    "filament_unload_time": [
-        "29"
-    ],
     "from": "system",
     "setting_id": "GFSA04",
     "instantiation": "true",
-    "hot_plate_temp": [
-        "50"
-    ],
-    "hot_plate_temp_initial_layer": [
-        "50"
-    ],
     "inherits": "Flashforge Generic TPU",
     "is_custom_defined": "0",
     "name": "Flashforge TPU 95A @FF AD5X",
     "compatible_printers": [
     "Flashforge AD5X 0.4 nozzle"
   ],
-    "nozzle_temperature": [
-        "220"
+    "slow_down_layer_time": [
+        "12"
     ],
     "textured_plate_temp": [
-        "50"
+        "45"
     ],
     "textured_plate_temp_initial_layer": [
-        "50"
+        "45"
     ],
     "version": "2.1.1.0"
 }

@@ -246,6 +246,7 @@ public:
 
 	// Called when closing the application and when switching the application language.
 	void 		shutdown();
+    bool        is_shutdown() { return m_is_shutdown;  }
 
     Plater*     plater() { return m_plater; }
 
@@ -350,6 +351,8 @@ public:
 
     //SoftFever
     void show_device(bool bBBLPrinter);
+
+    bool m_is_shutdown{ false };
 
     PA_Calibration_Dlg* m_pa_calib_dlg{ nullptr };
     Temp_Calibration_Dlg* m_temp_calib_dlg{ nullptr };

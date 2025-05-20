@@ -4,9 +4,10 @@
 #include "slic3r/GUI/GUI.hpp"
 #include "slic3r/GUI/MainFrame.hpp"
 #include <slic3r/GUI/Widgets/WebView.hpp>
-#include "slic3r/GUI/FlashForge/AmsPrintFileDlg.hpp"
 #include "slic3r/GUI/FlashForge/MultiComMgr.hpp"
 #include "slic3r/GUI/FlashForge/MultiComUtils.hpp"
+#include "slic3r/GUI/FlashForge/PrintDevLocalFileDlg.hpp"
+#include "slic3r/GUI/FlashForge/PrinterErrorMsgDlg.hpp"
 #include <nlohmann/json.hpp>
 #include "slic3r/GUI/GUI.hpp"
 #include "slic3r/GUI/GUI_App.hpp"
@@ -20,6 +21,7 @@ namespace pt = boost::property_tree;
 namespace Slic3r {
 namespace GUI {
 wxDEFINE_EVENT(EVT_SWITCH_TO_FILETER, wxCommandEvent);
+wxDEFINE_EVENT(EVT_DOWNLOADED_MODEL_IMAGE, StdStringEvent);
 
 const std::string CLOSE = "close";
 const std::string OPEN  = "open";
@@ -1044,9 +1046,6 @@ SingleDeviceState::SingleDeviceState(wxWindow* parent, wxWindowID id, const wxPo
 
 SingleDeviceState::~SingleDeviceState()
 {
-    for (auto it : m_download_pic_thread) {
-        MultiComUtils::killAsyncCall(it);
-    }
 }
 
 void SingleDeviceState::setCurId(int curId)
@@ -1058,12 +1057,15 @@ void SingleDeviceState::setCurId(int curId)
         reInitMaterialPic();
         clearFileList();
         m_curId_first_Click_fileList = true;
+        m_status_check_message_show_time = 0;
+        m_status_check_error_code.clear();
     } 
     {
         if (m_idle_tempMixDevice && !m_idle_tempMixDevice->IsShown()) {
             m_panel_print_btn->Hide();
             m_scrolledWindow->Hide();
             m_FileList_split_line->Hide();
+            m_timeLapseVideoPnl->Hide();
 
             m_printBtn->Enable(false);
             if (m_curSelectedFileItem) {
@@ -1078,6 +1080,7 @@ void SingleDeviceState::setCurId(int curId)
     m_busy_G3U_detail->setCurId(curId);
     m_busy_circula_filter->setCurId(curId);
     m_idle_tempMixDevice->setCurId(curId);
+    m_timeLapseVideoPnl->setComId(curId);
     reInitProductState();
     m_idle_tempMixDevice->reInitProductState();
 
@@ -1089,22 +1092,30 @@ void SingleDeviceState::setCurId(int curId)
         return;
     }
     unsigned short curr_pid = 0;
-    if (data.connectMode == 0) {
+    if (data.connectMode == COM_CONNECT_LAN) {
         m_cur_serial_number = data.lanDevInfo.serialNumber;
         curr_pid            = data.lanDevInfo.pid;
-    } else if (data.connectMode == 1) {
+        m_fileListbutton->SetMinSize((wxSize(FromDIP(450), FromDIP(45))));
+        m_timeLapseVideoBtn->Show(false);
+    } else if (data.connectMode == COM_CONNECT_WAN) {
         m_cur_serial_number = data.wanDevInfo.serialNumber;
         curr_pid            = data.devDetail->pid;
+        m_fileListbutton->SetMinSize((wxSize(FromDIP(225), FromDIP(45))));
+        m_timeLapseVideoBtn->Show(true);
     }
 
     // 根据机型判断是否支持四色打印，并设置currID
-    std::string modelId             = FFUtils::getPrinterModelId(curr_pid);
-    bool        isPrinterSupportAms = FFUtils::isPrinterSupportAms(modelId);
+    std::string modelId = FFUtils::getPrinterModelId(curr_pid);
+    bool isPrinterSupportAms = FFUtils::isPrinterSupportAms(modelId);
+    bool isPrinterSupportCoolingFan = FFUtils::isPrinterSupportCoolingFan(modelId);
+    bool isPrinterSupportDeviceFilter = FFUtils::isPrinterSupportDeviceFilter(modelId);
     m_material_station->show_material_panel(modelId);
-    m_busy_device_detial->setCoolingFanShow(!isPrinterSupportAms);
+    m_busy_device_detial->setCoolingFanShow(isPrinterSupportCoolingFan);
     if (isPrinterSupportAms) {
         m_material_station->setCurId(m_cur_id);
     }
+    m_filter_button->Enable(isPrinterSupportDeviceFilter);
+    m_filter_button->SetIcon(isPrinterSupportDeviceFilter ? "device_filter" : "device_filter_offline");
 
     changeMachineType(data.devDetail->pid);
     m_idle_tempMixDevice->changeMachineType(data.devDetail->pid);
@@ -1179,6 +1190,7 @@ void SingleDeviceState::reInitUI()
         m_panel_print_btn->Hide();
         m_scrolledWindow->Hide();
         m_FileList_split_line->Hide();
+        m_timeLapseVideoPnl->Hide();
         m_panel_separotor8->Hide();
         m_busyState_top_gap->Show();
         m_busyState_bottom_gap->Show();
@@ -1231,6 +1243,26 @@ void SingleDeviceState::reInitPage()
     }
 }
 
+void SingleDeviceState::getImageForHttp(StdStringEvent& event) 
+{
+    string body = event.str;
+    m_cur_pic   = body;
+    wxMemoryInputStream stream(body.data(), body.size());
+    wxImage             image(stream, wxBITMAP_TYPE_ANY);
+    image.Rescale(MATERIAL_PIC_WIDTH, MATERIAL_PIC_HEIGHT);
+    if (m_last_pic != m_cur_pic) {
+        m_last_pic = m_cur_pic;
+        if (m_material_image) {
+            delete m_material_image;
+            m_material_image = nullptr;
+        }
+        m_material_image = new wxImage(image);
+        if (m_material_picture) {
+            m_material_picture->SetImage(*m_material_image);
+        }
+    }
+}
+
 void SingleDeviceState::changeMachineType(unsigned short pid)
 {
     switch (pid) {
@@ -1251,6 +1283,7 @@ void SingleDeviceState::changeMachineType(unsigned short pid)
         m_tempCtrl_bottom->SetIconNormal();
         m_tempCtrl_mid->SetNormalIcon("device_bottom_temperature");
         m_tempCtrl_mid->SetIconNormal();
+        m_tempCtrl_mid->SetReadOnly(false);
         break;
     }
 }
@@ -1339,8 +1372,10 @@ void SingleDeviceState::lostFocusmodifyTemp()
         Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, tempCtrl);
         break;
     }
-    case 0x0025: {
-        //"Flashforge-Guider-4";
+    case 0x0025: 
+    case 0x0027: {
+        //"Flashforge-Guider4";
+        //"Flashforge-Guider4-Pro"
         if (!bTop || top_temp < 0) {
             m_tempCtrl_top->SetTagTemp(m_right_target_temp, true);
             top_temp = m_right_target_temp;
@@ -1591,7 +1626,7 @@ wxBoxSizer* SingleDeviceState::create_machine_control_title()
     //bSizer_h_title->Add(m_staticText_device_info, wxSizerFlags(1).Expand());
     //bSizer_h_title->AddSpacer(FromDIP(6));
 
-    m_staticText_device_info = new FFButton(panel_top_right_info, wxID_ANY, ("error Info"), 0);
+    m_staticText_device_info = new FFScrollButton(panel_top_right_info, wxID_ANY, ("error Info"), 0);
     m_staticText_device_info->Enable(false);
     //m_staticText_device_info->SetBackgroundColour(*wxWHITE);
     m_staticText_device_info->SetBGDisableColor(wxColour("#F6CBC6"));
@@ -2311,24 +2346,31 @@ void SingleDeviceState::setupLayoutIdlePage(wxBoxSizer* idleSizer,wxPanel* paren
     idleSizer->Add(m_panel_separotor2, 0, wxALL | wxEXPAND, 0);
     m_idleWnd.push_back(m_panel_separotor2);
 
-    wxBoxSizer* bSizer_h_file_list = new wxBoxSizer(wxHORIZONTAL);
     m_panel_idle_text = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(450), FromDIP(52)), wxTAB_TRAVERSAL);
     m_fileListbutton  = new Button(m_panel_idle_text, _L("Local File List"), "local_file_list", 0, 16);
-    m_fileListbutton->SetMinSize((wxSize(FromDIP(450), FromDIP(45))));
+    m_fileListbutton->SetMinSize((wxSize(FromDIP(225), FromDIP(45))));
     m_fileListbutton->SetFlashForge(true);
     m_fileListbutton->SetBorderWidth(0);
     m_fileListbutton->SetBackgroundColor(wxColour(255, 255, 255));
     m_fileListbutton->SetBorderColor(wxColour(255, 255, 255));
     m_fileListbutton->SetTextColor(wxColour(51, 51, 51));
-    //  m_print_button->SetMinSize((wxSize(FromDIP(158), FromDIP(29))));
     m_fileListbutton->SetCornerRadius(0);
 
-    bSizer_h_file_list->Add(m_fileListbutton, 0, wxALL | wxEXPAND, 0);
+    m_timeLapseVideoBtn = new Button(m_panel_idle_text, _L("Time-Lapse Video"), "time_lapse_video", 0, 16);
+    m_timeLapseVideoBtn->SetMinSize((wxSize(FromDIP(225), FromDIP(45))));
+    m_timeLapseVideoBtn->SetFlashForge(true);
+    m_timeLapseVideoBtn->SetBorderWidth(0);
+    m_timeLapseVideoBtn->SetBackgroundColor(wxColour(255, 255, 255));
+    m_timeLapseVideoBtn->SetBorderColor(wxColour(255, 255, 255));
+    m_timeLapseVideoBtn->SetTextColor(wxColour(51, 51, 51));
+    m_timeLapseVideoBtn->SetCornerRadius(0);
 
-    m_panel_idle_text->SetSizer(bSizer_h_file_list);
-    m_panel_idle_text->Layout();
-    bSizer_h_file_list->Fit(m_panel_idle_text);
+    wxBoxSizer* bSizer_h_idle_text = new wxBoxSizer(wxHORIZONTAL);
+    bSizer_h_idle_text->Add(m_fileListbutton, 0, wxEXPAND);
+    bSizer_h_idle_text->AddSpacer(FromDIP(6));
+    bSizer_h_idle_text->Add(m_timeLapseVideoBtn, 0, wxEXPAND);
 
+    m_panel_idle_text->SetSizer(bSizer_h_idle_text);
     idleSizer->Add(m_panel_idle_text, 0, wxALL | wxEXPAND, 0);
 
     //*** 文件列表和列表内容间距
@@ -2340,78 +2382,7 @@ void SingleDeviceState::setupLayoutIdlePage(wxBoxSizer* idleSizer,wxPanel* paren
     idleSizer->Add(m_panel_separotor8, 0, wxALL | wxEXPAND, 0);
     m_idleWnd.push_back(m_panel_separotor8);
     //m_panel_separotor8->Hide();
-#if 0
 
-
-/*** fileList content ***/
-    wxBoxSizer* bSizer_v_file_content = new wxBoxSizer(wxVERTICAL);
-    m_fileBook = new wxSimplebook(parent, wxID_ANY);
-    m_filePanel = new wxPanel(m_fileBook);
-    m_filePanel->SetBackgroundColour(wxColour("#FFFFFF"));
-
-    m_fileListWindow = new wxScrolledWindow(m_filePanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHSCROLL | wxVSCROLL);
-    m_fileListWindow->EnableScrolling(true, true);
-    m_fileListWindow->SetScrollRate(0, 30);
-    m_fileListWindow->SetBackgroundColour(wxColor("#FFFFFF"));
-
-    m_fileListPanel = new wxPanel(m_fileListWindow, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxNO_BORDER);
-    m_fileListSizer = new wxGridSizer(1);
-    m_fileListSizer->SetVGap(FromDIP(9));
-    m_fileListPanel->SetBackgroundColour(wxColor("#FFFFFF"));
-
-    m_fileListPanel->SetSizer(m_fileListSizer);
-
-    auto window_sizer = new wxBoxSizer(wxVERTICAL);
-    window_sizer->Add(m_fileListPanel,0);
-    //window_sizer->AddSpacer(1);
-    m_fileListWindow->SetSizer(window_sizer);
-
-    m_fileBook->AddPage(m_filePanel, wxEmptyString, true);
-
-    idleSizer->Add(m_fileBook, 0, wxALL | wxEXPAND, 0);
-    m_fileBook->Hide();
-
-//print btn
-    wxBoxSizer* bSizer_v_print = new wxBoxSizer(wxVERTICAL);
-    m_panel_print_btn = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(450), FromDIP(92)), wxTAB_TRAVERSAL);
-    m_panel_print_btn->SetBackgroundColour(wxColor("#FFFFFF"));
-
-    m_printBtn = new FFButton(m_panel_print_btn, wxID_ANY, _L("print"));
-    m_printBtn->SetMinSize(wxSize(FromDIP(64), FromDIP(32)));
-    m_printBtn->SetFontHoverColor(wxColour(255, 255, 255));
-    m_printBtn->SetBGHoverColor(wxColour(149, 197, 255));
-    m_printBtn->SetBorderHoverColor(wxColour(149, 197, 255));
-
-    m_printBtn->SetFontPressColor(wxColour(255, 255, 255));
-    m_printBtn->SetBGPressColor(wxColour(17, 111, 223));
-    m_printBtn->SetBorderPressColor(wxColour(17, 111, 223));
-
-    m_printBtn->SetFontColor(wxColour(255, 255, 255));
-    m_printBtn->SetBorderColor(wxColour(50, 141, 251));
-    m_printBtn->SetBGColor(wxColour(50, 141, 251));
-
-    bSizer_v_print->AddStretchSpacer();
-    bSizer_v_print->Add(m_printBtn, 0, wxALIGN_CENTER, 0);
-    bSizer_v_print->AddStretchSpacer();
-
-    m_panel_print_btn->SetSizer(bSizer_v_print);
-    m_panel_print_btn->Layout();
-    bSizer_v_print->Fit(m_panel_print_btn);
-
-    idleSizer->Add(m_panel_print_btn, 0, wxCENTER, 0);
-    m_panel_print_btn->Hide();
-
-    //idleSizer->Add(m_printBtn, 0, wxALIGN_CENTER, 0);
-    //m_printBtn->Hide();
-
-    //*** 文件列表和设备状态间距
-    //添加空白间距
-    auto m_panel_separotor3 = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-    m_panel_separotor3->SetBackgroundColour(wxColour(240,240,240));
-    m_panel_separotor3->SetMinSize(wxSize(-1, FromDIP(10)));
-
-    idleSizer->Add(m_panel_separotor3,0, wxALL | wxEXPAND, 0);
-#endif
     m_scrolledWindow = new wxScrolledWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHSCROLL | wxVSCROLL);
     //m_scrolledWindow->SetBackgroundColour(/**wxWHITE*/ wxColour("#fafafa"));
     m_scrolledWindow->SetBackgroundColour(*wxWHITE);
@@ -2487,7 +2458,14 @@ void SingleDeviceState::setupLayoutIdlePage(wxBoxSizer* idleSizer,wxPanel* paren
     idleSizer->Add(m_panel_print_btn, 0, wxCENTER, 0);
     m_panel_print_btn->Hide();
 
-////新增温度-设备控件
+    //延迟视频
+    m_timeLapseVideoPnl = new TimeLapseVideoPanel(parent);
+    m_timeLapseVideoPnl->SetBackgroundColour(*wxWHITE);
+    m_timeLapseVideoPnl->SetMinSize(wxSize(FromDIP(450), FromDIP(411)));
+    m_timeLapseVideoPnl->Hide();
+    idleSizer->Add(m_timeLapseVideoPnl, 0, wxALL | wxEXPAND, 0);
+
+    //新增温度-设备控件
     m_idle_tempMixDevice = new TempMixDevice(parent,false);
     idleSizer->Add(m_idle_tempMixDevice, 0, wxALL | wxEXPAND , 0);
 }
@@ -2514,21 +2492,14 @@ void SingleDeviceState::connectEvent()
    MultiComMgr::inst()->Bind(COM_START_JOB_EVENT, &SingleDeviceState::onFileSendFinished, this);
    //lan network download file finished
    MultiComMgr::inst()->Bind(COM_GET_GCODE_THUMB_EVENT, &SingleDeviceState::onLanThumbDownloadFinished, this);
-#if 1
-//local file list
+
+   //local file list
    m_fileListbutton->Bind(wxEVT_LEFT_DOWN, &SingleDeviceState::onFileListClicked, this);
-   /*
-    *   click blank spacing, hide local file list
-    *
-   this->GetParent()->Bind(wxEVT_LEFT_DOWN, &SingleDeviceState::onMouseLeftUp, this);
-   for (const auto& ctrl : m_idleWnd) {
-       if (ctrl) {
-            ctrl->Bind(wxEVT_LEFT_DOWN, &SingleDeviceState::onMouseLeftUp, this);
-        }
-   }
-   */
-#endif
-//busy button slot
+
+   // time lapse video
+   m_timeLapseVideoBtn->Bind(wxEVT_LEFT_DOWN, &SingleDeviceState::onTimeLapseVideoBtnClicked, this);
+
+   //busy button slot
    m_device_info_button->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e){
        //m_device_info_button->SetIcon("device_idle_file_info");
        m_device_info_button->Refresh();
@@ -2634,6 +2605,11 @@ void SingleDeviceState::connectEvent()
            m_lamp_control_button->SetFlashForgeSelected(true);
        }
    });
+   Bind(EVT_DOWNLOADED_MODEL_IMAGE, &SingleDeviceState::getImageForHttp, this);
+   m_check_printer_status_timer.Bind(wxEVT_TIMER, [this](wxTimerEvent &e) {
+       checkPrinterStatus();
+   });
+   m_check_printer_status_timer.Start(1000);
 }
 
 void SingleDeviceState::on_navigated(wxWebViewEvent &event) 
@@ -2832,6 +2808,7 @@ void SingleDeviceState::onDevStateChanged(std::string devState, const com_dev_da
             m_panel_print_btn->Hide();
             m_scrolledWindow->Hide();
             m_FileList_split_line->Hide();
+            m_timeLapseVideoPnl->Hide();
             m_idle_tempMixDevice->Show();
             m_tempCtrl_top->SetTargetTempVis(true);
             m_tempCtrl_bottom->SetTargetTempVis(true);
@@ -2877,7 +2854,7 @@ void SingleDeviceState::onDevStateChanged(std::string devState, const com_dev_da
             wxString error_state = _L("error");
             std::string error_info  = data.devDetail->errorCode;
             wxString trans_error = FFUtils::converDeviceError(error_info);
-            setTipMessage(error_state, "#FB4747", trans_error, true, false);
+            setTipMessage(error_state, "#FB4747", trans_error, !trans_error.empty(), false);
             m_idle_tempMixDevice->setDevProductAuthority(*data.devProduct);
         } else if (state == PAUSE) {
              m_staticText_device_info->Hide();
@@ -2982,19 +2959,20 @@ void SingleDeviceState::onContinuePrint(wxCommandEvent &event)
 
 void SingleDeviceState::onFileListClicked(wxMouseEvent& event) 
 {
-    if (m_idle_tempMixDevice && !m_idle_tempMixDevice->IsShown()) {
-         m_panel_print_btn->Hide();
-         m_scrolledWindow->Hide();
-         m_FileList_split_line->Hide();
-         
-         m_printBtn->Enable(false);
-         if (m_curSelectedFileItem) {
-             m_curSelectedFileItem->SetPressed(false);
-             m_curSelectedFileItem = nullptr;
-         }
-         m_idle_tempMixDevice->Show();
-         Layout();
-         return;
+    if (m_scrolledWindow && m_scrolledWindow->IsShown()) {
+        m_panel_print_btn->Hide();
+        m_scrolledWindow->Hide();
+        m_FileList_split_line->Hide();
+
+        m_printBtn->Enable(false);
+        if (m_curSelectedFileItem) {
+            m_curSelectedFileItem->SetPressed(false);
+            m_curSelectedFileItem = nullptr;
+        }
+        m_idle_tempMixDevice->Show();
+        m_timeLapseVideoPnl->Hide();
+        Layout();
+        return;
     }
 
     if (m_curId_first_Click_fileList) {
@@ -3003,8 +2981,9 @@ void SingleDeviceState::onFileListClicked(wxMouseEvent& event)
          m_curId_first_Click_fileList = false;
     }
 
-    if (m_idle_tempMixDevice && m_idle_tempMixDevice->IsShown()) {
+    if (m_scrolledWindow && !m_scrolledWindow->IsShown()) {
          m_idle_tempMixDevice->Hide();
+         m_timeLapseVideoPnl->Hide();
          m_scrolledWindow->Scroll(0, 0);
          m_scrolledWindow->Refresh();
          m_scrolledWindow->Show();
@@ -3082,25 +3061,27 @@ void SingleDeviceState::onFileListPrintBtnClicked(wxMouseEvent& event)
     if (m_curSelectedFileItem == nullptr) {
          return;
     }
-    bool valid = false;
-    const fnet_dev_detail_t *devDetail = MultiComMgr::inst()->devData(m_cur_id, &valid).devDetail;
-    if (!valid) {
-        return;
+    PrintDevLocalFileDlg printDevLocalFileDlg(wxGetApp().mainframe);
+    wxImage *image;
+    wxImage defultImage;
+    if (m_curSelectedFileItem->m_data.srcImage.IsOk()) {
+        image = &m_curSelectedFileItem->m_data.srcImage;
+    } else {
+        std::string name = m_curSelectedFileItem->m_data.gcodeData.fileName;
+        std::string suffix = name.substr(name.find_last_of(".") + 1);
+        ScalableBitmap bmp(&printDevLocalFileDlg, FileItem::getImageNameByType(suffix), FromDIP(117));
+        defultImage = bmp.bmp().ConvertToImage();
+        image = &defultImage;
     }
     const com_gcode_data_t &gcodeData = m_curSelectedFileItem->m_data.gcodeData;
     com_local_job_data_t jobData;
     jobData.fileName = gcodeData.fileName;
     jobData.printNow = true;
-    if (devDetail->hasMatlStation != 0 && devDetail->matlStationInfo.slotCnt != 0 && gcodeData.useMatlStation) {
-        AmsPrintFileDlg amsPrintFileDlg(wxGetApp().mainframe);
-        amsPrintFileDlg.setupData(m_cur_id, gcodeData, m_curSelectedFileItem->m_data.srcImage);
-        if (amsPrintFileDlg.ShowModal(jobData) != wxID_OK) {
-            return;
-        }
-    } else {
-        jobData.levelingBeforePrint = false;
-        jobData.flowCalibration = false;
-        jobData.useMatlStation = false;
+    if (!printDevLocalFileDlg.setupData(m_cur_id, gcodeData, *image)) {
+        return;
+    }
+    if (printDevLocalFileDlg.ShowModal(jobData) != wxID_OK) {
+        return;
     }
     ComStartJob* startJob = new ComStartJob(jobData);
     Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, startJob);
@@ -3136,6 +3117,25 @@ void SingleDeviceState::onLanThumbDownloadFinished(ComGetGcodeThumbEvent& event)
     }
 }
 
+void SingleDeviceState::onTimeLapseVideoBtnClicked(wxMouseEvent& event)
+{
+    if (m_timeLapseVideoPnl->IsShown()) {
+        m_idle_tempMixDevice->Show();
+        m_scrolledWindow->Hide();
+        m_FileList_split_line->Hide();
+        m_panel_print_btn->Hide();
+        m_timeLapseVideoPnl->Hide();
+    } else {
+        m_idle_tempMixDevice->Hide();
+        m_scrolledWindow->Hide();
+        m_FileList_split_line->Hide();
+        m_panel_print_btn->Hide();
+        m_timeLapseVideoPnl->updateVideoList();
+        m_timeLapseVideoPnl->Show();
+    }
+    Layout();
+}
+
 void SingleDeviceState::setTipMessage(const wxString& title, const std::string& titleColor, const wxString& info, bool showInfo, bool showBtn)
 {
     m_staticText_device_tip->SetLabel(title); 
@@ -3148,31 +3148,25 @@ void SingleDeviceState::setTipMessage(const wxString& title, const std::string& 
     Layout();
 }
 
-void SingleDeviceState::onMouseLeftUp(wxMouseEvent& event)
+void SingleDeviceState::checkPrinterStatus()
 {
-    event.Skip();
-    if (m_idle_tempMixDevice && m_idle_tempMixDevice->IsShown()) {
+    if (m_cur_id < 0 || m_block_status_check) {
         return;
     }
-    auto mouse_pos        = ClientToScreen(event.GetPosition());
-    auto wxscroll_win_pos = m_scrolledWindow->ClientToScreen(wxPoint(0, 0));
-#ifdef __APPLE__
-    //BOOST_LOG_TRIVIAL(info) << "SelectMachinePopup uOnLeftUp";
-#endif
-    if (mouse_pos.x > wxscroll_win_pos.x && mouse_pos.y > wxscroll_win_pos.y &&
-        mouse_pos.x < (wxscroll_win_pos.x + m_scrolledWindow->GetSize().x) &&
-        mouse_pos.y < (wxscroll_win_pos.y + m_scrolledWindow->GetSize().y)) {
-        ;
-    } else {
-        if (m_curSelectedFileItem) {
-            m_curSelectedFileItem->SetPressed(false);
-            m_curSelectedFileItem = nullptr;
-            m_printBtn->Enable(false);
+    bool valid;
+    const fnet_dev_detail_t *devDetail = MultiComMgr::inst()->devData(m_cur_id, &valid).devDetail;
+    if (!valid || strcmp(devDetail->status, "error") != 0) {
+        return;
+    }
+    if (strcmp(devDetail->errorCode, "E0088") == 0 || strcmp(devDetail->errorCode, "E0089") == 0) {
+        time_t elapsedTime = time(nullptr) - m_status_check_message_show_time;
+        if (elapsedTime > 20 || devDetail->errorCode != m_status_check_error_code) {
+            m_status_check_error_code = devDetail->errorCode; // 进入事件循环后之前获取的devDetail可能失效
+            m_block_status_check = true;
+            PrinterErrorMsgDlg(wxGetApp().mainframe, m_cur_id, devDetail->errorCode).ShowModal();
+            m_block_status_check = false;
+            m_status_check_message_show_time = time(nullptr);
         }
-        m_panel_print_btn->Hide();
-        m_scrolledWindow->Hide();
-        m_FileList_split_line->Hide();
-        m_idle_tempMixDevice->Show();
     }
 }
 
@@ -3344,31 +3338,26 @@ void SingleDeviceState::fillValue(const com_dev_data_t& data,bool wanDev)
             m_busy_G3U_detail->setChamberFanSpeed(chamberFanSpeed);
         }
 
-        if (m_pid != data.devDetail->pid && data.devDetail->pid == 0x0024) {
-            m_tempCtrl_mid->SetReadOnly(true);
-            m_tempCtrl_mid->Enable(false);
-            m_pid = data.devDetail->pid;
-            m_idle_device_staticbitmap->SetBitmap(create_scaled_bitmap("adventurer_5m_pro", 0, 165));
-        } else if (m_pid != data.devDetail->pid && data.devDetail->pid == 0x0023) {
-            m_tempCtrl_mid->SetReadOnly(true);
-            m_tempCtrl_mid->Enable(false);
-            m_pid = data.devDetail->pid;
-            m_idle_device_staticbitmap->SetBitmap(create_scaled_bitmap("adventurer_5m", 0, 165));
-        } else if (m_pid != data.devDetail->pid && data.devDetail->pid == 0x001F) {
-            m_tempCtrl_mid->SetReadOnly(false);
-            m_tempCtrl_mid->Enable(true);
-            m_pid = data.devDetail->pid;
-            m_idle_device_staticbitmap->SetBitmap(create_scaled_bitmap("guider_3_ultra", 0, 165));
-        } else if (m_pid != data.devDetail->pid && data.devDetail->pid == 0x0025) {
-            m_tempCtrl_mid->SetReadOnly(true);
-            m_tempCtrl_mid->Enable(false);
-            m_pid = data.devDetail->pid;
-            m_idle_device_staticbitmap->SetBitmap(create_scaled_bitmap("Guider4", 0, 165));
-        } else if (m_pid != data.devDetail->pid && data.devDetail->pid == 0x0026) {
-            m_tempCtrl_mid->SetReadOnly(true);
-            m_tempCtrl_mid->Enable(false);
-            m_pid = data.devDetail->pid;
-            m_idle_device_staticbitmap->SetBitmap(create_scaled_bitmap("ad5x", 0, 165));
+        map<int, bool> temp_pid_show_datas;
+        temp_pid_show_datas[0x0023] = false;
+        temp_pid_show_datas[0x0024] = false;
+        temp_pid_show_datas[0x0025] = false;
+        temp_pid_show_datas[0x0026] = false;
+        temp_pid_show_datas[0x0027] = true;
+        temp_pid_show_datas[0x001F] = true;
+        if (m_pid != data.devDetail->pid) {
+            for (auto& elem : temp_pid_show_datas) {
+                if (data.devDetail->pid == elem.first) {
+                    m_tempCtrl_mid->SetReadOnly(!elem.second);
+                    m_tempCtrl_mid->Enable(elem.second);
+                    m_pid = data.devDetail->pid;
+                    auto bitmap_name = FFUtils::getBitmapFileName(m_pid);
+                    if (bitmap_name) {
+                        m_idle_device_staticbitmap->SetBitmap(create_scaled_bitmap(bitmap_name.ToStdString(), 0, 165));
+                    }
+                    break;
+                }
+            }
         }
 #if 0
         if (m_pid != data.devDetail->pid) {
@@ -3411,6 +3400,7 @@ void SingleDeviceState::setPageOffline()
         m_panel_print_btn->Hide();
         m_scrolledWindow->Hide();
         m_FileList_split_line->Hide();
+        m_timeLapseVideoPnl->Hide();
         m_panel_separotor8->Hide();
         m_busyState_top_gap->Show();
         m_busyState_bottom_gap->Show();
@@ -3611,26 +3601,13 @@ void SingleDeviceState::downloadModelImage(const std::string& url)
     Slic3r::Http http   = Slic3r::Http::get(url);
     std::string  suffix = url.substr(url.find_last_of(".") + 1);
     http.header("accept", "image/" + suffix)
-        .on_complete([this](std::string body, unsigned int status) {
-            m_cur_pic = body;
-            wxMemoryInputStream stream(body.data(), body.size());
-            wxImage             image(stream, wxBITMAP_TYPE_ANY);
-            image.Rescale(MATERIAL_PIC_WIDTH, MATERIAL_PIC_HEIGHT);
-            if (m_last_pic != m_cur_pic) {
-                m_last_pic = m_cur_pic;
-                if (m_material_image) {
-                    delete m_material_image;
-                    m_material_image = nullptr;
-                }
-                m_material_image = new wxImage(image);
-                if (m_material_picture){
-                    m_material_picture->SetImage(*m_material_image);
-                }
-            }
+        .on_complete([&](std::string body, unsigned int status) { 
+            auto event = new StdStringEvent;
+            event->SetEventType(EVT_DOWNLOADED_MODEL_IMAGE);
+            event->str = body; 
+            wxQueueEvent(this, event);
         })
         .on_error([=](std::string body, std::string error, unsigned status) {
-            m_file_pic_url.clear();
-            m_file_pic_name.clear();
             BOOST_LOG_TRIVIAL(info) << " status:" << status << " error:" << error;
         })
         .perform();

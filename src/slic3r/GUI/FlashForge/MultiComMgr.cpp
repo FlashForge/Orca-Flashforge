@@ -1,7 +1,10 @@
 #include "MultiComMgr.hpp"
-#include <boost/filesystem.hpp>
+#include <boost/interprocess/sync/file_lock.hpp>
+#include <wx/dir.h>
+#include <wx/file.h>
 #include <wx/filename.h>
 #include <wx/stdpaths.h>
+#include "CleanNimData.hpp"
 #include "FreeInDestructor.h"
 #include "WanDevTokenMgr.hpp"
 
@@ -14,15 +17,18 @@ MultiComMgr::MultiComMgr()
     , m_nimOnline(false)
     , m_nimFirstLogined(true)
     , m_loopCheckTimer(this)
+    , m_nimDataFileLockName("ff_file_lock")
 {
     com_dev_data_t devData;
     devData.connectMode = COM_CONNECT_LAN;
     devData.devProduct = nullptr;
     devData.devDetail = nullptr;
-    devData.lanGcodeList.gcodeDatas = nullptr;
     devData.lanGcodeList.gcodeCnt = 0;
-    devData.wanGcodeList.gcodeDatas = nullptr;
+    devData.lanGcodeList.gcodeDatas = nullptr;
     devData.wanGcodeList.gcodeCnt = 0;
+    devData.wanGcodeList.gcodeDatas = nullptr;
+    devData.wanTimeLapseVideoList.videoCnt = 0;
+    devData.wanTimeLapseVideoList.videoDatas = nullptr;
     memset(&devData.lanDevInfo, 0, sizeof(devData.lanDevInfo));
     m_datMap.emplace(ComInvalidId, devData);
     Bind(wxEVT_TIMER, &MultiComMgr::onTimer, this);
@@ -65,7 +71,8 @@ bool MultiComMgr::initalize(const std::string &dllPath, const std::string &dataD
     m_threadExitEvent.set(false);
     m_loopCheckTimer.Start(1000);
 
-    std::string nimAppDir = dataDir + "/nimData";
+    std::string nimAppDir = getNimAppDir(dataDir);
+    CleanNimData::inst()->run(nimAppDir, m_nimDataFileLockName);
     ComWanNimConn::inst()->initalize(networkIntfc(), nimAppDir.c_str());
     ComWanNimConn::inst()->Bind(WAN_CONN_STATUS_EVENT, &MultiComMgr::onWanConnStatus, this);
     ComWanNimConn::inst()->Bind(WAN_CONN_READ_EVENT, &MultiComMgr::onWanConnRead, this);
@@ -79,13 +86,20 @@ void MultiComMgr::uninitalize()
     if (networkIntfc() == nullptr) {
         return;
     }
+    m_loopCheckTimer.Stop();
+    m_threadExitEvent.set(true);
+    removeWanDev();
+    for (auto &comPtr : m_comPtrs) {
+        if (comPtr->connectMode() == COM_CONNECT_LAN) {
+            comPtr->disconnect(0);
+        }
+        comPtr->joinThread();
+    }
     WanDevTokenMgr::inst()->Unbind(COM_REFRESH_TOKEN_EVENT, &MultiComMgr::onRefreshToken, this);
     ComWanNimConn::inst()->Unbind(WAN_CONN_STATUS_EVENT, &MultiComMgr::onWanConnStatus, this);
     ComWanNimConn::inst()->Unbind(WAN_CONN_READ_EVENT, &MultiComMgr::onWanConnRead, this);
     ComWanNimConn::inst()->Unbind(WAN_CONN_SUBSCRIBE_EVENT, &MultiComMgr::onWanConnSubscribe, this);
     ComWanNimConn::inst()->uninitalize();
-    m_loopCheckTimer.Stop();
-    m_threadExitEvent.set(true);
     m_threadPool.reset();
     m_sendGcodeThd->exit();
     m_sendGcodeThd.reset();
@@ -110,10 +124,12 @@ com_id_t MultiComMgr::addLanDev(const fnet_lan_dev_info_t &devInfo, const std::s
     devData.lanDevInfo = devInfo;
     devData.devProduct = nullptr;
     devData.devDetail = nullptr;
-    devData.lanGcodeList.gcodeDatas = nullptr;
     devData.lanGcodeList.gcodeCnt = 0;
-    devData.wanGcodeList.gcodeDatas = nullptr;
+    devData.lanGcodeList.gcodeDatas = nullptr;
     devData.wanGcodeList.gcodeCnt = 0;
+    devData.wanGcodeList.gcodeDatas = nullptr;
+    devData.wanTimeLapseVideoList.videoCnt = 0;
+    devData.wanTimeLapseVideoList.videoDatas = nullptr;
     devData.devDetailUpdated = false;
     initConnection(comPtr, devData);
     return m_idNum++;
@@ -167,7 +183,7 @@ ComErrno MultiComMgr::addWanDev(const com_token_data_t &tokenData, int tryCnt, i
     m_uid = userProfile.uid;
     m_nimData = nimData;
     m_subscribeTime = std_precise_clock::now();
-    m_commandFailedUpdating = false;
+    m_blockCommandFailedUpdate = false;
     m_commandFailedUpdateTime = std_precise_clock::time_point::min();
     m_wanDevMaintainThd->setUid(userProfile.uid);
     WanDevTokenMgr::inst()->start(tokenData, networkIntfc()); // initialize global token
@@ -179,6 +195,7 @@ ComErrno MultiComMgr::addWanDev(const com_token_data_t &tokenData, int tryCnt, i
         m_nimOnline = false;
         return ret;
     }
+    m_wanDevMaintainThd->setUpdateWanDev();
     QueueEvent(new ComGetUserProfileEvent(COM_GET_USER_PROFILE_EVENT, userProfile, ret));
     return ret;
 }
@@ -191,7 +208,7 @@ void MultiComMgr::removeWanDev()
     }
     for (auto &comPtr : m_comPtrs) {
         if (comPtr->connectMode() == COM_CONNECT_WAN) {
-            comPtr.get()->disconnect(0);
+            comPtr->disconnect(0);
         }
     }
     m_login = false;
@@ -336,8 +353,10 @@ void MultiComMgr::initConnection(const com_ptr_t &comPtr, const com_dev_data_t &
     comPtr->Bind(COM_CONNECTION_EXIT_EVENT, &MultiComMgr::onConnectionExit, this);
     comPtr->Bind(COM_DEV_DETAIL_UPDATE_EVENT, &MultiComMgr::onDevDetailUpdate, this);
     comPtr->Bind(COM_GET_DEV_GCODE_LIST_EVENT, &MultiComMgr::onGetDevGcodeList, this);
-    comPtr->Bind(COM_START_JOB_EVENT, queueEvent);
     comPtr->Bind(COM_GET_GCODE_THUMB_EVENT, [this](auto &event){ QueueEvent(event.MoveClone()); });
+    comPtr->Bind(COM_GET_TIME_LAPSE_VIDEO_LIST_EVENT, &MultiComMgr::onGetDevTimeLapseVideoList, this);
+    comPtr->Bind(COM_DELETE_TIME_LAPSE_VIDEO_EVENT, queueEvent);
+    comPtr->Bind(COM_START_JOB_EVENT, queueEvent);
     comPtr->Bind(COM_SEND_GCODE_PROGRESS_EVENT, queueEvent);
     comPtr->Bind(COM_SEND_GCODE_FINISH_EVENT, queueEvent);
     comPtr->Bind(COMMAND_FAILED_EVENT, &MultiComMgr::onCommandFailed, this);
@@ -401,7 +420,7 @@ void MultiComMgr::onReloginHttp(ReloginHttpEvent &event)
         m_networkIntfc->freeWanDevList(event.devInfos, event.devCnt);
         return;
     }
-    if (event.ret == COM_UNAUTHORIZED && !WanDevTokenMgr::inst()->tokenExpired(event.accessToken)) {
+    if (event.ret == COM_UNAUTHORIZED) {
         m_networkIntfc->freeWanDevList(event.devInfos, event.devCnt);
         removeWanDev();
         QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, false, false, event.ret));
@@ -429,7 +448,7 @@ void MultiComMgr::onUpdateWanDev(const GetWanDevEvent &event)
         return;
     }
     if (event.ret != COM_OK) {
-        maintianWanDev(event.ret);
+        maintianWanDev(event.ret, false, false);
         return;
     }
     std::map<std::string, fnet_wan_dev_info_t *> devInfoMap;
@@ -481,7 +500,7 @@ void MultiComMgr::onUpdateUserProfile(const ComGetUserProfileEvent &event)
         return;
     }
     if (event.ret == COM_UNAUTHORIZED) {
-        maintianWanDev(event.ret);
+        maintianWanDev(event.ret, false, false);
     } else if (event.ret != COM_OK) {
         m_wanDevMaintainThd->setUpdateUserProfile();
     } else {
@@ -523,6 +542,8 @@ void MultiComMgr::onConnectionExit(const ComConnectionExitEvent &event)
     m_networkIntfc->freeDevDetail(devData.devDetail);
     m_networkIntfc->freeGcodeList(devData.lanGcodeList.gcodeDatas, devData.lanGcodeList.gcodeCnt);
     m_networkIntfc->freeGcodeList(devData.wanGcodeList.gcodeDatas, devData.wanGcodeList.gcodeCnt);
+    m_networkIntfc->freeTimeLapseVideoList(devData.wanTimeLapseVideoList.videoDatas,
+        devData.wanTimeLapseVideoList.videoCnt);
     m_readyIdSet.erase(event.id);
     if (comConnection->connectMode() == COM_CONNECT_WAN) {
         m_devAliveTimeMap.erase(event.id);
@@ -568,14 +589,22 @@ void MultiComMgr::onDevDetailUpdate(const ComDevDetailUpdateEvent &event)
 void MultiComMgr::onGetDevGcodeList(const ComGetDevGcodeListEvent &event)
 {
     com_dev_data_t &devData = m_datMap.at(event.id);
-    if (event.lanGcodeList.gcodeCnt != 0) {
+    if (devData.connectMode == COM_CONNECT_LAN) {
         m_networkIntfc->freeGcodeList(devData.lanGcodeList.gcodeDatas, devData.lanGcodeList.gcodeCnt);
         devData.lanGcodeList = event.lanGcodeList;
-    }
-    if (event.wanGcodeList.gcodeCnt != 0) {
+    } else {
         m_networkIntfc->freeGcodeList(devData.wanGcodeList.gcodeDatas, devData.wanGcodeList.gcodeCnt);
         devData.wanGcodeList = event.wanGcodeList;
     }
+    QueueEvent(event.Clone());
+}
+
+void MultiComMgr::onGetDevTimeLapseVideoList(const ComGetTimeLapseVideoListEvent &event)
+{
+    com_dev_data_t &devData = m_datMap.at(event.id);
+    m_networkIntfc->freeTimeLapseVideoList(devData.wanTimeLapseVideoList.videoDatas,
+        devData.wanTimeLapseVideoList.videoCnt);
+    devData.wanTimeLapseVideoList = event.wanTimeLapseVideoList;
     QueueEvent(event.Clone());
 }
 
@@ -585,20 +614,22 @@ void MultiComMgr::onCommandFailed(const CommandFailedEvent &event)
         return;
     }
     if (event.fatalError || event.ret == COM_UNAUTHORIZED) {
-        maintianWanDev(event.ret);
-    } else if (!m_commandFailedUpdating) {
-        m_commandFailedUpdating = true;
+        maintianWanDev(event.ret, false, false);
+    } else if (!m_blockCommandFailedUpdate) {
+        m_blockCommandFailedUpdate = true;
         m_threadPool->post([this]() {
-            std::chrono::duration<double> duration = std_precise_clock::now() - m_commandFailedUpdateTime;
-            int waitTime = 600000 - duration.count() * 1000;
-            if (waitTime > 0) {
-                m_threadExitEvent.waitTrue(waitTime);
+            if (m_commandFailedUpdateTime != std_precise_clock::time_point::min()) {
+                std::chrono::duration<double> duration = std_precise_clock::now() - m_commandFailedUpdateTime;
+                int waitTime = 600000 - duration.count() * 1000;
+                if (waitTime > 0) {
+                    m_threadExitEvent.waitTrue(waitTime);
+                }
             }
             if (!m_threadExitEvent.get()) {
                 m_wanDevMaintainThd->setUpdateWanDev();
                 m_commandFailedUpdateTime = std_precise_clock::now();
             }
-            m_commandFailedUpdating = false;
+            m_blockCommandFailedUpdate = false;
         });
     }
 }
@@ -614,15 +645,15 @@ void MultiComMgr::onWanConnStatus(const WanConnStatusEvent &event)
         QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, m_httpOnline, COM_OK));
         if (!m_nimFirstLogined) {
             m_wanDevMaintainThd->setUpdateUserProfile();
+            m_wanDevMaintainThd->setUpdateWanDev();
+            subscribeWanDevNimStatus();
+            updateWanDevDetail();
+            m_subscribeTime = std_precise_clock::now();
         }
-        m_wanDevMaintainThd->setUpdateWanDev();
-        subscribeWanDevNimStatus();
-        updateWanDevDetail();
-        m_subscribeTime = std_precise_clock::now();
         m_nimFirstLogined = false;
         break;
     case FNET_CONN_STATUS_LOGOUT:
-        maintianWanDev(COM_REPEAT_LOGIN);
+        maintianWanDev(COM_OK, true, false);
         break;
     case FNET_CONN_STATUS_UNLOGIN:
         m_nimOnline = false;
@@ -673,7 +704,7 @@ void MultiComMgr::onWanConnRead(const WanConnReadEvent &event)
         m_wanDevMaintainThd->setUpdateWanDev();
         break;
     case FNET_CONN_READ_UNREGISTER_USER:
-        maintianWanDev(COM_UNREGISTER_USER);
+        maintianWanDev(COM_OK, false, true);
         break;
     case FNET_CONN_READ_DEVICE_DETAIL:
         procDevDetailUpdate(event.readData);
@@ -723,19 +754,21 @@ com_dev_data_t MultiComMgr::makeWanDevData(const fnet_wan_dev_info_t *wanDevInfo
     devData.wanDevInfo.nimAccountId = wanDevInfo->nimAccountId;
     devData.devProduct = nullptr;
     devData.devDetail = nullptr;
-    devData.lanGcodeList.gcodeDatas = nullptr;
     devData.lanGcodeList.gcodeCnt = 0;
-    devData.wanGcodeList.gcodeDatas = nullptr;
+    devData.lanGcodeList.gcodeDatas = nullptr;
     devData.wanGcodeList.gcodeCnt = 0;
+    devData.wanGcodeList.gcodeDatas = nullptr;
+    devData.wanTimeLapseVideoList.videoCnt = 0;
+    devData.wanTimeLapseVideoList.videoDatas = nullptr;
     devData.devDetailUpdated = false;
     memset(&devData.lanDevInfo, 0, sizeof(devData.lanDevInfo));
     return devData;
 }
 
-void MultiComMgr::maintianWanDev(ComErrno ret)
+void MultiComMgr::maintianWanDev(ComErrno ret, bool repeatLogin, bool unregisterUser)
 {
     BOOST_LOG_TRIVIAL(info) << "MultiComMgr::maintianWanDev " << (int)ret;
-    if (ret == COM_UNREGISTER_USER || ret == COM_REPEAT_LOGIN) {
+    if (repeatLogin || unregisterUser) {
         removeWanDev();
         QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, false, false, ret));
         return;
@@ -786,12 +819,39 @@ void MultiComMgr::updateWanDevDetail()
     for (auto &item : m_ptrMap.left) {
         if (item.second->connectMode() == COM_CONNECT_WAN
         && !item.second->isDisconnect()
-        && !nimAccountIds.empty()) {
+        && !item.second->nimAccountId().empty()) {
             nimAccountIds.push_back(item.second->nimAccountId());
         }
     }
     if (!nimAccountIds.empty()) {
         ComWanNimConn::inst()->updateDetail(nimAccountIds, m_nimData.nimTeamId);
+    }
+}
+
+std::string MultiComMgr::getNimAppDir(const std::string &dataDir)
+{
+    for (int i = 0; true; ++i) {
+        wxString dirPath = wxString::FromUTF8(dataDir + "/nimData");
+        if (i > 0) {
+            dirPath += std::to_string(i);
+        }
+        if (!wxDir::Exists(dirPath)) {
+            wxDir::Make(dirPath);
+        }
+        wxString fileLockPath = dirPath + "/" + m_nimDataFileLockName;
+        if (!wxFile::Exists(fileLockPath)) {
+            wxFile().Open(fileLockPath, wxFile::write);
+        }
+        try {
+            auto fileLock = std::make_unique<boost::interprocess::file_lock>(fileLockPath.ToUTF8().data());
+            if (fileLock->try_lock()) {
+                m_nimDataDirFileLock.swap(fileLock);
+                return dirPath.ToUTF8().data();
+            }
+        } catch (...) {
+            BOOST_LOG_TRIVIAL(fatal) << "create file lock failed, " << fileLockPath;
+            return dirPath.ToUTF8().data();
+        }
     }
 }
 

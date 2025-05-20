@@ -1,10 +1,10 @@
 {
     "type": "filament",
     "cool_plate_temp": [
-        "75"
+        "0"
     ],
     "cool_plate_temp_initial_layer": [
-        "75"
+        "0"
     ],
     "eng_plate_temp": [
         "75"
@@ -12,14 +12,11 @@
     "eng_plate_temp_initial_layer": [
         "75"
     ],
-    "filament_load_time": [
-        "29"
+    "filament_flow_ratio": [
+        "0.98"
     ],
     "filament_settings_id": [
         "Flashforge HS PETG @FF AD5X"
-    ],
-    "filament_unload_time": [
-        "29"
     ],
     "from": "system",
     "setting_id": "GFSA04",
@@ -44,6 +41,12 @@
     ],
     "pressure_advance": [
         "0.04"
+    ],
+    "textured_cool_plate_temp": [
+        "75"
+    ],
+    "textured_cool_plate_temp_initial_layer": [
+        "75"
     ],
     "textured_plate_temp": [
         "75"
