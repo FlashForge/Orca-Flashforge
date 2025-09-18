@@ -56,8 +56,6 @@ private:
 
     void onMouseCaptureLost(wxMouseCaptureLostEvent &event);
 
-    wxRect getDrawRect(const wxSize &boardSize, const wxSize &imgSize, bool scale);
-
 private:
     int            m_itemIdx;
     std::string    m_jobId;

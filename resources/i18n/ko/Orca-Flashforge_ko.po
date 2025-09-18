@@ -19971,8 +19971,8 @@ msgstr "출력 시간"
 msgid "IP-Address"
 msgstr "IP-주소"
 
-msgid "When using Orca-Flashforge V%s, please update Flash Maker to V2.0.2, and also update your device firmware to the latest version."
-msgstr "Orca-Flashforge V%s을 사용할 때, Flash Maker를 V2.0.2으로 업데이트하고, 기기 펌웨어도 최신 버전으로 업데이트해 주세요."
+msgid "When using Orca-Flashforge V%s, please update Flash Maker to V%s, and also update your device firmware to the latest version."
+msgstr "Orca-Flashforge V%s을 사용할 때, Flash Maker를 V%s으로 업데이트하고, 기기 펌웨어도 최신 버전으로 업데이트해 주세요."
 
 msgid "Do not show again"
 msgstr "다시 표시하지 않음"
@@ -20033,6 +20033,206 @@ msgstr "라이다 초점 고장이 감지되었습니다. 라이다를 점검해
 
 msgid "For an improved experience, please restart Orca-Flashforge to load resources."
 msgstr "더 나은 경험을 위해 Orca-Flashforge를 재시작하여 리소스를 로드하십시오."
+
+msgctxt "Flashforge"
+msgid "Refer & Earn"
+msgstr "추천 & 획득"
+
+msgid "Copy Referral Link"
+msgstr "추천 링크 복사"
+
+msgid "Insufficient points"
+msgstr "포인트 부족"
+
+msgid "Generating, please wait..."
+msgstr "생성 중입니다. 잠시만 기다려 주세요..."
+
+msgid "Generation successful!"
+msgstr "생성 성공!"
+
+msgid "You can specify the number of colors for the model."
+msgstr "모델의 색상 수를 지정할 수 있습니다."
+
+msgid "AI 3D Model Generator"
+msgstr "AI 3D 모델 생성기"
+
+msgid "Points consumed"
+msgstr "소모된 포인트"
+
+msgid "Start generating"
+msgstr "생성 시작"
+
+msgid "This generation is free"
+msgstr "이 생성은 무료입니다"
+
+msgid "Remaining points"
+msgstr "남은 포인트"
+
+msgid "Image Upload Tips"
+msgstr "이미지 업로드 팁"
+
+msgid "It supports PNG, JPG, JPEG. Images should be no larger than 6MB with a minimum resolution of 128*128."
+msgstr "PNG, JPG, JPEG를 지원합니다. 이미지 크기는 6MB 이하, 해상도는 최소 128*128이어야 합니다."
+
+msgid "Simple background (preferably solid color)"
+msgstr "단순한 배경 (단색 권장)"
+
+msgid "No text included"
+msgstr "텍스트 포함 금지"
+
+msgid "Single model"
+msgstr "단일 모델"
+
+msgid "The model should not be too small."
+msgstr "모델이 너무 작지 않아야 합니다."
+
+msgid "We're currently experiencing high demand. Please wait..."
+msgstr "현재 많은 사용자가 몰려 대기 중입니다. 잠시만 기다려 주세요..."
+
+msgid "Current queue"
+msgstr "현재 대기열"
+
+msgid "Maximum image resolution: 5000*5000"
+msgstr "최대 이미지 해상도: 5000*5000"
+
+msgid "Minimum image resolution: 128*128"
+msgstr "최소 이미지 해상도: 128*128"
+
+msgid "Maximum image size: "
+msgstr "최대 이미지 크기: "
+
+msgid "Failed to load image"
+msgstr "이미지 로드에 실패했습니다"
+
+msgid "A model is currently being generated. Please wait."
+msgstr "모델을 생성 중입니다. 잠시만 기다려주세요."
+
+msgid "Network Error"
+msgstr "네트워크 오류"
+
+msgid "AI Model Generation Failed"
+msgstr "AI 모델 생성 실패"
+
+msgid "Importing..."
+msgstr "가져오는 중..."
+
+msgid "Not enough points. Please earn more points."
+msgstr "포인트가 부족합니다. 포인트를 획득해 주세요."
+
+msgid "Get Now"
+msgstr "지금 받기"
+
+msgid "Please upload the image."
+msgstr "사진을 업로드해 주세요."
+
+msgid "Failed to cancel the task"
+msgstr "작업 취소에 실패했습니다"
+
+msgid "One-click export log"
+msgstr "원클릭 로그 내보내기"
+
+msgid "Export log"
+msgstr "로그 내보내기"
+
+msgid "Exporting, please wait"
+msgstr "내보내는 중입니다. 잠시만 기다려주세요"
+
+msgctxt "Flashforge"
+msgid "Export successful"
+msgstr "내보내기 성공"
+
+msgid "Export failed, please try again"
+msgstr "내보내기 실패, 다시 시도해주세요"
+
+msgid "Text to 3D Model"
+msgstr "텍스트에서 3D 모델"
+
+msgid "Image to 3D Model"
+msgstr "이미지에서 3D 모델"
+
+msgid "Please enter the content you want to generate. We recommend focusing on a single subject. For example: A brown cat sculpture with a curled tail, in a cartoon style"
+msgstr "생성할 내용을 입력하세요. 단일 대상에 집중하는 것을 권장합니다. 예: 꼬리가 말린 갈색 고양이 조각, 만화 스타일"
+
+msgid "Image preprocessing"
+msgstr "이미지 전처리"
+
+msgid "Processing image, please wait"
+msgstr "이미지를 처리 중입니다. 잠시 기다려 주세요"
+
+msgid "We will preprocess the image to ensure the best AI model generation results"
+msgstr "최적의 AI 모델 생성 결과를 위해 이미지를 전처리합니다"
+
+msgid "Please confirm if the image meets your expectations"
+msgstr "이미지가 기대에 부합하는지 확인하세요"
+
+msgid "Regenerate"
+msgstr "재생성"
+
+msgid "This will cost you %d points. Are you sure you want to regenerate?"
+msgstr "이 작업에는 %d 포인트가 필요합니다. 재생성하시겠습니까?"
+
+msgid "What we will do?"
+msgstr "실행 내용?"
+
+msgid "We will preprocess the image, including but not limited to removing the background, reducing complexity, and enhancing colors, to ensure higher-quality model generation results"
+msgstr "배경 제거, 복잡도 감소, 색상 강화 등을 포함하여(이에 국한되지 않음) 보다 높은 품질의 모델 생성 결과를 위해 이미지를 전처리합니다"
+
+msgid "Generate without preprocessing"
+msgstr "전처리 없이 생성"
+
+msgid "Generate model"
+msgstr "모델 생성"
+
+msgid "Based on our tests, the generation results are excellent. We highly recommend enabling this feature!"
+msgstr "테스트 결과, 생성 결과가 매우 우수합니다. 이 기능을 활성화할 것을 강력히 권장합니다!"
+
+msgid "Not Now"
+msgstr "지금은 아니요"
+
+msgid "Point Consumption Rules"
+msgstr "포인트 사용 규칙"
+
+msgid "Generating a model image based on your text, please wait"
+msgstr "입력한 텍스트를 기반으로 모델 이미지를 생성 중입니다. 잠시 기다려 주세요"
+
+msgid "Please select an image to generate a 3D model"
+msgstr "3D 모델을 생성할 이미지를 선택하세요"
+
+msgid "Text optimization"
+msgstr "텍스트 최적화"
+
+msgid "Generate image"
+msgstr "이미지 생성"
+
+msgid "Points have been consumed. Are you sure you want to stop this generation?"
+msgstr "포인트가 소모되었습니다. 이 생성을 중단하시겠습니까?"
+
+msgid "Points"
+msgstr "포인트"
+
+msgid "Uploaded images must be square (same width and height)."
+msgstr "업로드하는 이미지는 정사각형이어야 합니다(가로와 세로가 같음)."
+
+msgid "Cannot regenerate. Insufficient points for image or model generation."
+msgstr "다시 생성할 수 없습니다. 이미지 또는 모델 생성에 필요한 포인트가 부족합니다."
+
+msgid "Please upload your text"
+msgstr "텍스트를 업로드해주세요"
+
+msgid "You have %d regenerations left for this model generation. Regenerate?"
+msgstr "이 모델 생성에서 %d회 재생성이 남아 있습니다. 재생성하시겠습니까?"
+
+msgid "Not enough regenerations. Cannot regenerate."
+msgstr "재생성 가능 횟수가 부족합니다. 재생성할 수 없습니다."
+
+msgid "You've used your free generation. Stop this generation?"
+msgstr "무료 생성을 사용했습니다. 이 생성을 중단하시겠습니까?"
+
+msgid "No copyright"
+msgstr "저작권 없음"
+
+msgid "Generation failed"
+msgstr "생성에 실패했습니다"
 
 #: resources/data/hints.ini: [hint:Chamber temperature]
 msgid ""

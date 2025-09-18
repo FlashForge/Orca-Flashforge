@@ -184,8 +184,12 @@ BindMachineDialog::BindMachineDialog()
     
     m_user_sizer = new wxBoxSizer(wxVERTICAL);
 
-    //m_user_img = new wxStaticBitmap(m_normal_panel, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxSize(FromDIP(80), FromDIP(80)), 0);
     m_user_panel = new RoundImagePanel(m_top_panel, wxSize(FromDIP(80), FromDIP(80)));
+    if (wxGetApp().getUsrPic().IsOk()) {
+        m_user_panel->SetImage(wxGetApp().getUsrPic());
+    }
+    wxGetApp().Bind(EVT_USER_HEAD_IMAGE_UPDATED, &BindMachineDialog::on_user_image_updated, this);
+
     m_user_sizer->AddStretchSpacer(1);
     m_user_sizer->Add(m_user_panel, 0, wxALIGN_CENTER, 0);
     m_user_sizer->AddSpacer(FromDIP(10));
@@ -325,29 +329,6 @@ BindMachineDialog::BindMachineDialog()
     Layout();
     Fit();
     Centre(wxBOTH);
-    #if 0
-    Bind(wxEVT_WEBREQUEST_STATE, [this](wxWebRequestEvent& evt) {
-         switch (evt.GetState()) {
-         case wxWebRequest::State_Completed: {
-             BOOST_LOG_TRIVIAL(error) << "BindDialog: web request state completed";
-             wxImage avatar_stream = *evt.GetResponse().GetStream();
-             if (avatar_stream.IsOk()) {
-                 avatar_stream.Rescale(FromDIP(80), FromDIP(80));
-                 //auto bitmap = new wxBitmap(avatar_stream);
-                 //bitmap->SetSize(wxSize(FromDIP(60), FromDIP(60)));
-                 //m_user_img->SetBitmap(*bitmap);
-                 m_user_panel->SetImage(avatar_stream);
-                 Layout();
-             }
-             break;
-         }
-         case wxWebRequest::State_Failed: {
-             BOOST_LOG_TRIVIAL(error) << "BindDialog: web request state failed";
-             break;
-         }
-         }
-         });
-    #endif
     Bind(wxEVT_SHOW, &BindMachineDialog::on_show, this);
     Bind(wxEVT_CLOSE_WINDOW, &BindMachineDialog::on_close, this);
     m_bind_btn->Bind(wxEVT_BUTTON, &BindMachineDialog::on_bind_printer, this);
@@ -380,11 +361,7 @@ void BindMachineDialog::on_destroy()
     if (m_bind_job) {
         m_bind_job->cancel();
         m_bind_job->join();
-    }*/  //by ymd
-
-    //if (m_web_request.IsOk()) {
-    //    m_web_request.Cancel();
-    //}
+    }*/
 }
 
 void BindMachineDialog::on_result_ok(wxCommandEvent& event)
@@ -399,37 +376,10 @@ void BindMachineDialog::on_result_ok(wxCommandEvent& event)
     }
 }
 
-void BindMachineDialog::downloadUrlPic(const std::string& url) 
+void BindMachineDialog::on_user_image_updated(wxCommandEvent& event)
 {
-    if (!url.empty()) {
-        Slic3r::Http http   = Slic3r::Http::get(url);
-        std::string  suffix = url.substr(url.find_last_of(".") + 1);
-        http.header("accept", "image/" + suffix)
-            .on_complete([this](std::string body, unsigned int status) {
-                wxMemoryInputStream stream(body.data(), body.size());
-                wxImage             image(stream, wxBITMAP_TYPE_ANY);
-                if (!image.IsOk()) {
-                    BOOST_LOG_TRIVIAL(error) << "download relogin image is not ok";
-                    return;
-                }
-                wxGetApp().setUsrPic(image);
-                image.Rescale(FromDIP(80), FromDIP(80));
-                m_user_panel->SetImage(image);
-                Layout();
-            })
-            .on_error([=](std::string body, std::string error, unsigned status) {
-                BOOST_LOG_TRIVIAL(info) << " downloadUrlPic: status:" << status << " error:" << error;
-            })
-            .perform();
-    } else {
-        wxImage     tmpimage;
-        std::string name = "login_default_usr_pic";
-        if (tmpimage.LoadFile(Slic3r::GUI::from_u8(Slic3r::var(name + ".png")), wxBITMAP_TYPE_PNG)) {
-            wxGetApp().setUsrPic(tmpimage);
-            tmpimage.Rescale(FromDIP(80), FromDIP(80));
-            m_user_panel->SetImage(tmpimage);
-            Layout();
-        }
+    if (wxGetApp().getUsrPic().IsOk()) {
+        m_user_panel->SetImage(wxGetApp().getUsrPic());
     }
 }
 
@@ -537,13 +487,17 @@ void BindMachineDialog::on_show(wxShowEvent &event)
             bmp = create_scaled_bitmap("adventurer_5m_pro", 0, 80);
         } else if (0x0023 == m_bind_info->dev_pid) { // ad 5m
             bmp = create_scaled_bitmap("adventurer_5m", 0, 80);
+        } else if (0x00BB == m_bind_info->dev_pid) {// ada5
+            bmp = create_scaled_bitmap("adventurer_a5", 0, 80);
         } else if (0x001F == m_bind_info->dev_pid) { // G3U
             bmp = create_scaled_bitmap("guider_3_ultra", 0, 80);
         } else if (0x0026 == m_bind_info->dev_pid) { // ad5x
             bmp = create_scaled_bitmap("ad5x", 0, 80);
         } else if (0x0025 == m_bind_info->dev_pid) { // Guider4
             bmp = create_scaled_bitmap("guider4", 0, 80);
-        }else {
+        } else if (0x0027 == m_bind_info->dev_pid) { // Guider4Pro
+            bmp = create_scaled_bitmap("guider4_pro", 0, 80);
+        } else {
             auto img_path = m_bind_info->img /*m_device_info->get_printer_thumbnail_img_str()*/;
             if (wxGetApp().dark_mode()) { img_path += "_dark"; }
             bmp = create_scaled_bitmap(img_path, this, FromDIP(80));
@@ -566,27 +520,6 @@ void BindMachineDialog::on_show(wxShowEvent &event)
             m_user_name->SetLabelText(clipName);
             m_user_name->SetToolTip(wxString::FromUTF8(user_info.nickname));
             //m_user_name->SetLabelText(wxString::FromUTF8(user_info.nickname));
-            #if 0
-            if (!user_info.headImgUrl.empty()) {
-                m_web_request = wxWebSession::GetDefault().CreateRequest(this, user_info.headImgUrl);
-                if (!m_web_request.IsOk()) {
-                    BOOST_LOG_TRIVIAL(error) << "web session create request fail";
-                } else {
-                    m_web_request.Start();
-                }
-            }
-            #else
-            #if 1
-            wxImage image = wxGetApp().getUsrPic();
-            if (image.IsOk()) {
-                image.Rescale(FromDIP(80), FromDIP(80));
-                m_user_panel->SetImage(image);
-                Layout();
-            } else {
-                downloadUrlPic(user_info.headImgUrl);
-            }
-            #endif
-            #endif
             m_user_sizer->Layout();
         }
         //m_normal_panel->Fit();
@@ -631,8 +564,12 @@ UnBindMachineDialog::UnBindMachineDialog()
     m_user_name->Wrap(FromDIP(350));
     m_user_sizer = new wxBoxSizer(wxVERTICAL);
 
-    //m_user_img = new wxStaticBitmap(m_normal_panel, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxSize(FromDIP(80), FromDIP(80)), 0);
     m_user_panel = new RoundImagePanel(this, wxSize(FromDIP(80), FromDIP(80)));
+    if (wxGetApp().getUsrPic().IsOk()) {
+        m_user_panel->SetImage(wxGetApp().getUsrPic());
+    }
+    wxGetApp().Bind(EVT_USER_HEAD_IMAGE_UPDATED, &UnBindMachineDialog::on_user_image_updated, this);
+
     m_user_sizer->AddStretchSpacer(1);
     m_user_sizer->Add(m_user_panel, 0, wxALIGN_CENTER, 0);
     m_user_sizer->AddSpacer(FromDIP(10));
@@ -695,29 +632,6 @@ UnBindMachineDialog::UnBindMachineDialog()
     Fit();
     Centre(wxBOTH);
 
-    #if 0
-    Bind(wxEVT_WEBREQUEST_STATE, [this](wxWebRequestEvent& evt) {
-         switch (evt.GetState()) {
-         case wxWebRequest::State_Completed: {
-             BOOST_LOG_TRIVIAL(error) << "BindDialog: web request state completed";
-             wxImage avatar_stream = *evt.GetResponse().GetStream();
-             if (avatar_stream.IsOk()) {
-                 avatar_stream.Rescale(FromDIP(80), FromDIP(80));
-                 //auto bitmap = new wxBitmap(avatar_stream);
-                 //bitmap->SetSize(wxSize(FromDIP(60), FromDIP(60)));
-                 //m_user_img->SetBitmap(*bitmap);
-                 m_user_panel->SetImage(avatar_stream);
-                 Layout();
-             }
-             break;
-         }
-         case wxWebRequest::State_Failed: {
-             BOOST_LOG_TRIVIAL(error) << "BindDialog: web request state failed";
-             break;
-         }
-         }
-         });
-    #endif
     Bind(wxEVT_SHOW, &UnBindMachineDialog::on_show, this);
     Bind(wxEVT_CLOSE_WINDOW, &UnBindMachineDialog::on_close, this);
     m_unbind_btn->Bind(wxEVT_BUTTON, &UnBindMachineDialog::on_unbind_printer, this);
@@ -748,49 +662,7 @@ void UnBindMachineDialog::on_destroy()
     if (m_unbind_job) {
         m_unbind_job->cancel();
         m_unbind_job->join();
-    }*/ //by ymd
-    //if (m_web_request.IsOk()) {
-    //    m_web_request.Cancel();
-    //}
-}
-
-    //if (m_web_request.IsOk()) {
-    //    m_web_request.Cancel();
-    //}
-}
-
-void UnBindMachineDialog::downloadUrlPic(const std::string& url) 
-{
-    if (!url.empty()) {
-        Slic3r::Http http   = Slic3r::Http::get(url);
-        std::string  suffix = url.substr(url.find_last_of(".") + 1);
-        http.header("accept", "image/" + suffix)
-            .on_complete([this](std::string body, unsigned int status) {
-                wxMemoryInputStream stream(body.data(), body.size());
-                wxImage             image(stream, wxBITMAP_TYPE_ANY);
-                if (!image.IsOk()) {
-                    BOOST_LOG_TRIVIAL(error) << "UnBindMachineDialog download image is not ok";
-                    return;
-                }
-                wxGetApp().setUsrPic(image);
-                image.Rescale(FromDIP(80), FromDIP(80));
-                m_user_panel->SetImage(image);
-                Layout();
-            })
-            .on_error([=](std::string body, std::string error, unsigned status) {
-                BOOST_LOG_TRIVIAL(info) << " UnBindMachineDialog::downloadUrlPic: status:" << status << " error:" << error;
-            })
-            .perform();
-    } else {
-        wxImage     tmpimage;
-        std::string name = "login_default_usr_pic";
-        if (tmpimage.LoadFile(Slic3r::GUI::from_u8(Slic3r::var(name + ".png")), wxBITMAP_TYPE_PNG)) {
-            wxGetApp().setUsrPic(tmpimage);
-            tmpimage.Rescale(FromDIP(80), FromDIP(80));
-            m_user_panel->SetImage(tmpimage);
-            Layout();
-        }
-    }
+    }*/
 }
 
 void UnBindMachineDialog::on_result_ok(wxCommandEvent& event)
@@ -802,6 +674,13 @@ void UnBindMachineDialog::on_result_ok(wxCommandEvent& event)
     } else {
         on_destroy();
         EndModal(wxID_OK);
+    }
+}
+
+void UnBindMachineDialog::on_user_image_updated(wxCommandEvent& event)
+{
+    if (wxGetApp().getUsrPic().IsOk()) {
+        m_user_panel->SetImage(wxGetApp().getUsrPic());
     }
 }
 
@@ -885,12 +764,16 @@ void UnBindMachineDialog::on_show(wxShowEvent &event)
             bmp = create_scaled_bitmap("adventurer_5m_pro", 0, 80);
         } else if (0x0023 == m_unbind_info->dev_pid) { // ad 5m
             bmp = create_scaled_bitmap("adventurer_5m", 0, 80);
-        }else if(0x001F == m_unbind_info->dev_pid){ //G3U
+        } else if (0x00BB == m_unbind_info->dev_pid) { // ad 5a
+            bmp = create_scaled_bitmap("adventurer_a5", 0, 80);
+        } else if (0x001F == m_unbind_info->dev_pid) { // G3U
             bmp = create_scaled_bitmap("guider_3_ultra", 0, 80);
         } else if (0x0026 == m_unbind_info->dev_pid) { // ad5x
             bmp = create_scaled_bitmap("ad5x", 0, 80);
         } else if (0x0025 == m_unbind_info->dev_pid) { // Guider4
-            bmp = create_scaled_bitmap("Guider4", 0, 80);
+            bmp = create_scaled_bitmap("guider4", 0, 80);
+        } else if (0x0027 == m_unbind_info->dev_pid) { // Guider4Pro
+            bmp = create_scaled_bitmap("guider4_pro", 0, 80);
         }
         else {
             auto img_path = m_unbind_info->img /*m_device_info->get_printer_thumbnail_img_str()*/;
@@ -914,27 +797,6 @@ void UnBindMachineDialog::on_show(wxShowEvent &event)
             m_user_name->SetLabelText(clipName);
             m_user_name->SetToolTip(wxString::FromUTF8(user_info.nickname));
             //m_user_name->SetLabelText(wxString::FromUTF8(user_info.nickname));
-            #if 0
-            if (!user_info.headImgUrl.empty()) {
-                m_web_request = wxWebSession::GetDefault().CreateRequest(this, user_info.headImgUrl);
-                if (!m_web_request.IsOk()) {
-                    BOOST_LOG_TRIVIAL(error) << "web session create request fail";
-                } else {
-                    m_web_request.Start();
-                }
-            }
-            #else
-            #if 1
-            wxImage image = wxGetApp().getUsrPic();
-            if (image.IsOk()) {
-                image.Rescale(FromDIP(80), FromDIP(80));
-                m_user_panel->SetImage(image);
-                Layout();
-            } else {
-                downloadUrlPic(user_info.headImgUrl);
-            }
-            #endif
-            #endif
             m_user_sizer->Layout();
         }
         //m_simplebook->Layout();
@@ -945,4 +807,4 @@ void UnBindMachineDialog::on_show(wxShowEvent &event)
     }
 }
 
-} // namespace Slic3r::GUI
+}} // namespace Slic3r::GUI

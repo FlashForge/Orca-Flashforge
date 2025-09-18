@@ -1,7 +1,4 @@
 {
-    "activate_air_filtration": [
-        "1"
-    ],
     "additional_cooling_fan_speed": [
         "40"
     ],
@@ -95,7 +92,7 @@
         "50%"
     ],
     "pressure_advance": [
-        "0.031"
+        "0.035"
     ],
     "slow_down_layer_time": [
         "4"

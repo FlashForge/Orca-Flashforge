@@ -1,6 +1,8 @@
 #ifndef _slic3r_gui_FFUtils_hpp_
 #define _slic3r_gui_FFUtils_hpp_
+
 #include <string.h>
+#include <wx/gdicmn.h>
 #include <wx/string.h>
 
 namespace Slic3r::GUI
@@ -41,6 +43,8 @@ public:
 	static wxString userAgreement();
 	static wxString userRegister();
 	static wxString passwordForget();
+
+	static wxRect calcContainedRect(const wxSize &containerSize, const wxSize &imgSize, bool enlarge);
 };
 
 }

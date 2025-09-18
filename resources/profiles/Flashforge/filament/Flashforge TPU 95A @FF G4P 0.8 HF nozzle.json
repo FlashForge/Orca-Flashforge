@@ -33,7 +33,7 @@
         "0.98"
     ],
     "filament_max_volumetric_speed": [
-        "8"
+        "3.6"
     ],
     "filament_minimal_purge_on_wipe_tower": [
         "15"
@@ -61,6 +61,9 @@
     "inherits": "Flashforge Generic PLA @G3U 0.6 Nozzle",
     "is_custom_defined": "0",
     "name": "Flashforge TPU 95A @FF G4P 0.8 HF nozzle",
+    "nozzle_temperature_initial_layer": [
+        "225"
+    ],
     "nozzle_temperature_range_high": [
         "250"
     ],
@@ -74,7 +77,7 @@
         "0.025"
     ],
     "slow_down_layer_time": [
-        "10"
+        "12"
     ],
     "slow_down_min_speed": [
         "20"

@@ -189,7 +189,7 @@
         "18"
     ],
     "retraction_length": [
-        "1.1"
+        "0.8"
     ],
     "retraction_minimum_travel": [
         "1"
@@ -225,7 +225,7 @@
         "0.4"
     ],
     "z_hop_types": [
-        "Normal Lift"
+        "Auto Lift"
     ],
     "z_offset": "0"
 }

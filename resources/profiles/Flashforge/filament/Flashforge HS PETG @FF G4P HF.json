@@ -1,7 +1,4 @@
 {
-    "activate_air_filtration": [
-        "1"
-    ],
     "additional_cooling_fan_speed": [
         "40"
     ],
@@ -90,12 +87,6 @@
     ],
     "temperature_vitrification": [
         "70"
-    ],
-    "textured_cool_plate_temp": [
-        "80"
-    ],
-    "textured_cool_plate_temp_initial_layer": [
-        "80"
     ],
     "version": "2.1.1.0"
 }

@@ -38,7 +38,6 @@
 #include "Widgets/ComboBox.hpp"
 #include "Widgets/ScrolledWindow.hpp"
 #include "Widgets/PopupWindow.hpp"
-#include "FlashForge/MultiComUtils.hpp"
 #include "FlashForge/MultiComEvent.hpp"
 #include <wx/simplebook.h>
 #include <wx/hashmap.h>

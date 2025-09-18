@@ -584,6 +584,183 @@ msgstr ""
 msgid "IP-Address"
 msgstr ""
 
+msgid "Insufficient points"
+msgstr "Insufficient points"
+
+msgid "Generating, please wait..."
+msgstr "Generating, please wait..."
+
+msgid "Generation successful!"
+msgstr "Generation successful!"
+
+msgid "You can specify the number of colors for the model."
+msgstr "You can specify the number of colors for the model."
+
+msgid "AI 3D Model Generator"
+msgstr "AI 3D Model Generator"
+
+msgid "Points consumed"
+msgstr "Points consumed"
+
+msgid "Start generating"
+msgstr "Start generating"
+
+msgid "This generation is free"
+msgstr "This generation is free"
+
+msgid "Remaining points"
+msgstr "Remaining points"
+
+msgid "Image Upload Tips"
+msgstr "Image Upload Tips"
+
+msgid "It supports PNG, JPG, JPEG. Images should be no larger than 6MB with a minimum resolution of 128*128."
+msgstr "It supports PNG, JPG, JPEG. Images should be no larger than 6MB with a minimum resolution of 128*128."
+
+msgid "Simple background (preferably solid color)"
+msgstr "Simple background (preferably solid color)"
+
+msgid "No text included"
+msgstr "No text included"
+
+msgid "Single model"
+msgstr "Single model"
+
+msgid "The model should not be too small."
+msgstr "The model should not be too small."
+
+msgid "We're currently experiencing high demand. Please wait..."
+msgstr "We're currently experiencing high demand. Please wait..."
+
+msgid "Current queue"
+msgstr "Current queue"
+
+msgid "Maximum image resolution: 5000*5000"
+msgstr "Maximum image resolution: 5000*5000"
+
+msgid "Minimum image resolution: 128*128"
+msgstr "Minimum image resolution: 128*128"
+
+msgid "Maximum image size: "
+msgstr "Maximum image size: "
+
+msgid "Failed to load image"
+msgstr "Failed to load image"
+
+msgid "A model is currently being generated. Please wait."
+msgstr "A model is currently being generated. Please wait."
+
+msgid "Network Error"
+msgstr "Network Error"
+
+msgid "AI Model Generation Failed"
+msgstr "AI Model Generation Failed"
+
+msgid "Importing..."
+msgstr "Importing..."
+
+msgid "Not enough points. Please earn more points."
+msgstr "Not enough points. Please earn more points."
+
+msgid "Get Now"
+msgstr "Get Now"
+
+msgid "Please upload the image."
+msgstr "Please upload the image."
+
+msgid "Failed to cancel the task"
+msgstr "Failed to cancel the task"
+
+msgid "Text to 3D Model"
+msgstr "Text to 3D Model"
+
+msgid "Image to 3D Model"
+msgstr "Image to 3D Model"
+
+msgid "Please enter the content you want to generate. We recommend focusing on a single subject. For example: A brown cat sculpture with a curled tail, in a cartoon style"
+msgstr "Please enter the content you want to generate. We recommend focusing on a single subject. For example: A brown cat sculpture with a curled tail, in a cartoon style"
+
+msgid "Image preprocessing"
+msgstr "Image preprocessing"
+
+msgid "Processing image, please wait"
+msgstr "Processing image, please wait"
+
+msgid "We will preprocess the image to ensure the best AI model generation results"
+msgstr "We will preprocess the image to ensure the best AI model generation results"
+
+msgid "Please confirm if the image meets your expectations"
+msgstr "Please confirm if the image meets your expectations"
+
+msgid "Regenerate"
+msgstr "Regenerate"
+
+msgid "This will cost you %d points. Are you sure you want to regenerate?"
+msgstr "This will cost you %d points. Are you sure you want to regenerate?"
+
+msgid "What we will do?"
+msgstr "What we will do?"
+
+msgid "We will preprocess the image, including but not limited to removing the background, reducing complexity, and enhancing colors, to ensure higher-quality model generation results"
+msgstr "We will preprocess the image, including but not limited to removing the background, reducing complexity, and enhancing colors, to ensure higher-quality model generation results"
+
+msgid "Generate without preprocessing"
+msgstr "Generate without preprocessing"
+
+msgid "Generate model"
+msgstr "Generate model"
+
+msgid "Based on our tests, the generation results are excellent. We highly recommend enabling this feature!"
+msgstr "Based on our tests, the generation results are excellent. We highly recommend enabling this feature!"
+
+msgid "Not Now"
+msgstr "Not Now"
+
+msgid "Point Consumption Rules"
+msgstr "Point Consumption Rules"
+
+msgid "Generating a model image based on your text, please wait"
+msgstr "Generating a model image based on your text, please wait"
+
+msgid "Please select an image to generate a 3D model"
+msgstr "Please select an image to generate a 3D model"
+
+msgid "Text optimization"
+msgstr "Text optimization"
+
+msgid "Generate image"
+msgstr "Generate image"
+
+msgid "Points have been consumed. Are you sure you want to stop this generation?"
+msgstr "Points have been consumed. Are you sure you want to stop this generation?"
+
+msgid "Points"
+msgstr "Points"
+
+msgid "Uploaded images must be square (same width and height)."
+msgstr "Uploaded images must be square (same width and height)."
+
+msgid "Cannot regenerate. Insufficient points for image or model generation."
+msgstr "Cannot regenerate. Insufficient points for image or model generation."
+
+msgid "Please upload your text"
+msgstr "Please upload your text"
+
+msgid "You have %d regenerations left for this model generation. Regenerate?"
+msgstr "You have %d regenerations left for this model generation. Regenerate?"
+
+msgid "Not enough regenerations. Cannot regenerate."
+msgstr "Not enough regenerations. Cannot regenerate."
+
+msgid "You've used your free generation. Stop this generation?"
+msgstr "You've used your free generation. Stop this generation?"
+
+msgid "No copyright"
+msgstr "No copyright"
+
+msgid "Generation failed"
+msgstr "Generation failed"
+
 #: resources/data/hints.ini: [hint:Chamber temperature]
 msgid ""
 "Chamber temperature\n"

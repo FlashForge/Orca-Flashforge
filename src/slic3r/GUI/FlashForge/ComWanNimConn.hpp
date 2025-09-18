@@ -65,6 +65,10 @@ public:
 
     ComErrno sendClearFanCtrl(const char *nimAccountId, const fnet_clear_fan_ctrl_t &clearFanCtrl);
 
+    ComErrno sendMoveCtrl(const char *nimAccountId, const fnet_move_ctrl_t &moveCtrl);
+
+    ComErrno sendHomingCtrl(const char *nimAccountId);
+
     ComErrno sendMatlStationCtrl(const char *nimAccountId,
         const fnet_matl_station_ctrl_t &matlStationCtrl);
 

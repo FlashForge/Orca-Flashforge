@@ -251,6 +251,25 @@ struct ComRefreshTokenEvent : public wxCommandEvent
     ComErrno ret;
 };
 
+struct ComBusGetRequestEvent : public wxCommandEvent
+{
+    ComBusGetRequestEvent(wxEventType type, const std::string &_requestId, const std::string &_responseData,
+        ComErrno _ret)
+        : wxCommandEvent(type)
+        , requestId(_requestId)
+        , responseData(_responseData)
+        , ret(_ret)
+    {
+    }
+    ComBusGetRequestEvent *Clone() const
+    {
+        return new ComBusGetRequestEvent(GetEventType(), requestId, responseData, ret);
+    }
+    std::string requestId;
+    std::string responseData;
+    ComErrno ret;
+};
+
 wxDECLARE_EVENT(COM_CONNECTION_READY_EVENT, ComConnectionReadyEvent);
 wxDECLARE_EVENT(COM_CONNECTION_EXIT_EVENT, ComConnectionExitEvent);
 wxDECLARE_EVENT(COM_WAN_DEV_INFO_UPDATE_EVENT, ComWanDevInfoUpdateEvent);
@@ -265,6 +284,7 @@ wxDECLARE_EVENT(COM_SEND_GCODE_FINISH_EVENT, ComSendGcodeFinishEvent);
 wxDECLARE_EVENT(COM_WAN_DEV_MAINTAIN_EVENT, ComWanDevMaintainEvent);
 wxDECLARE_EVENT(COM_GET_USER_PROFILE_EVENT, ComGetUserProfileEvent);
 wxDECLARE_EVENT(COM_REFRESH_TOKEN_EVENT, ComRefreshTokenEvent);
+wxDECLARE_EVENT(COM_BUS_GET_REQUEST_EVENT, ComBusGetRequestEvent);
 
 }} // namespace Slic3r::GUI
 

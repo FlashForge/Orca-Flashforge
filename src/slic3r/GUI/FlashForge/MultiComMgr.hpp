@@ -43,7 +43,8 @@ public:
 
     void removeLanDev(com_id_t id);
 
-    ComErrno addWanDev(const com_token_data_t &tokenData, int tryCnt, int tryMsInterval);
+    ComErrno addWanDev(const com_token_data_t &tokenData, com_add_wan_dev_data_t &addDevData,
+        int tryCnt, int tryMsInterval);
 
     void removeWanDev();
 
@@ -149,7 +150,6 @@ private:
     std::unique_ptr<ComThreadPool>           m_threadPool;
     WaitEvent                                m_threadExitEvent;
     interprocess_file_lock_ptr_t             m_nimDataDirFileLock;
-    bool                                     m_blockShowNimDataBaseError;
     std_precise_clock::time_point            m_showNimDataBaseErrorTime;
     const char                              *m_nimDataFileLockName;
 };

@@ -40,12 +40,14 @@ FlashNetworkIntfc::FlashNetworkIntfc(const char *libraryPath, const char *server
     INIT_FUNC_PTR(ctrlLanDevAirFilter, fnet_ctrlLanDevAirFilter);
     INIT_FUNC_PTR(ctrlLanDevClearFan, fnet_ctrlLanDevClearFan);
     INIT_FUNC_PTR(ctrlLanDevMove, fnet_ctrlLanDevMove);
+    INIT_FUNC_PTR(ctrlLanDevExtrude, fnet_ctrlLanDevExtrude);
     INIT_FUNC_PTR(ctrlLanDevHoming, fnet_ctrlLanDevHoming);
     INIT_FUNC_PTR(ctrlLanDevMatlStation, fnet_ctrlLanDevMatlStation);
     INIT_FUNC_PTR(ctrlLanDevIndepMatl, fnet_ctrlLanDevIndepMatl);
     INIT_FUNC_PTR(ctrlLanDevPrint, fnet_ctrlLanDevPrint);
     INIT_FUNC_PTR(ctrlLanDevJob, fnet_ctrlLanDevJob);
     INIT_FUNC_PTR(ctrlLanDevState, fnet_ctrlLanDevState);
+    INIT_FUNC_PTR(ctrlLanDevErrorCode, fnet_ctrlLanDevErrorCode);
     INIT_FUNC_PTR(ctrlLanDevPlateDetect, fnet_ctrlLanDevPlateDetect);
     INIT_FUNC_PTR(ctrlLanDevFirstLayerDetect, fnet_ctrlLanDevFirstLayerDetect);
     INIT_FUNC_PTR(configLanDevMatlStation, fnet_configLanDevMatlStation);
@@ -82,6 +84,33 @@ FlashNetworkIntfc::FlashNetworkIntfc(const char *libraryPath, const char *server
     INIT_FUNC_PTR(freeCloundGcodeData, fnet_freeCloundGcodeData);
     INIT_FUNC_PTR(wanDevAddCloundJob, fnet_wanDevAddCloundJob);
     INIT_FUNC_PTR(freeAddCloudJobResults, fnet_freeAddCloudJobResults);
+    INIT_FUNC_PTR(bindAccountRelp, fnet_bindAccountRelp);
+    INIT_FUNC_PTR(freeBindAccountRelpResult, fnet_freeBindAccountRelpResult);
+    INIT_FUNC_PTR(uploadAiImageClound, fnet_uploadAiImageClound);
+    INIT_FUNC_PTR(freeCloundFileData, fnet_freeCloundFileData);
+    INIT_FUNC_PTR(getUserAiPointsInfo, fnet_getUserAiPointsInfo);
+    INIT_FUNC_PTR(freeUserAiPointsInfo, fnet_freeUserAiPointsInfo);
+    INIT_FUNC_PTR(createAiJobPipeline, fnet_createAiJobPipeline);
+    INIT_FUNC_PTR(freeAiJobPipelineInfo, fnet_freeAiJobPipelineInfo);
+    INIT_FUNC_PTR(startAiModelJob, fnet_startAiModelJob);
+    INIT_FUNC_PTR(freeStartAiModelJobResult, fnet_freeStartAiModelJobResult);
+    INIT_FUNC_PTR(getAiModelJobState, fnet_getAiModelJobState);
+    INIT_FUNC_PTR(freeAiModelJobState, fnet_freeAiModelJobState);
+    INIT_FUNC_PTR(abortAiModelJob, fnet_abortAiModelJob);
+    INIT_FUNC_PTR(getExistingAiModelJob, fnet_getExistingAiModelJob);
+    INIT_FUNC_PTR(startAiImg2imgJob, fnet_startAiImg2imgJob);
+    INIT_FUNC_PTR(startAiTxt2txtJob, fnet_startAiTxt2txtJob);
+    INIT_FUNC_PTR(startAiTxt2imgJob, fnet_startAiTxt2imgJob);
+    INIT_FUNC_PTR(freeStartAiGeneralJobResult, fnet_freeStartAiGeneralJobResult);
+    INIT_FUNC_PTR(getAiImg2imgJobState, fnet_getAiImg2imgJobState);
+    INIT_FUNC_PTR(getAiTxt2txtJobState, fnet_getAiTxt2txtJobState);
+    INIT_FUNC_PTR(getAiTxt2imgJobState, fnet_getAiTxt2imgJobState);
+    INIT_FUNC_PTR(freeAiGeneralJobState, fnet_freeAiGeneralJobState);
+    INIT_FUNC_PTR(abortAiImg2imgJob, fnet_abortAiImg2imgJob);
+    INIT_FUNC_PTR(abortAiTxt2txtJob, fnet_abortAiTxt2txtJob);
+    INIT_FUNC_PTR(abortAiTxt2imgJob, fnet_abortAiTxt2imgJob);
+    INIT_FUNC_PTR(userClickCount, fnet_userClickCount);
+    INIT_FUNC_PTR(doBusGetRequest, fnet_doBusGetRequest);
     INIT_FUNC_PTR(getNimData, fnet_getNimData);
     INIT_FUNC_PTR(freeNimData, fnet_freeNimData);
     INIT_FUNC_PTR(initlizeNim, fnet_initlizeNim);
@@ -92,7 +121,7 @@ FlashNetworkIntfc::FlashNetworkIntfc(const char *libraryPath, const char *server
     INIT_FUNC_PTR(connectionSubscribe, fnet_connectionSubscribe);
     INIT_FUNC_PTR(connectionUnsubscribe, fnet_connectionUnsubscribe);
     INIT_FUNC_PTR(freeString, fnet_freeString);
-    if (initlize(serverSettingsPath, &logSettings) == FNET_OK && strcmp(getVersion(), "2.2.0") == 0) {
+    if (initlize(serverSettingsPath, &logSettings) == FNET_OK && strcmp(getVersion(), "2.3.0") == 0) {
         m_isOk = true;
     }
 }

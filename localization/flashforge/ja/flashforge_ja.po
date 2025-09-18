@@ -605,8 +605,8 @@ msgstr "印刷時間"
 msgid "IP-Address"
 msgstr "IPアドレス"
 
-msgid "When using Orca-Flashforge V%s, please update Flash Maker to V2.0.2, and also update your device firmware to the latest version."
-msgstr "Orca-Flashforge V%sを使用する際は、Flash MakerをV2.0.2に更新し、デバイスのファームウェアも最新バージョンに更新してください。"
+msgid "When using Orca-Flashforge V%s, please update Flash Maker to V%s, and also update your device firmware to the latest version."
+msgstr "Orca-Flashforge V%sを使用する際は、Flash MakerをV%sに更新し、デバイスのファームウェアも最新バージョンに更新してください。"
 
 msgid "Do not show again"
 msgstr "再度表示しない"
@@ -667,6 +667,206 @@ msgstr "Lidarのフォーカス不良が検出されました。Lidarを確認�
 
 msgid "For an improved experience, please restart Orca-Flashforge to load resources."
 msgstr "より良い体験のために、Orca-Flashforgeを再起動してリソースを読み込んでください。"
+
+msgctxt "Flashforge"
+msgid "Refer & Earn"
+msgstr "紹介して獲得"
+
+msgid "Copy Referral Link"
+msgstr "紹介リンクをコピー"
+
+msgid "Insufficient points"
+msgstr "ポイント不足"
+
+msgid "Generating, please wait..."
+msgstr "生成中です。お待ちください…"
+
+msgid "Generation successful!"
+msgstr "生成成功！"
+
+msgid "You can specify the number of colors for the model."
+msgstr "モデルの色数を指定できます。"
+
+msgid "AI 3D Model Generator"
+msgstr "AI 3Dモデルジェネレーター"
+
+msgid "Points consumed"
+msgstr "消費ポイント"
+
+msgid "Start generating"
+msgstr "生成開始"
+
+msgid "This generation is free"
+msgstr "この生成は無料です"
+
+msgid "Remaining points"
+msgstr "残りポイント"
+
+msgid "Image Upload Tips"
+msgstr "画像アップロードのヒント"
+
+msgid "It supports PNG, JPG, JPEG. Images should be no larger than 6MB with a minimum resolution of 128*128."
+msgstr "PNG、JPG、JPEGに対応しています。画像サイズは6MB以下、解像度は128*128以上である必要があります。"
+
+msgid "Simple background (preferably solid color)"
+msgstr "シンプルな背景（できれば単色）"
+
+msgid "No text included"
+msgstr "テキストなし"
+
+msgid "Single model"
+msgstr "単一モデル"
+
+msgid "The model should not be too small."
+msgstr "モデルはあまり小さくないこと"
+
+msgid "We're currently experiencing high demand. Please wait..."
+msgstr "現在、多くのご利用が集中しています。お待ちください…"
+
+msgid "Current queue"
+msgstr "現在の待ち行列"
+
+msgid "Maximum image resolution: 5000*5000"
+msgstr "最大画像解像度：5000*5000"
+
+msgid "Minimum image resolution: 128*128"
+msgstr "最小画像解像度：128*128"
+
+msgid "Maximum image size: "
+msgstr "最大画像サイズ："
+
+msgid "Failed to load image"
+msgstr "画像の読み込みに失敗しました"
+
+msgid "A model is currently being generated. Please wait."
+msgstr "モデルを生成中です。しばらくお待ちください。"
+
+msgid "Network Error"
+msgstr "ネットワークエラー"
+
+msgid "AI Model Generation Failed"
+msgstr "AIモデルの生成に失敗しました"
+
+msgid "Importing..."
+msgstr "インポート中..."
+
+msgid "Not enough points. Please earn more points."
+msgstr "ポイントが不足しています。ポイントを取得してください。"
+
+msgid "Get Now"
+msgstr "今すぐ入手"
+
+msgid "Please upload the image."
+msgstr "画像をアップロードしてください。"
+
+msgid "Failed to cancel the task"
+msgstr "タスクのキャンセルに失敗しました"
+
+msgid "One-click export log"
+msgstr "ワンクリックでログをエクスポート"
+
+msgid "Export log"
+msgstr "ログをエクスポート"
+
+msgid "Exporting, please wait"
+msgstr "エクスポート中です。お待ちください"
+
+msgctxt "Flashforge"
+msgid "Export successful"
+msgstr "エクスポート成功"
+
+msgid "Export failed, please try again"
+msgstr "エクスポートに失敗しました。再試行してください"
+
+msgid "Text to 3D Model"
+msgstr "テキストから3Dモデル"
+
+msgid "Image to 3D Model"
+msgstr "画像から3Dモデル"
+
+msgid "Please enter the content you want to generate. We recommend focusing on a single subject. For example: A brown cat sculpture with a curled tail, in a cartoon style"
+msgstr "生成したい内容を入力してください。単一の対象に絞ることをおすすめします。例：巻き尾の茶色い猫の彫刻、カートゥーンスタイル"
+
+msgid "Image preprocessing"
+msgstr "画像の前処理"
+
+msgid "Processing image, please wait"
+msgstr "画像を処理中です。しばらくお待ちください"
+
+msgid "We will preprocess the image to ensure the best AI model generation results"
+msgstr "最適なAIモデル生成結果を得るために、画像を前処理します"
+
+msgid "Please confirm if the image meets your expectations"
+msgstr "画像が期待通りかどうか確認してください"
+
+msgid "Regenerate"
+msgstr "再生成"
+
+msgid "This will cost you %d points. Are you sure you want to regenerate?"
+msgstr "これには %d ポイントが必要です。再生成してもよろしいですか？"
+
+msgid "What we will do?"
+msgstr "実施内容？"
+
+msgid "We will preprocess the image, including but not limited to removing the background, reducing complexity, and enhancing colors, to ensure higher-quality model generation results"
+msgstr "背景の削除、複雑さの軽減、色の強化などを含め（これらに限定されません）、より高品質なモデル生成結果を得るために画像を前処理します"
+
+msgid "Generate without preprocessing"
+msgstr "前処理なしで生成"
+
+msgid "Generate model"
+msgstr "モデルを生成"
+
+msgid "Based on our tests, the generation results are excellent. We highly recommend enabling this feature!"
+msgstr "テスト結果によると、生成結果は非常に優れています。この機能の有効化を強くおすすめします！"
+
+msgid "Not Now"
+msgstr "今はしない"
+
+msgid "Point Consumption Rules"
+msgstr "ポイント消費ルール"
+
+msgid "Generating a model image based on your text, please wait"
+msgstr "入力テキストに基づいてモデル画像を生成中です。しばらくお待ちください"
+
+msgid "Please select an image to generate a 3D model"
+msgstr "3Dモデルを生成する画像を選択してください"
+
+msgid "Text optimization"
+msgstr "テキスト最適化"
+
+msgid "Generate image"
+msgstr "画像を生成"
+
+msgid "Points have been consumed. Are you sure you want to stop this generation?"
+msgstr "ポイントが消費されました。この生成を停止してもよろしいですか？"
+
+msgid "Points"
+msgstr "ポイント"
+
+msgid "Uploaded images must be square (same width and height)."
+msgstr "アップロードする画像は正方形である必要があります（幅と高さが同じ）。"
+
+msgid "Cannot regenerate. Insufficient points for image or model generation."
+msgstr "再生成できません。画像またはモデル生成のポイントが不足しています。"
+
+msgid "Please upload your text"
+msgstr "テキストをアップロードしてください"
+
+msgid "You have %d regenerations left for this model generation. Regenerate?"
+msgstr "このモデル生成では、あと %d 回 再生成できます。再生成しますか？"
+
+msgid "Not enough regenerations. Cannot regenerate."
+msgstr "再生成回数が足りません。再生成できません。"
+
+msgid "You've used your free generation. Stop this generation?"
+msgstr "無料生成を使用しました。この生成を停止しますか？"
+
+msgid "No copyright"
+msgstr "著作権なし"
+
+msgid "Generation failed"
+msgstr "生成に失敗しました"
 
 #: resources/data/hints.ini: [hint:Chamber temperature]
 msgid ""

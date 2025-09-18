@@ -15,14 +15,17 @@ wxString FFUtils::getBitmapFileName(unsigned short pid)
 	case 0x0024:
 		str = "adventurer_5m_pro";
 		break;
+    case 0x00BB: 
+        str = "adventurer_a5"; 
+        break;
     case 0x0025: 
-        str = "Guider4"; 
+        str = "guider4"; 
         break;
     case 0x0026:
         str = "ad5x";
         break;
     case 0x0027: 
-        str = "Guider4Pro"; 
+        str = "guider4_pro"; 
         break;
     case 0x001F:
         str = "guider_3_ultra";
@@ -41,6 +44,9 @@ std::string FFUtils::getPrinterName(unsigned short pid)
 	case 0x0024:
 		str = "Adventurer 5M Pro";
 		break;
+    case 0x00BB:
+        str = "Adventurer A5";
+        break;
     case 0x0025: 
         str = "Flashforge Guider 4"; 
         break;
@@ -67,6 +73,9 @@ std::string FFUtils::getPrinterModelId(unsigned short pid)
 	case 0x0024:
 		str = "Flashforge-Adventurer-5M-Pro";
 		break;
+    case 0x00BB: 
+        str = "Flashforge-Adventurer-A5"; 
+        break;
     case 0x0025: 
         str = "Flashforge-Guider4"; 
         break;
@@ -443,6 +452,31 @@ wxString FFUtils::passwordForget()
 		return "https://auth.flashforge.com/lt/resetPassword/?channel=Orca";
 	}
     return "https://auth.flashforge.com/en/resetPassword/?channel=Orca";
+}
+
+wxRect FFUtils::calcContainedRect(const wxSize &containerSize, const wxSize &imgSize, bool enlarge)
+{
+    if (imgSize.x == 0 || imgSize.y == 0) {
+        return wxRect(0, 0, containerSize.x, containerSize.y);
+    }
+    wxSize drawSize;
+    if (enlarge || imgSize.x > containerSize.x || imgSize.y > containerSize.y) {
+        if (containerSize.x * imgSize.y > imgSize.x * containerSize.y) {
+            drawSize.x = imgSize.x * containerSize.y / imgSize.y;
+            drawSize.y = containerSize.y;
+        } else {
+            drawSize.x = containerSize.x;
+            drawSize.y = imgSize.y * containerSize.x / imgSize.x;
+        }
+    } else {
+        drawSize = imgSize;
+    }
+    wxRect rt;
+    rt.x = containerSize.x / 2 - drawSize.x / 2;
+    rt.y = containerSize.y / 2 - drawSize.y / 2;
+    rt.width = drawSize.x;
+    rt.height = drawSize.y;
+    return rt;
 }
 
 } // end namespace

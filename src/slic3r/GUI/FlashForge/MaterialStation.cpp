@@ -2252,8 +2252,10 @@ void MaterialPanel::setCurId(int curId)
 {
     m_cur_id = curId;
     m_material_slot->setCurId(curId);
-    update_wire_btn_state();
-    update_cancel_btn_state();
+    if (m_cur_id != -1) {
+        ComDevDetailUpdateEvent event(COM_DEV_DETAIL_UPDATE_EVENT, m_cur_id, 0, MultiComMgr::inst()->devData(m_cur_id).devDetail);
+        onComDevDetailUpdate(event);
+    }
     m_recognized_btn->Enable(false);
     m_unrecognized_btn->Enable(false);
     m_tips_area->reset_printer_status();

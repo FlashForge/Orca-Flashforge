@@ -1,7 +1,4 @@
 {
-    "activate_air_filtration": [
-        "1"
-    ],
     "additional_cooling_fan_speed": [
         "40"
     ],
@@ -22,6 +19,9 @@
     ],
     "eng_plate_temp_initial_layer": [
         "55"
+    ],
+    "filament_max_volumetric_speed": [
+        "21"
     ],
     "filament_settings_id": [
         "Flashforge PLA Basic @FF G4P"

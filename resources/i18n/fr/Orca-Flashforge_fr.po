@@ -21539,8 +21539,8 @@ msgstr "Temps d'impression"
 msgid "IP-Address"
 msgstr "Adresse IP"
 
-msgid "When using Orca-Flashforge V%s, please update Flash Maker to V2.0.2, and also update your device firmware to the latest version."
-msgstr "Lorsque vous utilisez Orca-Flashforge V%s, veuillez mettre à jour Flash Maker vers la version V2.0.2 également mettre à jour le firmware de votre appareil vers la dernière version."
+msgid "When using Orca-Flashforge V%s, please update Flash Maker to V%s, and also update your device firmware to the latest version."
+msgstr "Lorsque vous utilisez Orca-Flashforge V%s, veuillez mettre à jour Flash Maker vers la version V%s également mettre à jour le firmware de votre appareil vers la dernière version."
 
 msgid "Do not show again"
 msgstr "Ne plus afficher"
@@ -21601,6 +21601,206 @@ msgstr "Défaut de mise au point du Lidar détecté. Veuillez vérifier le Lidar
 
 msgid "For an improved experience, please restart Orca-Flashforge to load resources."
 msgstr "Pour une meilleure expérience, veuillez redémarrer Orca-Flashforge pour charger les ressources."
+
+msgctxt "Flashforge"
+msgid "Refer & Earn"
+msgstr "Recommandez et gagnez"
+
+msgid "Copy Referral Link"
+msgstr "Copier le lien de la recommandation"
+
+msgid "Insufficient points"
+msgstr "Points insuffisants"
+
+msgid "Generating, please wait..."
+msgstr "Génération en cours, veuillez patienter..."
+
+msgid "Generation successful!"
+msgstr "Génération réussie !"
+
+msgid "You can specify the number of colors for the model."
+msgstr "Vous pouvez spécifier le nombre de couleurs pour le modèle."
+
+msgid "AI 3D Model Generator"
+msgstr "Générateur de Modèles 3D IA"
+
+msgid "Points consumed"
+msgstr "Points consommés"
+
+msgid "Start generating"
+msgstr "Commencer la génération"
+
+msgid "This generation is free"
+msgstr "Cette génération est gratuite"
+
+msgid "Remaining points"
+msgstr "Points restants"
+
+msgid "Image Upload Tips"
+msgstr "Conseils pour le téléversement d’images"
+
+msgid "It supports PNG, JPG, JPEG. Images should be no larger than 6MB with a minimum resolution of 128*128."
+msgstr "Formats pris en charge : PNG, JPG, JPEG. Les images doivent peser moins de 6 Mo avec une résolution minimale de 128*128."
+
+msgid "Simple background (preferably solid color)"
+msgstr "Arrière-plan simple (de préférence uni)"
+
+msgid "No text included"
+msgstr "Aucun texte inclus"
+
+msgid "Single model"
+msgstr "Modèle unique"
+
+msgid "The model should not be too small."
+msgstr "Le modèle ne doit pas être trop petit."
+
+msgid "We're currently experiencing high demand. Please wait..."
+msgstr "Nous rencontrons actuellement une forte demande. Veuillez patienter..."
+
+msgid "Current queue"
+msgstr "File d’attente actuelle"
+
+msgid "Maximum image resolution: 5000*5000"
+msgstr "Résolution maximale de l’image : 5000*5000"
+
+msgid "Minimum image resolution: 128*128"
+msgstr "Résolution minimale de l’image : 128*128"
+
+msgid "Maximum image size: "
+msgstr "Taille maximale de l’image : "
+
+msgid "Failed to load image"
+msgstr "Échec du chargement de l’image"
+
+msgid "A model is currently being generated. Please wait."
+msgstr "Un modèle est en cours de génération. Veuillez patienter."
+
+msgid "Network Error"
+msgstr "Erreur réseau"
+
+msgid "AI Model Generation Failed"
+msgstr "Échec de la génération du modèle IA"
+
+msgid "Importing..."
+msgstr " Importation..."
+
+msgid "Not enough points. Please earn more points."
+msgstr "Points insuffisants. Veuillez en obtenir davantage."
+
+msgid "Get Now"
+msgstr "Obtenez maintenant"
+
+msgid "Please upload the image."
+msgstr "Veuillez télécharger l'image."
+
+msgid "Failed to cancel the task"
+msgstr "Échec de l'annulation de la tâche"
+
+msgid "One-click export log"
+msgstr "Exporter le journal en un clic"
+
+msgid "Export log"
+msgstr "Exporter le journal"
+
+msgid "Exporting, please wait"
+msgstr "Exportation en cours, veuillez patienter"
+
+msgctxt "Flashforge"
+msgid "Export successful"
+msgstr "Exportation réussie"
+
+msgid "Export failed, please try again"
+msgstr "Échec de l’exportation, veuillez réessayer"
+
+msgid "Text to 3D Model"
+msgstr "Texte vers modèle 3D"
+
+msgid "Image to 3D Model"
+msgstr "Image vers modèle 3D"
+
+msgid "Please enter the content you want to generate. We recommend focusing on a single subject. For example: A brown cat sculpture with a curled tail, in a cartoon style"
+msgstr "Veuillez saisir le contenu que vous souhaitez générer. Nous recommandons de vous concentrer sur un seul sujet. Par exemple : une sculpture de chat brun à la queue recourbée, dans un style cartoon"
+
+msgid "Image preprocessing"
+msgstr "Prétraitement de l’image"
+
+msgid "Processing image, please wait"
+msgstr "Traitement de l’image en cours, veuillez patienter"
+
+msgid "We will preprocess the image to ensure the best AI model generation results"
+msgstr "Nous allons prétraiter l’image afin de garantir les meilleurs résultats de génération de modèle IA"
+
+msgid "Please confirm if the image meets your expectations"
+msgstr "Veuillez confirmer si l’image correspond à vos attentes"
+
+msgid "Regenerate"
+msgstr "Régénérer"
+
+msgid "This will cost you %d points. Are you sure you want to regenerate?"
+msgstr "Cela vous coûtera %d points. Voulez-vous vraiment régénérer ?"
+
+msgid "What we will do?"
+msgstr "Ce que nous ferons?"
+
+msgid "We will preprocess the image, including but not limited to removing the background, reducing complexity, and enhancing colors, to ensure higher-quality model generation results"
+msgstr "Nous prétraiterons l’image, y compris, sans nous y limiter, en supprimant l’arrière-plan, en réduisant la complexité et en renforçant les couleurs, afin de garantir des résultats de génération de modèle de meilleure qualité"
+
+msgid "Generate without preprocessing"
+msgstr "Générer sans prétraitement"
+
+msgid "Generate model"
+msgstr "Générer le modèle"
+
+msgid "Based on our tests, the generation results are excellent. We highly recommend enabling this feature!"
+msgstr "D’après nos tests, les résultats de génération sont excellents. Nous vous recommandons vivement d’activer cette fonctionnalité !"
+
+msgid "Not Now"
+msgstr "Pas maintenant"
+
+msgid "Point Consumption Rules"
+msgstr "Règles de consommation des points"
+
+msgid "Generating a model image based on your text, please wait"
+msgstr "Génération d’une image de modèle à partir de votre texte en cours, veuillez patienter"
+
+msgid "Please select an image to generate a 3D model"
+msgstr "Veuillez sélectionner une image pour générer un modèle 3D"
+
+msgid "Text optimization"
+msgstr "Optimisation du texte"
+
+msgid "Generate image"
+msgstr "Générer l’image"
+
+msgid "Points have been consumed. Are you sure you want to stop this generation?"
+msgstr "Des points ont été consommés. Êtes-vous sûr de vouloir arrêter cette génération ?"
+
+msgid "Points"
+msgstr "Points"
+
+msgid "Uploaded images must be square (same width and height)."
+msgstr "Les images téléchargées doivent être carrées (largeur et hauteur identiques)."
+
+msgid "Cannot regenerate. Insufficient points for image or model generation."
+msgstr "Impossible de régénérer. Points insuffisants pour générer une image ou un modèle."
+
+msgid "Please upload your text"
+msgstr "Veuillez télécharger votre texte"
+
+msgid "You have %d regenerations left for this model generation. Regenerate?"
+msgstr "Vous avez %d régénérations restantes pour cette génération de modèle. Régénérer ?"
+
+msgid "Not enough regenerations. Cannot regenerate."
+msgstr "Pas assez de régénérations. Impossible de régénérer."
+
+msgid "You've used your free generation. Stop this generation?"
+msgstr "Vous avez utilisé votre génération gratuite. Arrêter cette génération ?"
+
+msgid "No copyright"
+msgstr "Pas de droits d'auteur"
+
+msgid "Generation failed"
+msgstr "Échec de la génération"
 
 #: resources/data/hints.ini: [hint:Chamber temperature]
 msgid ""

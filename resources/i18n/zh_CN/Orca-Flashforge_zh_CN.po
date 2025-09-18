@@ -18500,8 +18500,8 @@ msgstr "累计打印时长"
 msgid "IP-Address"
 msgstr "IP地址"
 
-msgid "When using Orca-Flashforge V%s, please update Flash Maker to V2.0.2, and also update your device firmware to the latest version."
-msgstr "使用Orca-Flashforge V%s时，请同步更新Flash Maker 至V2.0.2版本，同时设备固件请更新至最新版本"
+msgid "When using Orca-Flashforge V%s, please update Flash Maker to V%s, and also update your device firmware to the latest version."
+msgstr "使用Orca-Flashforge V%s时，请同步更新Flash Maker 至V%s版本，同时设备固件请更新至最新版本"
 
 msgid "Do not show again"
 msgstr "不再显示"
@@ -18562,6 +18562,206 @@ msgstr "检测到激光雷达对焦失败，请检查激光雷达"
 
 msgid "For an improved experience, please restart Orca-Flashforge to load resources."
 msgstr "为优化您的使用体验，请重启Orca-Flashforge以加载资源"
+
+msgctxt "Flashforge"
+msgid "Refer & Earn"
+msgstr "推荐得积分"
+
+msgid "Copy Referral Link"
+msgstr "复制推荐链接"
+
+msgid "Insufficient points"
+msgstr "积分不足"
+
+msgid "Generating, please wait..."
+msgstr "生成中，请稍候..."
+
+msgid "Generation successful!"
+msgstr "生成成功"
+
+msgid "You can specify the number of colors for the model."
+msgstr "您可以指定模型的颜色数量"
+
+msgid "AI 3D Model Generator"
+msgstr "AI 模型生成"
+
+msgid "Points consumed"
+msgstr "消耗积分"
+
+msgid "Start generating"
+msgstr "开始生成"
+
+msgid "This generation is free"
+msgstr "本次生成免费"
+
+msgid "Remaining points"
+msgstr "剩余积分"
+
+msgid "Image Upload Tips"
+msgstr "图片上传建议"
+
+msgid "It supports PNG, JPG, JPEG. Images should be no larger than 6MB with a minimum resolution of 128*128."
+msgstr "支持png/jpg/jpeg，图片大小最大不超过6M，分辨率最低要求128*128。"
+
+msgid "Simple background (preferably solid color)"
+msgstr "背景简单（尽量纯色）"
+
+msgid "No text included"
+msgstr "不包含文字"
+
+msgid "Single model"
+msgstr "单主体"
+
+msgid "The model should not be too small."
+msgstr "主体不要过小"
+
+msgid "We're currently experiencing high demand. Please wait..."
+msgstr "生成高峰期，请稍等"
+
+msgid "Current queue"
+msgstr "当前队列"
+
+msgid "Maximum image resolution: 5000*5000"
+msgstr "图片最大分辨率 5000*5000"
+
+msgid "Minimum image resolution: 128*128"
+msgstr "图片最小分辨率 128*128"
+
+msgid "Maximum image size: "
+msgstr "图片大小最大 "
+
+msgid "Failed to load image"
+msgstr "图片加载失败"
+
+msgid "A model is currently being generated. Please wait."
+msgstr "当前有生成中的模型，请等待"
+
+msgid "Network Error"
+msgstr "网络错误"
+
+msgid "AI Model Generation Failed"
+msgstr "AI 模型生成失败"
+
+msgid "Importing..."
+msgstr "导入中..."
+
+msgid "Not enough points. Please earn more points."
+msgstr "积分不足，请获取积分"
+
+msgid "Get Now"
+msgstr "去获取"
+
+msgid "Please upload the image."
+msgstr "请上传图片"
+
+msgid "Failed to cancel the task"
+msgstr "取消任务失败"
+
+msgid "One-click export log"
+msgstr "一键导出日志"
+
+msgid "Export log"
+msgstr "日志导出"
+
+msgid "Exporting, please wait"
+msgstr "导出中，请稍后"
+
+msgctxt "Flashforge"
+msgid "Export successful"
+msgstr "导出成功"
+
+msgid "Export failed, please try again"
+msgstr "导出失败，请重试"
+
+msgid "Text to 3D Model"
+msgstr "文生 3D"
+
+msgid "Image to 3D Model"
+msgstr "图生 3D"
+
+msgid "Please enter the content you want to generate. We recommend focusing on a single subject. For example: A brown cat sculpture with a curled tail, in a cartoon style"
+msgstr "请输入想要生成的内容。建议以单主体为主。例如:一只棕色的猫雕塑，尾巴卷曲，卡通风格"
+
+msgid "Image preprocessing"
+msgstr "图片预处理"
+
+msgid "Processing image, please wait"
+msgstr "图片处理中，请稍候"
+
+msgid "We will preprocess the image to ensure the best AI model generation results"
+msgstr "我们会对图片进行预处理，以保证最佳的 AI 模型生成效果"
+
+msgid "Please confirm if the image meets your expectations"
+msgstr "请确认图片效果是否符合预期"
+
+msgid "Regenerate"
+msgstr "重新生成"
+
+msgid "This will cost you %d points. Are you sure you want to regenerate?"
+msgstr "需要消耗您%d 积分，确认重新生成吗？"
+
+msgid "What we will do?"
+msgstr "我们做了什么？"
+
+msgid "We will preprocess the image, including but not limited to removing the background, reducing complexity, and enhancing colors, to ensure higher-quality model generation results"
+msgstr "我们会将图片进行预处理，包括并不限于抠除背景、降低复杂度、强化色彩等等，以保证更优质的模型生成效果"
+
+msgid "Generate without preprocessing"
+msgstr "未处理生成"
+
+msgid "Generate model"
+msgstr "生成模型"
+
+msgid "Based on our tests, the generation results are excellent. We highly recommend enabling this feature!"
+msgstr "经测试，生成效果极佳，强烈建议您打开该功能！"
+
+msgid "Not Now"
+msgstr "暂不开启"
+
+msgid "Point Consumption Rules"
+msgstr "积分消耗规则"
+
+msgid "Generating a model image based on your text, please wait"
+msgstr "正在根据您的文案生成模型图片，请稍后"
+
+msgid "Please select an image to generate a 3D model"
+msgstr "请选择一张图片进一步生成 3D 模型"
+
+msgid "Text optimization"
+msgstr "文案优化"
+
+msgid "Generate image"
+msgstr "生成图片"
+
+msgid "Points have been consumed. Are you sure you want to stop this generation?"
+msgstr "积分已消耗，是否确认要终止本次生成？"
+
+msgid "Points"
+msgstr "积分"
+
+msgid "Uploaded images must be square (same width and height)."
+msgstr "上传的图片需要为正方形（长宽相同）。"
+
+msgid "Cannot regenerate. Insufficient points for image or model generation."
+msgstr "无法重新生成，总积分不足生成图片和模型。"
+
+msgid "Please upload your text"
+msgstr "请上传文案"
+
+msgid "You have %d regenerations left for this model generation. Regenerate?"
+msgstr "本次模型生成您还剩 %d 次重新生成次数，确认重新生成吗？"
+
+msgid "Not enough regenerations. Cannot regenerate."
+msgstr "重新生成次数不足，无法重新生成。"
+
+msgid "You've used your free generation. Stop this generation?"
+msgstr "本次免费生成次数已消耗，是否确认要终止本次生成？"
+
+msgid "No copyright"
+msgstr "无版权"
+
+msgid "Generation failed"
+msgstr "生成失败"
 
 #: resources/data/hints.ini: [hint:Chamber temperature]
 msgid ""

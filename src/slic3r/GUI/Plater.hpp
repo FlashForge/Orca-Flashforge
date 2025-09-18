@@ -28,6 +28,7 @@
 #include "libslic3r/calib.hpp"
 #include "libslic3r/CutUtils.hpp"
 #include "libslic3r/FlushVolCalc.hpp"
+#include "slic3r/GUI/ConvertModel/ConvertModel.hpp"
 
 #define FILAMENT_SYSTEM_COLORS_NUM      16
 
@@ -299,7 +300,7 @@ public:
     // BBS: restore
     std::vector<size_t> load_files(const std::vector<boost::filesystem::path>& input_files, LoadStrategy strategy = LoadStrategy::LoadModel | LoadStrategy::LoadConfig,  bool ask_multi = false);
     // To be called when providing a list of files to the GUI slic3r on command line.
-    std::vector<size_t> load_files(const std::vector<std::string>& input_files, LoadStrategy strategy = LoadStrategy::LoadModel | LoadStrategy::LoadConfig,  bool ask_multi = false);
+    std::vector<size_t> load_files(const std::vector<std::string>& input_files, LoadStrategy strategy = LoadStrategy::LoadModel | LoadStrategy::LoadConfig,  bool ask_multi = false, cvt_colors_t convert_colors = {});
     // to be called on drag and drop
     bool load_files(const wxArrayString& filenames);
 

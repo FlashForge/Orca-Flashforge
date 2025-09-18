@@ -169,10 +169,40 @@ set(SLIC3R_GUI_SOURCES
     GUI/GLSelectionRectangle.hpp
     GUI/Gizmos/GizmoObjectManipulation.cpp
     GUI/Gizmos/GizmoObjectManipulation.hpp
+    GUI/ConvertModel/CMLoadGlb.cpp
+    GUI/ConvertModel/CMLoadGlb.hpp
+    GUI/ConvertModel/CMLoadObj.cpp
+    GUI/ConvertModel/CMLoadObj.hpp
+    GUI/ConvertModel/CMSaveObj.cpp
+    GUI/ConvertModel/CMSaveObj.hpp
+    GUI/ConvertModel/ConvertModel.cpp
+    GUI/ConvertModel/ConvertModel.hpp
+    GUI/ConvertModel/ConvertModelDef.hpp
+    GUI/ConvertModel/ConvertModelProc.cpp
+    GUI/ConvertModel/ConvertModelProc.hpp
+    GUI/ConvertModel/ConvertModelUtils.cpp
+    GUI/ConvertModel/ConvertModelUtils.hpp
+    GUI/ConvertModel/KMeansCluster.cpp
+    GUI/ConvertModel/KMeansCluster.hpp
+    GUI/ConvertModel/MakeOutData.cpp
+    GUI/ConvertModel/MakeOutData.hpp
+    GUI/ConvertModel/MeshSubdivide.cpp
+    GUI/ConvertModel/MeshSubdivide.hpp
+    GUI/ConvertModel/MeshSubdivideBase.cpp
+    GUI/ConvertModel/MeshSubdivideBase.hpp
+    GUI/ConvertModel/RemoveSmallPatches.cpp
+    GUI/ConvertModel/RemoveSmallPatches.hpp
+    GUI/ConvertModel/SampleColorData.cpp
+    GUI/ConvertModel/SampleColorData.hpp
+    GUI/ConvertModel/TextureSample.cpp
+    GUI/ConvertModel/TextureSample.hpp
+    GUI/ConvertModel/Vertex2FaceColor.cpp
+    GUI/ConvertModel/Vertex2FaceColor.hpp
+    GUI/ConvertModel/tinygltf/tiny_gltf.cc
     GUI/FlashForge/AmsMappingWidgets.cpp
     GUI/FlashForge/AmsMappingWidgets.hpp
-	GUI/FlashForge/CleanNimData.cpp
-	GUI/FlashForge/CleanNimData.hpp
+    GUI/FlashForge/CleanNimData.cpp
+    GUI/FlashForge/CleanNimData.hpp
     GUI/FlashForge/ComWanNimConn.cpp
     GUI/FlashForge/ComWanNimConn.hpp
     GUI/FlashForge/ComCommand.cpp
@@ -189,12 +219,16 @@ set(SLIC3R_GUI_SOURCES
     GUI/FlashForge/DeviceListPanel.hpp
     GUI/FlashForge/DeviceFilterPopup.hpp
     GUI/FlashForge/DeviceFilterPopup.cpp
+	GUI/FlashForge/ExportLogs.cpp
+	GUI/FlashForge/ExportLogs.hpp
     GUI/FlashForge/FlashNetwork.h
     GUI/FlashForge/FlashNetworkIntfc.cpp
     GUI/FlashForge/FlashNetworkIntfc.h
     GUI/FlashForge/FreeInDestructor.h
     GUI/FlashForge/FFDownloadTool.cpp
     GUI/FlashForge/FFDownloadTool.hpp
+    GUI/FlashForge/FFTitleLessDialog.cpp
+    GUI/FlashForge/FFTitleLessDialog.hpp
     GUI/FlashForge/FFTransientWindow.cpp
     GUI/FlashForge/FFTransientWindow.hpp
     GUI/FlashForge/LoginDialog.cpp
@@ -204,6 +238,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/FlashForge/MultiComEvent.cpp
     GUI/FlashForge/MultiComEvent.hpp
     GUI/FlashForge/MultiComDef.hpp
+    GUI/FlashForge/MultiComHelper.cpp
+    GUI/FlashForge/MultiComHelper.hpp
     GUI/FlashForge/MultiComMgr.cpp
     GUI/FlashForge/MultiComMgr.hpp
     GUI/FlashForge/MultiComUtils.cpp
@@ -212,17 +248,19 @@ set(SLIC3R_GUI_SOURCES
     GUI/FlashForge/PasswordCtrl.hpp
     GUI/FlashForge/PrintDevLocalFileDlg.cpp
     GUI/FlashForge/PrintDevLocalFileDlg.hpp
-	GUI/FlashForge/PrinterErrorMsgDlg.cpp
-	GUI/FlashForge/PrinterErrorMsgDlg.hpp
+    GUI/FlashForge/PrinterErrorMsgDlg.cpp
+    GUI/FlashForge/PrinterErrorMsgDlg.hpp
+    GUI/FlashForge/PromoShareDlg.cpp
+    GUI/FlashForge/PromoShareDlg.hpp
     GUI/FlashForge/SingleDeviceState.cpp
     GUI/FlashForge/SingleDeviceState.hpp
     GUI/FlashForge/Singleton.hpp
-	GUI/FlashForge/TimeLapseVideoPlayDlg.cpp
-	GUI/FlashForge/TimeLapseVideoPlayDlg.hpp
-	GUI/FlashForge/TimeLapseVideoPanel.cpp
-	GUI/FlashForge/TimeLapseVideoPanel.hpp
-	GUI/FlashForge/VideoDownloadErrorDlg.cpp
-	GUI/FlashForge/VideoDownloadErrorDlg.hpp
+    GUI/FlashForge/TimeLapseVideoPlayDlg.cpp
+    GUI/FlashForge/TimeLapseVideoPlayDlg.hpp
+    GUI/FlashForge/TimeLapseVideoPanel.cpp
+    GUI/FlashForge/TimeLapseVideoPanel.hpp
+    GUI/FlashForge/VideoDownloadErrorDlg.cpp
+    GUI/FlashForge/VideoDownloadErrorDlg.hpp
     GUI/FlashForge/VideoFileOperatorMsgDlg.cpp
     GUI/FlashForge/VideoFileOperatorMsgDlg.hpp
     GUI/FlashForge/WaitEvent.cpp
@@ -239,6 +277,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/FlashForge/UserNameCtrl.hpp
     GUI/FlashForge/VerifyCodeCtrl.cpp
     GUI/FlashForge/VerifyCodeCtrl.hpp
+    GUI/FlashForge/ModelApiDialog.cpp
+    GUI/FlashForge/ModelApiDialog.hpp
     GUI/GLModel.hpp
     GUI/GLModel.cpp
     GUI/GLTexture.hpp

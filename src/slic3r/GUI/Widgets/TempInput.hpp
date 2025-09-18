@@ -12,7 +12,6 @@
 #include "slic3r/GUI/TitleDialog.hpp"
 #include "slic3r/GUI/FlashForge/FlashNetwork.h"
 #include "slic3r/GUI/FlashForge/MultiComMgr.hpp"
-#include "slic3r/GUI/FlashForge/MultiComUtils.hpp"
 #include "slic3r/GUI/FlashForge/ComCommand.hpp"
 
 wxDECLARE_EVENT(wxCUSTOMEVT_SET_TEMP_FINISH, wxCommandEvent);

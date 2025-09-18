@@ -1332,6 +1332,7 @@ void TempMixDevice::changeMachineType(unsigned short pid)
     switch (pid) {
     case 0x0023: //"adventurer_5m"
     case 0x0024: //"adventurer_5m_pro"
+    case 0x00BB: // "adventurer_a5"
         m_g3uMachine = false;
         m_top_btn->SetNormalIcon("device_top_temperature");
         m_top_btn->SetIconNormal();

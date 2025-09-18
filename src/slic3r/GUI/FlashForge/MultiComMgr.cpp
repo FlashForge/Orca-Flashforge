@@ -6,6 +6,7 @@
 #include <wx/stdpaths.h>
 #include "CleanNimData.hpp"
 #include "FreeInDestructor.h"
+#include "MultiComHelper.hpp"
 #include "WanDevTokenMgr.hpp"
 
 namespace Slic3r { namespace GUI {
@@ -49,7 +50,11 @@ bool MultiComMgr::initalize(const std::string &dllPath, const std::string &dataD
     logSettings.expireHours = 72;
     logSettings.level = debug ? FNET_LOG_LEVEL_DEBUG : FNET_LOG_LEVEL_INFO;
 
-    std::string serverSettingsPath = (appPathWithSep + "FLASHNETWORK2.DAT").ToUTF8().data();
+#ifdef __APPLE__
+    std::string serverSettingsPath = (appPathWithSep + "../Resources/data/FLASHNETWORK3.DAT").ToUTF8().data();
+#else
+    std::string serverSettingsPath = (appPathWithSep + "resources/data/FLASHNETWORK3.DAT").ToUTF8().data();
+#endif
     m_networkIntfc.reset(new fnet::FlashNetworkIntfc(
         dllPath.c_str(), serverSettingsPath.c_str(), logSettings));
     if (!m_networkIntfc->isOk()) {
@@ -144,7 +149,8 @@ void MultiComMgr::removeLanDev(com_id_t id)
     it->second->disconnect(0);
 }
 
-ComErrno MultiComMgr::addWanDev(const com_token_data_t &tokenData, int tryCnt, int tryMsInterval)
+ComErrno MultiComMgr::addWanDev(const com_token_data_t &tokenData, com_add_wan_dev_data_t &addDevData,
+    int tryCnt, int tryMsInterval)
 {
     auto tryDo = [tryCnt, tryMsInterval](const std::function<ComErrno()> &func) {
         ComErrno ret = COM_ERROR;
@@ -162,16 +168,22 @@ ComErrno MultiComMgr::addWanDev(const com_token_data_t &tokenData, int tryCnt, i
     if (networkIntfc() == nullptr || m_login) {
         return COM_ERROR;
     }
-    com_user_profile_t userProfile;
     ComErrno ret = tryDo([&]() {
-        return MultiComUtils::getUserProfile(tokenData.accessToken, userProfile, ComTimeoutWanA);
+        return MultiComUtils::getUserProfile(tokenData.accessToken, addDevData.userProfile, ComTimeoutWanA);
+    });
+    if (ret != COM_OK) {
+        return ret;
+    }
+    ret = tryDo([&]() {
+        return MultiComUtils::bindAccountRelp(addDevData.userProfile.uid, tokenData.accessToken,
+            addDevData.userProfile.email, addDevData.showUserPoints, ComTimeoutWanA);
     });
     if (ret != COM_OK) {
         return ret;
     }
     com_nim_data_t nimData;
     ret = tryDo([&]() {
-        return MultiComUtils::getNimData(userProfile.uid, tokenData.accessToken, nimData, ComTimeoutWanA);
+        return MultiComUtils::getNimData(addDevData.userProfile.uid, tokenData.accessToken, nimData, ComTimeoutWanA);
     });
     if (ret != COM_OK) {
         return ret;
@@ -180,12 +192,13 @@ ComErrno MultiComMgr::addWanDev(const com_token_data_t &tokenData, int tryCnt, i
     m_httpOnline = true;
     m_nimOnline = true;
     m_nimFirstLogined = true;
-    m_uid = userProfile.uid;
+    m_uid = addDevData.userProfile.uid;
     m_nimData = nimData;
     m_subscribeTime = std_precise_clock::now();
     m_blockCommandFailedUpdate = false;
     m_commandFailedUpdateTime = std_precise_clock::time_point::min();
-    m_wanDevMaintainThd->setUid(userProfile.uid);
+    m_wanDevMaintainThd->setUid(addDevData.userProfile.uid);
+    MultiComHelper::inst()->setUid(addDevData.userProfile.uid);
     WanDevTokenMgr::inst()->start(tokenData, networkIntfc()); // initialize global token
     //
     ret = ComWanNimConn::inst()->createConn(nimData.nimDataId.c_str());
@@ -196,7 +209,7 @@ ComErrno MultiComMgr::addWanDev(const com_token_data_t &tokenData, int tryCnt, i
         return ret;
     }
     m_wanDevMaintainThd->setUpdateWanDev();
-    QueueEvent(new ComGetUserProfileEvent(COM_GET_USER_PROFILE_EVENT, userProfile, ret));
+    QueueEvent(new ComGetUserProfileEvent(COM_GET_USER_PROFILE_EVENT, addDevData.userProfile, ret));
     return ret;
 }
 
@@ -401,6 +414,7 @@ void MultiComMgr::onTimer(const wxTimerEvent &event)
                 if (duration.count() > 20 && devData.wanDevInfo.status != "offline") {
                     devData.wanDevInfo.status = "offline";
                     QueueEvent(new ComWanDevInfoUpdateEvent(COM_WAN_DEV_INFO_UPDATE_EVENT, comId));
+                    BOOST_LOG_TRIVIAL(warning) << devData.wanDevInfo.serialNumber << ", timeout offline";
                 }
             }
         }

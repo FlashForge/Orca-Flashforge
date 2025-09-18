@@ -12,9 +12,9 @@ ComErrno MultiComUtils::getLanDevList(std::vector<fnet_lan_dev_info> &devInfos)
     }
     int devCnt;
     fnet_lan_dev_info *fnetDevInfos;
-    int ret = intfc->getLanDevList(&fnetDevInfos, &devCnt, 500);
-    if (ret != COM_OK) {
-        return fnetRet2ComErrno(ret);
+    int fnetRet = intfc->getLanDevList(&fnetDevInfos, &devCnt, 500);
+    if (fnetRet != FNET_OK) {
+        return fnetRet2ComErrno(fnetRet);
     }
     fnet::FreeInDestructor freeDevInfos(fnetDevInfos, intfc->freeLanDevInfos);
     devInfos.clear();
@@ -35,13 +35,13 @@ ComErrno MultiComUtils::getTokenByPassword(const std::string &userName, const st
     fnet_token_data_t *fnetTokenData;
     char *fnetMessage = nullptr;
     fnet::FreeInDestructor freeFnetMessage(fnetMessage, intfc->freeString);
-    int ret = intfc->getTokenByPassword(userName.c_str(), password.c_str(), language.c_str(),
+    int fnetRet = intfc->getTokenByPassword(userName.c_str(), password.c_str(), language.c_str(),
         &fnetTokenData, &fnetMessage, msTimeout);
     if (fnetMessage != nullptr) {
         message = fnetMessage;
     }
-    if (ret != FNET_OK) {
-        return fnetRet2ComErrno(ret);
+    if (fnetRet != FNET_OK) {
+        return fnetRet2ComErrno(fnetRet);
     }
     fnet::FreeInDestructor freeTokenInfo(fnetTokenData, intfc->freeToken);
     tokenData.expiresIn = fnetTokenData->expiresIn;
@@ -59,9 +59,9 @@ ComErrno MultiComUtils::refreshToken(const std::string &refreshToken, com_token_
     }
     time_t startTime = time(nullptr);
     fnet_token_data_t *fnetTokenData;
-    int ret = intfc->refreshToken(refreshToken.c_str(), "en", &fnetTokenData, nullptr, msTimeout);
-    if (ret != COM_OK) {
-        return fnetRet2ComErrno(ret);
+    int fnetRet = intfc->refreshToken(refreshToken.c_str(), "en", &fnetTokenData, nullptr, msTimeout);
+    if (fnetRet != FNET_OK) {
+        return fnetRet2ComErrno(fnetRet);
     }
     fnet::FreeInDestructor freeTokenData(fnetTokenData, intfc->freeToken);
     tokenData.expiresIn = fnetTokenData->expiresIn;
@@ -79,9 +79,9 @@ ComErrno MultiComUtils::getClientToken(com_clinet_token_data_t &clinetTokenData,
     }
     time_t startTime = time(nullptr);
     fnet_client_token_data *fnetClientTokenData;
-    int ret = intfc->getClientToken("en", &fnetClientTokenData, nullptr, msTimeout);
-    if (ret != COM_OK) {
-        return fnetRet2ComErrno(ret);
+    int fnetRet = intfc->getClientToken("en", &fnetClientTokenData, nullptr, msTimeout);
+    if (fnetRet != FNET_OK) {
+        return fnetRet2ComErrno(fnetRet);
     }
     fnet::FreeInDestructor freeClientTokenData(fnetClientTokenData, intfc->freeClientToken);
     clinetTokenData.accessToken = fnetClientTokenData->accessToken;
@@ -99,13 +99,13 @@ ComErrno MultiComUtils::sendSMSCode(const std::string &clinetAccessToken, const 
     }
     char *fnetMessage = nullptr;
     fnet::FreeInDestructor freeFnetMessage(fnetMessage, intfc->freeString);
-    int ret = intfc->sendSMSCode(clinetAccessToken.c_str(), phoneNumber.c_str(), language.c_str(),
+    int fnetRet = intfc->sendSMSCode(clinetAccessToken.c_str(), phoneNumber.c_str(), language.c_str(),
         &fnetMessage, msTimeout);
     if (fnetMessage != nullptr) {
         message = fnetMessage;
     }
-    if (ret != COM_OK) {
-        return fnetRet2ComErrno(ret);
+    if (fnetRet != FNET_OK) {
+        return fnetRet2ComErrno(fnetRet);
     }
     return COM_OK;
 }
@@ -121,13 +121,13 @@ ComErrno MultiComUtils::getTokenBySMSCode(const std::string &userName, const std
     fnet_token_data_t *fnetTokenData;
     char *fnetMessage = nullptr;
     fnet::FreeInDestructor freeFnetMessage(fnetMessage, intfc->freeString);
-    int ret = intfc->getTokenBySMSCode(userName.c_str(), SMSCode.c_str(), language.c_str(),
+    int fnetRet = intfc->getTokenBySMSCode(userName.c_str(), SMSCode.c_str(), language.c_str(),
         &fnetTokenData, &fnetMessage, msTimeout);
     if (fnetMessage != nullptr) {
         message = fnetMessage;
     }
-    if (ret != COM_OK) {
-        return fnetRet2ComErrno(ret);
+    if (fnetRet != FNET_OK) {
+        return fnetRet2ComErrno(fnetRet);
     }
     fnet::FreeInDestructor freeTokenInfo(fnetTokenData, intfc->freeToken);
     tokenData.expiresIn = fnetTokenData->expiresIn;
@@ -135,24 +135,6 @@ ComErrno MultiComUtils::getTokenBySMSCode(const std::string &userName, const std
     tokenData.refreshToken = fnetTokenData->refreshToken;
     tokenData.startTime = startTime;
     return COM_OK;
-}
-
-ComErrno MultiComUtils::checkToken(const std::string &accessToken, int msTimeout)
-{
-    fnet::FlashNetworkIntfc *intfc = MultiComMgr::inst()->networkIntfc();
-    if (intfc == nullptr) {
-        return COM_ERROR;
-    }
-    return fnetRet2ComErrno(intfc->checkToken(accessToken.c_str(), msTimeout));
-}
-
-ComErrno MultiComUtils::signOut(const std::string &accessToken, int msTimeout)
-{
-    fnet::FlashNetworkIntfc *intfc = MultiComMgr::inst()->networkIntfc();
-    if (intfc == nullptr) {
-        return COM_ERROR;
-    }
-    return fnetRet2ComErrno(intfc->signOut(accessToken.c_str(), msTimeout));
 }
 
 ComErrno MultiComUtils::getUserProfile(const std::string &accessToken, com_user_profile_t &userProfile,
@@ -171,6 +153,25 @@ ComErrno MultiComUtils::getUserProfile(const std::string &accessToken, com_user_
     userProfile.uid = fnetProfile->uid;
     userProfile.nickname = fnetProfile->nickname;
     userProfile.headImgUrl = fnetProfile->headImgUrl;
+    userProfile.email = fnetProfile->email;
+    return COM_OK;
+}
+
+ComErrno MultiComUtils::bindAccountRelp(const std::string &uid, const std::string &accessToken,
+    const std::string &email, bool &showUserPoints, int msTimeout)
+{
+    fnet::FlashNetworkIntfc *intfc = MultiComMgr::inst()->networkIntfc();
+    if (intfc == nullptr) {
+        return COM_ERROR;
+    }
+    fnet_bind_account_relp_result_t *bindResult;
+    int fnetRet = intfc->bindAccountRelp(
+        uid.c_str(), accessToken.c_str(), email.c_str(), &bindResult, msTimeout);
+    if (fnetRet != FNET_OK) {
+        return fnetRet2ComErrno(fnetRet);
+    }
+    fnet::FreeInDestructor freeBindResult(bindResult, intfc->freeBindAccountRelpResult);
+    showUserPoints = bindResult->showUserPoints;
     return COM_OK;
 }
 
@@ -245,6 +246,14 @@ ComErrno MultiComUtils::fnetRet2ComErrno(int networkRet)
         return COM_INVALID_VALIDATION;
     case FNET_DEVICE_HAS_BEEN_BOUND:
         return COM_DEVICE_HAS_BEEN_BOUND;
+    case FNET_ABORT_AI_JOB_FAILED:
+        return COM_ABORT_AI_JOB_FAILED;
+    case FENT_AI_JOB_NOT_ENOUGH_POINTS:
+        return COM_AI_JOB_NOT_ENOUGH_POINTS;
+    case FNET_NO_EXISTING_AI_MODEL_JOB:
+        return COM_NO_EXISTING_AI_MODEL_JOB;
+    case FNET_INPUT_FAILED_THE_REVIEW:
+        return COM_INPUT_FAILED_THE_REVIEW;
     case FNET_NIM_SEND_ERROR:
         return COM_NIM_SEND_ERROR;
     case FNET_NIM_DATA_BASE_ERROR:

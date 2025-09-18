@@ -61,11 +61,8 @@
     "nozzle_temperature_range_high": [
         "250"
     ],
-    "textured_cool_plate_temp": [
-        "0"
-    ],
-    "textured_cool_plate_temp_initial_layer": [
-        "0"
+    "pressure_advance": [
+        "0.035"
     ],
     "textured_plate_temp": [
         "100"

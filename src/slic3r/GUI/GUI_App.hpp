@@ -68,9 +68,13 @@ wxDECLARE_EVENT(EVT_START_LOGIN, wxCommandEvent);
 wxDECLARE_EVENT(EVT_LOGIN_FAILED, wxCommandEvent);
 wxDECLARE_EVENT(EVT_LOGIN_SUCCEED, wxCommandEvent);
 wxDECLARE_EVENT(EVT_LOGIN_OUT, wxCommandEvent);
+wxDECLARE_EVENT(EVT_USER_HEAD_IMAGE_UPDATED, wxCommandEvent);
 
+struct com_add_wan_dev_data_t;
 struct ComGetUserProfileEvent;
 struct ComWanDevMaintainEvent;
+struct ComRefreshTokenEvent;
+struct ComBusGetRequestEvent;
 class RemovableDriveManager;
 class OtherInstanceMessageHandler;
 class MainFrame;
@@ -91,7 +95,7 @@ class NetworkErrorDialog;
 class DeviceObjectOpr;
 class LoginDialog;
 class ReLoginDialog;
-
+class FFDownloadTool;
 
 enum FileType
 {
@@ -328,10 +332,12 @@ private:
     HttpServer       m_http_server;
     bool             m_show_gcode_window{true};
     boost::thread    m_check_network_thread;
+
     bool             m_restart_app{false};
     bool             m_login_success{false};
-    std::vector<char> m_usr_pic_data;
     wxImage          m_usr_pic_image;
+    std::unique_ptr<FFDownloadTool> m_download_tool;
+
   public:
       //try again when subscription fails
     void            on_start_subscribe_again(std::string dev_id);
@@ -340,8 +346,8 @@ private:
     int             OnExit() override;
     bool            initialized() const { return m_initialized; }
     inline bool     is_enable_multi_machine() { return this->app_config&& this->app_config->get("enable_multi_machine") == "true"; }
-    wxImage         getUsrPic();
-    void            setUsrPic(wxImage image);
+    const wxImage  &getUsrPic();
+    void            setUsrPic(const wxImage &image);
     
 
     std::map<std::string, bool> test_url_state;
@@ -471,12 +477,16 @@ private:
     bool            is_user_login();
     
     void            auto_login_flashforge();
+    void            set_user_region();
+    void            jump_to_user_points();
+    void            update_user_points();
     void            request_user_login(int online_login = 0);
     void            request_user_handle(int online_login = 0);
     void            request_user_logout();
     int             request_user_unbind(std::string dev_id);
     std::string     handle_web_request(std::string cmd);
-    void            handle_login_result(std::string url, std::string name);
+    void            handle_show_user_points(const com_add_wan_dev_data_t &add_dev_data);
+    void            handle_login_result(std::string url, std::string name, std::string email, bool showUserPoints);
     void            handle_login_out();
     void            handle_script_message(std::string msg);
     void            request_model_download(wxString url);
@@ -495,7 +505,8 @@ private:
     void            on_connect_event();
     void            get_usr_profile(ComGetUserProfileEvent &event);
     void            wan_dev_maintain(ComWanDevMaintainEvent &event);
-    void            downloadUrlPic(const std::string& url);
+    void            refresh_access_token(ComRefreshTokenEvent &event);
+    void            bus_get_request(ComBusGetRequestEvent &event);
     void            onAutoStartLogin(wxCommandEvent& event);
 
     // BBS

@@ -85,7 +85,7 @@ void TimeLapseVideoItem::onPaint(wxPaintEvent &event)
     }
     wxSize thumbRectSize = m_thumbRect.GetSize();
     if (m_thumbWxBmp.IsOk()) {
-        wxRect rt = getDrawRect(thumbRectSize, m_thumbWxBmp.GetSize(), true);
+        wxRect rt = FFUtils::calcContainedRect(thumbRectSize, m_thumbWxBmp.GetSize(), true);
         gc->SetPen(wxColour("#e3e2e2"));
         gc->SetBrush(*wxTRANSPARENT_BRUSH);
         gc->DrawRectangle(0, 0, thumbRectSize.x - 1, thumbRectSize.y - 1);
@@ -95,16 +95,16 @@ void TimeLapseVideoItem::onPaint(wxPaintEvent &event)
         gc->SetBrush(wxColour("#e3e2e2"));
         gc->DrawRectangle(0, 0, thumbRectSize.x, thumbRectSize.y);
         if (m_drawThumbImg) {
-            wxRect rt = getDrawRect(thumbRectSize, m_loadingBmp.GetBmpSize(), false);
+            wxRect rt = FFUtils::calcContainedRect(thumbRectSize, m_loadingBmp.GetBmpSize(), false);
             gc->DrawBitmap(m_loadingBmp.bmp(), rt.x, rt.y, rt.width, rt.height);
         } else {
-            wxRect rt = getDrawRect(thumbRectSize, m_flashforgeBmp.GetBmpSize(), false);
+            wxRect rt = FFUtils::calcContainedRect(thumbRectSize, m_flashforgeBmp.GetBmpSize(), false);
             gc->DrawBitmap(m_flashforgeBmp.bmp(), rt.x, rt.y, rt.width, rt.height);
         }
     }
 
     if (m_hoverPlay) {
-        wxRect rt = getDrawRect(thumbRectSize, m_playHoverBmp.GetBmpSize(), false);
+        wxRect rt = FFUtils::calcContainedRect(thumbRectSize, m_playHoverBmp.GetBmpSize(), false);
         gc->DrawBitmap(m_playHoverBmp.bmp(), rt.x, rt.y, rt.width, rt.height);
     }
     wxBitmap *bmp = nullptr;
@@ -190,31 +190,6 @@ void TimeLapseVideoItem::onMouseCaptureLost(wxMouseCaptureLostEvent &event)
         Refresh();
         Update();
     }
-}
-
-wxRect TimeLapseVideoItem::getDrawRect(const wxSize &boardSize, const wxSize &imgSize, bool scale)
-{
-    if (imgSize.x == 0 || imgSize.y == 0) {
-        return wxRect(0, 0, boardSize.x, boardSize.y);
-    }
-    wxSize drawSize;
-    if (scale || imgSize.x > boardSize.x || imgSize.y > boardSize.y) {
-        if (boardSize.x * imgSize.y > imgSize.x * boardSize.y) {
-            drawSize.x = imgSize.x * boardSize.y / imgSize.y;
-            drawSize.y = boardSize.y;
-        } else {
-            drawSize.x = boardSize.x;
-            drawSize.y = imgSize.y * boardSize.x / imgSize.x;
-        }
-    } else {
-        drawSize = imgSize;
-    }
-    wxRect rt;
-    rt.x = boardSize.x / 2 - drawSize.x / 2;
-    rt.y = boardSize.y / 2 - drawSize.y / 2;
-    rt.width = drawSize.x;
-    rt.height = drawSize.y;
-    return rt;
 }
 
 TimeLapseVideoPanel::TimeLapseVideoPanel(wxWindow *parent)

@@ -5,8 +5,20 @@
     "complete_print_exhaust_fan_speed": [
         "50"
     ],
+    "cool_plate_temp": [
+        "0"
+    ],
+    "cool_plate_temp_initial_layer": [
+        "0"
+    ],
     "during_print_exhaust_fan_speed": [
         "40"
+    ],
+    "eng_plate_temp": [
+        "80"
+    ],
+    "eng_plate_temp_initial_layer": [
+        "80"
     ],
     "fan_cooling_layer_time": [
         "10"
@@ -74,6 +86,12 @@
         "-1"
     ],
     "temperature_vitrification": [
+        "80"
+    ],
+    "textured_plate_temp": [
+        "80"
+    ],
+    "textured_plate_temp_initial_layer": [
         "80"
     ],
     "version": "2.1.1.0"

@@ -85,12 +85,6 @@
     "support_material_interface_fan_speed": [
         "80"
     ],
-    "textured_cool_plate_temp": [
-        "0"
-    ],
-    "textured_cool_plate_temp_initial_layer": [
-        "0"
-    ],
     "textured_plate_temp": [
         "100"
     ],

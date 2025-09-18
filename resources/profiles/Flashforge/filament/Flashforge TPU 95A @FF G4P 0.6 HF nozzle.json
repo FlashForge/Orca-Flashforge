@@ -39,7 +39,7 @@
         "0.98"
     ],
     "filament_max_volumetric_speed": [
-        "8"
+        "3.6"
     ],
     "filament_minimal_purge_on_wipe_tower": [
         "15"
@@ -71,10 +71,10 @@
     "is_custom_defined": "0",
     "name": "Flashforge TPU 95A @FF G4P 0.6 HF nozzle",
     "nozzle_temperature": [
-        "220"
+        "225"
     ],
     "nozzle_temperature_initial_layer": [
-        "220"
+        "225"
     ],
     "nozzle_temperature_range_high": [
         "250"
@@ -87,6 +87,9 @@
     ],
     "pressure_advance": [
         "0.03"
+    ],
+    "slow_down_layer_time": [
+        "12"
     ],
     "slow_down_min_speed": [
         "20"

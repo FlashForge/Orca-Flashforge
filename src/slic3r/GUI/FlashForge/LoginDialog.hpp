@@ -55,7 +55,7 @@ public:
 
     void ReLoad();
 
-    static com_token_data_t GetLoginToken();
+    static const com_token_data_t &GetLoginToken();
     static void SetToken(const std::string& accessToken, const std::string& refreshToken);
     static void SetUsrLogin(bool loginState);
     static bool IsUsrLogin();

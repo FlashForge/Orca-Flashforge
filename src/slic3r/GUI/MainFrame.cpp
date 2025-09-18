@@ -62,6 +62,7 @@
 #include "ConfigWizard.hpp"
 #include "Widgets/WebView.hpp"
 #include "DailyTips.hpp"
+#include "FlashForge/ExportLogs.hpp"
 
 #ifdef _WIN32
 #include <dbt.h>
@@ -171,6 +172,8 @@ static const wxString ctrl = ("Ctrl+");
 #else
 static const wxString ctrl = _L("Ctrl+");
 #endif
+
+#define FLASH_MAKER_VERSION "2.1.0"
 
 MainFrame::MainFrame() :
 DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_STYLE, "mainframe")
@@ -624,7 +627,7 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
             evtHandler->Bind(wxEVT_TIMER, [evtHandler](wxTimerEvent &) {
                 std::string donotShowUpdateAppFirmwareMsg = wxGetApp().app_config->get("donotShowUpdateAppFirmwareMsg");
                 if (donotShowUpdateAppFirmwareMsg.empty()) {
-                    MessageDialog dlg(nullptr, wxString::Format(_L(R"(When using Orca-Flashforge V%s, please update Flash Maker to V2.0.2, and also update your device firmware to the latest version.)"), Orca_Flashforge_VERSION), wxEmptyString, wxOK | wxICON_INFORMATION);
+                    MessageDialog dlg(nullptr, wxString::Format(_L(R"(When using Orca-Flashforge V%s, please update Flash Maker to V%s, and also update your device firmware to the latest version.)"), Orca_Flashforge_VERSION, FLASH_MAKER_VERSION), wxEmptyString, wxOK | wxICON_INFORMATION);
                     dlg.show_dsa_button(_L("Do not show again"));
                     dlg.ShowModal();
                     if (dlg.get_checkbox_state()) {
@@ -2348,6 +2351,10 @@ static wxMenu* generate_help_menu()
             dlg.ShowModal();
         });
 
+    append_menu_item(helpMenu, wxID_ANY, _L("One-click export log"), _L("One-click export log"), [](wxCommandEvent&) {
+            ExportLogs::exportLocal();
+        });
+
     // About
 #ifndef __APPLE__
     wxString about_title = wxString::Format(_L("&About %s"), SLIC3R_APP_FULL_NAME);
@@ -2987,6 +2994,7 @@ void MainFrame::init_menubar_as_editor()
             PreferencesDialog dlg(this);
             dlg.ShowModal();
             plater()->get_current_canvas3D()->force_set_focus();
+            wxGetApp().set_user_region();
 #if ENABLE_GCODE_LINES_ID_IN_H_SLIDER
             if (dlg.seq_top_layer_only_changed() || dlg.seq_seq_top_gcode_indices_changed())
 #else

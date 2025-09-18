@@ -1,7 +1,4 @@
 {
-    "activate_air_filtration": [
-        "1"
-    ],
     "additional_cooling_fan_speed": [
         "40"
     ],
@@ -9,10 +6,10 @@
         "40"
     ],
     "cool_plate_temp": [
-        "80"
+        "0"
     ],
     "cool_plate_temp_initial_layer": [
-        "80"
+        "0"
     ],
     "during_print_exhaust_fan_speed": [
         "40"
@@ -46,20 +43,17 @@
     "inherits": "Flashforge PETG @FF AD5M 0.25 Nozzle",
     "is_custom_defined": "0",
     "name": "Flashforge PETG Pro @FF G4P 0.25 nozzle",
-    "pressure_advance": [
-        "0.045"
+    "nozzle_temperature": [
+        "265"
+    ],
+    "nozzle_temperature_initial_layer": [
+        "265"
     ],
     "slow_down_layer_time": [
         "5"
     ],
     "slow_down_min_speed": [
         "20"
-    ],
-    "textured_cool_plate_temp": [
-        "0"
-    ],
-    "textured_cool_plate_temp_initial_layer": [
-        "0"
     ],
     "textured_plate_temp": [
         "80"

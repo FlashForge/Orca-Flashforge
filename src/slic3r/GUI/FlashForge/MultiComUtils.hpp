@@ -25,12 +25,11 @@ public:
     static ComErrno getTokenBySMSCode(const std::string &userName, const std::string &SMSCode,
         const std::string &language, com_token_data_t &tokenData, std::string &message, int msTimeout);
 
-    static ComErrno checkToken(const std::string &accessToken, int msTimeout);
-
-    static ComErrno signOut(const std::string &accessToken, int msTimeout);
-
     static ComErrno getUserProfile(const std::string &accessToken, com_user_profile_t &userProfile,
         int msTimeout);
+
+    static ComErrno bindAccountRelp(const std::string &uid, const std::string &accessToken,
+        const std::string &email, bool &showUserPoints, int msTimeout);
 
     static ComErrno getNimData(const std::string &uid, const std::string &accessToken,
         com_nim_data_t &nimData, int msTimeout);

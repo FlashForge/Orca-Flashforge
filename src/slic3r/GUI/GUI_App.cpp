@@ -82,10 +82,14 @@
 #include "../Utils/Http.hpp"
 #include "../Utils/UndoRedo.hpp"
 #include "slic3r/Config/Snapshot.hpp"
+#include "slic3r/GUI/FlashForge/FFDownloadTool.hpp"
 #include "slic3r/GUI/FlashForge/LoginDialog.hpp"
 #include "slic3r/GUI/FlashForge/ReLoginDialog.hpp"
+#include "slic3r/GUI/FlashForge/MultiComHelper.hpp"
 #include "slic3r/GUI/FlashForge/MultiComMgr.hpp"
 #include "slic3r/GUI/FlashForge/DeviceData.hpp"
+#include "slic3r/GUI/FlashForge/ModelApiDialog.hpp"
+#include "slic3r/GUI/FlashForge/PromoShareDlg.hpp"
 #include "slic3r/GUI/Widgets/TempInput.hpp"
 #include "Preferences.hpp"
 #include "Tab.hpp"
@@ -161,11 +165,13 @@ namespace Slic3r {
 namespace GUI {
 
 struct AsyncLoginFinishedEvent : public wxCommandEvent {
-    AsyncLoginFinishedEvent(wxEventType type, ComErrno _ret, com_token_data_t _token_data)
-        : wxCommandEvent(type), ret(_ret), token_data(_token_data) {
+    AsyncLoginFinishedEvent(wxEventType type, ComErrno _ret, const com_token_data_t &_token_data,
+        const com_add_wan_dev_data_t &_add_dev_data)
+        : wxCommandEvent(type), ret(_ret), token_data(_token_data), add_dev_data(_add_dev_data) {
     }
     ComErrno ret;
     com_token_data_t token_data;
+    com_add_wan_dev_data_t add_dev_data;
 };
 
 wxDEFINE_EVENT(EVT_ASYNC_LOGIN_FINISHED, AsyncLoginFinishedEvent);
@@ -173,6 +179,7 @@ wxDEFINE_EVENT(EVT_START_LOGIN, wxCommandEvent);
 wxDEFINE_EVENT(EVT_LOGIN_FAILED, wxCommandEvent);
 wxDEFINE_EVENT(EVT_LOGIN_SUCCEED, wxCommandEvent);
 wxDEFINE_EVENT(EVT_LOGIN_OUT, wxCommandEvent);
+wxDEFINE_EVENT(EVT_USER_HEAD_IMAGE_UPDATED, wxCommandEvent);
 
 class MainFrame;
 
@@ -1112,7 +1119,7 @@ GUI_App::GUI_App()
 #if wxUSE_WEBVIEW_EDGE
     this->init_webview_runtime();
 #endif
-
+    ModelApiDialog::updateCustomModelDir();
     reset_to_active();
 }
 
@@ -1914,6 +1921,9 @@ GUI_App::~GUI_App()
         preset_updater = nullptr;
     }
 
+    if (m_download_tool.get() != nullptr) {
+        m_download_tool->wait(true);
+    }
     if (m_auto_login_thread.joinable()) {
         m_auto_login_thread.join();
     }
@@ -2271,9 +2281,9 @@ int GUI_App::OnExit()
     return wxApp::OnExit();
 }
 
-wxImage GUI_App::getUsrPic() { return m_usr_pic_image; }
+const wxImage &GUI_App::getUsrPic() { return m_usr_pic_image; }
 
-void GUI_App::setUsrPic(wxImage image) { m_usr_pic_image = image; }
+void GUI_App::setUsrPic(const wxImage &image) { m_usr_pic_image = image; }
 
 class wxBoostLog : public wxLog
 {
@@ -3635,10 +3645,11 @@ void GUI_App::ShowUserGuide() {
         GuideFrame GuideDlg(this);
                 //if (GuideDlg.IsFirstUse())
         res = GuideDlg.run();
-if (res) {
+        if (res) {
             load_current_presets();
             update_publish_status();
             mainframe->refresh_plugin_tips();
+            set_user_region();
             // BBS: remove SLA related message
         }
     } catch (std::exception &) {
@@ -3989,6 +4000,8 @@ void GUI_App::auto_login_flashforge()
     std::string refresh_token = app_config->get("refresh_token");
     std::string token_expire_time = app_config->get("token_expire_time");
     std::string token_start_time = app_config->get("token_start_time");
+    std::string usr_eamil = app_config->get("usr_email");
+    std::string show_user_points = app_config->get("show_user_points");
     std::string usr_uid = app_config->get("usr_uid");
     std::string usr_pic = app_config->get("usr_pic");
     std::string usr_name = app_config->get("usr_name");
@@ -3997,7 +4010,7 @@ void GUI_App::auto_login_flashforge()
     }
     // 切换语言时此接口也会被调用，这种情况直接显示登录成功
     if (m_restart_app && m_login_success) {
-        handle_login_result(usr_pic, usr_name);
+        handle_login_result(usr_pic, usr_name, usr_eamil, show_user_points == "true");
         LoginDialog::SetToken(access_token, refresh_token);
         LoginDialog::SetUsrInfo(com_user_profile_t{ usr_uid, usr_name, usr_pic });
         return;
@@ -4011,35 +4024,79 @@ void GUI_App::auto_login_flashforge()
     event.SetEventObject(this);
     wxPostEvent(this, event);
     Bind(EVT_ASYNC_LOGIN_FINISHED, // 只在软件打开时执行一次，否则会重复Bind
-        [this, usr_uid, usr_name, usr_pic](const AsyncLoginFinishedEvent &event) {
-            if (mainframe != nullptr && !mainframe->is_shutdown()) { // 关闭窗口后执行 GUI::wxGetApp().run_script 可能出现崩溃
-                if (event.ret == COM_OK) {
-                    BOOST_LOG_TRIVIAL(info) << "user login succeed";
-                    on_connect_event();
-                    handle_login_result(usr_pic, usr_name);
-                    LoginDialog::SetToken(event.token_data.accessToken, event.token_data.refreshToken);
-                    LoginDialog::SetUsrInfo(com_user_profile_t{ usr_uid, usr_name, usr_pic });
-                    wxCommandEvent event(EVT_LOGIN_SUCCEED);
-                    event.SetEventObject(this);
-                    wxPostEvent(this, event);
-                } else {
-                    BOOST_LOG_TRIVIAL(warning) << boost::format("user login failed");
-                    wxCommandEvent event(EVT_LOGIN_FAILED);
-                    event.SetEventObject(this);
-                    wxPostEvent(this, event);
-                }
+        [this](const AsyncLoginFinishedEvent &event) {
+            if (event.ret == COM_OK) {
+                BOOST_LOG_TRIVIAL(info) << "user login succeed";
+                LoginDialog::SetToken(event.token_data.accessToken, event.token_data.refreshToken);
+                handle_show_user_points(event.add_dev_data);
+                wxCommandEvent event(EVT_LOGIN_SUCCEED);
+                event.SetEventObject(this);
+                wxPostEvent(this, event);
+            } else {
+                BOOST_LOG_TRIVIAL(warning) << boost::format("user login failed");
+                wxCommandEvent event(EVT_LOGIN_FAILED);
+                event.SetEventObject(this);
+                wxPostEvent(this, event);
             }
         });
+    on_connect_event();
     m_auto_login_thread = Slic3r::create_thread([=] {
         com_token_data_t token_data;
         token_data.expiresIn = atoi(token_expire_time.c_str());
         token_data.accessToken = access_token;
         token_data.refreshToken = refresh_token;
         token_data.startTime = atoll(token_start_time.c_str());
-        ComErrno ret = Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data, 2, 200);
-        wxQueueEvent(this, new AsyncLoginFinishedEvent(EVT_ASYNC_LOGIN_FINISHED, ret, token_data));
+        com_add_wan_dev_data_t add_dev_data;
+        ComErrno ret = Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data, add_dev_data, 2, 200);
+        wxQueueEvent(this, new AsyncLoginFinishedEvent(EVT_ASYNC_LOGIN_FINISHED, ret, token_data, add_dev_data));
         BOOST_LOG_TRIVIAL(warning) << boost::format("MultiComMgr::inst()->addWanDev: %d") % ret;
     });
+}
+
+void GUI_App::set_user_region()
+{
+    // 关闭窗口后执行 GUI::wxGetApp().run_script 可能出现崩溃
+    if (mainframe == nullptr || mainframe->is_shutdown()) {
+        return;
+    }
+    nlohmann::json json;
+    json["command"] = "set_user_region";
+    json["region"] = app_config->get("region");
+    json["sequence_id"] = "10001";
+
+    std::string jsonStr = json.dump();
+    wxString strJS = wxString::Format("window.postMessage(%s)", wxString::FromUTF8(jsonStr));
+    GUI::wxGetApp().run_script(strJS);
+}
+
+void GUI_App::jump_to_user_points()
+{
+    // 关闭窗口后执行 GUI::wxGetApp().run_script 可能出现崩溃
+    if (mainframe == nullptr || mainframe->is_shutdown()) {
+        return;
+    }
+    nlohmann::json json;
+    json["command"] = "jump_to_user_points";
+    json["sequence_id"] = "10001";
+
+    std::string jsonStr = json.dump();
+    wxString strJS = wxString::Format("window.postMessage(%s)", wxString::FromUTF8(jsonStr));
+    GUI::wxGetApp().run_script(strJS);
+}
+
+void GUI_App::update_user_points()
+{
+    // 关闭窗口后执行 GUI::wxGetApp().run_script 可能出现崩溃
+    if (mainframe == nullptr || mainframe->is_shutdown()) {
+        return;
+    }
+    nlohmann::json json;
+    json["command"] = "update_user_points";
+    json["sequence_id"] = "10001";
+
+    std::string jsonStr = json.dump();
+    wxString strJS = wxString::Format("window.postMessage(%s)", wxString::FromUTF8(jsonStr));
+    GUI::wxGetApp().run_script(strJS);
 }
 
 void GUI_App::request_user_handle(int online_login)
@@ -4123,9 +4180,11 @@ std::string GUI_App::handle_web_request(std::string cmd)
                 }
             }
             else if (command_str.compare("get_login_info") == 0) {
+                CallAfter([]() {
+                    wxGetApp().set_user_region();
+                });
                 CallAfter([this]() {
                     auto_login_flashforge();
-                    //get_login_info();
                 });
             }
             else if (command_str.compare("homepage_login_or_register") == 0) {
@@ -4135,8 +4194,6 @@ std::string GUI_App::handle_web_request(std::string cmd)
             }
             else if (command_str.compare("homepage_logout") == 0) {
                 CallAfter([this] {
-                    //Slic3r::GUI::MultiComMgr::inst()->removeWanDev();
-                    //wxGetApp().handle_login_out();
                     if(!m_re_login_dlg){
                         m_re_login_dlg = new ReLoginDialog();
                     }
@@ -4272,7 +4329,9 @@ std::string GUI_App::handle_web_request(std::string cmd)
             else if (command_str.compare("common_openurl") == 0) {
                 boost::optional<std::string> path      = root.get_optional<std::string>("url");
                 if (path.has_value()) {
-                    wxLaunchDefaultBrowser(path.value());
+                    CallAfter([path]() {
+                        wxLaunchDefaultBrowser(path.value());
+                    });
                 }
             } 
             else if (command_str.compare("homepage_makerlab_get") == 0) {
@@ -4290,6 +4349,46 @@ std::string GUI_App::handle_web_request(std::string cmd)
                     }
                 }
             }
+            else if (command_str.compare("image_generate_3d") == 0) {
+                CallAfter([this]() {
+                    if (!this->m_login_success) {
+                        this->ShowUserLogin();
+                    }
+                    if (this->m_login_success) {
+                        ModelApi::ShowModelApi(mainframe);
+                    }
+                });
+            }
+            else if (command_str.compare("show_promo_share") == 0) {
+                try {
+                    nlohmann::json json = nlohmann::json::parse(cmd);
+                    std::string dataStr = json["data"].dump();
+                    CallAfter([this, dataStr]() {
+                        PromoShareDlg promoShareDlg(mainframe, dataStr);
+                        promoShareDlg.ShowModal();
+                    });
+                } catch (const Exception &e) {
+                    BOOST_LOG_TRIVIAL(error) << "show_promo_share error, " << cmd;
+                }
+            }
+            else if (command_str.compare("track_shopify_click") == 0) {
+                MultiComHelper::inst()->userClickCount("shopify", ComTimeoutWanB);
+            }
+            else if (command_str.compare("send_network_request_get") == 0) {
+                if (root.get_child_optional("data") != boost::none) {
+                    pt::ptree data_node = root.get_child("data");
+                    boost::optional<std::string> request_id = data_node.get_optional<std::string>("request_type");
+                    boost::optional<std::string> target = data_node.get_optional<std::string>("url");
+                    if (request_id.has_value() && target.has_value()) {
+                        MultiComHelper::inst()->doBusGetRequest(request_id.value(), target.value(), ComTimeoutWanB);
+                    }
+                }
+            }
+            else if (command_str.compare("unknown_benefits") == 0) {
+                CallAfter([this]() {
+                    check_new_version_sf(true, 0);
+                });
+            }
         }
     }
     catch (...) {
@@ -4299,44 +4398,64 @@ std::string GUI_App::handle_web_request(std::string cmd)
     return "";
 }
 
-void GUI_App::handle_login_result(std::string url, std::string name)
+void GUI_App::handle_show_user_points(const com_add_wan_dev_data_t &add_dev_data)
 {
+    if (app_config == nullptr) {
+        return;
+    }
+    bool showUserPointsOld = app_config->get("show_user_points") == "true";
+    if (showUserPointsOld != add_dev_data.showUserPoints) {
+        app_config->set("show_user_points", add_dev_data.showUserPoints ? "true" : "false");
+        CallAfter([this, add_dev_data]() {
+            const com_user_profile_t &user_profile = add_dev_data.userProfile;
+            handle_login_result(user_profile.headImgUrl, user_profile.nickname,
+                user_profile.email, add_dev_data.showUserPoints);
+        });
+    }
+}
+
+void GUI_App::handle_login_result(std::string url, std::string name, std::string email, bool showUserPoints)
+{
+    // 关闭窗口后执行 GUI::wxGetApp().run_script 可能出现崩溃
+    if (mainframe == nullptr || mainframe->is_shutdown()) {
+        return;
+    }
     m_login_success = true;
     LoginDialog::SetUsrLogin(true);
-    // 原始的JSON字符串
-    std::string jsonStr = R"({"command": "studio_userlogin","data": {"avatar": "default.jpg","name": ""},"sequence_id": "10001"})";
 
-    // 将JSON字符串解析为JSON对象
-    json jsonObj = json::parse(jsonStr);
+    nlohmann::json json;
+    json["command"] = "studio_userlogin";
+    json["data"]["avatar"] = url.empty() ? "default.jpg" : url;
+    json["data"]["email"] = email;
+    json["data"]["show_user_points"] = showUserPoints;
+    json["sequence_id"] = "10001";
 
-    // 替换"avatar"的值
-    if(!url.empty()){
-        jsonObj["data"]["avatar"] = url;
-    }
     if (!name.empty()) {
-        jsonObj["data"]["name"] = name;
-    } else if (name.empty()) {
-        std::string usr_name = app_config->get("usr_name");
-        if (usr_name.empty()) {
-            usr_name = app_config->get("usr_input_name");
-            jsonObj["data"]["name"] = usr_name;
+        json["data"]["name"] = name;
+    } else {
+        std::string usrName = app_config->get("usr_name");
+        if (!usrName.empty()) {
+            json["data"]["name"] = usrName;
+        } else {
+            json["data"]["name"] = app_config->get("usr_input_name");
         }
     }
 
-    // 将JSON对象转换为字符串
-    std::string newJsonStr = jsonObj.dump();
-
-    wxString strJS = wxString::Format("window.postMessage(%s)", wxString::FromUTF8(newJsonStr));
+    std::string jsonStr = json.dump();
+    wxString strJS = wxString::Format("window.postMessage(%s)", wxString::FromUTF8(jsonStr));
     GUI::wxGetApp().run_script(strJS);
 }
 
 void GUI_App::handle_login_out()
 {
+    // 关闭窗口后执行 GUI::wxGetApp().run_script 可能出现崩溃
+    if (mainframe == nullptr || mainframe->is_shutdown()) {
+        return;
+    }
     m_login_success = false;
-    m_usr_pic_data.clear();
     m_usr_pic_image.Destroy();
     LoginDialog::SetUsrLogin(false);
-    // 原始的JSON字符串
+
     std::string jsonStr = R"({"command":"studio_useroffline","sequence_id":"10001"})";
     wxString strJS = wxString::Format("window.postMessage(%s)", jsonStr);
     GUI::wxGetApp().run_script(strJS);
@@ -4493,49 +4612,48 @@ void GUI_App::on_connect_event()
 {
     Slic3r::GUI::MultiComMgr::inst()->Unbind(COM_GET_USER_PROFILE_EVENT, &GUI_App::get_usr_profile, this);
     Slic3r::GUI::MultiComMgr::inst()->Unbind(COM_WAN_DEV_MAINTAIN_EVENT, &GUI_App::wan_dev_maintain, this);
+    Slic3r::GUI::MultiComMgr::inst()->Unbind(COM_REFRESH_TOKEN_EVENT, &GUI_App::refresh_access_token, this);
     Slic3r::GUI::MultiComMgr::inst()->Bind(COM_GET_USER_PROFILE_EVENT, &GUI_App::get_usr_profile,this);
     Slic3r::GUI::MultiComMgr::inst()->Bind(COM_WAN_DEV_MAINTAIN_EVENT, &GUI_App::wan_dev_maintain,this);
+    Slic3r::GUI::MultiComMgr::inst()->Bind(COM_REFRESH_TOKEN_EVENT, &GUI_App::refresh_access_token, this);
+
+    Slic3r::GUI::MultiComHelper::inst()->Unbind(COM_BUS_GET_REQUEST_EVENT, &GUI_App::bus_get_request, this);
+    Slic3r::GUI::MultiComHelper::inst()->Bind(COM_BUS_GET_REQUEST_EVENT, &GUI_App::bus_get_request, this);
 }
 
 void GUI_App::get_usr_profile(ComGetUserProfileEvent &event) 
 {
     event.Skip();
     if (event.ret == ComErrno::COM_OK) {
-        LoginDialog::SetUsrInfo(com_user_profile_t{event.userProfile.uid, event.userProfile.nickname, event.userProfile.headImgUrl});
-        if (app_config) {
+        bool show_user_points = false;
+        if (app_config != nullptr) {
+            show_user_points = app_config->get("show_user_points") == "true";
             app_config->set("usr_uid", event.userProfile.uid);
             app_config->set("usr_pic", event.userProfile.headImgUrl);
             app_config->set("usr_name", event.userProfile.nickname);
-            handle_login_result(event.userProfile.headImgUrl, event.userProfile.nickname);
+            app_config->set("usr_email", event.userProfile.email);
             app_config->save();
         }
-        //download usr pic
-        downloadUrlPic(event.userProfile.headImgUrl);
-    }
-}
-
-void GUI_App::downloadUrlPic(const std::string &url) 
-{
-    if (!url.empty()) {
-        Slic3r::Http http   = Slic3r::Http::get(url);
-        std::string  suffix = url.substr(url.find_last_of(".") + 1);
-        http.header("accept", "image/" + suffix)
-            .on_complete([this](std::string body, unsigned int status) {
-                wxMemoryInputStream stream(body.data(), body.size());
-                wxImage   image(stream, wxBITMAP_TYPE_ANY);
-                m_usr_pic_image = image;
-                }
-            )
-            .on_error([=](std::string body, std::string error, unsigned status) {
-                BOOST_LOG_TRIVIAL(info) << " GUI_App::downloadUrlPic: status:" << status << " error:" << error;
-            })
-            .perform();
-    } else {
+        LoginDialog::SetUsrInfo(com_user_profile_t{ event.userProfile.uid, event.userProfile.nickname, event.userProfile.headImgUrl });
+        handle_login_result(event.userProfile.headImgUrl, event.userProfile.nickname, event.userProfile.email, show_user_points);
         wxImage image;
-        std::string name = "login_default_usr_pic";
-        if (image.LoadFile(Slic3r::GUI::from_u8(Slic3r::var(name + ".png")), wxBITMAP_TYPE_PNG)) {
+        if (image.LoadFile(Slic3r::GUI::from_u8(Slic3r::var("login_default_usr_pic.png")), wxBITMAP_TYPE_PNG)) {
             m_usr_pic_image = image;
         }
+        if (m_download_tool.get() == nullptr) {
+            m_download_tool.reset(new FFDownloadTool(1, 5000));
+            m_download_tool->Bind(EVT_FF_DOWNLOAD_FINISHED, [this](FFDownloadFinishedEvent &event) {
+                if (event.succeed) {
+                    wxMemoryInputStream stream(event.data.data(), event.data.size());
+                    wxImage image(stream, wxBITMAP_TYPE_ANY);
+                    if (image.IsOk()) {
+                        m_usr_pic_image = image;
+                        QueueEvent(new wxCommandEvent(EVT_USER_HEAD_IMAGE_UPDATED));
+                    }
+                }
+            });
+        }
+        m_download_tool->downloadMem(event.userProfile.headImgUrl, 30000, 60000);
     }
 }
 
@@ -4630,6 +4748,8 @@ void GUI_App::wan_dev_maintain(ComWanDevMaintainEvent& event)
             app_config->set("refresh_token", "");
             app_config->set("token_expire_time", "");
             app_config->set("token_start_time", "");
+            app_config->set("usr_email", "");
+            app_config->set("show_user_points", "");
             app_config->set("usr_name", "");
             app_config->set("usr_pic", "");
             app_config->set("usr_uid", "");
@@ -4641,8 +4761,33 @@ void GUI_App::wan_dev_maintain(ComWanDevMaintainEvent& event)
             m_logout_tip = nullptr;
             m_logout_tip = new ShowTip(_L("The current account has been logged out!"));
         }
-        m_logout_tip->ShowModal();
+        m_logout_tip->Show();
     }
+}
+
+void GUI_App::refresh_access_token(ComRefreshTokenEvent &event)
+{
+    app_config->set("access_token", event.tokenData.accessToken);
+    app_config->set("refresh_token", event.tokenData.refreshToken);
+    app_config->set("token_expire_time", std::to_string(event.tokenData.expiresIn));
+    app_config->set("token_start_time", std::to_string(event.tokenData.startTime));
+}
+
+void GUI_App::bus_get_request(ComBusGetRequestEvent &event)
+{
+    // 关闭窗口后执行 GUI::wxGetApp().run_script 可能出现崩溃
+    if (mainframe == nullptr || mainframe->is_shutdown()) {
+        return;
+    }
+    nlohmann::json json;
+    json["command"] = "network_request_get";
+    json["request_type"] = event.requestId;
+    json["data"] = event.responseData;
+    json["error_code"] = (int)event.ret;
+
+    std::string jsonStr = json.dump();
+    wxString strJS = wxString::Format("window.postMessage(%s)", wxString::FromUTF8(jsonStr));
+    GUI::wxGetApp().run_script(strJS);
 }
 
 bool GUI_App::is_studio_active()
@@ -6096,6 +6241,7 @@ void GUI_App::open_preferences(size_t open_on_tab, const std::string& highlight_
         PreferencesDialog dlg(mainframe, open_on_tab, highlight_option);
         dlg.ShowModal();
         this->plater_->get_current_canvas3D()->force_set_focus();
+        wxGetApp().set_user_region();
         // BBS
         //app_layout_changed = dlg.settings_layout_changed();
 #if ENABLE_GCODE_LINES_ID_IN_H_SLIDER
@@ -7014,6 +7160,7 @@ bool GUI_App::config_wizard_startup()
     if (!m_app_conf_exists || preset_bundle->printers.only_default_printers()) {
         BOOST_LOG_TRIVIAL(info) << "run wizard...";
         run_wizard(ConfigWizard::RR_DATA_EMPTY);
+        set_user_region();
         BOOST_LOG_TRIVIAL(info) << "finished run wizard";
         return true;
     } /*else if (get_app_config()->legacy_datadir()) {
@@ -7026,6 +7173,7 @@ bool GUI_App::config_wizard_startup()
         run_wizard(ConfigWizard::RR_DATA_LEGACY);
         return true;
     }*/
+    set_user_region();
     return false;
 }
 

@@ -25,6 +25,7 @@
 #include "slic3r/GUI/Widgets/FFButton.hpp"
 #include "slic3r/GUI/Widgets/FFScrollButton.hpp"
 #include "slic3r/GUI/SelectMachine.hpp"
+#include "FFDownloadTool.hpp"
 #include "MultiComDef.hpp"
 #include "MultiComEvent.hpp"
 #include "MaterialStation.hpp"
@@ -210,14 +211,6 @@ private:
     wxBoxSizer*     m_mainSizer;
 };
 
-class StdStringEvent : public wxCommandEvent
-{
-public:
-    std::string str;
-};
-
-wxDECLARE_EVENT(EVT_DOWNLOADED_MODEL_IMAGE, StdStringEvent);
-
 class SingleDeviceState : public wxScrolledWindow
 {
 public:
@@ -233,7 +226,6 @@ public:
     void reInitUI();
     void reInitMaterialPic();
     void reInitPage();
-    void getImageForHttp(StdStringEvent& event);
     void setDevProductAuthority(const fnet_dev_product_t &data);
     void setG3UProductAuthority(const fnet_dev_product_t& data);
     void reInitProductState();
@@ -250,6 +242,7 @@ public:
     void msw_rescale();
     void connectEvent(); 
 
+private:
     void onScriptMessage(wxWebViewEvent &evt);
     void on_navigated(wxWebViewEvent &event);
     void onConnectWanDevInfoUpdate(ComWanDevInfoUpdateEvent &event);
@@ -268,7 +261,9 @@ public:
     void onFileSendFinished(ComStartJobEvent& event);
     void onLanThumbDownloadFinished(ComGetGcodeThumbEvent& event);
     void onTimeLapseVideoBtnClicked(wxMouseEvent& event);
+    void onDownloadImageFinished(FFDownloadFinishedEvent& event);
 
+public:
     void setTipMessage(const wxString &title = "", const std::string &titleColor = "", const wxString &info = "", bool showInfo = false, bool showBtn = false);
     void checkPrinterStatus();
 
@@ -284,8 +279,6 @@ private:
     void  clearFileList();
 
     void initFileList(const std::vector<FileItem::FileData>& fileDataList);
-    void downloadFileListImage(FileItem& fileItem);
-    void downloadModelImage(const std::string& url);
     void changeMachineType(unsigned short pid);
 
 protected:
@@ -311,7 +304,6 @@ protected:
 
     wxStaticBitmap*     m_material_weight_staticbitmap{nullptr};
     MaterialImagePanel* m_material_picture{nullptr};
-    wxImage*            m_material_image{nullptr};
 
     wxPanel*            m_panel_idle{nullptr};
     wxStaticBitmap*     m_idle_device_staticbitmap{nullptr};
@@ -398,20 +390,19 @@ protected:
     wxPanel*               m_busyState_top_gap{nullptr};
     wxPanel*               m_busyState_bottom_gap{nullptr};
     wxPanel*               m_FileList_split_line{nullptr};
-    std::string            m_cur_pic;
-    std::string            m_last_pic;
 
     Button*                m_timeLapseVideoBtn;
     TimeLapseVideoPanel*   m_timeLapseVideoPnl;
 
-    std::mutex             m_mutex;
     wxTimer                m_check_printer_status_timer;
     bool                   m_block_status_check{false};
     time_t                 m_status_check_message_show_time{0};
     std::string            m_status_check_error_code;
+
+    FFDownloadTool           m_download_tool;
+    int                      m_download_title_image_task_id;
+    std::map<int, FileItem*> m_download_file_list_image_map;
 };
-
-
 
 } // namespace GUI
 } // namespace Slic3r

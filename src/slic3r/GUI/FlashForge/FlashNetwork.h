@@ -49,12 +49,14 @@ typedef enum fnet_conn_write_data_type {
     FNET_CONN_WRITE_AIR_FILTER_CTRL,    // data, fnet_air_filter_ctrl_t
     FNET_CONN_WRITE_CLEAR_FAN_CTRL,     // data, fnet_clear_fan_ctrl_t
     FNET_CONN_WRITE_MOVE_CTRL,          // data, fnet_move_ctrl_t
+    FNET_CONN_WRITE_EXTRUDE_CTRL,       // data, fnet_extrude_ctrl_t
     FNET_CONN_WRITE_HOMING_CTRL,        // data, nullptr
     FNET_CONN_WRITE_MATL_STATION_CTRL,  // data, fnet_matl_station_ctrl_t
     FNET_CONN_WRITE_INDEP_MATL_CTRL,    // data, fnet_indep_matl_ctrl_t
     FNET_CONN_WRITE_PRINT_CTRL,         // data, fnet_print_ctrl_t
     FNET_CONN_WRITE_JOB_CTRL,           // data, fnet_job_ctrl_t
     FNET_CONN_WRITE_STATE_CTRL,         // data, fnet_state_ctrl_t
+    FNET_CONN_WRITE_ERROR_CODE_CTRL,    // data, fnet_error_code_ctrl_t
     FNET_CONN_WRITE_PLATE_DETECT_CTRL,  // data, fnet_plate_detect_ctrl_t
     FNET_CONN_WRITE_FIRST_LAYER_DETECT_CTRL, // data, fnet_first_layer_detect_ctrl_t
     FNET_CONN_WRITE_CAMERA_STREAM_CTRL, // data, fnet_camera_stream_ctrl_t
@@ -161,6 +163,27 @@ typedef struct fnet_local_job_data {
     const fnet_material_mapping_t *materialMappings;
 } fnet_local_job_data_t;
 
+typedef struct fnet_upload_file_data {
+    const char *filePath;
+    const char *saveName;
+    fnet_progress_callback_t callback;
+    void *callbackData;
+} fnet_upload_file_data_t;
+
+typedef struct fnet_start_ai_model_job_data {
+    int supplier;
+    long long pipelineId;
+    const char *imageUrl;
+    const char *resultFormat;
+} fnet_start_ai_model_job_data_t;
+
+typedef struct fnet_start_ai_general_job_data {
+    int supplier;
+    long long pipelineId;
+    const char *prompt;
+    const char *imageUrl;
+} fnet_start_ai_general_job_data_t;
+
 typedef struct fnet_conn_settings {
     const char *nimDataId;
     fnet_conn_status_callback_t statusCallback;
@@ -211,9 +234,14 @@ typedef struct fnet_clear_fan_ctrl {
 } fnet_clear_fan_ctrl_t;
 
 typedef struct fnet_move_ctrl {
-    const char *axis;
+    const char *axis;               // "x", "y", "z"
     double delta;
 } fnet_move_ctrl_t;
+
+typedef struct fnet_extrue_ctrl {
+    const char *axis;               // "e"
+    double delta;
+} fnet_extrude_ctrl_t;
 
 typedef struct fnet_matl_station_ctrl {
     int slotId;
@@ -240,6 +268,11 @@ typedef struct fnet_job_ctrl {
 typedef struct fnet_state_ctrl {
     const char *action;             // "setClearPlatform"
 } fnet_state_ctrl_t;
+
+typedef struct fnet_error_code_ctrl {
+    const char *action;             // "clearErrorCode"
+    const char *errorCode;
+} fnet_error_code_ctrl_t;
 
 typedef struct fnet_plate_detect_ctrl {
     const char *action;             // "continue", "stop"
@@ -295,6 +328,7 @@ typedef struct fnet_user_profile {
     char *uid;
     char *nickname;
     char *headImgUrl;
+    char *email;
 } fnet_user_profile_t;
 
 typedef struct fnet_wan_dev_bind_data {
@@ -347,7 +381,6 @@ typedef struct fnet_indep_matl_info {
 } fnet_indep_matl_info_t;
 
 typedef struct fnet_dev_detail {
-    char *protocolVersion;
     int pid;
     int nozzleCnt;
     int nozzleStyle;            // 0 independent, 1 non-independent
@@ -359,6 +392,8 @@ typedef struct fnet_dev_detail {
     char *name;
     int lidar;                  // 1 enable, 2 disable, 0 unknown
     int camera;                 // 1 enable, 2 disable, 0 unknown
+    int moveCtrl;               // 1 enable, 2 disable, 0 unknown
+    int extrudeCtrl;            // 1 enable, 2 disable, 0 unknown
     char *location;
     char *status;               // "ready", "busy", "calibrate_doing", "error", "heating", "printing", "pausing", "pause", "canceling", "cancel", "completed"
     double coordinate[3];       // mm
@@ -460,6 +495,78 @@ typedef struct fnet_add_clound_job_result {
     char *jobId;
 } fnet_add_clound_job_result_t;
 
+typedef struct fnet_bind_account_relp_result {
+    int showUserPoints;
+} fnet_bind_account_relp_result_t;
+
+typedef struct fnet_clound_file_data {
+    char *bucketName;
+    char *endpoint;
+    char *storageKey;
+    char *storageUrl;
+} fnet_clound_file_data_t;
+
+typedef struct fnet_user_ai_points_info {
+    int totalPoints;
+    int modelGenPoints;
+    int img2imgPoints;
+    int txt2txtPoints;
+    int txt2imgPoints;
+    int remainingFreeCount;
+    int freeRetriesPerProcess;
+} fnet_user_ai_points_info_t;
+
+typedef struct fnet_ai_job_pipeline_info {
+    long long id;
+    int isFree;
+} fnet_ai_job_pipeline_info_t;
+
+typedef struct fnet_start_ai_model_job_result {
+    int status;                 // 0 waiting, 1 running, 2 failed, 3 done, 4 cancelled
+    long long jobId;
+    int posInQueue;
+    int queueLength;
+    int isOldJob;
+} fnet_start_ai_model_job_result_t;
+
+typedef struct fnet_ai_model_data {
+    const char *modelType;
+    const char *modelUrl;
+} fnet_ai_model_data_t;
+
+typedef struct fnet_ai_model_job_state {
+    int status;                 // 0 waiting, 1 running, 2 failed, 3 done, 4 cancelled
+    long long jobId;
+    int posInQueue;
+    int queueLength;
+    int modelCnt;
+    fnet_ai_model_data_t *models;
+    const char *externalJobId;
+} fnet_ai_model_job_state_t;
+
+typedef struct fnet_start_ai_general_job_result {
+    int status;                 // 0 waiting, 1 running, 2 failed, 3 done, 4 cancelled
+    long long jobId;
+    int posInQueue;
+    int queueLength;
+    int remainingFreeRetries;
+} fnet_start_ai_general_job_result_t;
+
+typedef struct fnet_ai_general_job_data {
+    const char *content;
+    const char *imageUrl;
+} fnet_ai_general_job_data_t;
+
+typedef struct fnet_ai_general_job_state {
+    int status;                 // 0 waiting, 1 running, 2 failed, 3 done, 4 cancelled
+    long long jobId;
+    int posInQueue;
+    int queueLength;
+    int dataCnt;
+    fnet_ai_general_job_data_t *datas;
+    const char *externalJobId;
+} fnet_ai_general_job_state_t;
+
 typedef struct fnet_nim_data {
     char *nimDataId;
     char *appNimAccountId;
@@ -484,6 +591,10 @@ typedef struct fnet_conn_read_data {
 #define FNET_UNAUTHORIZED 2001          // invalid accessToken/clientAccessToken
 #define FNET_INVALID_VALIDATION 2002    // invalid userName/password/SMSCode
 #define FNET_DEVICE_HAS_BEEN_BOUND 2003
+#define FNET_ABORT_AI_JOB_FAILED 2004
+#define FENT_AI_JOB_NOT_ENOUGH_POINTS 2005
+#define FNET_NO_EXISTING_AI_MODEL_JOB 2006
+#define FNET_INPUT_FAILED_THE_REVIEW 2007
 #define FNET_NIM_SEND_ERROR 3001
 #define FNET_NIM_DATA_BASE_ERROR 3002
 
@@ -537,6 +648,9 @@ FNET_API int fnet_ctrlLanDevClearFan(const char *ip, unsigned short port, const 
 FNET_API int fnet_ctrlLanDevMove(const char *ip, unsigned short port, const char *serialNumber,
     const char *checkCode, const fnet_move_ctrl_t *moveCtrl, int msTimeout);
 
+FNET_API int fnet_ctrlLanDevExtrude(const char *ip, unsigned short port, const char *serialNumber,
+    const char *checkCode, const fnet_extrude_ctrl_t *extrudeCtrl, int msTimeout);
+
 FNET_API int fnet_ctrlLanDevHoming(const char *ip, unsigned short port, const char *serialNumber,
     const char *checkCode, int msTimeout);
 
@@ -554,6 +668,9 @@ FNET_API int fnet_ctrlLanDevJob(const char *ip, unsigned short port, const char 
 
 FNET_API int fnet_ctrlLanDevState(const char *ip, unsigned short port, const char *serialNumber,
     const char *checkCode, const fnet_state_ctrl_t *stateCtrl, int msTimeout);
+
+FNET_API int fnet_ctrlLanDevErrorCode(const char *ip, unsigned short port, const char *serialNumber,
+    const char *checkCode, const fnet_error_code_ctrl_t *errorCodeCtrl, int msTimeout);
 
 FNET_API int fnet_ctrlLanDevPlateDetect(const char *ip, unsigned short port, const char *serialNumber,
     const char *checkCode, const fnet_plate_detect_ctrl_t *plateDetectCtrl, int msTimeout);
@@ -650,6 +767,74 @@ FNET_API int fnet_wanDevAddCloundJob(const char *uid, const char *accessToken,
     const fnet_clound_job_data_t *jobData, fnet_add_clound_job_result_t **results, int *resultCnt, int msTimeout);
 
 FNET_API void fnet_freeAddCloudJobResults(fnet_add_clound_job_result_t *results, int resultCnt);
+
+FNET_API int fnet_bindAccountRelp(const char *uid, const char *accessToken, const char *email,
+    fnet_bind_account_relp_result_t **bindResult, int msTimeout);
+
+FNET_API void fnet_freeBindAccountRelpResult(fnet_bind_account_relp_result_t *bindResult);
+
+FNET_API int fnet_uploadAiImageClound(const char *uid, const char *accessToken,
+    const fnet_upload_file_data_t *uploadFileData, fnet_clound_file_data_t **cloundFileData, int msTimeout);
+
+FNET_API void fnet_freeCloundFileData(fnet_clound_file_data_t *cloundFileData);
+
+FNET_API int fnet_getUserAiPointsInfo(const char *uid, const char *accessToken,
+    fnet_user_ai_points_info_t **userAiPointsInfo, int msTimeout);
+
+FNET_API void fnet_freeUserAiPointsInfo(fnet_user_ai_points_info_t *userAiPointsInfo);
+
+FNET_API int fnet_createAiJobPipeline(const char *uid, const char *accessToken, const char *entryType,
+    fnet_ai_job_pipeline_info_t **pipelineInfo, int msTimeout);
+
+FNET_API void fnet_freeAiJobPipelineInfo(fnet_ai_job_pipeline_info_t *pipelineInfo);
+
+FNET_API int fnet_startAiModelJob(const char *uid, const char *accessToken,
+    const fnet_start_ai_model_job_data_t *jobData, fnet_start_ai_model_job_result_t **jobResult, int msTimeout);
+
+FNET_API void fnet_freeStartAiModelJobResult(fnet_start_ai_model_job_result_t *jobResult);
+
+FNET_API int fnet_getAiModelJobState(const char *uid, const char *accessToken, long long jobId,
+    fnet_ai_model_job_state_t **jobState, int msTimeout);
+
+FNET_API void fnet_freeAiModelJobState(fnet_ai_model_job_state_t *jobState);
+
+FNET_API int fnet_abortAiModelJob(const char *uid, const char *accessToken, long long jobId, int msTimeout);
+
+FNET_API int fnet_getExistingAiModelJob(const char *uid, const char *accessToken,
+    fnet_start_ai_model_job_result_t **jobResult, int msTimeout);
+
+FNET_API int fnet_startAiImg2imgJob(const char *uid, const char *accessToken,
+    const fnet_start_ai_general_job_data_t *jobData, fnet_start_ai_general_job_result_t **jobResult, int msTimeout);
+
+FNET_API int fnet_startAiTxt2txtJob(const char *uid, const char *accessToken,
+    const fnet_start_ai_general_job_data_t *jobData, fnet_start_ai_general_job_result_t **jobResult, int msTimeout);
+
+FNET_API int fnet_startAiTxt2imgJob(const char *uid, const char *accessToken,
+    const fnet_start_ai_general_job_data_t *jobData, fnet_start_ai_general_job_result_t **jobResult, int msTimeout);
+
+FNET_API void fnet_freeStartAiGeneralJobResult(fnet_start_ai_general_job_result_t *jobResult);
+
+FNET_API int fnet_getAiImg2imgJobState(const char *uid, const char *accessToken, long long jobId,
+    fnet_ai_general_job_state_t **jobState, int msTimeout);
+
+FNET_API int fnet_getAiTxt2txtJobState(const char *uid, const char *accessToken, long long jobId,
+    fnet_ai_general_job_state_t **jobState, int msTimeout);
+
+FNET_API int fnet_getAiTxt2imgJobState(const char *uid, const char *accessToken, long long jobId,
+    fnet_ai_general_job_state_t **jobState, int msTimeout);
+
+FNET_API void fnet_freeAiGeneralJobState(fnet_ai_general_job_state_t *jobState);
+
+FNET_API int fnet_abortAiImg2imgJob(const char *uid, const char *accessToken, long long jobId, int msTimeout);
+
+FNET_API int fnet_abortAiTxt2txtJob(const char *uid, const char *accessToken, long long jobId, int msTimeout);
+
+FNET_API int fnet_abortAiTxt2imgJob(const char *uid, const char *accessToken, long long jobId, int msTimeout);
+
+FNET_API int fnet_userClickCount(const char *uid, const char *accessToken, const char *source, int msTimeout);
+
+FNET_API int fnet_doBusGetRequest(const char *uid, const char *accessToken, const char *target, char **responseData,
+    int msTimeout); // call fnet_freeString to release message
 
 FNET_API int fnet_getNimData(const char *uid, const char *accessToken, fnet_nim_data_t **nimData,
     int msTimeout);

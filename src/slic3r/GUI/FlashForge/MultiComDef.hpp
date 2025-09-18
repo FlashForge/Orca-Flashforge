@@ -1,6 +1,7 @@
 #ifndef slic3r_GUI_MultiComDef_hpp_
 #define slic3r_GUI_MultiComDef_hpp_
 
+#include <cstdint>
 #include <ctime>
 #include <string>
 #include <vector>
@@ -27,6 +28,10 @@ enum ComErrno {
     COM_UNAUTHORIZED,           // invalid accessToken/clientAccessToken
     COM_INVALID_VALIDATION,     // invalid userName/password/SMSCode
     COM_DEVICE_HAS_BEEN_BOUND,
+    COM_ABORT_AI_JOB_FAILED,
+    COM_AI_JOB_NOT_ENOUGH_POINTS,
+    COM_NO_EXISTING_AI_MODEL_JOB,
+    COM_INPUT_FAILED_THE_REVIEW,
     COM_NIM_SEND_ERROR,
     COM_NIM_DATA_BASE_ERROR,
 };
@@ -62,6 +67,12 @@ struct com_user_profile_t {
     std::string uid;
     std::string nickname;
     std::string headImgUrl;
+    std::string email;
+};
+
+struct com_add_wan_dev_data_t {
+    com_user_profile_t userProfile;
+    bool showUserPoints;
 };
 
 struct com_wan_dev_info_t {
@@ -144,6 +155,65 @@ struct com_gcode_data_t {
     double totalFilamentWeight; // gram
     bool useMatlStation;
     std::vector<com_gcode_tool_data_t> gcodeToolDatas;
+};
+
+struct com_user_ai_points_info_t {
+    int totalPoints;
+    int modelGenPoints;
+    int img2imgPoints;
+    int txt2txtPoints;
+    int txt2imgPoints;
+    int remainingFreeCount;
+    int freeRetriesPerProcess;
+};
+
+struct com_ai_job_pipeline_info_t {
+    int64_t id;
+    int isFree;
+};
+
+struct com_ai_model_job_result_t {
+    int status;                 // 0 initializing, 1 in the queue, 2 running, 3 completed, 4 failed, 5 canceled
+    int64_t jobId;
+    int posInQueue;
+    int queueLength;
+    bool isOldJob;
+};
+
+struct com_ai_model_data_t {
+    std::string modelType;
+    std::string modelUrl;
+};
+
+struct com_ai_model_job_state_t {
+    int status;                 // 0 initializing, 1 in the queue, 2 running, 3 completed, 4 failed, 5 canceled
+    int64_t jobId;
+    int posInQueue;
+    int queueLength;
+    std::vector<com_ai_model_data_t> models;
+    std::string externalJobId;
+};
+
+struct com_ai_general_job_result_t {
+    int status;                 // 0 waiting, 1 running, 2 failed, 3 done, 4 cancelled
+    int64_t jobId;
+    int posInQueue;
+    int queueLength;
+    int remainingFreeRetries;
+};
+
+struct com_ai_general_job_data_t {
+    std::string content;
+    std::string imageUrl;
+};
+
+struct com_ai_general_job_state_t {
+    int status;                 // 0 waiting, 1 running, 2 failed, 3 done, 4 cancelled
+    int64_t jobId;
+    int posInQueue;
+    int queueLength;
+    std::vector<com_ai_general_job_data_t> datas;
+    std::string externalJobId;
 };
 
 struct com_nim_data_t {

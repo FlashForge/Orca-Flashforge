@@ -20,6 +20,8 @@ wxDECLARE_EVENT(EVT_FF_DOWNLOAD_FINISHED, FFDownloadFinishedEvent);
 class FFDownloadTool : public wxEvtHandler
 {
 public:
+    static const int InvalidTaskId = -1;
+
     FFDownloadTool(size_t maxThreadCnt, int expiryTimeout);
 
     ~FFDownloadTool();
@@ -37,6 +39,8 @@ private:
         FFDownloadTool *self;
         int taskId;
     };
+    int newTaskId();
+
     void insertAbortFlag(int taskId);
 
     void removeAbortFlag(int taskId);
@@ -45,6 +49,7 @@ private:
 
 private:
     int                 m_baseTaskId;
+    std::mutex          m_taskIdMutex;
     std::map<int, bool> m_abortFlagMap;
     std::mutex          m_abortFlagMutex;
     ComThreadPool       m_threadPool;

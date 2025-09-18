@@ -286,6 +286,30 @@ ComErrno ComWanNimConn::sendClearFanCtrl(const char *nimAccountId,
     return checkAndConvertError(m_networkIntfc->connectionSend(m_conn, &writeData));
 }
 
+ComErrno ComWanNimConn::sendMoveCtrl(const char *nimAccountId, const fnet_move_ctrl_t &moveCtrl)
+{
+    boost::shared_lock<boost::shared_mutex> lock(m_connMutex);
+    if (m_conn == nullptr) {
+        return COM_ERROR;
+    }
+    fnet_conn_write_data_t writeData = { FNET_CONN_WRITE_MOVE_CTRL, &moveCtrl };
+    writeData.sendTeam = 0;
+    writeData.nimId = nimAccountId;
+    return checkAndConvertError(m_networkIntfc->connectionSend(m_conn, &writeData));
+}
+
+ComErrno ComWanNimConn::sendHomingCtrl(const char *nimAccountId)
+{
+    boost::shared_lock<boost::shared_mutex> lock(m_connMutex);
+    if (m_conn == nullptr) {
+        return COM_ERROR;
+    }
+    fnet_conn_write_data_t writeData = { FNET_CONN_WRITE_HOMING_CTRL, nullptr };
+    writeData.sendTeam = 0;
+    writeData.nimId = nimAccountId;
+    return checkAndConvertError(m_networkIntfc->connectionSend(m_conn, &writeData));
+}
+
 ComErrno ComWanNimConn::sendMatlStationCtrl(const char *nimAccountId,
     const fnet_matl_station_ctrl_t &matlStationCtrl)
 {

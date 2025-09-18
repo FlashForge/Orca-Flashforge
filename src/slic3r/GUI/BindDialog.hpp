@@ -16,7 +16,6 @@
 #include <wx/icon.h>
 #include <wx/dialog.h>
 #include <curl/curl.h>
-#include <wx/webrequest.h>
 #include "wxExtensions.hpp"
 #include "Plater.hpp"
 #include "Widgets/StepCtrl.hpp"
@@ -92,7 +91,6 @@ private:
     wxSizer*       m_user_sizer;
     RoundImagePanel* m_user_panel;
     wxStaticText * m_user_name;
-    wxStaticBitmap *m_user_img;
     wxStaticText * m_bind_text;
     FFCheckBox*    m_checkbox_privacy;
     LinkLabel*     m_privacy_title;
@@ -104,7 +102,6 @@ private:
     wxStaticText*  m_result_text;
     FFButton*      m_result_btn;
 
-    //wxWebRequest   m_web_request;
     int            m_result_code;
     bool           m_unbind_flag;
 
@@ -112,7 +109,7 @@ private:
     //DeviceObject                     *m_device_info {nullptr};
     BindInfo                *m_bind_info{nullptr};
     std::shared_ptr<BindJob>          m_bind_job;
-    std::vector<char>        m_pic_data;
+
 public:
     BindMachineDialog();
     ~BindMachineDialog();
@@ -129,7 +126,7 @@ public:
     void     on_close(wxCloseEvent& event);
     void     on_destroy();
     void     on_result_ok(wxCommandEvent& event);
-    void     downloadUrlPic(const std::string& url);
+    void     on_user_image_updated(wxCommandEvent& event);
 };
 
 // unbind
@@ -144,19 +141,17 @@ private:
     wxSizer*       m_user_sizer;
     RoundImagePanel* m_user_panel;
     wxStaticText * m_user_name;
-    wxStaticBitmap *m_user_img;
     wxStaticText * m_unbind_text;
     FFButton*      m_unbind_btn;
     FFButton*      m_cancel_btn;
 
-    //wxWebRequest   m_web_request;
     int            m_result_code;
 
     MachineObject *                   m_machine_info{nullptr};
     //DeviceObject                     *m_device_info {nullptr};
     BindInfo                  *m_unbind_info{nullptr};
     std::shared_ptr<UnbindJob>        m_unbind_job;
-    std::vector<char>          m_pic_data;
+
 public:
     UnBindMachineDialog();
     ~UnBindMachineDialog();
@@ -172,7 +167,7 @@ public:
     void     on_close(wxCloseEvent& event);
     void     on_destroy();
     void     on_result_ok(wxCommandEvent& event);
-    void     downloadUrlPic(const std::string& url);
+    void     on_user_image_updated(wxCommandEvent& event);
 };
 
 }} // namespace Slic3r::GUI

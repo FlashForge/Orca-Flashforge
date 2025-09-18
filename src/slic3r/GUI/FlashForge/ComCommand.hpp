@@ -479,6 +479,45 @@ private:
     fnet_clear_fan_ctrl_t m_clearFanCtrl;
 };
 
+class ComMoveCtrl : public ComCommand
+{
+public:
+    ComMoveCtrl(const std::string &axis, double delta)
+        : m_axis(axis)
+    {
+        m_moveCtrl.delta = delta;
+    }
+    ComErrno exec(const com_command_exec_data_t &data)
+    {
+        if (data.connectMode == COM_CONNECT_LAN) {
+            int ret = data.networkIntfc->ctrlLanDevMove(data.ip, data.port, data.serialNumber,
+                data.checkCode, &m_moveCtrl, ComTimeoutLanA);
+            return MultiComUtils::fnetRet2ComErrno(ret);
+        } else {
+            return ComWanNimConn::inst()->sendMoveCtrl(data.nimAccountId, m_moveCtrl);
+        }
+    }
+
+private:
+    std::string m_axis;
+    fnet_move_ctrl_t m_moveCtrl;
+};
+
+class ComHomingCtrl : public ComCommand
+{
+public:
+    ComErrno exec(const com_command_exec_data_t &data)
+    {
+        if (data.connectMode == COM_CONNECT_LAN) {
+            int ret = data.networkIntfc->ctrlLanDevHoming(data.ip, data.port, data.serialNumber,
+                data.checkCode, ComTimeoutLanA);
+            return MultiComUtils::fnetRet2ComErrno(ret);
+        } else {
+            return ComWanNimConn::inst()->sendHomingCtrl(data.nimAccountId);
+        }
+    }
+};
+
 class ComMatlStationCtrl : public ComCommand
 {
 public:
