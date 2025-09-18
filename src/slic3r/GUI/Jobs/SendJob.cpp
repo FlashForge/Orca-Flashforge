@@ -38,12 +38,10 @@ SendJob::SendJob(std::string dev_id)
 void SendJob::prepare()
 {
     m_plater->get_print_job_data(&job_data);
-    if (&job_data) {
-        std::string temp_file = Slic3r::resources_dir() + "/check_access_code.txt";
-        auto check_access_code_path = temp_file.c_str();
-        BOOST_LOG_TRIVIAL(trace) << "sned_job: check_access_code_path = " << check_access_code_path;
-        job_data._temp_path = fs::path(check_access_code_path);
-    }
+    std::string temp_file = Slic3r::resources_dir() + "/check_access_code.txt";
+    auto check_access_code_path = temp_file.c_str();
+    BOOST_LOG_TRIVIAL(trace) << "sned_job: check_access_code_path = " << check_access_code_path;
+    job_data._temp_path = fs::path(check_access_code_path);
 }
 
 wxString SendJob::get_http_error_msg(unsigned int status, std::string body)
@@ -67,9 +65,6 @@ wxString SendJob::get_http_error_msg(unsigned int status, std::string body)
             if (!j["message"].is_null())
                 message = j["message"].get<std::string>();
         }
-        switch (status) {
-            ;
-        }
     }
     catch (...) {
         ;
@@ -78,7 +73,7 @@ wxString SendJob::get_http_error_msg(unsigned int status, std::string body)
         return _L("Service Unavailable");
     }
     else {
-        wxString unkown_text = _L("Unkown Error.");
+        wxString unkown_text = _L("Unknown Error.");
         unkown_text += wxString::Format("status=%u, body=%s", status, body);
         return unkown_text;
     }
@@ -111,7 +106,6 @@ void SendJob::process(Ctl &ctl)
     NetworkAgent* m_agent = wxGetApp().getAgent();
     AppConfig* config = wxGetApp().app_config;
     int result = -1;
-    unsigned int http_code;
     std::string http_body;
 
     if (this->connection_type == "lan") {

@@ -43,16 +43,20 @@ PrintJob::PrintJob(std::string dev_id)
     m_print_job_completed_id = m_plater->get_print_finished_event();
 }
 
+PrintJob::PrintJob(std::shared_ptr<ProgressIndicator> pri, Plater* plater, std::string dev_id)
+    : m_plater(plater), m_dev_id(dev_id), m_is_calibration_task(false) //by ymd
+{
+    m_print_job_completed_id = plater->get_print_finished_event();
+}
+
 void PrintJob::prepare()
 {
     if (job_data.is_from_plater)
         m_plater->get_print_job_data(&job_data);
-    if (&job_data) {
-        std::string temp_file = Slic3r::resources_dir() + "/check_access_code.txt";
-        auto check_access_code_path = temp_file.c_str();
-        BOOST_LOG_TRIVIAL(trace) << "sned_job: check_access_code_path = " << check_access_code_path;
-        job_data._temp_path = fs::path(check_access_code_path);
-    }
+    std::string temp_file = Slic3r::resources_dir() + "/check_access_code.txt";
+    auto check_access_code_path = temp_file.c_str();
+    BOOST_LOG_TRIVIAL(trace) << "sned_job: check_access_code_path = " << check_access_code_path;
+    job_data._temp_path = fs::path(check_access_code_path);
 }
 
 void PrintJob::on_success(std::function<void()> success)
@@ -103,9 +107,6 @@ wxString PrintJob::get_http_error_msg(unsigned int status, std::string body)
                 if (!j["message"].is_null())
                     message = j["message"].get<std::string>();
             }
-            switch (status) {
-                ;
-            }
         }
         catch (...) {
             ;
@@ -114,7 +115,7 @@ wxString PrintJob::get_http_error_msg(unsigned int status, std::string body)
             return _L("Service Unavailable");
         }
         else {
-            wxString unkown_text = _L("Unkown Error.");
+            wxString unkown_text = _L("Unknown Error.");
             unkown_text += wxString::Format("status=%u, body=%s", status, body);
             BOOST_LOG_TRIVIAL(error) << "http_error: status=" << status << ", code=" << code << ", error=" << error;
             return unkown_text;
@@ -150,7 +151,6 @@ void PrintJob::process(Ctl &ctl)
     ctl.call_on_main_thread([this] { prepare(); }).wait();
 
     int result = -1;
-    unsigned int http_code;
     std::string http_body;
 
     int total_plate_num = plate_data.plate_count;
@@ -275,21 +275,57 @@ void PrintJob::process(Ctl &ctl)
         auto model_name = model_info->metadata_items.find(BBL_DESIGNER_MODEL_TITLE_TAG);
         if (model_name != model_info->metadata_items.end()) {
             try {
-                params.project_name = model_name->second;
+
+                std::string mall_model_name = model_name->second;
+                std::replace(mall_model_name.begin(), mall_model_name.end(), ' ', '_');
+                const char* unusable_symbols = "<>[]:/\\|?*\" ";
+                for (const char* symbol = unusable_symbols; *symbol != '\0'; ++symbol) {
+                    std::replace(mall_model_name.begin(), mall_model_name.end(), *symbol, '_');
+                }
+
+                std::regex pattern("_+");
+                params.project_name = std::regex_replace(mall_model_name, pattern, "_");
             }
             catch (...) {}
         }
     }
 
+    params.stl_design_id = 0;
     if (!wxGetApp().model().stl_design_id.empty()) {
-       int stl_design_id = 0;
-        try {
-            stl_design_id = std::stoi(wxGetApp().model().stl_design_id);
+
+        auto country_code = wxGetApp().app_config->get_country_code();
+        bool match_code = false;
+
+        if (wxGetApp().model().stl_design_country == "DEV" && (country_code == "ENV_CN_DEV" || country_code == "NEW_ENV_DEV_HOST")) {
+            match_code = true;
         }
-        catch (const std::exception& e) {
-            stl_design_id = 0;
+
+        if (wxGetApp().model().stl_design_country == "QA" && (country_code == "ENV_CN_QA" || country_code == "NEW_ENV_QAT_HOST")) {
+            match_code = true;
         }
-        params.stl_design_id = stl_design_id;
+
+        if (wxGetApp().model().stl_design_country == "CN_PRE" && (country_code == "ENV_CN_PRE" || country_code == "NEW_ENV_PRE_HOST")) {
+            match_code = true;
+        }
+
+        if (wxGetApp().model().stl_design_country == "US_PRE" && country_code == "ENV_US_PRE") {
+            match_code = true;
+        }
+
+        if (country_code == wxGetApp().model().stl_design_country) {
+            match_code = true;
+        }
+
+        if (match_code) {
+            int stl_design_id = 0;
+            try {
+                stl_design_id = std::stoi(wxGetApp().model().stl_design_id);
+            }
+            catch (const std::exception&) {
+                stl_design_id = 0;
+            }
+            params.stl_design_id = stl_design_id;
+        }
     }
 
     if (params.preset_name.empty() && m_print_type == "from_normal") { params.preset_name = wxString::Format("%s_plate_%d", m_project_name, curr_plate_idx).ToStdString(); }
@@ -420,7 +456,7 @@ void PrintJob::process(Ctl &ctl)
             std::string curr_job_id;
             json job_info_j;
             try {
-                job_info_j.parse(job_info);
+                std::ignore = job_info_j.parse(job_info);
                 if (job_info_j.contains("job_id")) {
                     curr_job_id = job_info_j["job_id"].get<std::string>();
                 }
@@ -470,7 +506,12 @@ void PrintJob::process(Ctl &ctl)
 
 
         //use ftp only
-        if (!wxGetApp().app_config->get("lan_mode_only").empty() && wxGetApp().app_config->get("lan_mode_only") == "1") {
+        if (m_print_type == "from_sdcard_view") {
+            BOOST_LOG_TRIVIAL(info) << "print_job: try to send with cloud, model is sdcard view";
+            ctl.update_status(curr_percent, _u8L("Sending print job through cloud service"));
+            result = m_agent->start_sdcard_print(params, update_fn, cancel_fn);
+        }
+        else if (!wxGetApp().app_config->get("lan_mode_only").empty() && wxGetApp().app_config->get("lan_mode_only") == "1") {
 
             if (params.password.empty() || params.dev_ip.empty()) {
                 error_text = wxString::Format("Access code:%s Ip address:%s", params.password, params.dev_ip);

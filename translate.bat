@@ -1,0 +1,2 @@
+xgettext --keyword=L --keyword=_L --keyword=_u8L --keyword=L_CONTEXT:1,2c --keyword=_L_PLURAL:1,2 --add-comments=TRN --from-code=UTF-8 --no-location --debug -f ./localization/i18n/list.txt -o ./localization/i18n/Orca-Flashforge.pot
+build\\src\\hints\\Release\\hintsToPot ./resources ./localization/i18n

@@ -67,7 +67,7 @@ std::string PrintBase::output_filename(const std::string &format, const std::str
     DynamicConfig cfg;
     if (config_override != nullptr)
     	cfg = *config_override;
-    cfg.set_key_value("version", new ConfigOptionString(std::string(SoftFever_VERSION)));
+    cfg.set_key_value("version", new ConfigOptionString(std::string(Orca_Flashforge_VERSION)));
     PlaceholderParser::update_timestamp(cfg);
     this->update_object_placeholders(cfg, default_ext);
     if (! filename_base.empty()) {
@@ -79,7 +79,7 @@ std::string PrintBase::output_filename(const std::string &format, const std::str
 			cfg.opt_string("input_filename_base") + default_ext :
 			this->placeholder_parser().process(format, 0, &cfg);
         if (filename.extension().empty())
-            filename = boost::filesystem::change_extension(filename, default_ext);
+            filename.replace_extension(default_ext);
         return filename.string();
     } catch (std::runtime_error &err) {
         throw Slic3r::PlaceholderParserError(L("Failed processing of the filename_format template.") + "\n" + err.what());

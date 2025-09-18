@@ -38,15 +38,19 @@
 #include <wx/hashmap.h>
 #include <wx/webview.h>
 
-#include "Jobs/Worker.hpp"
-
 namespace Slic3r { namespace GUI {
 
 wxDECLARE_EVENT(EVT_SECONDARY_CHECK_CONFIRM, wxCommandEvent);
 wxDECLARE_EVENT(EVT_SECONDARY_CHECK_CANCEL, wxCommandEvent);
 wxDECLARE_EVENT(EVT_SECONDARY_CHECK_RETRY, wxCommandEvent);
 wxDECLARE_EVENT(EVT_SECONDARY_CHECK_DONE, wxCommandEvent);
+wxDECLARE_EVENT(EVT_SECONDARY_CHECK_RESUME, wxCommandEvent);
+wxDECLARE_EVENT(EVT_PRINT_ERROR_STOP, wxCommandEvent);
 wxDECLARE_EVENT(EVT_UPDATE_NOZZLE, wxCommandEvent);
+wxDECLARE_EVENT(EVT_LOAD_VAMS_TRAY, wxCommandEvent);
+wxDECLARE_EVENT(EVT_JUMP_TO_HMS, wxCommandEvent);
+wxDECLARE_EVENT(EVT_JUMP_TO_LIVEVIEW, wxCommandEvent);
+wxDECLARE_EVENT(EVT_UPDATE_TEXT_MSG, wxCommandEvent);
 
 class ReleaseNoteDialog : public DPIDialog
 {
@@ -116,8 +120,9 @@ public:
         CONFIRM_AND_CANCEL  = 1,
         CONFIRM_AND_DONE    = 2,
         CONFIRM_AND_RETRY   = 3,
-        DONE_AND_RETRY      = 4,
-        MAX_STYLE_NUM       = 5
+        CONFIRM_AND_RESUME  = 4,
+        DONE_AND_RETRY      = 5,
+        MAX_STYLE_NUM       = 6
     };
     SecondaryCheckDialog(
         wxWindow* parent,
@@ -150,10 +155,75 @@ public:
     Button* m_button_retry { nullptr };
     Button* m_button_cancel { nullptr };
     Button* m_button_fn { nullptr };
+    Button* m_button_resume { nullptr };
     wxCheckBox* m_show_again_checkbox;
     ButtonStyle m_button_style;
     bool not_show_again = false;
     std::string show_again_config_text = "";
+};
+
+class PrintErrorDialog : public DPIFrame
+{
+private:
+    wxWindow* event_parent{ nullptr };
+public:
+    enum PrintErrorButton {
+        RESUME_PRINTING = 2,
+        RESUME_PRINTING_DEFECTS = 3,
+        RESUME_PRINTING_PROBELM_SOLVED = 4,
+        STOP_PRINTING = 5,
+        CHECK_ASSISTANT = 6,
+        FILAMENT_EXTRUDED = 7,
+        RETRY_FILAMENT_EXTRUDED = 8,
+        CONTINUE = 9,
+        LOAD_VIRTUAL_TRAY = 10,
+        OK_BUTTON = 11,
+        FILAMENT_LOAD_RESUME,
+        JUMP_TO_LIVEVIEW,
+        ERROR_BUTTON_COUNT
+    };
+    PrintErrorDialog(
+        wxWindow* parent,
+        wxWindowID      id = wxID_ANY,
+        const wxString& title = wxEmptyString,
+        const wxPoint& pos = wxDefaultPosition,
+        const wxSize& size = wxDefaultSize,
+        long            style = wxCLOSE_BOX | wxCAPTION
+    );
+    void update_text_image(const wxString& text, const wxString& error_code,const wxString& image_url);
+    void on_show();
+    void on_hide();
+    void update_title_style(wxString title, std::vector<int> style, wxWindow* parent = nullptr);
+    void post_event(wxCommandEvent&& event);
+    void rescale();
+    ~PrintErrorDialog();
+    void on_dpi_changed(const wxRect& suggested_rect);
+    void msw_rescale();
+    void init_button(PrintErrorButton style, wxString buton_text);
+    void init_button_list();
+    void on_webrequest_state(wxWebRequestEvent& evt);
+
+    StateColor btn_bg_white;
+    wxWebRequest web_request;
+    wxStaticBitmap* m_error_prompt_pic_static;
+    Label* m_staticText_release_note{ nullptr };
+    Label* m_staticText_error_code{ nullptr };
+    wxBoxSizer* m_sizer_main;
+    wxBoxSizer* m_sizer_button;
+    wxScrolledWindow* m_vebview_release_note{ nullptr };
+    std::map<int, Button*> m_button_list;
+    std::vector<int> m_used_button;
+};
+
+struct ConfirmBeforeSendInfo
+{
+    enum InfoLevel {
+        Normal = 0,
+        Warning = 1
+    };
+    InfoLevel level;
+    wxString text;
+    ConfirmBeforeSendInfo(wxString txt, InfoLevel lev = Normal) : text(txt), level(lev) {}
 };
 
 class ConfirmBeforeSendDialog : public DPIDialog
@@ -175,12 +245,17 @@ public:
         bool not_show_again_check = false
     );
     void update_text(wxString text);
+    void update_text(std::vector<ConfirmBeforeSendInfo> texts);
     void on_show();
     void on_hide();
     void update_btn_label(wxString ok_btn_text, wxString cancel_btn_text);
     void rescale();
     void on_dpi_changed(const wxRect& suggested_rect);
-    void show_update_nozzle_button();
+    void show_update_nozzle_button(bool show = false);
+    void hide_button_ok();
+    void edit_cancel_button_txt(wxString txt);
+    void disable_button_ok();
+    void enable_button_ok();
     wxString format_text(wxString str, int warp);
 
     ~ConfirmBeforeSendDialog();
@@ -201,8 +276,12 @@ class InputIpAddressDialog : public DPIDialog
 public:
     wxString comfirm_before_enter_text;
     wxString comfirm_after_enter_text;
+    wxString comfirm_last_enter_text;
+
+    boost::thread* m_thread{nullptr};
 
     std::string m_ip;
+    wxWindow* m_step_icon_panel3{ nullptr };
     Label* m_tip1{ nullptr };
     Label* m_tip2{ nullptr };
     Label* m_tip3{ nullptr };
@@ -211,23 +290,35 @@ public:
     ~InputIpAddressDialog();
 
     MachineObject* m_obj{nullptr};
+    wxPanel * ip_input_top_panel{ nullptr };
+    wxPanel * ip_input_bot_panel{ nullptr };
     Button* m_button_ok{ nullptr };
+    Button* m_button_manual_setup{ nullptr };
     Label* m_tips_ip{ nullptr };
     Label* m_tips_access_code{ nullptr };
+    Label* m_tips_sn{nullptr};
+    Label* m_tips_modelID{nullptr};
     Label* m_test_right_msg{ nullptr };
     Label* m_test_wrong_msg{ nullptr };
     TextInput* m_input_ip{ nullptr };
     TextInput* m_input_access_code{ nullptr };
+    TextInput* m_input_printer_name{ nullptr };
+    TextInput* m_input_sn{ nullptr };
+    ComboBox*  m_input_modelID{ nullptr };
     wxStaticBitmap* m_img_help{ nullptr };
     wxStaticBitmap* m_img_step1{ nullptr };
     wxStaticBitmap* m_img_step2{ nullptr };
     wxStaticBitmap* m_img_step3{ nullptr };
     wxHyperlinkCtrl* m_trouble_shoot{ nullptr };
+    wxTimer* closeTimer{ nullptr };
+    int     closeCount{3};
     bool   m_show_access_code{ false };
     int    m_result;
-    std::shared_ptr<BBLStatusBarSend>  m_status_bar;
-    std::unique_ptr<Worker> m_worker;
+    int    current_input_index {0};
+    std::shared_ptr<BBLStatusBarSend> m_status_bar;
+    boost::bimaps::bimap<std::string, std::string> m_models_map;
 
+    void switch_input_panel(int index);
     void on_cancel();
     void update_title(wxString title);
     void set_machine_obj(MachineObject* obj);
@@ -236,6 +327,10 @@ public:
     void check_ip_address_failed(int result);
     void on_check_ip_address_failed(wxCommandEvent& evt);
     void on_ok(wxMouseEvent& evt);
+    void update_test_msg_event(wxCommandEvent &evt);
+    void post_update_test_msg(wxString text, bool beconnect);
+    void workerThreadFunc(std::string str_ip, std::string str_access_code, std::string sn, std::string model_id, std::string name);
+    void OnTimer(wxTimerEvent& event);
     void on_text(wxCommandEvent& evt);
     void on_dpi_changed(const wxRect& suggested_rect) override;
 };
@@ -245,6 +340,7 @@ wxDECLARE_EVENT(EVT_CLOSE_IPADDRESS_DLG, wxCommandEvent);
 wxDECLARE_EVENT(EVT_CHECKBOX_CHANGE, wxCommandEvent);
 wxDECLARE_EVENT(EVT_ENTER_IP_ADDRESS, wxCommandEvent);
 wxDECLARE_EVENT(EVT_CHECK_IP_ADDRESS_FAILED, wxCommandEvent);
+wxDECLARE_EVENT(EVT_CHECK_IP_ADDRESS_LAYOUT, wxCommandEvent);
 
 
 }} // namespace Slic3r::GUI

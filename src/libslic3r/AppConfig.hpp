@@ -1,7 +1,3 @@
-///|/ Copyright (c) Prusa Research 2017 - 2023 Vojtěch Bubník @bubnikv, David Kocík @kocikdav, Lukáš Matěna @lukasmatena, Filip Sykala @Jony01, Enrico Turri @enricoturri1966, Oleksandra Iushchenko @YuSanka, Vojtěch Král @vojtechkral
-///|/
-///|/ PrusaSlicer is released under the terms of the AGPLv3 or higher
-///|/
 #ifndef slic3r_AppConfig_hpp_
 #define slic3r_AppConfig_hpp_
 
@@ -22,11 +18,33 @@ using namespace nlohmann;
 #define ENV_PRE_HOST		"2"
 #define ENV_PRODUCT_HOST	"3"
 
+#define SETTING_PROJECT_LOAD_BEHAVIOUR "project_load_behaviour"
+#define OPTION_PROJECT_LOAD_BEHAVIOUR_LOAD_ALL "load_all"
+#define OPTION_PROJECT_LOAD_BEHAVIOUR_ASK_WHEN_RELEVANT "ask_when_relevant"
+#define OPTION_PROJECT_LOAD_BEHAVIOUR_ALWAYS_ASK "always_ask"
+#define OPTION_PROJECT_LOAD_BEHAVIOUR_LOAD_GEOMETRY "load_geometry_only"
+
 #define SUPPORT_DARK_MODE
 //#define _MSW_DARK_MODE
 
 
 namespace Slic3r {
+
+
+// Connected LAN mode BambuLab printer
+struct BBLocalMachine
+{
+    std::string dev_name;
+    std::string dev_ip;
+    std::string dev_id; /* serial number */
+    std::string printer_type; /* model_id */
+
+    bool operator==(const BBLocalMachine& other) const
+    {
+        return dev_name == other.dev_name && dev_ip == other.dev_ip && dev_id == other.dev_id && printer_type == other.printer_type;
+    }
+    bool operator!=(const BBLocalMachine& other) const { return !operator==(other); }
+};
 
 class AppConfig
 {
@@ -36,6 +54,9 @@ public:
 		Editor,
 		GCodeViewer
 	};
+
+    typedef std::map<std::string, std::string> MacInfoMap;
+    typedef std::vector<MacInfoMap>			   LocalMacInfo;
 
     //BBS: remove GCodeViewer as seperate APP logic
 	explicit AppConfig() :
@@ -47,13 +68,17 @@ public:
 		this->reset();
 	}
 
+    ~AppConfig();
+
 	std::string get_language_code();
 	std::string get_hms_host();
+	bool get_stealth_mode();
 
 	// Clear and reset to defaults.
 	void 			   	reset();
 	// Override missing or keys with their defaults.
 	void 			   	set_defaults();
+    void				set_version_check_url();
 
 	// Load the slic3r.ini from a user profile directory (or a datadir, if configured).
 	// return error string or empty strinf
@@ -84,8 +109,10 @@ public:
 		{ std::string value; this->get(section, key, value); return value; }
 	std::string 		get(const std::string &key) const
 		{ std::string value; this->get("app", key, value); return value; }
+	bool				get_bool(const std::string &section, const std::string &key) const
+		{ return this->get(section, key) == "true" || this->get(key) == "1"; }
 	bool				get_bool(const std::string &key) const
-		{ return this->get(key) == "true" || this->get(key) == "1"; }
+		{ return this->get_bool("app", key); }
 	void			    set(const std::string &section, const std::string &key, const std::string &value)
 	{
 #ifndef NDEBUG
@@ -153,7 +180,8 @@ public:
 	{
 		auto it = m_storage.find(section);
 		if (it != m_storage.end()) {
-			it->second.erase(key);
+            it->second.erase(key);
+            m_dirty = true;
 		}
 	}
 
@@ -195,11 +223,34 @@ public:
             return "";
         return m_printer_settings[printer][name];
     }
-    std::string set_printer_setting(std::string printer, std::string name, std::string value) {
-        return m_printer_settings[printer][name] = value;
-        m_dirty                = true;
+    void set_printer_setting(std::string printer, std::string name, std::string value) {
+        m_printer_settings[printer][name] = value;
+        m_dirty = true;
     }
 
+	const std::map<std::string, BBLocalMachine>& get_local_machines() const { return m_local_machines; }
+	void erase_local_machine(std::string dev_id)
+    {
+        auto it = m_local_machines.find(dev_id);
+        if (it != m_local_machines.end()) {
+            m_local_machines.erase(it);
+            m_dirty = true;
+        }
+    }
+    void update_local_machine(const BBLocalMachine& machine)
+    {
+        auto it = m_local_machines.find(machine.dev_id);
+        if (it != m_local_machines.end()) {
+            const auto& current = it->second;
+            if (machine != current) {
+                m_local_machines[machine.dev_id] = machine;
+                m_dirty = true;
+            }
+        } else {
+            m_local_machines[machine.dev_id] = machine;
+            m_dirty = true;
+        }
+    }
 
     const std::vector<std::string> &get_filament_presets() const { return m_filament_presets; }
     void set_filament_presets(const std::vector<std::string> &filament_presets){
@@ -232,8 +283,17 @@ public:
 	std::string         get_region();
 	std::string         get_country_code();
     bool				is_engineering_region();
+    void                get_local_mahcines(LocalMacInfo& local_machines);
+    void                save_bind_machine_to_config(const std::string&    dev_id,
+                                                    const std::string&    dev_name,
+                                                    const std::string&    placement,
+                                                    const unsigned short& pid,
+													bool modifyPlacement = true);
+    void                erase_local_machine(const std::string& dev_id, const std::string& dev_name);
 
-	// reset the current print / filament / printer selections, so that 
+    void                save_custom_color_to_config(const std::vector<std::string> &colors);
+    std::vector<std::string> get_custom_color_from_config();
+	// reset the current print / filament / printer selections, so that
 	// the  PresetBundle::load_selections(const AppConfig &config) call will select
 	// the first non-default preset when called.
     void                reset_selections();
@@ -295,6 +355,7 @@ public:
 	static const std::string SECTION_FILAMENTS;
     static const std::string SECTION_MATERIALS;
     static const std::string SECTION_EMBOSS_STYLE;
+    static const std::string SECTION_LOCAL_MACHINES;
 
 private:
 	template<typename T>
@@ -328,12 +389,17 @@ private:
 	// Whether the existing version is before system profiles & configuration updating
 	bool                                                        m_legacy_datadir;
 
+    // Used connected machine's information
+    LocalMacInfo                                                m_local_machines_ff;
+
 	std::string                                                 m_loading_path;
 
 	std::vector<std::string>									m_filament_presets;
     std::vector<std::string>									m_filament_colors;
 
 	std::vector<PrinterCaliInfo>								m_printer_cali_infos;
+
+	std::map<std::string, BBLocalMachine>						m_local_machines;
 };
 
 } // namespace Slic3r

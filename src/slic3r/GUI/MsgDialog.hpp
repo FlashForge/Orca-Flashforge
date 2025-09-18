@@ -1,7 +1,3 @@
-///|/ Copyright (c) Prusa Research 2018 - 2022 Oleksandra Iushchenko @YuSanka, Lukáš Matěna @lukasmatena, David Kocík @kocikdav, Lukáš Hejl @hejllukas, Vojtěch Bubník @bubnikv, Vojtěch Král @vojtechkral
-///|/
-///|/ PrusaSlicer is released under the terms of the AGPLv3 or higher
-///|/
 #ifndef slic3r_MsgDialog_hpp_
 #define slic3r_MsgDialog_hpp_
 
@@ -20,6 +16,7 @@
 #include "Widgets/TextInput.hpp"
 #include "BBLStatusBar.hpp"
 #include "BBLStatusBarSend.hpp"
+#include "libslic3r/Semver.hpp"
 
 class wxBoxSizer;
 class wxCheckBox;
@@ -105,7 +102,7 @@ class ErrorDialog : public MsgDialog
 public:
 	// If monospaced_font is true, the error message is displayed using html <code><pre></pre></code> tags,
 	// so that the code formatting will be preserved. This is useful for reporting errors from the placeholder parser.
-	ErrorDialog(wxWindow *parent, const wxString &msg, bool courier_font);
+    ErrorDialog(wxWindow *parent, const wxString &msg, bool monospaced_font);
 	ErrorDialog(ErrorDialog &&) = delete;
 	ErrorDialog(const ErrorDialog &) = delete;
 	ErrorDialog &operator=(ErrorDialog &&) = delete;
@@ -196,7 +193,7 @@ public:
 	}
 
 	wxString	GetCheckBoxText()	const { return m_checkBoxText; }
-	bool		IsCheckBoxChecked() const { return m_checkBoxValue; }
+	bool		IsCheckBoxChecked() const;
 
 // This part o fcode isported from the "wx\msgdlg.h"
 	using wxMD = wxMessageDialogBase;
@@ -390,6 +387,46 @@ private:
     Button *      m_del_btn    = nullptr;
     Button *      m_cancel_btn = nullptr;
     wxStaticText *m_msg_text   = nullptr;
+};
+
+class Newer3mfVersionDialog : public DPIDialog
+{
+public:
+    Newer3mfVersionDialog(wxWindow *parent, const Semver* file_version, const Semver* cloud_version, wxString new_keys);
+    ~Newer3mfVersionDialog(){};
+    virtual void on_dpi_changed(const wxRect &suggested_rect){};
+
+private:
+    wxBoxSizer *get_msg_sizer();
+    wxBoxSizer *get_btn_sizer();
+
+
+private:
+    const Semver *m_file_version;
+    const Semver *m_cloud_version;
+    wxString      m_new_keys;
+    Button *      m_update_btn = nullptr;
+    Button *      m_later_btn  = nullptr;
+    wxStaticText *m_msg_text   = nullptr;
+};
+
+
+class NetworkErrorDialog : public DPIDialog
+{
+public:
+    NetworkErrorDialog(wxWindow* parent);
+    ~NetworkErrorDialog() {};
+    virtual void on_dpi_changed(const wxRect& suggested_rect) {};
+
+private:
+    Label* m_text_basic;
+    wxHyperlinkCtrl* m_link_server_state;
+    Label* m_text_proposal;
+    wxHyperlinkCtrl* m_text_wiki;
+    Button *         m_button_confirm;
+
+public:
+    bool m_show_again{false};
 };
 
 }

@@ -384,6 +384,7 @@ void DailyTipsPanel::set_fade_opacity(float opacity)
 
 void DailyTipsPanel::render_controller_buttons(const ImVec2& pos, const ImVec2& size)
 {
+    return;
     ImGuiWrapper& imgui = *wxGetApp().imgui();
     float scale = imgui.get_font_size() / 15.0f;
     ImGuiWindow* parent_window = ImGui::GetCurrentWindow();

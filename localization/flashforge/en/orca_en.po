@@ -1,0 +1,34 @@
+msgid "Shift + Mouse move up or dowm"
+msgstr "Shift + Mouse move up or down"
+
+msgid "Fatal error, exception catched: %1%"
+msgstr "Fatal error, exception caught: %1%"
+
+msgid "Split the selected object into mutiple objects"
+msgstr "Split the selected object into multiple objects"
+
+msgid "Split the selected object into mutiple parts"
+msgstr "Split the selected object into multiple parts"
+
+msgid "Failed to fetching model infomations from printer."
+msgstr "Failed to fetch model information from printer."
+
+msgid "Failed to parse model infomations."
+msgstr "Failed to parse model information"
+
+msgid "Upload Pictrues"
+msgstr "Upload Pictures"
+
+msgid ""
+"Enable pressure advance, auto calibration result will be overwriten once "
+"enabled."
+msgstr ""
+"Enable pressure advance, auto calibration result will be overwritten once "
+"enabled."
+
+msgid ""
+"*We recommend you to add brand, materia, type, and even humidity level in "
+"the Name"
+msgstr ""
+"*We recommend you to add brand, material, type, and even humidity level in "
+"the Name"

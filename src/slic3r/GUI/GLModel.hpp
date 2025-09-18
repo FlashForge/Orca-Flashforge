@@ -1,7 +1,3 @@
-///|/ Copyright (c) Prusa Research 2020 - 2023 Enrico Turri @enricoturri1966, Vojtěch Bubník @bubnikv, Filip Sykala @Jony01, Lukáš Matěna @lukasmatena
-///|/
-///|/ PrusaSlicer is released under the terms of the AGPLv3 or higher
-///|/
 #ifndef slic3r_GLModel_hpp_
 #define slic3r_GLModel_hpp_
 
@@ -251,7 +247,15 @@ namespace GUI {
     // the origin of the torus is in its center
     GLModel::Geometry smooth_torus(unsigned int primary_resolution, unsigned int secondary_resolution, float radius, float thickness);
 
-} // namespace GUI
+    GLModel::Geometry init_plane_data(const indexed_triangle_set &its, const std::vector<int> &triangle_indices,float normal_offset = 0.0f);
+    GLModel::Geometry init_torus_data(unsigned int       primary_resolution,
+                                      unsigned int       secondary_resolution,
+                                      const Vec3f &      center,
+                                      float              radius,
+                                      float              thickness,
+                                      const Vec3f &      model_axis,
+                                      const Transform3f &world_trafo);
+    } // namespace GUI
 } // namespace Slic3r
 
 #endif // slic3r_GLModel_hpp_

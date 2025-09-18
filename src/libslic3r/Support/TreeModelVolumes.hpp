@@ -1,7 +1,3 @@
-///|/ Copyright (c) Prusa Research 2022 - 2023 Vojtěch Bubník @bubnikv, Oleksandra Iushchenko @YuSanka
-///|/
-///|/ PrusaSlicer is released under the terms of the AGPLv3 or higher
-///|/
 // Tree supports by Thomas Rahm, losely based on Tree Supports by CuraEngine.
 // Original source of Thomas Rahm's tree supports:
 // https://github.com/ThomasRahm/CuraEngine
@@ -30,12 +26,12 @@ namespace Slic3r
 class BuildVolume;
 class PrintObject;
 
-namespace FFFTreeSupport
+namespace TreeSupport3D
 {
 
 static constexpr const double  SUPPORT_TREE_EXPONENTIAL_FACTOR = 1.5;
-static constexpr const coord_t SUPPORT_TREE_EXPONENTIAL_THRESHOLD = scaled<coord_t>(1. * SUPPORT_TREE_EXPONENTIAL_FACTOR);
-static constexpr const coord_t SUPPORT_TREE_COLLISION_RESOLUTION = scaled<coord_t>(0.5);
+#define SUPPORT_TREE_EXPONENTIAL_THRESHOLD  scaled<coord_t>(1. * SUPPORT_TREE_EXPONENTIAL_FACTOR)
+#define SUPPORT_TREE_COLLISION_RESOLUTION  scaled<coord_t>(0.5)
 static constexpr const bool    SUPPORT_TREE_AVOID_SUPPORT_BLOCKER = true;
 
 class TreeModelVolumes
@@ -170,6 +166,8 @@ public:
             this->ceilRadius(radius) :
             this->ceilRadius(radius + m_current_min_xy_dist_delta) - m_current_min_xy_dist_delta;
     }
+
+    Polygon m_bed_area;
 
 private:
     // Caching polygons for a range of layers.
@@ -552,7 +550,7 @@ private:
 #endif // SLIC3R_TREESUPPORTS_PROGRESS
 };
 
-} // namespace FFFTreeSupport
+} // namespace TreeSupport3D
 } // namespace Slic3r
 
 #endif //slic3r_TreeModelVolumes_hpp

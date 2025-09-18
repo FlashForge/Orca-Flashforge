@@ -14,7 +14,7 @@
 #define SIDE_TOOLS_GREY900 wxColour(38, 46, 48)
 #define SIDE_TOOLS_GREY600 wxColour(144, 144, 144)
 #define SIDE_TOOLS_GREY400 wxColour(206, 206, 206)
-#define SIDE_TOOLS_BRAND wxColour(0, 150, 136)
+#define SIDE_TOOLS_BRAND wxColour(255, 255, 255)
 #define SIDE_TOOLS_LIGHT_GREEN wxColour(219, 253, 231)
 
 enum WifiSignal {
@@ -26,17 +26,32 @@ enum WifiSignal {
 };
 
 enum MonitorStatus {
-    MONITOR_UNKNOWN = 0,
-    MONITOR_NORMAL = 1 << 1,
-    MONITOR_NO_PRINTER = 1 << 2,
-    MONITOR_DISCONNECTED = 1 << 3,
+    MONITOR_UNKNOWN             = 0,
+    MONITOR_NORMAL              = 1 << 1,
+    MONITOR_NO_PRINTER          = 1 << 2,
+    MONITOR_DISCONNECTED        = 1 << 3,
     MONITOR_DISCONNECTED_SERVER = 1 << 4,
-    MONITOR_CONNECTING = 1 << 5,
+    MONITOR_CONNECTING          = 1 << 5,
+    MONITOR_CONNECTED_FAILED    = 1 << 6,
+    MONITOR_LOGIN_OFFLINE       = 1 << 7,
 };
 
 #define SIDE_TOOL_CLICK_INTERVAL 20
 
 namespace Slic3r { namespace GUI {
+
+
+class DevListBtnClickedEvent : public wxCommandEvent
+{
+public:
+    DevListBtnClickedEvent(wxEventType type)
+        : wxCommandEvent(type)
+    {}
+
+    DevListBtnClickedEvent *Clone() const { return new DevListBtnClickedEvent(GetEventType()); }
+
+};
+wxDECLARE_EVENT(EVT_DEV_LIST_BTN_CLICKED, DevListBtnClickedEvent);
 
 class SideToolsPanel : public wxPanel
 {
@@ -52,7 +67,6 @@ private:
     ScalableBitmap  m_arrow_img;
 
     ScalableBitmap  m_none_printing_img;
-    ScalableBitmap  m_none_arrow_img;
     ScalableBitmap  m_none_add_img;
 
     ScalableBitmap  m_wifi_none_img;
@@ -90,6 +104,7 @@ protected:
     void on_mouse_left_up(wxMouseEvent &evt);
 };
 
+class DeviceObject;
 class SideTools : public wxPanel
 {
 public:
@@ -99,7 +114,7 @@ public:
 private:
     SideToolsPanel* m_side_tools{ nullptr };
     Tabbook*        m_tabpanel{ nullptr };
-    wxHyperlinkCtrl* m_link_network_state{ nullptr };
+    Label*          m_link_network_state{nullptr};
     Label* m_st_txt_error_code{ nullptr };
     Label* m_st_txt_error_desc{ nullptr };
     Label* m_st_txt_extra_info{ nullptr };
@@ -110,6 +125,7 @@ private:
     ScalableBitmap      m_more_err_open;
     ScalableBitmap      m_more_err_close;
     bool                m_more_err_state{ false };
+    bool                m_account_online{true};
 
 public:
     void set_table_panel(Tabbook* tb) {m_tabpanel = tb;};
@@ -120,8 +136,12 @@ public:
     void set_none_printer_mode();
     void start_interval();
     void update_status(MachineObject* obj);
+    void update_device_status(DeviceObject* obj);
     void update_connect_err_info(int code, wxString desc, wxString info);
     void show_status(int status);
+    int  getConnectInfoHeight();
+    void setAccountState(bool state);
+    bool getAccountState();
 
 public:
     SideToolsPanel* get_panel() {return m_side_tools;};

@@ -1,8 +1,3 @@
-///|/ Copyright (c) Prusa Research 2017 - 2023 Oleksandra Iushchenko @YuSanka, Enrico Turri @enricoturri1966, Lukáš Matěna @lukasmatena, Vojtěch Bubník @bubnikv, David Kocík @kocikdav, Vojtěch Král @vojtechkral
-///|/ Copyright (c) 2019 John Drake @foxox
-///|/
-///|/ PrusaSlicer is released under the terms of the AGPLv3 or higher
-///|/
 #ifndef slic3r_PresetBundle_hpp_
 #define slic3r_PresetBundle_hpp_
 
@@ -97,7 +92,13 @@ public:
     VendorType get_current_vendor_type();
     // Vendor related handy functions
     bool is_bbl_vendor() { return get_current_vendor_type() == VendorType::Marlin_BBL; }
+    // Whether using bbl network for print upload
     bool use_bbl_network();
+    // Whether using bbl's device tab
+    bool use_bbl_device_tab();
+    bool is_flashforge_vendor();
+
+    bool backup_user_folder() const;
 
     //BBS: project embedded preset logic
     PresetsConfigSubstitutions load_project_embedded_presets(std::vector<Preset*> project_presets, ForwardCompatibilitySubstitutionRule substitution_rule);
@@ -113,6 +114,7 @@ public:
     void            export_selections(AppConfig &config);
 
     // BBS
+    void            set_num_filaments(unsigned int n, std::vector<std::string> new_colors);
     void            set_num_filaments(unsigned int n, std::string new_col = "");
     unsigned int sync_ams_list(unsigned int & unknowns);
     //BBS: check whether this is the only edited filament
@@ -124,6 +126,15 @@ public:
 
     void set_is_validation_mode(bool mode) { validation_mode = mode; }
     void set_vendor_to_validate(std::string vendor) { vendor_to_validate = vendor; }
+
+    std::set<std::string> get_printer_names_by_printer_type_and_nozzle(const std::string &printer_type, std::string nozzle_diameter_str);
+    bool                  check_filament_temp_equation_by_printer_type_and_nozzle_for_mas_tray(const std::string &printer_type,
+                                                                                               std::string &      nozzle_diameter_str,
+                                                                                               std::string &      setting_id,
+                                                                                               std::string &      tag_uid,
+                                                                                               std::string &      nozzle_temp_min,
+                                                                                               std::string &      nozzle_temp_max,
+                                                                                               std::string &      preset_setting_id);
 
     PresetCollection            prints;
     PresetCollection            sla_prints;
@@ -152,7 +163,12 @@ public:
     // and the system profiles will point to the VendorProfile instances owned by PresetBundle::vendors.
     VendorMap                   vendors;
 
-    struct ObsoletePresets {
+    // Orca: for OrcaFilamentLibrary
+    std::map<std::string, DynamicPrintConfig> m_config_maps;
+    std::map<std::string, std::string> m_filament_id_maps;
+
+        struct ObsoletePresets
+    {
         std::vector<std::string> prints;
         std::vector<std::string> sla_prints;
         std::vector<std::string> filaments;
@@ -204,9 +220,9 @@ public:
     // Don't do any config substitutions when loading a system profile, perform and report substitutions otherwise.
     /*std::pair<PresetsConfigSubstitutions, size_t> load_configbundle(
         const std::string &path, LoadConfigBundleAttributes flags, ForwardCompatibilitySubstitutionRule compatibility_rule);*/
-    //BBS: add json related logic
+    //Orca: load config bundle from json, pass the base bundle to support cross vendor inheritance
     std::pair<PresetsConfigSubstitutions, size_t> load_vendor_configs_from_json(
-        const std::string &path, const std::string &vendor_name, LoadConfigBundleAttributes flags, ForwardCompatibilitySubstitutionRule compatibility_rule);
+        const std::string &path, const std::string &vendor_name, LoadConfigBundleAttributes flags, ForwardCompatibilitySubstitutionRule compatibility_rule, const PresetBundle* base_bundle = nullptr);
 
     // Export a config bundle file containing all the presets and the names of the active presets.
     //void                        export_configbundle(const std::string &path, bool export_system_settings = false, bool export_physical_printers = false);
@@ -253,11 +269,13 @@ public:
     std::pair<PresetsConfigSubstitutions, std::string> load_system_filaments_json(ForwardCompatibilitySubstitutionRule compatibility_rule);
     VendorProfile                                      get_custom_vendor_models() const;
 
-    //BBS: add BBL as default
-    static const char *BBL_BUNDLE;
-	static const char *BBL_DEFAULT_PRINTER_MODEL;
-	static const char *BBL_DEFAULT_PRINTER_VARIANT;
-	static const char *BBL_DEFAULT_FILAMENT;
+    //orca: add 'custom' as default
+    static const char *ORCA_DEFAULT_BUNDLE;
+	static const char *ORCA_DEFAULT_PRINTER_MODEL;
+	static const char *ORCA_DEFAULT_PRINTER_VARIANT;
+	static const char *ORCA_DEFAULT_FILAMENT;
+    static const char *ORCA_FILAMENT_LIBRARY;
+
 
     static std::array<Preset::Type, 3>  types_list(PrinterTechnology pt) {
         if (pt == ptFFF)
@@ -266,12 +284,7 @@ public:
     }
 
     // Orca: for validation only
-    bool has_errors() const
-    {
-        if (m_errors != 0 || printers.m_errors != 0 || filaments.m_errors != 0 || prints.m_errors != 0)
-            return true;
-        return false;
-    }
+    bool has_errors() const;
 
 private:
     //std::pair<PresetsConfigSubstitutions, std::string> load_system_presets(ForwardCompatibilitySubstitutionRule compatibility_rule);

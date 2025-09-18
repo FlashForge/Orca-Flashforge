@@ -1,223 +1,881 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
-<head>
-<meta charset="utf-8">
-<meta http-equiv="Cache-Control" content="max-age=7200" />
-<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />	
-<title>homepage</title>
-<link rel="stylesheet" type="text/css" href="./css/home.css" />
-<link rel="stylesheet" type="text/css" href="./css/dark.css" />	
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Cache-Control" content="max-age=7200" />
+    <meta
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"
+      name="viewport"
+    />
+    <title>homepage</title>
+    <link rel="stylesheet" type="text/css" href="./css/elemenPlus.css" />
+    <link rel="stylesheet" type="text/css" href="./css/home.css" />
+    <link rel="stylesheet" type="text/css" href="./css/dark.css" />
+    <link rel="stylesheet" type="text/css" href="./css/point.css" />
+    
+    <script src="./js/vue@3.js"></script>
+    <script src="./js/vue-i18n.js"></script>
+    <script src="./js/elementPlus.js"></script>
+    <script
+      type="text/javascript"
+      src="../include/jquery-2.1.1.min.js"
+    ></script>
+    <script type="text/javascript" src="../include/json2.js"></script>
+    <script type="text/javascript" src="../include/globalapi.js"></script>
 
-<script type="text/javascript" src="../include/jquery-2.1.1.min.js"></script>
-<script type="text/javascript" src="../include/json2.js"></script>	
-<script type="text/javascript" src="../include/globalapi.js"></script>	
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="../include/swiper/swiper-bundle.min.css"
+    />
 
-<link rel="stylesheet" type="text/css" href="../include/swiper/swiper-bundle.min.css" />
-<script type="text/javascript" src="../include/swiper/swiper-bundle.min.js"></script>
-<script type="text/javascript" src="../data/text.js"></script>		
-	
-<script type="text/javascript" src="js/home.js"></script>
-</head>
-<body class="ZScrol" onLoad="OnInit()">
-<div id="LeftBoard" style="display: none;">
-	<div id="LoginArea">
-	<div id="Login1">
-		<div id="Icon1"><img id="BBLIcon" src="../image/logo2.png" /></div>
-		<div id="LoginBtn" class="TextS1" style="font-weight: 700;" onClick="OnLoginOrRegister()"><span class="trans" tid="t26">login</span>/<span class="trans" tid="t27">register</span></div>
-	</div>
-		
-	<div id="Login2">
-		<div>
-			<img id="UserAvatarIcon" src="img/c.jpg" onerror="this.onerror=null;this.src='img/c.jpg';" />
-		</div>
-		<div id="UserName" class="TextS1"></div>
-		<div id="LogoutBtn" class="Btn trans" tid="t50" onClick="OnLogOut()">log out</div>
-	</div>	
-		
+    <script
+      type="text/javascript"
+      src="../include/swiper/swiper-bundle.min.js"
+    ></script>
+    <script type="text/javascript" src="../data/text.js"></script>
+    <script type="text/javascript" src="./js/text.js"></script>
+
+    <script type="text/javascript" src="js/home.js"></script>
+
+    <script src="./js/elementLang/zh_CN.js"></script>
+    <script src="./js/elementLang/en.js"></script>
+    <script src="./js/elementLang/ko_KR.js"></script>
+    <script src="./js/elementLang/de_DE.js"></script>
+    <script src="./js/elementLang/fr_FR.js"></script>
+    <script src="./js/elementLang/lt_LT.js"></script>
+    <script src="./js/elementLang/es_ES.js"></script>
+    <script src="./js/elementLang/ru_RU.js"></script>
+  </head>
+  <body class="ZScrol" onLoad="OnInit()">
+    <div class="point_content">
+      <div id="LeftBoard">
+        <div id="LoginArea">
+          <div id="Login1">
+            <div id="Icon1">
+              <img id="BBLIcon" src="../image/logo2.png" />
+            </div>
+            <div
+              id="LoginBtn"
+              class="TextS1"
+              style="font-weight: 700"
+              onClick="OnLoginOrRegister()"
+            >
+              <span class="trans" tid="t26">login</span>/<span
+                class="trans"
+                tid="t27"
+                >register</span
+              >
+            </div>
+          </div>
+
+          <div id="Login2">
+            <div>
+              <img
+                id="UserAvatarIcon"
+                src="img/c.jpg"
+                onerror="this.onerror=null;this.src='img/c.jpg';"
+              />
+            </div>
+            <div id="UserName" class="TextS1"></div>
+            <div
+              id="LogoutBtn"
+              class="Btn trans"
+              tid="t50"
+              onClick="OnLogOut()"
+            >
+              log out
+            </div>
+          </div>
+          <!--	
 	<div id="NoPluginTip">	
 	    <div id="NoPluginText"><a class="RedFont trans" tid="t76">Network plugin not detected. Click </a><a Class="LinkBtn trans" onClick="BeginDownloadNetworkPlugin()" tid="t77">here</a><a class="RedFont trans" tid="t78"> to install it.</a></div>
 	</div>
-		
-	</div>
+	-->
+        </div>
 
-	<div id="BtnArea">
-	    <div menu="recent" class="BtnItem BtnItemSelected" onClick="GotoMenu('recent')">
-			<div class="BtnIcon "><img class="LeftIcon" src="img/i2.png" /></div>
-			<div class="trans" tid="t28">recent</div> 
-		</div>	
+        <div id="BtnArea">
+          <div
+            menu="recent"
+            class="BtnItem BtnItemSelected"
+            onClick="GotoMenu('recent', event)"
+          >
+            <div class="BtnIcon">
+              <img class="LeftIcon" src="img/i2.png" />
+            </div>
+            <div class="trans" tid="t28">recent</div>
+          </div>
+          <div
+            menu="my_point"
+            class="BtnItem"
+            onClick="GotoMenu('my_point')"
+            v-if="show_user_points"
+          >
+            <div class="BtnIcon">
+              <img class="LeftIcon" src="img/i2.png" />
+            </div>
+            <div class="trans">{{ $t('orca_list_mypoints') }}</div>
+          </div>
+        </div>
+      </div>
 
-	</div>
-</div>
+      <div id="RightBoard">
+        <div id="ContentBoard" class="ZScrol" board="recent">
+          <div style="height: 14px"></div>
+          <div id="MenuArea">
+            <!--		<div class="MenuItem" onClick="OnClickModelDepot()">
+						<div class="MenuIcon"><img src="img/i6.png"></div>
+						<div>
+							<div class="trans TextS1" tid="t90">3D Model</div>
+							<div class="MenuDesc trans"  tid="t91">Download 3D Models</div>
+						</div>
+					</div>	-->
+            <div class="MenuItem" onClick="OnClickNewProject()">
+              <div class="MenuIcon"><img src="img/i4.png" /></div>
+              <div>
+                <div class="trans TextS1" tid="t31">new project</div>
+                <div class="MenuDesc trans" tid="t32">create new project</div>
+              </div>
+            </div>
+            <div class="MenuItem" onClick="OnClickOpenProject()">
+              <div class="MenuIcon"><img src="img/i5.png" /></div>
+              <div>
+                <div class="trans TextS1" tid="t33">open project</div>
+                <div class="MenuDesc">3mf</div>
+              </div>
+            </div>
+            <div
+              class="MenuItem on_click_open_image_generate_3d"
+              onClick="OnClickOpenImageGenerate3D()"
+              v-if="show_user_points"
+            >
+              <div class="MenuIcon">
+                <img src="./img/image_to_3d.png" />
+              </div>
+              <div>
+                <div class="trans TextS1">
+                  {{ $t('image_generate_3d') }}
+                </div>
+                <div class="MenuDesc">{{ $t('orca_list_recent_aitopic_tips') }}</div>
+              </div>
+            </div>
+          </div>
 
-<div id="RightBoard">
-<div id="ContentBoard" class="ZScrol" board="recent">
-    <div style="height: 14px;"></div>	
-	<div id="MenuArea">
-<!--		<div class="MenuItem" onClick="OnClickModelDepot()">
-			<div class="MenuIcon"><img src="img/i6.png"></div>
-			<div>
-				<div class="trans TextS1" tid="t90">3D Model</div>
-				<div class="MenuDesc trans"  tid="t91">Download 3D Models</div>
-			</div>
-		</div>	-->	
-		<div class="MenuItem" onClick="OnClickNewProject()">
-			<div class="MenuIcon"><img src="img/i4.png"></div>
-			<div>
-				<div class="trans TextS1" tid="t31">new project</div>
-				<div class="MenuDesc trans"  tid="t32">create new project</div>
-			</div>
-		</div>
-		<div class="MenuItem" onClick="OnClickOpenProject()">
-			<div class="MenuIcon"><img src="img/i5.png"></div>
-			<div>
-				<div class="trans TextS1" tid="t33">open project</div>
-				<div class="MenuDesc">3mf</div>
-			</div>
-		</div>		
-	</div>
-	
-	<div id="DebugText"></div>	
-	<div id="RecentFileArea">
-		<div id="RecentTitleBlock">
-		    <div id="RecentTitle" class="Content-Title trans TextS1" tid="t35">recent open</div>
-			<div id="RecentClearAllBtn" class="trans TextS1" tid="t12" onClick="OnDeleteAllRecentFiles()">Clear all</div>
-		</div>
-		<div id="FileList">
-<!--		    <div class="FileItem" onClick="OnOpenRecentFile('aaaa')" fpath='d:\model\11.3mf'>
-				<a class="FileTip" title="d:\model\11.3mf"></a>
-				<div class="FileImg"><img src="img/d.png"/></div>
-				<div class="FileName TextS1">abcd12334abcd12334abcd12334.3mf</div>
-				<div class="FileDate">2021/12/27 09:22</div>
-			</div>
-		    <div class="FileItem" onClick="OnOpenRecentFile('aaaa')" fpath='d:\model\11.3mf'>
-				<a class="FileTip" title="d:\model\11.3mf"></a>
-				<div class="FileImg"><img src="img/d.png"/></div>
-				<div class="FileName TextS1">abcd12334abcd12334abcd12334.3mf</div>
-				<div class="FileDate">2021/12/27 09:22</div>
-			</div>
-		    <div class="FileItem" onClick="OnOpenRecentFile('aaaa')" fpath='d:\model\11.3mf'>
-				<a class="FileTip" title="d:\model\11.3mf"></a>
-				<div class="FileImg"><img src="img/d.png"/></div>
-				<div class="FileName TextS1">abcd12334abcd12334abcd12334.3mf</div>
-				<div class="FileDate">2021/12/27 09:22</div>
-			</div>
-		    <div class="FileItem" onClick="OnOpenRecentFile('aaaa')" fpath='d:\model\11.3mf'>
-				<a class="FileTip" title="d:\model\11.3mf"></a>
-				<div class="FileImg"><img src="img/d.png"/></div>
-				<div class="FileName TextS1">abcd12334abcd12334abcd12334.3mf</div>
-				<div class="FileDate">2021/12/27 09:22</div>
-			</div>
-		    <div class="FileItem" onClick="OnOpenRecentFile('aaaa')" fpath='d:\model\11.3mf'>
-				<a class="FileTip" title="d:\model\11.3mf"></a>
-				<div class="FileImg"><img src="img/d.png"/></div>
-				<div class="FileName TextS1">abcd12334abcd12334abcd12334.3mf</div>
-				<div class="FileDate">2021/12/27 09:22</div>
-			</div>
-		    <div class="FileItem" onClick="OnOpenRecentFile('aaaa')" fpath='d:\model\11.3mf'>
-				<a class="FileTip" title="d:\model\11.3mf"></a>
-				<div class="FileImg"><img src="img/d.png"/></div>
-				<div class="FileName TextS1">abcd12334abcd12334abcd12334.3mf</div>
-				<div class="FileDate">2021/12/27 09:22</div>
-			</div>
-		    <div class="FileItem" onClick="OnOpenRecentFile('aaaa')" fpath='d:\model\11.3mf'>
-				<a class="FileTip" title="d:\model\11.3mf"></a>
-				<div class="FileImg"><img src="img/d.png"/></div>
-				<div class="FileName TextS1">abcd12334abcd12334abcd12334.3mf</div>
-				<div class="FileDate">2021/12/27 09:22</div>
-			</div>
-		    <div class="FileItem" onClick="OnOpenRecentFile('aaaa')" fpath='d:\model\11.3mf'>
-				<a class="FileTip" title="d:\model\11.3mf"></a>
-				<div class="FileImg"><img src="img/d.png"/></div>
-				<div class="FileName TextS1">abcd12334abcd12334abcd12334.3mf</div>
-				<div class="FileDate">2021/12/27 09:22</div>
-			</div>
-		    <div class="FileItem" onClick="OnOpenRecentFile('aaaa')" fpath='d:\model\11.3mf'>
-				<a class="FileTip" title="d:\model\11.3mf"></a>
-				<div class="FileImg"><img src="img/d.png"/></div>
-				<div class="FileName TextS1">abcd12334abcd12334abcd12334.3mf</div>
-				<div class="FileDate">2021/12/27 09:22</div>
-			</div>
-		    <div class="FileItem" onClick="OnOpenRecentFile('aaaa')" fpath='d:\model\11.3mf'>
-				<a class="FileTip" title="d:\model\11.3mf"></a>
-				<div class="FileImg"><img src="img/d.png"/></div>
-				<div class="FileName TextS1">abcd12334abcd12334abcd12334.3mf</div>
-				<div class="FileDate">2021/12/27 09:22</div>
-			</div>
-		    <div class="FileItem" onClick="OnOpenRecentFile('aaaa')" fpath='d:\model\11.3mf'>
-				<a class="FileTip" title="d:\model\11.3mf"></a>
-				<div class="FileImg"><img src="img/d.png"/></div>
-				<div class="FileName TextS1">abcd12334abcd12334abcd12334.3mf</div>
-				<div class="FileDate">2021/12/27 09:22</div>
-			</div>
-		    <div class="FileItem" onClick="OnOpenRecentFile('aaaa')" fpath='d:\model\11.3mf'>
-				<a class="FileTip" title="d:\model\11.3mf"></a>
-				<div class="FileImg"><img src="img/d.png"/></div>
-				<div class="FileName TextS1">abcd12334abcd12334abcd12334.3mf</div>
-				<div class="FileDate">2021/12/27 09:22</div>
-			</div>	-->		
-		</div>
-	</div>
-	
-    <div style="height: 14px;"></div>	
-	
-	<div id="recnet_context_menu">
-		<div id="CT_Delete_Bar" class="CT_Item" onClick="OnDeleteRecentFile()">
-			<div class="CT_Icon CT_Delete"></div>
-			<div class="CT_Text trans" tid="t88">clear</div>
-		</div>
-		<div id="CT_Folder_Bar" class="CT_Item " onClick="OnExploreRecentFile()" >
-			<div class="CT_Icon CT_Explore"></div>
-			<div class="CT_Text trans" tid="t89">open in explorer </div>
-		</div>				
+          <div id="DebugText" v-if="show_user_points"></div>
+
+          <div class="model_hub" v-if="show_user_points">
+            <div
+              id="RecentTitle"
+              class="Content-Title trans TextS1"
+            >
+              {{ $t('orca_list_thirdmodel') }}
+            </div>
+
+            <div class="url_list">
+              <div
+                class="url_list_item"
+                onClick="OpenUrl('https://www.thingiverse.com/')"
+              >
+                <img
+                  src="./img/thingiverse.png"
+                  style="width: 162px; height: 29px"
+                  alt=""
+                />
+              </div>
+              <div
+                class="url_list_item"
+                onClick="OpenUrl('https://cults3d.com/')"
+              >
+                <img
+                  src="./img/cults.png"
+                  style="width: 115px; height: 41px"
+                  alt=""
+                />
+              </div>
+              <div
+                class="url_list_item"
+                onClick="OpenUrl('https://thangs.com/?sort=trending')"
+              >
+                <img
+                  src="./img/thangs.png"
+                  style="width: 221px; height: 41px"
+                  alt=""
+                />
+              </div>
+              <div
+                class="url_list_item"
+                onClick="OpenUrl('https://www.myminifactory.com/')"
+              >
+                <img
+                  src="./img/myminifactory.png"
+                  style="width: 166px; height: 65px"
+                  alt=""
+                />
+              </div>
+            </div>
+          </div>
+
+          <div id="DebugText"></div>
+
+          <div id="RecentFileArea">
+            <div id="RecentTitleBlock">
+              <div
+                id="RecentTitle"
+                class="Content-Title trans TextS1"
+                tid="t35"
+              >
+                recent open
+              </div>
+              <div
+                id="RecentClearAllBtn"
+                class="trans TextS1"
+                tid="t12"
+                onClick="OnDeleteAllRecentFiles()"
+              >
+                Clear all
+              </div>
+            </div>
+            <div id="FileList">
+              <!--		    <div class="FileItem" onClick="OnOpenRecentFile('aaaa')" fpath='d:\model\11.3mf'>
+							<a class="FileTip" title="d:\model\11.3mf"></a>
+							<div class="FileImg"><img src="img/d.png"/></div>
+							<div class="FileName TextS1">abcd12334abcd12334abcd12334.3mf</div>
+							<div class="FileDate">2021/12/27 09:22</div>
+						</div>
+						<div class="FileItem" onClick="OnOpenRecentFile('aaaa')" fpath='d:\model\11.3mf'>
+							<a class="FileTip" title="d:\model\11.3mf"></a>
+							<div class="FileImg"><img src="img/d.png"/></div>
+							<div class="FileName TextS1">abcd12334abcd12334abcd12334.3mf</div>
+							<div class="FileDate">2021/12/27 09:22</div>
+						</div>
+						<div class="FileItem" onClick="OnOpenRecentFile('aaaa')" fpath='d:\model\11.3mf'>
+							<a class="FileTip" title="d:\model\11.3mf"></a>
+							<div class="FileImg"><img src="img/d.png"/></div>
+							<div class="FileName TextS1">abcd12334abcd12334abcd12334.3mf</div>
+							<div class="FileDate">2021/12/27 09:22</div>
+						</div>
+						<div class="FileItem" onClick="OnOpenRecentFile('aaaa')" fpath='d:\model\11.3mf'>
+							<a class="FileTip" title="d:\model\11.3mf"></a>
+							<div class="FileImg"><img src="img/d.png"/></div>
+							<div class="FileName TextS1">abcd12334abcd12334abcd12334.3mf</div>
+							<div class="FileDate">2021/12/27 09:22</div>
+						</div>
+						<div class="FileItem" onClick="OnOpenRecentFile('aaaa')" fpath='d:\model\11.3mf'>
+							<a class="FileTip" title="d:\model\11.3mf"></a>
+							<div class="FileImg"><img src="img/d.png"/></div>
+							<div class="FileName TextS1">abcd12334abcd12334abcd12334.3mf</div>
+							<div class="FileDate">2021/12/27 09:22</div>
+						</div>
+						<div class="FileItem" onClick="OnOpenRecentFile('aaaa')" fpath='d:\model\11.3mf'>
+							<a class="FileTip" title="d:\model\11.3mf"></a>
+							<div class="FileImg"><img src="img/d.png"/></div>
+							<div class="FileName TextS1">abcd12334abcd12334abcd12334.3mf</div>
+							<div class="FileDate">2021/12/27 09:22</div>
+						</div>
+						<div class="FileItem" onClick="OnOpenRecentFile('aaaa')" fpath='d:\model\11.3mf'>
+							<a class="FileTip" title="d:\model\11.3mf"></a>
+							<div class="FileImg"><img src="img/d.png"/></div>
+							<div class="FileName TextS1">abcd12334abcd12334abcd12334.3mf</div>
+							<div class="FileDate">2021/12/27 09:22</div>
+						</div>
+						<div class="FileItem" onClick="OnOpenRecentFile('aaaa')" fpath='d:\model\11.3mf'>
+							<a class="FileTip" title="d:\model\11.3mf"></a>
+							<div class="FileImg"><img src="img/d.png"/></div>
+							<div class="FileName TextS1">abcd12334abcd12334abcd12334.3mf</div>
+							<div class="FileDate">2021/12/27 09:22</div>
+						</div>
+						<div class="FileItem" onClick="OnOpenRecentFile('aaaa')" fpath='d:\model\11.3mf'>
+							<a class="FileTip" title="d:\model\11.3mf"></a>
+							<div class="FileImg"><img src="img/d.png"/></div>
+							<div class="FileName TextS1">abcd12334abcd12334abcd12334.3mf</div>
+							<div class="FileDate">2021/12/27 09:22</div>
+						</div>
+						<div class="FileItem" onClick="OnOpenRecentFile('aaaa')" fpath='d:\model\11.3mf'>
+							<a class="FileTip" title="d:\model\11.3mf"></a>
+							<div class="FileImg"><img src="img/d.png"/></div>
+							<div class="FileName TextS1">abcd12334abcd12334abcd12334.3mf</div>
+							<div class="FileDate">2021/12/27 09:22</div>
+						</div>
+						<div class="FileItem" onClick="OnOpenRecentFile('aaaa')" fpath='d:\model\11.3mf'>
+							<a class="FileTip" title="d:\model\11.3mf"></a>
+							<div class="FileImg"><img src="img/d.png"/></div>
+							<div class="FileName TextS1">abcd12334abcd12334abcd12334.3mf</div>
+							<div class="FileDate">2021/12/27 09:22</div>
+						</div>
+						<div class="FileItem" onClick="OnOpenRecentFile('aaaa')" fpath='d:\model\11.3mf'>
+							<a class="FileTip" title="d:\model\11.3mf"></a>
+							<div class="FileImg"><img src="img/d.png"/></div>
+							<div class="FileName TextS1">abcd12334abcd12334abcd12334.3mf</div>
+							<div class="FileDate">2021/12/27 09:22</div>
+						</div>	-->
+            </div>
+          </div>
+
+          <div style="height: 14px"></div>
+
+          <div id="recnet_context_menu">
+            <div
+              id="CT_Delete_Bar"
+              class="CT_Item"
+              onClick="OnDeleteRecentFile()"
+            >
+              <div class="CT_Icon CT_Delete"></div>
+              <div class="CT_Text trans" tid="t88">clear</div>
+            </div>
+            <div
+              id="CT_Folder_Bar"
+              class="CT_Item"
+              onClick="OnExploreRecentFile()"
+            >
+              <div class="CT_Icon CT_Explore"></div>
+              <div class="CT_Text trans" tid="t89">open in explorer</div>
+            </div>
+          </div>
+
+          <div
+            class="floating_window"
+            onClick="OnClickOpenImageGenerate3D()"
+            v-if="show_user_points"
+          >
+            <img src="./img/floatingWindow.png" alt="" />
+          </div>
+        </div>
+
+        <div
+          id="my_point"
+          class="ZScrol"
+          board="my_point"
+          style="width: calc(-338px + 100vw)"
+          v-if="show_user_points"
+        >
+          <div style="width: 1160px; height: 100%; background-color: #f0f0f0">
+            <div v-if="user_name" class="ZScrol">
+              <div class="model_title">{{ $t('orca_list_mypoints_benefits_title') }}</div>
+              <div class="benefits_content">
+                <div class="total_point">
+                  <div class="total_point_info">
+                    <div>{{ $t('orca_list_mypoints_benefits_current') }}</div>
+                    <div class="total_point_num">{{ user_points || 0 }}</div>
+                  </div>
+                </div>
+                <div class="benefits_card_list">
+                  <div
+                    v-for="(item, index) in benefits_list"
+                    :key="index"
+                    class="benefits_card_list_item"
+                    :style="{ 
+                        backgroundImage: `url('${item.invalid ? item?.data?.invalid_url : item?.data?.valid_url}')`, 
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'center',
+                        backgroundSize: 'cover',
+                        cursor: item.invalid ? 'not-allowed' : 'pointer',
+                    }"
+                    @click="benefitsClick(item)"
+                  >
+                    <div
+                      class="benefits_card_list_item_name"
+                      :style="{color: item.invalid ? '#999' : '#000'}"
+                    >
+                      {{ item.description }}
+                    </div>
+                    <div
+                      v-if="!item.invalid"
+                      style="color: #328dfb; font-size: 12px; display: flex; align-items: center;"
+                    >
+                      <span style="margin-right: 4px;">{{ $t('orca_list_mypoints_benefits_view_btn') }}</span> >
+                    </div>
+                    <div v-else="item.invalid" style="color: #999; font-size: 12px">
+                      {{ $t('orca_list_mypoints_benefits_soon_tip') }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="model_title">{{ $t('orca_list_mypoints_earn_title') }}</div>
+              <div class="channel_block">
+                <div class="channel_item" 
+                  v-for="(item, index) in channel_list" 
+                  @click="channelClick(item)"
+                >
+                  <div class="channel_item_header">
+                    <div class="channel_item_header_name">
+                      {{ item.description }}
+                    </div>
+                    <div style="color: #999; font-size: 12px; display: flex;" v-if="item.points && showChannel(item)">
+                        <span style="margin-right: 4px;">
+                            {{ $t('orca_list_mypoints_earn_got_btn') }}
+                        </span> 
+                        >
+                    </div>
+                    <div style="color: #328dfb; font-size: 12px; display: flex;" v-else>
+                        <span style="margin-right: 4px;">
+                            {{ $t('orca_list_mypoints_earn_get_btn') }}
+                        </span> 
+                        >
+                    </div>
+                  </div>
+                  <div class="channel_item_footer">
+                    <span>{{ $t('Earned') }}</span>
+                    <span style="color: #328dfb; margin: 0 2px;;">{{ item.points || 0 }}</span>
+                    <span>{{ $t('points') }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="model_title">{{ $t('orca_list_mypoints_history_title') }}</div>
+
+              <div v-loading="table_loading">
+                <div class="table_header" >
+                  <div class="table_operation_btn">
+                    <el-button
+                      class="table_operation_btn_item"
+                      :type="point_tab_current == 'all' ? 'primary' : ''"
+                      @click="changeTab('all')"
+                      >{{ $t('orca_list_mypoints_history_all_btn') }}</el-button
+                    >
+                    <el-button
+                      class="table_operation_btn_item"
+                      :type="point_tab_current == 'acquire' ? 'primary' : ''"
+                      @click="changeTab('acquire')"
+                      >{{ $t('orca_list_mypoints_history_earnings_btn') }}</el-button
+                    >
+                    <el-button
+                      class="table_operation_btn_item"
+                      :type="point_tab_current == 'spend' ? 'primary' : ''"
+                      @click="changeTab('spend')"
+                      >{{ $t('orca_list_mypoints_history_expenses_btn') }}</el-button
+                    >
+                  </div>
+                  <div class="table_header_total_point_info">
+                    <div class="total_income">
+                      {{ $t('orca_list_mypoints_history_totalearnings') }}
+                      <span class="total_income_num">{{ total_income }}</span>
+                    </div>
+                    <div class="total_expenditure">
+                      {{ $t('orca_list_mypoints_history_totalexpenses') }}
+                      <span class="total_income_num"
+                        >{{ total_expenditure }}</span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <el-table
+                  :data="pointsList"
+                  height="380"
+                  style="margin-top: 12px"
+                  :header-cell-style="{ background: '#f9f9f9', fontFamily: 'Alibaba PuHuiTi' }"
+                >
+                  <el-table-column
+                    prop="create_at"
+                    :label="$t('orca_list_mypoints_history_time')"
+                    align="center"
+                    :formatter="formatLocalTime"
+                  ></el-table-column>
+                  <el-table-column
+                    prop="description"
+                    :label="$t('orca_list_mypoints_history_action')"
+                    align="center"
+                  ></el-table-column>
+                  <!-- <el-table-column prop="date" label="交易详情" align="center"></el-table-column> -->
+                  <el-table-column prop="amount " :label="$t('points')" align="center">
+                    <template v-slot="scope">
+                      <div
+                        :style="{color: scope.row.history_type ? '' : '#328DFB',}"
+                      >
+                        <span v-if="scope.row.history_type">-</span>
+                        <span style="color: #328DFB;" v-else>+</span>
+                        {{ scope.row.amount }}
+                      </div>
+                    </template>
+                  </el-table-column>
+                </el-table>
+
+                <el-pagination
+                  style="margin: 10px 0"
+                  v-model:current-page="page"
+                  v-model:page-size="pageSize"
+                  :page-sizes="[10, 20, 50]"
+                  layout="total, sizes, prev, pager, next"
+                  :total="total"
+                  @size-change="handleSizeChange"
+                  @current-change="handleCurrentChange"
+                />
+              </div>
+            </div>
+            <div v-else="!user_name" class="ZScrol empty_page">
+              <div class="empty_info">
+                <img src="./img/empty_img.png" class="empty_img" alt="" />
+                <div class="empty_desc">{{ $t('orca_list_mypoints_login') }}</div>
+                <div class="empty_btn" onClick="OnLoginOrRegister()">{{ $t('Login') }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-	
-	
-</div>
+  </body>
+  
+  <script>
+    const { createApp, ref, onMounted, onUnmounted, watch, nextTick } = Vue
+    const messages = window.LangTextMyPoint
+    const i18n = VueI18n.createI18n({
+        locale: 'en', // 默认语言
+        fallbackLocale: 'en',
+        messages: LangTextMyPoint,   // 使用导入的翻译
+        legacy: false,
+    })
 
-</div>	
-</body>
-<script type="text/javascript">
-	//HandleStudio(TestData);
+    const createRequestHandler = () => {
+      return async (url, requestType, loadingRef) => {
+        try {
+          // 开始请求时设置loading
+          if (loadingRef) loadingRef.value = true
+          
+          // 发送网络请求
+          SendNetworkRequestGet(url, requestType)
+          
+          // 返回一个Promise以便于调用者可以链式处理
+          return new Promise((resolve) => {
+            // 临时保存原始postMessage
+            const originalPostMessage = window.postMessage
+            
+            // 临时重写postMessage来处理响应
+            window.postMessage = function(pVal) {
+              originalPostMessage(pVal)
+              
+              if (pVal.command === "network_request_get" && pVal.request_type === requestType) {
+                // 请求完成时关闭loading
+                if (loadingRef) loadingRef.value = false
+                
+                // 恢复原始postMessage
+                window.postMessage = originalPostMessage
+                
+                // 解析数据
+                const data = pVal.error_code === 0 ? JSON.parse(pVal?.data || '{}') : null
+                resolve(data)
+              }
+            }
+          })
+        } catch (error) {
+          // 出错时也要关闭loading
+          if (loadingRef) loadingRef.value = false
+          console.error('Request failed:', error)
+          throw error
+        }
+      }
+    }
+    const App = {
+      setup() {
+        const { t } = VueI18n.useI18n();
+
+        const has_open_site_url = ref([])
+        const page_lang = ref('en')
+        const user_name = ref("")
+        const show_user_points = ref(false)
+        const user_email = ref('')
+
+        const point_tab_current = ref("all")
+        const total_income = ref(0)
+        const total_expenditure = ref(0)
+
+        const request = createRequestHandler()
+
+        const loading_total_point = ref(false)
+        const loading_channel_list = ref(false)
+        const loading_site_url = ref(false)
+        const loading_benefits_list = ref(false)
+        const loading_points_list = ref(false)
+
+        // 总积分  请求
+        const user_points = ref(0)
+        const request_type_total_point = ref("")
+        const getTotalPoint = async () => {
+          request_type_total_point.value = `get_total_point_${Date.now()}`
+          const url = "/api/v2/external/shop-center/apps/user_points"
+          SendNetworkRequestGet(url, request_type_total_point.value)
+        }
+
+        // 积分获取方式列表  请求
+        const channel_list = ref([])
+        const request_type_channel_list = ref("")
+        const getChannelList = async () => {
+          request_type_channel_list.value = `get_channel_list_${Date.now()}`
+          const url = `/api/v2/external/shop-center/apps/channels?language=${page_lang.value}`
+          SendNetworkRequestGet(url, request_type_channel_list.value)
+        }
+
+        // siteUrl  请求
+        const site_url = ref("")
+        const request_type_site_url = ref([])
+        const getSiteUrl = async () => {
+          // request_type_site_url.value = `get_site_url_${Date.now()}`
+          request_type_site_url.value.push(`get_site_url_${Date.now()}`)
+          const url =
+            `/api/v2/external/shop-center/apps/multi_info?client_type=slicer&email=${user_email.value}`
+          SendNetworkRequestGet(url, `get_site_url_${Date.now()}`)
+        }
+
+        // 权益列表请求
+        const benefits_list = ref([])
+        const request_type_benefits_list = ref("")
+        const getBenefitsList = async () => {
+          request_type_benefits_list.value = `get_benefits_list_${Date.now()}`
+          const url = `/api/v2/external/shop-center/apps/benefits?language=${page_lang.value}`
+          SendNetworkRequestGet(url, request_type_benefits_list.value)
+        }
+
+        // 收支明细
+        const pointsList = ref([])
+        const page = ref(1)
+        const pageSize = ref(10)
+        const total = ref(0)
+        const request_type_points_list = ref("")
+        const table_loading = ref(false)
+        const getPointsList = async () => {
+          table_loading.value = true
+          request_type_points_list.value = `get_points_list_${Date.now()}`
+          const url = `/api/v2/external/shop-center/apps/points_details?language=${page_lang.value}&types=${point_tab_current.value}&currentPage=${page.value}&pageSize=${pageSize.value}`
+          SendNetworkRequestGet(url, request_type_points_list.value)
+        }
+
+        const handleSizeChange = (val) => {
+          pageSize.value = val
+          getPointsList()
+        }
+        const handleCurrentChange = (val) => {
+          page.value = val
+          getPointsList()
+        }
+
+        const originalPostMessage = window.postMessage
+
+        window.postMessage = function (pVal) {
+          originalPostMessage(pVal)
+
+          // 再处理你需要的数据
+          if (pVal.command === "studio_useroffline") {
+            user_name.value = ""
+            show_user_points.value = false
+            GotoMenu("recent")
+          } else if (pVal.command === "update_user_points") {
+            // 更新积分
+            getTotalPoint()
+          } else if (pVal.command === "jump_to_user_points") {
+            // 跳转我的积分页
+            GotoMenu("my_point")
+          } else if (pVal.command === "studio_userlogin") {
+            user_name.value = pVal["data"]["name"]
+            show_user_points.value = pVal["data"]["show_user_points"]
+            user_email.value = pVal["data"]["email"]
+            nextTick(() => {
+              GotoMenu("recent")
+            })
+          } else if (pVal.command === "network_request_get") {
+            let request_type = pVal["request_type"]
+            let data = {}
+            if (pVal["error_code"] === 0) {
+              data = JSON.parse(pVal?.["data"])
+            }
+
+            if (request_type == request_type_total_point.value) {
+              // 总积分
+              user_points.value = data?.total
+            } else if (request_type == request_type_channel_list.value) {
+              // 积分获取方式列表
+              channel_list.value = data || []
+            } else if (request_type_site_url.value.indexOf(request_type) != -1) {
+              // siteUrl token mutipass
+              const index = request_type_site_url.value.indexOf(request_type)
+              if (index !== -1) {
+                request_type_site_url.value.splice(index, 1);
+              }
+              if (has_open_site_url.value?.length) {
+                let url = `${has_open_site_url.value[0]}/account/login/multipass/${data?.multipass_token}`
+                SendTrackShopifyClick()
+                OpenUrl(url)
+                has_open_site_url.value.splice(0, 1)
+              }
+            } else if (request_type == request_type_benefits_list.value) {
+              // 权益列表请求
+              benefits_list.value = data || []
+            } else if (request_type == request_type_points_list.value) {
+              // 积分明细列表请求
+              pointsList.value = data?.result ?? []
+              total_income.value = data?.total_acquire ?? 0
+              total_expenditure.value = data?.total_spend ?? 0
+              total.value = Number(data?.total) ?? 0
+              table_loading.value = false
+            }
+          }
+        }
+
+
+        onMounted(() => {
+          window.addEventListener("szOrcaMyPonitMounted", () => {
+            nextTick(() => {
+              var langMap = {
+                zh_CN: 'zh',
+                en_US: 'en',
+                ko_KR: 'ko',
+                de_DE: 'de',
+                fr_FR: 'fr',
+                lt_LT: 'it',
+                es_ES: 'es',
+                ru_RU: 'ru',
+                ja_JP: 'ja',
+              }
+              // alert(GetQueryString("lang"));
+              var page_local = GetQueryString("lang")
+              i18n.global.locale.value = page_local
+              page_lang.value = langMap[page_local || 'en_US']
+              getTotalPoint()
+              getChannelList()
+              getSiteUrl()
+              getBenefitsList()
+              getPointsList()
+            })
+          })
+        })
+
+        onUnmounted(() => {
+          window.postMessage = originalPostMessage
+        })
+
+        const benefitsClick = (item) => {
+          if (item.invalid) {
+            return
+          }
+          if (item.name == 'orca_list_mypoints_benefits_product') {
+            has_open_site_url.value.push(item?.redirect)
+            getSiteUrl()
+            // OpenUrl(item?.redirect)
+          }
+          if (item.name == 'orca_list_mypoints_benefits_image3d') {
+            OnClickOpenImageGenerate3D()
+          }
+        }
+
+        const channelClick = (item) => {
+          if (item.name == 'orca_list_mypoints_earn_refer' || item.name == 'orca_list_mypoints_earn_refershop') {
+            SendShowPromoShare(item)
+          } else {
+            has_open_site_url.value.push(item?.redirect)
+            getSiteUrl()
+            // OpenUrl(item?.redirect)
+          }
+        }
+
+        const changeTab = (tab) => {
+          pointsList.value = []
+          point_tab_current.value = tab
+          getPointsList()
+        }
+
+        const showChannel = (item) => {
+          return item.name == 'orca_list_mypoints_earn_signup_officialshop' || item.name == 'orca_list_mypoints_earn_birthday' || item.name == 'orca_list_mypoints_earn_profile' || item.name == 'orca_list_mypoints_earn_subscribe' ? true : false
+        }
+
+        const formatLocalTime = (row, column, cellValue) => {
+          if (!cellValue) return '';
+          // 转换为本地时间，按需求格式化
+          const date = new Date(cellValue); 
+          return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} `
+                + `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+        }
+
+        return {
+          t,
+          page_lang,
+          user_name,
+          show_user_points,
+          user_email,
+          user_points,
+          channel_list,
+          site_url,
+          benefits_list,
+          getTotalPoint,
+          getChannelList,
+          getSiteUrl,
+          getBenefitsList,
+          pointsList,
+          request_type_channel_list,
+          request_type_benefits_list,
+          request_type_site_url,
+          request_type_total_point,
+          request_type_points_list,
+          point_tab_current,
+          total_income,
+          total_expenditure,
+          page,
+          pageSize,
+          total,
+          handleSizeChange,
+          handleCurrentChange,
+          benefitsClick,
+          channelClick,
+          changeTab,
+          table_loading,
+          loading_total_point,
+          loading_channel_list,
+          loading_site_url,
+          loading_benefits_list,
+          loading_points_list,
+          showChannel,
+          has_open_site_url,
+          formatLocalTime
+        }
+      },
+    }
+    const app = Vue.createApp(App)
+    app.use(i18n)
+
+    var strLangEle = GetQueryString("lang");
+    var langMapEle = {
+      zh_CN: ElementPlusLocaleZhCn,
+      en_US: ElementPlusLocaleEn,
+      ko_KR: ElementPlusLocaleKo,
+      de_DE: ElementPlusLocaleDe,
+      fr_FR: ElementPlusLocaleFr,
+      lt_LT: ElementPlusLocaleLt,
+      es_ES: ElementPlusLocaleEs,
+      ru_RU: ElementPlusLocaleRu,
+      ja_JP: ElementPlusLocaleEn
+    }
+    app.use(ElementPlus, {
+      locale: langMapEle[strLangEle],
+    })
+    app.mount(".point_content")
+    document.body.classList.add("vue-ready");
+  </script>
+  <script type="text/javascript">
+    //HandleStudio(TestData);
     document.onkeydown = function (event) {
-		var e = event || window.event || arguments.callee.caller.arguments[0];
+      var e = event || window.event || arguments.callee.caller.arguments[0]
 
-		if (e.ctrlKey && e.metaKey)
-			OutputKey(e.keyCode, true, false, true);
-		else if (e.ctrlKey)
-			OutputKey(e.keyCode, true, false, false);
-		else if (e.metaKey)
-			OutputKey(e.keyCode, false, false, true);
+      if (e.ctrlKey && e.metaKey) OutputKey(e.keyCode, true, false, true)
+      else if (e.ctrlKey) OutputKey(e.keyCode, true, false, false)
+      else if (e.metaKey) OutputKey(e.keyCode, false, false, true)
 
-		if (e.shiftKey && e.ctrlKey)
-			OutputKey(e.keyCode, true, true, false);
+      if (e.shiftKey && e.ctrlKey) OutputKey(e.keyCode, true, true, false)
 
-		if (e.shiftKey && e.metaKey)
-			OutputKey(e.keyCode, false, true, true);
+      if (e.shiftKey && e.metaKey) OutputKey(e.keyCode, false, true, true)
 
-		if (window.event) {
-			try { e.keyCode = 0; } catch (e) { }
-			e.returnValue = false;
-		}
-	};
+      if (window.event) {
+        try {
+          e.keyCode = 0
+        } catch (e) {}
+        e.returnValue = false
+      }
+    }
 
-	window.addEventListener('mousewheel', function (event) {
-		if (event.ctrlKey === true || event.metaKey) {
-			event.preventDefault();
-		}
-	}, { passive: false });
-
-</script>
+    window.addEventListener(
+      "mousewheel",
+      function (event) {
+        if (event.ctrlKey === true || event.metaKey) {
+          event.preventDefault()
+        }
+      },
+      { passive: false }
+    )
+  </script>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-

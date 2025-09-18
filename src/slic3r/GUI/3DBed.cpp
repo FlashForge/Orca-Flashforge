@@ -246,7 +246,7 @@ void Bed3D::Axes::render()
 
 //BBS: add part plate logic
 bool Bed3D::set_shape(const Pointfs& printable_area, const double printable_height, const std::string& custom_model, bool force_as_custom,
-    const Vec2d position, bool with_reset)
+    const Vec2d& position, bool with_reset)
 {
     /*auto check_texture = [](const std::string& texture) {
         boost::system::error_code ec; // so the exists call does not throw (e.g. after a permission problem)
@@ -396,6 +396,7 @@ void Bed3D::render_internal(GLCanvas3D& canvas, const Transform3d& view_matrix, 
 BoundingBoxf3 Bed3D::calc_extended_bounding_box(bool consider_model_offset) const
 {
     BoundingBoxf3 out { m_build_volume.bounding_volume() };
+    const Vec3d bCenter = out.center();
 
     const Vec3d size = out.size();
     // ensures that the bounding box is set as defined or the following calls to merge() will not work as intented
@@ -409,7 +410,13 @@ BoundingBoxf3 Bed3D::calc_extended_bounding_box(bool consider_model_offset) cons
     Vec3d offset{ m_position.x(), m_position.y(), 0.f };
     //out.merge(m_axes.get_origin() + offset + m_axes.get_total_length() * Vec3d::Ones());
     out.merge(Vec3d(0.f, 0.f, GROUND_Z) + offset + m_axes.get_total_length() * Vec3d::Ones());
-    out.merge(out.min + Vec3d(-Axes::DefaultTipRadius, -Axes::DefaultTipRadius, out.max.z()));
+    //to fix separation between bed and grid when coordinate system is on bed center
+    Vec3d axisTipOffset(0, 0, out.max.z());
+    if (bCenter.x() - Axes::DefaultTipRadius < out.min.x()
+        && bCenter.y() - Axes::DefaultTipRadius < out.min.y()){
+        axisTipOffset = Vec3d(-Axes::DefaultTipRadius, -Axes::DefaultTipRadius, out.max.z());
+    }
+    out.merge(out.min + axisTipOffset);
     //BBS: add part plate related logic.
     if (consider_model_offset) {
         // extend to contain model, if any
@@ -612,7 +619,7 @@ void Bed3D::render_system(GLCanvas3D& canvas, const Transform3d& view_matrix, co
 void Bed3D::update_model_offset()
 {
     // move the model so that its origin (0.0, 0.0, 0.0) goes into the bed shape center and a bit down to avoid z-fighting with the texture quad
-    Vec3d shift = m_extended_bounding_box.center();
+    Vec3d shift = m_build_volume.bounding_volume().center();
     shift(2) = -0.03;
     Vec3d* model_offset_ptr = const_cast<Vec3d*>(&m_model_offset);
     *model_offset_ptr = shift;

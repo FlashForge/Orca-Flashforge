@@ -2,17 +2,18 @@
 #define slic3r_DeviceManager_hpp_
 
 #include <map>
+#include <mutex>
 #include <vector>
 #include <string>
 #include <memory>
 #include <chrono>
-#include <mutex>
 #include <boost/thread.hpp>
 #include <boost/nowide/fstream.hpp>
 #include "nlohmann/json.hpp"
 #include "libslic3r/ProjectTask.hpp"
 #include "slic3r/Utils/json_diff.hpp"
 #include "slic3r/Utils/NetworkAgent.hpp"
+#include "boost/bimap/bimap.hpp"
 #include "CameraPopup.hpp"
 #include "libslic3r/calib.hpp"
 #include "libslic3r/Utils.hpp"
@@ -53,6 +54,7 @@ using namespace nlohmann;
 
 namespace Slic3r {
 
+struct BBLocalMachine;
 class SecondaryCheckDialog;
 enum PrinterArch {
     ARCH_CORE_XY,
@@ -132,6 +134,7 @@ enum ManualPaCaliMethod {
     PA_LINE = 0,
     PA_PATTERN,
 };
+
 
 struct RatingInfo {
     bool        request_successful;
@@ -289,6 +292,7 @@ public:
     unsigned        reserved;
     HMSMessageLevel msg_level = HMS_UNKNOWN;
     int             msg_code = 0;
+    bool            already_read = false;
     bool parse_hms_info(unsigned attr, unsigned code);
     std::string get_long_error_code();
 
@@ -311,6 +315,7 @@ struct DisValue {
     bool  is_type_match = true;
 };
 
+class Preset;
 class MachineObject
 {
 private:
@@ -322,6 +327,9 @@ private:
 
     std::string access_code;
     std::string user_access_code;
+
+    // type, time stamp, delay
+    std::vector<std::tuple<std::string, uint64_t, uint64_t>> message_delay;
 
 public:
 
@@ -419,14 +427,14 @@ public:
     std::string dev_connection_name;    /* lan | eth */
     void set_dev_ip(std::string ip) {dev_ip = ip;}
     std::string get_ftp_folder();
-    bool has_access_right() { return !get_access_code().empty(); }
-    std::string get_access_code();
+    bool has_access_right() const { return !get_access_code().empty(); }
+    std::string get_access_code() const;
 
     void set_access_code(std::string code, bool only_refresh = true);
     void set_user_access_code(std::string code, bool only_refresh = true);
     void erase_user_access_code();
-    std::string get_user_access_code();
-    bool is_lan_mode_printer();
+    std::string get_user_access_code() const;
+    bool is_lan_mode_printer() const;
 
     //PRINTER_TYPE printer_type = PRINTER_3DPrinter_UKNOWN;
     std::string printer_type;       /* model_id */
@@ -486,6 +494,7 @@ public:
     bool  ams_power_on_flag { false };
     bool  ams_calibrate_remain_flag { false };
     bool  ams_auto_switch_filament_flag  { false };
+    bool  ams_air_print_status { false };
     bool  ams_support_use_ams { false };
     bool  ams_support_virtual_tray { true };
     int   ams_humidity;
@@ -520,6 +529,7 @@ public:
     bool can_unload_filament();
     bool is_support_ams_mapping();
 
+    void get_ams_colors(std::vector<wxColour>& ams_colors);
     int ams_filament_mapping(std::vector<FilamentInfo> filaments, std::vector<FilamentInfo> &result, std::vector<int> exclude_id = std::vector<int>());
     bool is_valid_mapping_result(std::vector<FilamentInfo>& result, bool check_empty_slot = false);
     // exceed index start with 0
@@ -567,7 +577,7 @@ public:
     int upgrade_display_state = 0;           // 0 : upgrade unavailable, 1: upgrade idle, 2: upgrading, 3: upgrade_finished
     int upgrade_display_hold_count = 0;
     PrinterFirmwareType       firmware_type; // engineer|production
-    PrinterFirmwareType       lifecycle { PrinterFirmwareType::FIRMEARE_TYPE_UKNOWN };
+    PrinterFirmwareType       lifecycle { PrinterFirmwareType::FIRMWARE_TYPE_PRODUCTION };
     std::string upgrade_progress;
     std::string upgrade_message;
     std::string upgrade_status;
@@ -613,6 +623,7 @@ public:
     int     curr_layer = 0;
     int     total_layers = 0;
     bool    is_support_layer_num { false };
+    bool    nozzle_blob_detection_enabled{ false };
 
     int cali_version = -1;
     float                      cali_selected_nozzle_dia { 0.0 };
@@ -622,6 +633,7 @@ public:
     std::vector<CaliPresetInfo> selected_cali_preset;
     float                      cache_flow_ratio { 0.0 };
     bool                       cali_finished = true;
+    FlowRatioCalibrationType   flow_ratio_calibration_type = FlowRatioCalibrationType::COMPLETE_CALIBRATION;
 
     ManualPaCaliMethod         manual_pa_cali_method = ManualPaCaliMethod::PA_LINE;
     bool                       has_get_pa_calib_tab{ false };
@@ -694,15 +706,31 @@ public:
     std::string tutk_state;
     enum LiveviewLocal {
         LVL_None,
+        LVL_Disable,
         LVL_Local, 
         LVL_Rtsps,
         LVL_Rtsp
     } liveview_local{ LVL_None };
-    bool        liveview_remote{false};
-    bool        file_local{false};
-    bool        file_remote{false};
+    enum LiveviewRemote {
+        LVR_None,
+        LVR_Tutk, 
+        LVR_Agora,
+        LVR_TutkAgora
+    } liveview_remote{ LVR_None };
+    enum FileLocal {
+        FL_None, 
+        FL_Local
+    } file_local{ FL_None };
+    enum FileRemote {
+        FR_None, 
+        FR_Tutk, 
+        FR_Agora,
+        FR_TutkAgora
+    } file_remote{ FR_None };
     bool        file_model_download{false};
     bool        virtual_camera{false};
+
+    int nozzle_setting_hold_count = 0;
 
     bool xcam_ai_monitoring{ false };
     int  xcam_ai_monitoring_hold_count = 0;
@@ -748,6 +776,10 @@ public:
     bool is_support_wait_sending_finish{false};
     bool is_support_user_preset{false};
     bool is_support_p1s_plus{false};
+    bool is_support_nozzle_blob_detection{false};
+    bool is_support_air_print_detection{false};
+    bool is_support_filament_setting_inprinting{false};
+    bool is_support_agora{false};
 
     int  nozzle_max_temperature = -1;
     int  bed_temperature_limit = -1;
@@ -838,6 +870,7 @@ public:
     int command_ams_user_settings(int ams_id, bool start_read_opt, bool tray_read_opt, bool remain_flag = false);
     int command_ams_user_settings(int ams_id, AmsOptionType op, bool value);
     int command_ams_switch_filament(bool switch_filament);
+    int command_ams_air_print_detect(bool air_print_detect);
     int command_ams_calibrate(int ams_id);
     int command_ams_filament_settings(int ams_id, int tray_id, std::string filament_id, std::string setting_id, std::string tray_color, std::string tray_type, int nozzle_temp_min, int nozzle_temp_max);
     int command_ams_select_tray(std::string tray_id);
@@ -861,6 +894,8 @@ public:
 
     // set print option
     int command_set_printing_option(bool auto_recovery);
+
+    int command_nozzle_blob_detect(bool nozzle_blob_detect);
 
     // axis string is X, Y, Z, E
     int command_axis_control(std::string axis, double unit = 1.0f, double input_val = 1.0f, int speed = 3000);
@@ -926,7 +961,7 @@ public:
     int publish_json(std::string json_str, int qos = 0);
     int cloud_publish_json(std::string json_str, int qos = 0);
     int local_publish_json(std::string json_str, int qos = 0);
-    int parse_json(std::string payload);
+    int parse_json(std::string payload, bool key_filed_only = false);
     int publish_gcode(std::string gcode_str);
 
     std::string setting_id_to_type(std::string setting_id, std::string tray_type);
@@ -940,14 +975,25 @@ public:
     bool m_firmware_thread_started { false };
     void get_firmware_info();
     bool is_firmware_info_valid();
+    std::string get_string_from_fantype(FanType type);
+
+    /* Device Filament Check */
+    std::set<std::string> m_checked_filament;
+    std::string m_printer_preset_name;
+    std::map<std::string, std::pair<int, int>> m_filament_list; // filament_id, pair<min temp, max temp>
+    void update_filament_list();
+    int get_flag_bits(std::string str, int start, int count = 1);
+    int get_flag_bits(int num, int start, int count = 1);
+    void update_printer_preset_name(const std::string &nozzle_diameter_str);
 };
 
 class DeviceManager
 {
 private:
     NetworkAgent* m_agent { nullptr };
-
 public:
+    static bool   EnableMultiMachine;
+
     DeviceManager(NetworkAgent* agent = nullptr);
     ~DeviceManager();
     void set_agent(NetworkAgent* agent);
@@ -972,9 +1018,14 @@ public:
 
     bool set_selected_machine(std::string dev_id,  bool need_disconnect = false);
     MachineObject* get_selected_machine();
+    void add_user_subscribe();
+    void del_user_subscribe();
+
+    void subscribe_device_list(std::vector<std::string> dev_list);
 
     /* return machine has access code and user machine if login*/
     std::map<std::string, MachineObject*> get_my_machine_list();
+    std::map<std::string, MachineObject*> get_my_cloud_machine_list();
     std::string get_first_online_user_machine();
     void modify_device_name(std::string dev_id, std::string dev_name);
     void update_user_machine_list_info();
@@ -982,7 +1033,7 @@ public:
 
     /* create machine or update machine properties */
     void on_machine_alive(std::string json_str);
-
+    MachineObject* insert_local_device(const BBLocalMachine& machine, std::string connection_type, std::string bind_state, std::string version, std::string access_code);
     /* disconnect all machine connections */
     void disconnect_all();
     int query_bind_status(std::string &msg);
@@ -991,6 +1042,11 @@ public:
     std::map<std::string, MachineObject*> get_local_machine_list();
     void load_last_machine();
 
+    std::vector<std::string> subscribe_list_cache;
+
+    static void set_key_field_parsing(bool enable) { DeviceManager::key_field_only = enable; }
+
+    static bool key_field_only;
     static json function_table;
     static json filaments_blacklist;
 
@@ -1023,14 +1079,19 @@ public:
     static std::string get_printer_ams_img(std::string type_str);
     static PrinterArch get_printer_arch(std::string type_str);
     static std::string get_ftp_folder(std::string type_str);
-    static bool        get_printer_is_enclosed(std::string type_str);
+    static bool get_printer_is_enclosed(std::string type_str);
+    static bool load_filaments_blacklist_config();
+    static void check_filaments_in_blacklist(std::string tag_vendor, std::string tag_type, bool& in_blacklist, std::string& ac, std::string& info);
     static std::vector<std::string> get_resolution_supported(std::string type_str);
     static std::vector<std::string> get_compatible_machine(std::string type_str);
-    static bool load_filaments_blacklist_config(std::string config_file);
-    static void check_filaments_in_blacklist(std::string tag_vendor, std::string tag_type, bool& in_blacklist, std::string& ac, std::string& info);
+    static boost::bimaps::bimap<std::string, std::string> get_all_model_id_with_name();
     static std::string load_gcode(std::string type_str, std::string gcode_file);
+
+    static void update_local_machine(const MachineObject& m);
 };
 
+// change the opacity
+void change_the_opacity(wxColour& colour);
 } // namespace Slic3r
 
 #endif //  slic3r_DeviceManager_hpp_

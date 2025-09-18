@@ -1,303 +1,531 @@
-///|/ Copyright (c) Prusa Research 2022 - 2023 Vojtěch Bubník @bubnikv
-///|/
-///|/ PrusaSlicer is released under the terms of the AGPLv3 or higher
-///|/
-// Tree supports by Thomas Rahm, losely based on Tree Supports by CuraEngine.
-// Original source of Thomas Rahm's tree supports:
-// https://github.com/ThomasRahm/CuraEngine
-//
-// Original CuraEngine copyright:
-// Copyright (c) 2021 Ultimaker B.V.
-// CuraEngine is released under the terms of the AGPLv3 or higher.
+#ifndef TREESUPPORT_H
+#define TREESUPPORT_H
 
-#ifndef slic3r_TreeSupport_hpp
-#define slic3r_TreeSupport_hpp
-
-#include "SupportLayer.hpp"
+#include <forward_list>
+#include <unordered_set>
+#include "ExPolygon.hpp"
+#include "Point.hpp"
+#include "Slicing.hpp"
+#include "MinimumSpanningTree.hpp"
+#include "tbb/concurrent_unordered_map.h"
+#include "Flow.hpp"
+#include "PrintConfig.hpp"
+#include "Fill/Lightning/Generator.hpp"
 #include "TreeModelVolumes.hpp"
-#include "TreeSupportCommon.hpp"
+#include "TreeSupport3D.hpp"
 
-#include "../BoundingBox.hpp"
-#include "../Point.hpp"
-#include "../Utils.hpp"
-
-#include <boost/container/small_vector.hpp>
-
-
-// #define TREE_SUPPORT_SHOW_ERRORS
-
-#ifdef SLIC3R_TREESUPPORTS_PROGRESS
-    // The various stages of the process can be weighted differently in the progress bar.
-    // These weights are obtained experimentally using a small sample size. Sensible weights can differ drastically based on the assumed default settings and model.
-    #define TREE_PROGRESS_TOTAL 10000
-    #define TREE_PROGRESS_PRECALC_COLL TREE_PROGRESS_TOTAL * 0.1
-    #define TREE_PROGRESS_PRECALC_AVO TREE_PROGRESS_TOTAL * 0.4
-    #define TREE_PROGRESS_GENERATE_NODES TREE_PROGRESS_TOTAL * 0.1
-    #define TREE_PROGRESS_AREA_CALC TREE_PROGRESS_TOTAL * 0.3
-    #define TREE_PROGRESS_DRAW_AREAS TREE_PROGRESS_TOTAL * 0.1
-    #define TREE_PROGRESS_GENERATE_BRANCH_AREAS TREE_PROGRESS_DRAW_AREAS / 3
-    #define TREE_PROGRESS_SMOOTH_BRANCH_AREAS TREE_PROGRESS_DRAW_AREAS / 3
-    #define TREE_PROGRESS_FINALIZE_BRANCH_AREAS TREE_PROGRESS_DRAW_AREAS / 3
-#endif // SLIC3R_TREESUPPORTS_PROGRESS
+#ifndef SQ
+#define SQ(x) ((x)*(x))
+#endif
 
 namespace Slic3r
 {
-
-// Forward declarations
-class Print;
 class PrintObject;
-struct SlicingParameters;
+class TreeSupport;
+class SupportLayer;
 
-namespace FFFTreeSupport
+struct LayerHeightData
 {
-
-// The number of vertices in each circle.
-static constexpr const size_t SUPPORT_TREE_CIRCLE_RESOLUTION = 25;
-
-struct AreaIncreaseSettings
-{
-    AreaIncreaseSettings(
-        TreeModelVolumes::AvoidanceType type = TreeModelVolumes::AvoidanceType::Fast, coord_t increase_speed = 0, 
-        bool increase_radius = false, bool no_error = false, bool use_min_distance = false, bool move = false) :
-        increase_speed{ increase_speed }, type{ type }, increase_radius{ increase_radius }, no_error{ no_error }, use_min_distance{ use_min_distance }, move{ move } {}
-
-    coord_t         increase_speed;
-    // Packing for smaller memory footprint of SupportElementState && SupportElementMerging
-    TreeModelVolumes::AvoidanceType type;
-    bool            increase_radius  : 1;
-    bool            no_error         : 1;
-    bool            use_min_distance : 1;
-    bool            move             : 1;
-    bool operator==(const AreaIncreaseSettings& other) const
-    {
-        return type             == other.type               &&
-               increase_speed   == other.increase_speed     &&
-               increase_radius  == other.increase_radius    &&
-               no_error         == other.no_error           &&
-               use_min_distance == other.use_min_distance   &&
-               move             == other.move;
+    coordf_t print_z       = 0;
+    coordf_t height        = 0;
+    size_t   obj_layer_nr  = 0;
+    LayerHeightData()      = default;
+    LayerHeightData(coordf_t z, coordf_t h, size_t obj_layer) : print_z(z), height(h), obj_layer_nr(obj_layer) {}
+    coordf_t bottom_z() {
+        return print_z - height;
     }
 };
 
-#define TREE_SUPPORTS_TRACK_LOST
-
-// C++17 does not support in place initializers of bit values, thus a constructor zeroing the bits is provided.
-struct SupportElementStateBits {
-    SupportElementStateBits() :
-        to_buildplate(false),
-        to_model_gracious(false),
-        use_min_xy_dist(false),
-        supports_roof(false),
-        can_use_safe_radius(false),
-        skip_ovalisation(false),
-#ifdef TREE_SUPPORTS_TRACK_LOST
-        lost(false),
-        verylost(false),
-#endif // TREE_SUPPORTS_TRACK_LOST
-        deleted(false),
-        marked(false)
-        {}
-
-    /*!
-     * \brief The element trys to reach the buildplate
-     */
-    bool to_buildplate : 1;
-
-    /*!
-     * \brief Will the branch be able to rest completely on a flat surface, be it buildplate or model ?
-     */
-    bool to_model_gracious : 1;
-
-    /*!
-     * \brief Whether the min_xy_distance can be used to get avoidance or similar. Will only be true if support_xy_overrides_z=Z overrides X/Y.
-     */
-    bool use_min_xy_dist : 1;
-
-    /*!
-     * \brief True if this Element or any parent (element above) provides support to a support roof.
-     */
-    bool supports_roof : 1;
-
-    /*!
-     * \brief An influence area is considered safe when it can use the holefree avoidance <=> It will not have to encounter holes on its way downward.
-     */
-    bool can_use_safe_radius : 1;
-
-    /*!
-     * \brief Skip the ovalisation to parent and children when generating the final circles.
-     */
-    bool skip_ovalisation : 1;
-
-#ifdef TREE_SUPPORTS_TRACK_LOST
-    // Likely a lost branch, debugging information.
-    bool lost : 1;
-    bool verylost : 1;
-#endif // TREE_SUPPORTS_TRACK_LOST
-
-    // Not valid anymore, to be deleted.
-    bool deleted : 1;
-
-    // General purpose flag marking a visited element.
-    bool marked : 1;
+enum TreeNodeType {
+    eCircle,
+    eSquare,
+    ePolygon
 };
 
-struct SupportElementState : public SupportElementStateBits
+
+/*!
+ * \brief Represents the metadata of a node in the tree.
+ */
+struct SupportNode
 {
-    /*!
-     * \brief The layer this support elements wants reach
-     */
-    LayerIndex  target_height;
+    static constexpr SupportNode* NO_PARENT = nullptr;
 
-    /*!
-     * \brief The position this support elements wants to support on layer=target_height
-     */
-    Point       target_position;
+    SupportNode()
+        : distance_to_top(0)
+        , position(Point(0, 0))
+        , obj_layer_nr(0)
+        , support_roof_layers_below(0)
+        , to_buildplate(true)
+        , parent(nullptr)
+        , print_z(0.0)
+        , height(0.0)
+    {}
 
-    /*!
-     * \brief The next position this support elements wants to reach. NOTE: This is mainly a suggestion regarding direction inside the influence area.
-     */
-    Point       next_position;
-
-    /*!
-     * \brief The next height this support elements wants to reach
-     */
-    LayerIndex  layer_idx;
-
-    /*!
-     * \brief The Effective distance to top of this element regarding radius increases and collision calculations.
-     */
-    uint32_t    effective_radius_height;
-
-    /*!
-     * \brief The amount of layers this element is below the topmost layer of this branch.
-     */
-    uint32_t    distance_to_top;
-
-    /*!
-     * \brief The resulting center point around which a circle will be drawn later.
-     * Will be set by setPointsOnAreas
-     */
-    Point result_on_layer { std::numeric_limits<coord_t>::max(), std::numeric_limits<coord_t>::max() };
-    bool  result_on_layer_is_set() const { return this->result_on_layer != Point{ std::numeric_limits<coord_t>::max(), std::numeric_limits<coord_t>::max() }; }
-    void  result_on_layer_reset() { this->result_on_layer = Point{ std::numeric_limits<coord_t>::max(), std::numeric_limits<coord_t>::max() }; }
-    /*!
-     * \brief The amount of extra radius we got from merging branches that could have reached the buildplate, but merged with ones that can not.
-     */
-    coord_t     increased_to_model_radius; // how much to model we increased only relevant for merging
-
-    /*!
-     * \brief Counter about the times the elephant foot was increased. Can be fractions for merge reasons.
-     */
-    double      elephant_foot_increases;
-
-    /*!
-     * \brief The element tries to not move until this dtt is reached, is set to 0 if the element had to move.
-     */
-    uint32_t    dont_move_until;
-
-    /*!
-     * \brief Settings used to increase the influence area to its current state.
-     */
-    AreaIncreaseSettings last_area_increase;
-
-    /*!
-     * \brief Amount of roof layers that were not yet added, because the branch needed to move.
-     */
-    uint32_t    missing_roof_layers;
-
-    // called by increase_single_area() and increaseAreas()
-    [[nodiscard]] static SupportElementState propagate_down(const SupportElementState &src)
+    // when dist_mm_to_top_==0, new node's dist_mm_to_top=parent->dist_mm_to_top + parent->height;
+    SupportNode(const Point position, const int distance_to_top, const int obj_layer_nr, const int support_roof_layers_below, const bool to_buildplate, SupportNode* parent,
+        coordf_t     print_z_, coordf_t height_, coordf_t dist_mm_to_top_ = 0, coordf_t radius_ = 0)
+        : distance_to_top(distance_to_top)
+        , position(position)
+        , obj_layer_nr(obj_layer_nr)
+        , support_roof_layers_below(support_roof_layers_below)
+        , to_buildplate(to_buildplate)
+        , parent(parent)
+        , print_z(print_z_)
+        , height(height_)
+        , dist_mm_to_top(dist_mm_to_top_)
+        , radius(radius_)
     {
-        SupportElementState dst{ src };
-        ++ dst.distance_to_top;
-        -- dst.layer_idx;
-        // set to invalid as we are a new node on a new layer
-        dst.result_on_layer_reset();
-        dst.skip_ovalisation = false;
-        return dst;
+        if (parent) {
+            parents.push_back(parent);
+            type = parent->type;
+            overhang = parent->overhang;
+            if (dist_mm_to_top == 0)
+                dist_mm_to_top = parent->dist_mm_to_top + parent->height;
+            if (radius == 0 && parent->radius>0)
+                radius = parent->radius + (dist_mm_to_top - parent->dist_mm_to_top) * diameter_angle_scale_factor;
+            parent->child = this;
+            for (auto& neighbor : parent->merged_neighbours) {
+                neighbor->child = this;
+                parents.push_back(neighbor);
+            }
+            is_sharp_tail = parent->is_sharp_tail;
+            skin_direction = parent->skin_direction;
+        }
     }
 
-    [[nodiscard]] bool locked() const { return this->distance_to_top < this->dont_move_until; }
+#ifdef DEBUG // Clear the delete node's data so if there's invalid access after, we may get a clue by inspecting that node.
+    ~SupportNode()
+    {
+        parent = nullptr;
+        merged_neighbours.clear();
+    }
+#endif // DEBUG
+
+    /*!
+     * \brief The number of layers to go to the top of this branch.
+     * Negative value means it's a virtual node between support and overhang, which doesn't need to be extruded.
+     */
+    int distance_to_top;
+    coordf_t dist_mm_to_top = 0;  // dist to bottom contact in mm
+
+    // all nodes will have same diameter_angle_scale_factor because it's defined by user
+    static double diameter_angle_scale_factor;
+
+    /*!
+     * \brief The position of this node on the layer.
+     */
+    Point          position;
+    Point          movement; // movement towards neighbor center or outline
+    mutable double radius          = 0.0;
+    mutable double max_move_dist   = 0.0;
+    TreeNodeType   type            = eCircle;
+    bool           is_corner       = false;
+    bool           is_processed    = false;
+    bool           need_extra_wall = false;
+    bool           is_sharp_tail   = false;
+    bool           valid = true;
+    ExPolygon      overhang; // when type==ePolygon, set this value to get original overhang area
+
+    /*!
+     * \brief The direction of the skin lines above the tip of the branch.
+     *
+     * This determines in which direction we should reduce the width of the
+     * branch.
+     */
+    Point skin_direction;
+
+    /*!
+     * \brief The number of support roof layers below this one.
+     *
+     * When a contact point is created, it is determined whether the mesh
+     * needs to be supported with support roof or not, since that is a
+     * per-mesh setting. This is stored in this variable in order to track
+     * how far we need to extend that support roof downwards.
+     */
+    int support_roof_layers_below;
+    int obj_layer_nr;
+
+    /*!
+     * \brief Whether to try to go towards the build plate.
+     *
+     * If the node is inside the collision areas, it has no choice but to go
+     * towards the model. If it is not inside the collision areas, it must
+     * go towards the build plate to prevent a scar on the surface.
+     */
+    bool to_buildplate;
+
+    /*!
+     * \brief The originating node for this one, one layer higher.
+     *
+     * In order to prune branches that can't have any support (because they
+     * can't be on the model and the path to the buildplate isn't clear),
+     * the entire branch needs to be known.
+     */
+    SupportNode* parent;
+    std::vector<SupportNode*> parents;
+    SupportNode* child = nullptr;
+
+    /*!
+    * \brief All neighbours (on the same layer) that where merged into this node.
+    *
+    * In order to prune branches that can't have any support (because they
+    * can't be on the model and the path to the buildplate isn't clear),
+    * the entire branch needs to be known.
+    */
+    std::list<SupportNode*> merged_neighbours;
+
+    coordf_t print_z;
+    coordf_t height;
+
+    bool operator==(const SupportNode& other) const
+    {
+        return position == other.position;
+    }
 };
 
 /*!
- * \brief Get the Distance to top regarding the real radius this part will have. This is different from distance_to_top, which is can be used to calculate the top most layer of the branch.
- * \param elem[in] The SupportElement one wants to know the effectiveDTT
- * \return The Effective DTT.
+ * \brief Lazily generates tree guidance volumes.
+ *
+ * \warning This class is not currently thread-safe and should not be accessed in OpenMP blocks
  */
-[[nodiscard]] inline size_t getEffectiveDTT(const TreeSupportSettings &settings, const SupportElementState &elem)
+class TreeSupportData
 {
-    return elem.effective_radius_height < settings.increase_radius_until_layer ? 
-        (elem.distance_to_top < settings.increase_radius_until_layer ? elem.distance_to_top : settings.increase_radius_until_layer) : 
-        elem.effective_radius_height;
-}
+public:
+    TreeSupportData() = default;
+    /*!
+     * \brief Construct the TreeSupportData object
+     *
+     * \param xy_distance The required clearance between the model and the
+     * tree branches.
+     * \param radius_sample_resolution Sample size used to round requested node radii.
+     */
+    TreeSupportData(const PrintObject& object, coordf_t xy_distance, coordf_t radius_sample_resolution);
+    ~TreeSupportData() {
+        clear_nodes();
+    }
 
-/*!
- * \brief Get the Radius, that this element will have.
- * \param elem[in] The Element.
- * \return The radius the element has.
- */
-[[nodiscard]] inline coord_t support_element_radius(const TreeSupportSettings &settings, const SupportElementState &elem)
-{ 
-    return settings.getRadius(getEffectiveDTT(settings, elem), elem.elephant_foot_increases);
-}
+    TreeSupportData(TreeSupportData&&) = default;
+    TreeSupportData& operator=(TreeSupportData&&) = default;
 
-/*!
- * \brief Get the collision Radius of this Element. This can be smaller then the actual radius, as the drawAreas will cut off areas that may collide with the model.
- * \param elem[in] The Element.
- * \return The collision radius the element has.
- */
-[[nodiscard]] inline coord_t support_element_collision_radius(const TreeSupportSettings &settings, const SupportElementState &elem)
-{
-    return settings.getRadius(elem.effective_radius_height, elem.elephant_foot_increases);
-}
-
-struct SupportElement
-{
-    using ParentIndices =
-#ifdef NDEBUG
-        // To reduce memory allocation in release mode.
-        boost::container::small_vector<int32_t, 4>;
-#else // NDEBUG
-        // To ease debugging.
-        std::vector<int32_t>;
-#endif // NDEBUG
-
-//    SupportElement(const SupportElementState &state) : SupportElementState(state) {}
-    SupportElement(const SupportElementState &state, Polygons &&influence_area) : state(state), influence_area(std::move(influence_area)) {}
-    SupportElement(const SupportElementState &state, ParentIndices &&parents, Polygons &&influence_area) :
-        state(state), parents(std::move(parents)), influence_area(std::move(influence_area)) {}
-
-    SupportElementState         state;
+    TreeSupportData(const TreeSupportData&) = delete;
+    TreeSupportData& operator=(const TreeSupportData&) = delete;
 
     /*!
-     * \brief All elements in the layer above the current one that are supported by this element
+     * \brief Creates the areas that have to be avoided by the tree's branches.
+     *
+     * The result is a 2D area that would cause nodes of radius \p radius to
+     * collide with the model.
+     *
+     * \param radius The radius of the node of interest
+     * \param layer The layer of interest
+     * \return Polygons object
      */
-    ParentIndices               parents;
+    const ExPolygons& get_collision(coordf_t radius, size_t layer_idx) const;
 
     /*!
-     * \brief The resulting influence area.
-     * Will only be set in the results of createLayerPathing, and will be nullptr inside!
+     * \brief Creates the areas that have to be avoided by the tree's branches
+     * in order to reach the build plate.
+     *
+     * The result is a 2D area that would cause nodes of radius \p radius to
+     * collide with the model or be unable to reach the build platform.
+     *
+     * The input collision areas are inset by the maximum move distance and
+     * propagated upwards.
+     *
+     * \param radius The radius of the node of interest
+     * \param layer The layer of interest
+     * \return Polygons object
      */
-    Polygons                    influence_area;
+    const ExPolygons& get_avoidance(coordf_t radius, size_t layer_idx, int recursions=0) const;
+
+    Polygons get_contours(size_t layer_nr) const;
+    Polygons get_contours_with_holes(size_t layer_nr) const;
+
+    SupportNode* create_node(const Point position, const int distance_to_top, const int obj_layer_nr, const int support_roof_layers_below, const bool to_buildplate, SupportNode* parent,
+        coordf_t     print_z_, coordf_t height_, coordf_t dist_mm_to_top_ = 0, coordf_t radius_ = 0);
+    void clear_nodes();
+    std::vector<LayerHeightData> layer_heights;
+
+    std::vector<std::unique_ptr<SupportNode>> contact_nodes;
+    // ExPolygon                  m_machine_border;
+
+private:
+    /*!
+     * \brief Convenience typedef for the keys to the caches
+     */
+    struct RadiusLayerPair {
+        coordf_t radius;
+        size_t layer_nr;
+        int recursions;
+
+    };
+    struct RadiusLayerPairEquality {
+        constexpr bool operator()(const RadiusLayerPair& _Left, const RadiusLayerPair& _Right) const {
+            return _Left.radius == _Right.radius && _Left.layer_nr == _Right.layer_nr;
+        }
+    };
+    struct RadiusLayerPairHash {
+        size_t operator()(const RadiusLayerPair& elem) const {
+            return std::hash<coord_t>()(elem.radius) ^ std::hash<coord_t>()(elem.layer_nr * 7919);
+        }
+    };
+
+    /*!
+     * \brief Round \p radius upwards to a multiple of m_radius_sample_resolution
+     *
+     * \param radius The radius of the node of interest
+     */
+    coordf_t ceil_radius(coordf_t radius) const;
+
+    /*!
+     * \brief Calculate the collision areas at the radius and layer indicated
+     * by \p key.
+     *
+     * \param key The radius and layer of the node of interest
+     */
+    const ExPolygons& calculate_collision(const RadiusLayerPair& key) const;
+
+    /*!
+     * \brief Calculate the avoidance areas at the radius and layer indicated
+     * by \p key.
+     *
+     * \param key The radius and layer of the node of interest
+     */
+    const ExPolygons& calculate_avoidance(const RadiusLayerPair& key) const;
+
+    tbb::spin_mutex  m_mutex;
+
+public:
+    bool is_slim = false;
+    /*!
+     * \brief The required clearance between the model and the tree branches
+     */
+    coordf_t m_xy_distance;
+
+    double branch_scale_factor = 1.0; // tan(45 degrees)
+
+    /*!
+     * \brief Sample resolution for radius values.
+     *
+     * The radius will be rounded (upwards) to multiples of this value before
+     * calculations are done when collision, avoidance and internal model
+     * Polygons are requested.
+     */
+    coordf_t m_radius_sample_resolution;
+
+    /*!
+     * \brief Storage for layer outlines of the meshes.
+     */
+    std::vector<ExPolygons> m_layer_outlines;
+
+    // union contours of all layers below
+    std::vector<ExPolygons> m_layer_outlines_below;
+
+    std::vector<double> m_max_move_distances;
+
+    /*!
+     * \brief Caches for the collision, avoidance and internal model polygons
+     * at given radius and layer indices.
+     *
+     * These are mutable to allow modification from const function. This is
+     * generally considered OK as the functions are still logically const
+     * (ie there is no difference in behaviour for the user betweeen
+     * calculating the values each time vs caching the results).
+     *
+     * coconut: previously stl::unordered_map is used which seems problematic with tbb::parallel_for.
+     * So we change to tbb::concurrent_unordered_map
+     */
+    mutable tbb::concurrent_unordered_map<RadiusLayerPair, ExPolygons, RadiusLayerPairHash, RadiusLayerPairEquality> m_collision_cache;
+    mutable tbb::concurrent_unordered_map<RadiusLayerPair, ExPolygons, RadiusLayerPairHash, RadiusLayerPairEquality> m_avoidance_cache;
+
+    friend TreeSupport;
 };
 
-using SupportElements = std::deque<SupportElement>;
+struct LineHash {
+    size_t operator()(const Line& line) const {
+        return (std::hash<coord_t>()(line.a(0)) ^ std::hash<coord_t>()(line.b(1))) * 102 +
+            (std::hash<coord_t>()(line.a(1)) ^ std::hash<coord_t>()(line.b(0))) * 10222;
+    }
+};
 
-[[nodiscard]] inline coord_t support_element_radius(const TreeSupportSettings &settings, const SupportElement &elem)
+/*!
+ * \brief Generates a tree structure to support your models.
+ */
+class TreeSupport
 {
-    return support_element_radius(settings, elem.state);
+public:
+    /*!
+     * \brief Creates an instance of the tree support generator.
+     *
+     * \param storage The data storage to get global settings from.
+     */
+    TreeSupport(PrintObject& object, const SlicingParameters &slicing_params);
+
+    void move_bounds_to_contact_nodes(std::vector<TreeSupport3D::SupportElements> &move_bounds,
+                                      PrintObject                                 &print_object,
+                                      const TreeSupport3D::TreeSupportSettings    &config);
+
+    /*!
+     * \brief Create the areas that need support.
+     *
+     * These areas are stored inside the given SliceDataStorage object.
+     * \param storage The data storage where the mesh data is gotten from and
+     * where the resulting support areas are stored.
+     */
+    void generate();
+
+    void detect_overhangs(bool check_support_necessity = false);
+
+    SupportNode* create_node(const Point  position,
+        const int    distance_to_top,
+        const int    obj_layer_nr,
+        const int    support_roof_layers_below,
+        const bool   to_buildplate,
+        SupportNode* parent,
+        coordf_t     print_z_,
+        coordf_t     height_,
+        coordf_t     dist_mm_to_top_ = 0,
+        coordf_t     radius_ = 0)
+    {
+        return m_ts_data->create_node(position, distance_to_top, obj_layer_nr, support_roof_layers_below, to_buildplate, parent, print_z_, height_, dist_mm_to_top_, radius_);
+    }
+
+    int  avg_node_per_layer = 0;
+    float nodes_angle = 0;
+    bool  has_sharp_tails = false;
+    bool  has_cantilever = false;
+    double max_cantilever_dist = 0;
+    SupportType support_type;
+
+    std::unique_ptr<FillLightning::Generator> generator;
+    std::unordered_map<double, size_t> printZ_to_lightninglayer;
+
+    std::function<void()> throw_on_cancel;
+    const PrintConfig* m_print_config;
+    /*!
+     * \brief Polygons representing the limits of the printable area of the
+     * machine
+     */
+    ExPolygon m_machine_border;
+
+    enum OverhangType { Detected = 0, Enforced, SharpTail };
+    std::map<const ExPolygon*, OverhangType> overhang_types;
+    std::vector<std::pair<Vec3f, Vec3f>>      m_vertical_enforcer_points;
+
+private:
+    /*!
+     * \brief Generator for model collision, avoidance and internal guide volumes
+     *
+     * Lazily computes volumes as needed.
+     *  \warning This class is NOT currently thread-safe and should not be accessed in OpenMP blocks
+     */
+    std::vector<std::vector<SupportNode*>> contact_nodes;
+    std::shared_ptr<TreeSupportData> m_ts_data;
+    std::unique_ptr<TreeSupport3D::TreeModelVolumes> m_model_volumes;
+    PrintObject    *m_object;
+    const PrintObjectConfig* m_object_config;
+    SlicingParameters        m_slicing_params;
+    // Various precomputed support parameters to be shared with external functions.
+    SupportParameters   m_support_params;
+    size_t          m_raft_layers = 0;  // number of raft layers, including raft base, raft interface, raft gap
+    size_t          m_highest_overhang_layer = 0;
+    std::vector<std::vector<MinimumSpanningTree>> m_spanning_trees;
+    std::vector< std::unordered_map<Line, bool, LineHash>> m_mst_line_x_layer_contour_caches;
+    float    DO_NOT_MOVER_UNDER_MM = 0.0;
+    coordf_t base_radius                        = 0.0;
+    const coordf_t MAX_BRANCH_RADIUS = 10.0;
+    const coordf_t MIN_BRANCH_RADIUS = 0.4;
+    const coordf_t MAX_BRANCH_RADIUS_FIRST_LAYER = 12.0;
+    const coordf_t MIN_BRANCH_RADIUS_FIRST_LAYER = 2.0;
+    double diameter_angle_scale_factor = tan(5.0*M_PI/180.0);
+    // minimum roof area (1 mm^2), area smaller than this value will not have interface
+    const double minimum_roof_area{SQ(scaled<double>(1.))};
+    float        top_z_distance = 0.0;
+
+    bool  is_strong = false;
+    bool  is_slim                            = false;
+    bool  with_infill                        = false;
+
+
+
+    /*!
+     * \brief Draws circles around each node of the tree into the final support.
+     *
+     * This also handles the areas that have to become support roof, support
+     * bottom, the Z distances, etc.
+     *
+     * \param storage[in, out] The settings storage to get settings from and to
+     * save the resulting support polygons to.
+     * \param contact_nodes The nodes to draw as support.
+     */
+    void draw_circles();
+
+    /*!
+     * \brief Drops down the nodes of the tree support towards the build plate.
+     *
+     * This is where the cleverness of tree support comes in: The nodes stay on
+     * their 2D layers but on the next layer they are slightly shifted. This
+     * causes them to move towards each other as they are copied to lower layers
+     * which ultimately results in a 3D tree.
+     *
+     * \param contact_nodes[in, out] The nodes in the space that need to be
+     * dropped down. The nodes are dropped to lower layers inside the same
+     * vector of layers.
+     */
+    void drop_nodes();
+
+    void smooth_nodes();
+
+    /*! BBS: MusangKing: maximum layer height
+     * \brief Optimize the generation of tree support by pre-planning the layer_heights
+     *
+    */
+
+    std::vector<LayerHeightData> plan_layer_heights();
+    /*!
+     * \brief Creates points where support contacts the model.
+     *
+     * A set of points is created for each layer.
+     * \param mesh The mesh to get the overhang areas to support of.
+     * \param contact_nodes[out] A vector of mappings from contact points to
+     * their tree nodes.
+     * \param collision_areas For every layer, the areas where a generated
+     * contact point would immediately collide with the model due to the X/Y
+     * distance.
+     * \return For each layer, a list of points where the tree should connect
+     * with the model.
+     */
+    void generate_contact_points();
+
+    /*!
+     * \brief Add a node to the next layer.
+     *
+     * If a node is already at that position in the layer, the nodes are merged.
+     */
+    void insert_dropped_node(std::vector<SupportNode*>& nodes_layer, SupportNode* node);
+    void create_tree_support_layers();
+    void generate_toolpaths();
+    // get unscaled radius of node
+    coordf_t calc_branch_radius(coordf_t base_radius, size_t layers_to_top, size_t tip_layers, double diameter_angle_scale_factor);
+    // get unscaled radius(mm) of node based on the distance mm to top
+    coordf_t calc_branch_radius(coordf_t base_radius, coordf_t mm_to_top, double diameter_angle_scale_factor, bool use_min_distance=true);
+    coordf_t   calc_radius(coordf_t mm_to_top);
+    coordf_t get_radius(const SupportNode* node);
+    ExPolygons get_avoidance(coordf_t radius, size_t obj_layer_nr);
+    // layer's expolygon expanded by radius+m_xy_distance
+    ExPolygons get_collision(coordf_t radius, size_t layer_nr);
+    // get Polygons instead of ExPolygons
+    Polygons get_collision_polys(coordf_t radius, size_t layer_nr);
+
+    // similar to SupportMaterial::trim_support_layers_by_object
+    Polygons get_trim_support_regions(
+        const PrintObject& object,
+        SupportLayer* support_layer_ptr,
+        const coordf_t       gap_extra_above,
+        const coordf_t       gap_extra_below,
+        const coordf_t       gap_xy);
+};
+
 }
 
-[[nodiscard]] inline coord_t support_element_collision_radius(const TreeSupportSettings &settings, const SupportElement &elem)
-{
-    return support_element_collision_radius(settings, elem.state);
-}
-
-} // namespace FFFTreeSupport
-
-void fff_tree_support_generate(PrintObject &print_object, std::function<void()> throw_on_cancel = []{});
-
-} // namespace Slic3r
-
-#endif /* slic3r_TreeSupport_hpp */
+#endif /* TREESUPPORT_H */

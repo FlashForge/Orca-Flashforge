@@ -7,7 +7,10 @@
 #include <algorithm>
 
 namespace Slic3r {
-
+using RGB = std::array<float, 3>;
+using RGBA = std::array<float, 4>;
+const RGBA UNDEFINE_COLOR = {0,0,0,0};
+bool  color_is_equal(const RGBA a, const RGBA &b);
 class ColorRGB
 {
 	std::array<float, 3> m_data{1.0f, 1.0f, 1.0f};
@@ -64,6 +67,7 @@ public:
 	static const ColorRGB YELLOW()      { return { 1.0f, 1.0f, 0.0f }; }
 	static const ColorRGB WHITE()       { return { 1.0f, 1.0f, 1.0f }; }
     static const ColorRGB ORCA()		{ return {0.0f, 150.f / 255.0f, 136.0f / 255}; }
+	static const ColorRGB WARNING()     { return {241.0f / 255, 117.f / 255.0f, 78.0f / 255}; }
 
 	static const ColorRGB X()           { return { 0.75f, 0.0f, 0.0f }; }
 	static const ColorRGB Y()           { return { 0.0f, 0.75f, 0.0f }; }
@@ -82,12 +86,16 @@ public:
 
 	ColorRGBA& operator = (const ColorRGBA& other) { m_data = other.m_data; return *this; }
 
-	bool operator == (const ColorRGBA& other) const { return m_data == other.m_data; }
+	bool operator==(const ColorRGBA &other) const{
+        return color_is_equal(m_data, other.m_data);
+    }
 	bool operator != (const ColorRGBA& other) const { return !operator==(other); }
 	bool operator < (const ColorRGBA& other) const;
 	bool operator > (const ColorRGBA& other) const;
+    float  operator[](int i) const { return m_data[i]; }
+    float& operator[](int i) { return m_data[i]; }
 
-	ColorRGBA operator + (const ColorRGBA& other) const;
+    ColorRGBA operator + (const ColorRGBA& other) const;
 	ColorRGBA operator * (float value) const;
 
 	const float* const data() const { return m_data.data(); }

@@ -1,6 +1,7 @@
 #include "GUI_App.hpp"
 #include "InstanceCheck.hpp"
 #include "Plater.hpp"
+#include <boost/regex.hpp>
 
 #ifdef _WIN32
   #include "MainFrame.hpp"
@@ -236,7 +237,7 @@ namespace instance_check_internal
 			dbus_uint32_t 	serial = 0;
 			const char* sigval = message_text.c_str();
 			//std::string		interface_name = "com.prusa3d.prusaslicer.InstanceCheck";
-			std::string		interface_name = "com.softfever3d.orca-slicer.InstanceCheck.Object" + version;
+			std::string		interface_name = "com.flashforge.orca-flashforge.InstanceCheck.Object" + version;
 			std::string   	method_name = "AnotherInstance";
 			//std::string		object_name = "/com/prusa3d/prusaslicer/InstanceCheck";
 			std::string		object_name = "/com/softfever3d/OrcaSlicer/InstanceCheck/Object" + version;
@@ -370,6 +371,7 @@ bool instance_check(int argc, char** argv, bool app_config_single_instance)
 namespace GUI {
 
 wxDEFINE_EVENT(EVT_LOAD_MODEL_OTHER_INSTANCE, LoadFromOtherInstanceEvent);
+wxDEFINE_EVENT(EVT_START_DOWNLOAD_OTHER_INSTANCE, StartDownloadOtherInstanceEvent);
 wxDEFINE_EVENT(EVT_INSTANCE_GO_TO_FRONT, InstanceGoToFrontEvent);
 
 void OtherInstanceMessageHandler::init(wxEvtHandler* callback_evt_handler)
@@ -498,18 +500,29 @@ void OtherInstanceMessageHandler::handle_message(const std::string& message)
 	}
 
 	std::vector<boost::filesystem::path> paths;
+	std::vector<std::string> downloads;
+	boost::regex re(R"(^(orcaslicer|prusaslicer|cura|bambustudio):\/\/open[\/]?\?file=)", boost::regbase::icase);
+	boost::regex re2(R"(^(bambustudioopen):\/\/)", boost::regex::icase);
+	boost::smatch results;
+
 	// Skip the first argument, it is the path to the slicer executable.
 	auto it = args.begin();
 	for (++ it; it != args.end(); ++ it) {
 		boost::filesystem::path p = MessageHandlerInternal::get_path(*it);
 		if (! p.string().empty())
 			paths.emplace_back(p);
+		else if (boost::regex_search(*it, results, re) || boost::regex_search(*it, results, re2))
+			downloads.emplace_back(*it);
 	}
 	if (! paths.empty()) {
 		//wxEvtHandler* evt_handler = wxGetApp().plater(); //assert here?
 		//if (evt_handler) {
 			wxPostEvent(m_callback_evt_handler, LoadFromOtherInstanceEvent(GUI::EVT_LOAD_MODEL_OTHER_INSTANCE, std::vector<boost::filesystem::path>(std::move(paths))));
 		//}
+	}
+	if (!downloads.empty())
+	{
+		wxPostEvent(m_callback_evt_handler, StartDownloadOtherInstanceEvent(GUI::EVT_START_DOWNLOAD_OTHER_INSTANCE, std::vector<std::string>(std::move(downloads))));
 	}
 }
 
@@ -538,7 +551,7 @@ namespace MessageHandlerDBusInternal
 	        "       <arg name=\"data\" direction=\"out\" type=\"s\" />"
 	        "     </method>"
 	        "   </interface>"
-	        "   <interface name=\"com.softfever3d.orca-slicer.InstanceCheck\">"
+	        "   <interface name=\"com.flashforge.orca-flashforge.InstanceCheck\">"
 	        "     <method name=\"AnotherInstance\">"
 	        "       <arg name=\"data\" direction=\"in\" type=\"s\" />"
 	        "     </method>"
@@ -576,7 +589,7 @@ namespace MessageHandlerDBusInternal
 	{
 		const char* interface_name = dbus_message_get_interface(message);
 	    const char* member_name    = dbus_message_get_member(message);
-	    std::string our_interface  = "com.softfever3d.orca-slicer.InstanceCheck.Object" + wxGetApp().get_instance_hash_string();
+	    std::string our_interface  = "com.flashforge.orca-flashforge.InstanceCheck.Object" + wxGetApp().get_instance_hash_string();
 	    BOOST_LOG_TRIVIAL(trace) << "DBus message received: interface: " << interface_name << ", member: " << member_name;
 	    if (0 == strcmp("org.freedesktop.DBus.Introspectable", interface_name) && 0 == strcmp("Introspect", member_name)) {		
 	        respond_to_introspect(connection, message);
@@ -596,7 +609,7 @@ void OtherInstanceMessageHandler::listen()
     int 				 name_req_val;
     DBusObjectPathVTable vtable;
     std::string 		 instance_hash  = wxGetApp().get_instance_hash_string();
-	std::string			 interface_name = "com.softfever3d.orca-slicer.InstanceCheck.Object" + instance_hash;
+	std::string			 interface_name = "com.flashforge.orca-flashforge.InstanceCheck.Object" + instance_hash;
     std::string			 object_name 	= "/com/softfever3d/OrcaSlicer/InstanceCheck/Object" + instance_hash;
 
     //BOOST_LOG_TRIVIAL(debug) << "init dbus listen " << interface_name << " " << object_name;

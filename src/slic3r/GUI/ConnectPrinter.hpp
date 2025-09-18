@@ -18,41 +18,49 @@
 #include <wx/statbmp.h>
 #include "Widgets/Button.hpp"
 #include "Widgets/TextInput.hpp"
+#include "Widgets/Label.hpp"
 #include "DeviceManager.hpp"
+#include "TitleDialog.hpp"
 
+class FFPushButton;
 namespace Slic3r { namespace GUI {
-class ConnectPrinterDialog : public DPIDialog
+class DeviceObject;
+class ConnectPrinterDialog : public TitleDialog
 {
 private:
 protected:
     bool            m_need_connect{true};
     wxStaticText *  m_staticText_connection_code;
     TextInput *     m_textCtrl_code;
-    Button *        m_button_confirm;
+    //Button *        m_button_confirm;
+    FFPushButton   *m_button_confirm{nullptr};
     wxStaticText*   m_staticText_hints;
-    wxStaticBitmap* m_bitmap_diagram;
-    wxBitmap        m_diagram_bmp;
-    wxImage         m_diagram_img;
+    Label*          m_label_error_info;
 
     MachineObject*  m_obj{ nullptr };
+    DeviceObject*   m_devObj {nullptr};
     wxString        m_input_access_code;
-public:
-    ConnectPrinterDialog(wxWindow *      parent,
-                         wxWindowID      id    = wxID_ANY,
-                         const wxString &title = wxEmptyString,
-                         const wxPoint & pos   = wxDefaultPosition,
-                         const wxSize &  size  = wxDefaultSize,
-                         long            style = wxCLOSE_BOX | wxCAPTION);
+    wxPanel        *m_error_panel;
 
+public:
+    //ConnectPrinterDialog(wxWindow       *parent,
+    //                     wxWindowID      id       = wxID_ANY,
+    //                     const wxString &title    = wxEmptyString,
+    //                     bool            err_hint = false,
+    //                     const wxPoint  &pos      = wxDefaultPosition,
+    //                     const wxSize   &size     = wxDefaultSize,
+    //                     long            style    = wxCLOSE_BOX | wxCAPTION);
+    ConnectPrinterDialog(bool err_hint = false);
     ~ConnectPrinterDialog();
 
     void go_connect_printer(bool need) {m_need_connect = need;};
     void end_modal(wxStandardID id);
-    void init_bitmap();
     void set_machine_object(MachineObject* obj);
+    void set_device_object(DeviceObject* devObj);
     void on_input_enter(wxCommandEvent& evt);
-    void on_button_confirm(wxCommandEvent &event); 
+    void on_button_confirm(wxMouseEvent &event); 
     void on_dpi_changed(const wxRect &suggested_rect) override;
+    void on_show(wxShowEvent &event);
 };
 }} // namespace Slic3r::GUI
 

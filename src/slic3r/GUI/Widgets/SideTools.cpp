@@ -8,8 +8,11 @@
 #include "../wxExtensions.hpp"
 #include "../I18N.hpp"
 #include "../GUI.hpp"
+#include "../FlashForge/DeviceData.hpp"
 
 namespace Slic3r { namespace GUI {
+
+    wxDEFINE_EVENT(EVT_DEV_LIST_BTN_CLICKED, DevListBtnClickedEvent);
 	SideToolsPanel::SideToolsPanel(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size)
 {
     wxPanel::Create(parent, id, pos, size);
@@ -23,9 +26,8 @@ namespace Slic3r { namespace GUI {
     m_printing_img = ScalableBitmap(this, "printer", 16);
     m_arrow_img    = ScalableBitmap(this, "monitor_arrow", 14);
 
-    m_none_printing_img = ScalableBitmap(this, "tab_monitor_active", 24);
-    m_none_arrow_img    = ScalableBitmap(this, "monitor_none_arrow", 14);
-    m_none_add_img      = ScalableBitmap(this, "monitor_none_add", 14);
+    m_none_printing_img = ScalableBitmap(this, "monitor_device", 18);
+    m_none_add_img      = ScalableBitmap(this, "monitor_device_add", 18);
 
     m_wifi_none_img     = ScalableBitmap(this, "monitor_signal_no", 18);
     m_wifi_weak_img     = ScalableBitmap(this, "monitor_signal_weak", 18);
@@ -92,18 +94,6 @@ bool SideToolsPanel::is_in_interval()
 
 void SideToolsPanel::msw_rescale() 
 { 
-    m_printing_img.msw_rescale();
-    m_arrow_img.msw_rescale();
-
-    m_none_printing_img.msw_rescale();
-    m_none_arrow_img.msw_rescale();
-    m_none_add_img.msw_rescale();
-
-    m_wifi_none_img.msw_rescale();
-    m_wifi_weak_img.msw_rescale();
-    m_wifi_middle_img.msw_rescale();
-    m_wifi_strong_img.msw_rescale();
-
     Refresh();
 }
 
@@ -136,7 +126,7 @@ void SideToolsPanel::render(wxDC &dc)
 
 void SideToolsPanel::doRender(wxDC &dc)
 {
-    auto   left = FromDIP(15);
+    auto   left = FromDIP(20);
     wxSize size = GetSize();
     
     //if (m_none_printer) {
@@ -146,42 +136,38 @@ void SideToolsPanel::doRender(wxDC &dc)
     //}
 
     if (m_none_printer) {
-        dc.SetPen(SIDE_TOOLS_BRAND);
-        dc.SetBrush(SIDE_TOOLS_BRAND);
+        dc.SetPen(StateColor::darkModeColorFor(SIDE_TOOLS_BRAND));   // ORCA: Sidebar header background color - Fix for dark mode compability
+        dc.SetBrush(StateColor::darkModeColorFor(SIDE_TOOLS_BRAND)); // ORCA: Sidebar header background color - Fix for dark mode compability
         dc.DrawRectangle(0, 0, size.x, size.y);
 
         dc.DrawBitmap(m_none_printing_img.bmp(), left, (size.y - m_none_printing_img.GetBmpSize().y) / 2);
 
-        left += (m_none_printing_img.GetBmpSize().x + FromDIP(15));
-        dc.DrawBitmap(m_none_arrow_img.bmp(), left, (size.y - m_none_arrow_img.GetBmpSize().y) / 2);
-
-        left += (m_none_arrow_img.GetBmpSize().x + FromDIP(6));
+        left += (m_none_printing_img.GetBmpSize().x + FromDIP(10));
         dc.SetFont(::Label::Body_14);
         dc.SetBackgroundMode(wxTRANSPARENT);
-        dc.SetTextForeground(*wxWHITE);
+        dc.SetTextForeground(*wxBLACK);
+        DeviceObjectOpr *devOpr          = wxGetApp().getDeviceObjectOpr();
+        if (devOpr->my_machine_empty()) {
+            wxString no_printer_str  = _L("No printer");
+            auto     sizet           = dc.GetTextExtent(no_printer_str);
+            auto     left_add_bitmap = size.x - FromDIP(18) - m_wifi_none_img.GetBmpSize().x - m_none_add_img.GetBmpSize().x;
+            auto     size_width      = left_add_bitmap - left;
 
-        wxString no_printer_str = _L("No printer");
-        auto sizet = dc.GetTextExtent(no_printer_str);
-        auto left_add_bitmap = size.x - FromDIP(30) - m_wifi_none_img.GetBmpSize().x - m_none_add_img.GetBmpSize().x;
-        auto size_width = left_add_bitmap - left;
-
-        if (sizet.x > size_width) {
-            wxString temp_str = wxEmptyString;
-            for (auto i = 0; i < no_printer_str.Len(); i++) {
-                if (dc.GetTextExtent(L("...") + temp_str).x < size_width) {
-                    temp_str += no_printer_str[i];
+            if (sizet.x > size_width) {
+                wxString temp_str = wxEmptyString;
+                for (auto i = 0; i < no_printer_str.Len(); i++) {
+                    if (dc.GetTextExtent(L("...") + temp_str).x < size_width) {
+                        temp_str += no_printer_str[i];
+                    } else {
+                        break;
+                    }
                 }
-                else {
-                    break;
-                }
+                no_printer_str = temp_str + L("...");
             }
-
-            no_printer_str = temp_str + L("...");
+            dc.DrawText(no_printer_str, wxPoint(left, (size.y - sizet.y) / 2));
         }
 
-        dc.DrawText(no_printer_str, wxPoint(left, (size.y - sizet.y) / 2));
-
-        left = size.x - FromDIP(30) - m_wifi_none_img.GetBmpSize().x;
+        left = size.x - FromDIP(18) - m_wifi_none_img.GetBmpSize().x;
         dc.DrawBitmap(m_none_add_img.bmp(), left, (size.y - m_none_add_img.GetBmpSize().y) / 2);
     } else {
         dc.DrawBitmap(m_printing_img.bmp(), left, (size.y - m_printing_img.GetBmpSize().y) / 2);
@@ -212,12 +198,12 @@ void SideToolsPanel::doRender(wxDC &dc)
 
         dc.DrawText(finally_name, wxPoint(left, (size.y - sizet.y) / 2));
 
-        left = size.x - FromDIP(18) - m_wifi_none_img.GetBmpSize().x;
+        /*left = size.x - FromDIP(18) - m_wifi_none_img.GetBmpSize().x;
         if (m_wifi_type == WifiSignal::NONE) dc.DrawBitmap(m_wifi_none_img.bmp(), left, (size.y - m_wifi_none_img.GetBmpSize().y) / 2);
         if (m_wifi_type == WifiSignal::WEAK) dc.DrawBitmap(m_wifi_weak_img.bmp(), left, (size.y - m_wifi_weak_img.GetBmpSize().y) / 2);
         if (m_wifi_type == WifiSignal::MIDDLE) dc.DrawBitmap(m_wifi_middle_img.bmp(), left, (size.y - m_wifi_middle_img.GetBmpSize().y) / 2);
         if (m_wifi_type == WifiSignal::STRONG) dc.DrawBitmap(m_wifi_strong_img.bmp(), left, (size.y - m_wifi_strong_img.GetBmpSize().y) / 2);
-        if (m_wifi_type == WifiSignal::WIRED)  dc.DrawBitmap(m_network_wired_img.bmp(), left, (size.y - m_network_wired_img.GetBmpSize().y) / 2);
+        if (m_wifi_type == WifiSignal::WIRED)  dc.DrawBitmap(m_network_wired_img.bmp(), left, (size.y - m_network_wired_img.GetBmpSize().y) / 2);*/
     }
 
     if (m_hover) {
@@ -230,6 +216,17 @@ void SideToolsPanel::doRender(wxDC &dc)
 void SideToolsPanel::on_mouse_left_down(wxMouseEvent &evt)
 {
     m_click = true;
+    wxSize        bmpsize = m_none_add_img.GetBmpSize();    
+    auto          left   = GetSize().x - m_none_add_img.GetBmpSize().x - FromDIP(24);
+    auto          right  = left + m_none_add_img.GetBmpSize().x + FromDIP(6);
+    auto          top    = (GetSize().y - m_none_add_img.GetBmpSize().y) / 2 - FromDIP(6);
+    auto          bottom = (GetSize().y - m_none_add_img.GetBmpSize().y) / 2 + m_none_add_img.GetBmpSize().y + FromDIP(6);
+    if ((evt.GetPosition().x >= left && evt.GetPosition().x <= right) && evt.GetPosition().y >= top && evt.GetPosition().y <= bottom) {
+        wxCommandEvent event(EVT_DEV_LIST_BTN_CLICKED);
+        event.SetEventObject(this);
+        GetEventHandler()->ProcessEvent(event);
+    }
+
     Refresh();
 }
 
@@ -326,9 +323,10 @@ SideTools::SideTools(wxWindow *parent, wxWindowID id, const wxPoint &pos, const 
     wxBoxSizer* sizer_error_desc = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer* sizer_extra_info = new wxBoxSizer(wxHORIZONTAL);
 
-    m_link_network_state = new wxHyperlinkCtrl(m_side_error_panel, wxID_ANY,_L("Check the status of current system services"),"",wxDefaultPosition,wxDefaultSize,wxALIGN_CENTER_HORIZONTAL | wxST_ELLIPSIZE_END);
+    m_link_network_state = new Label(m_side_error_panel, _L("Check cloud service status"), wxALIGN_CENTER_HORIZONTAL | wxST_ELLIPSIZE_END);
     m_link_network_state->SetMinSize(wxSize(FromDIP(220), -1));
     m_link_network_state->SetMaxSize(wxSize(FromDIP(220), -1));
+    m_link_network_state->SetForegroundColour(0x009688);
     m_link_network_state->SetFont(::Label::Body_12);
     m_link_network_state->Bind(wxEVT_LEFT_DOWN, [this](auto& e) {wxGetApp().link_to_network_check(); });
     m_link_network_state->Bind(wxEVT_ENTER_WINDOW, [this](auto& e) {m_link_network_state->SetCursor(wxCURSOR_HAND); });
@@ -396,9 +394,10 @@ SideTools::SideTools(wxWindow *parent, wxWindowID id, const wxPoint &pos, const 
     m_st_txt_error_desc->SetLabel("");
 
     wxBoxSizer* m_main_sizer = new wxBoxSizer(wxVERTICAL);
+    m_main_sizer->Add(m_side_tools, 1, wxEXPAND, 0);
     m_main_sizer->Add(m_connection_info, 0, wxEXPAND, 0);
     m_main_sizer->Add(m_side_error_panel, 0, wxEXPAND, 0);
-    m_main_sizer->Add(m_side_tools, 1, wxEXPAND, 0);
+    
     SetSizer(m_main_sizer);
     Layout();
     Fit();
@@ -491,6 +490,17 @@ void SideTools::update_status(MachineObject* obj)
     }
 }
 
+void SideTools::update_device_status(DeviceObject* obj)
+{
+    if (!obj) {
+        m_side_tools->set_none_printer_mode();
+        return;
+    }
+
+    /* Update Device Info */
+    m_side_tools->set_current_printer_name(obj->get_dev_name());
+}
+
 void SideTools::show_status(int status)
 {
     if (((status & (int)MonitorStatus::MONITOR_DISCONNECTED) != 0) || ((status & (int)MonitorStatus::MONITOR_DISCONNECTED_SERVER) != 0)) {
@@ -504,7 +514,7 @@ void SideTools::show_status(int status)
             m_hyperlink->SetLabel(_L("Failed to connect to the printer"));
             update_connect_err_info(BAMBU_NETWORK_ERR_CONNECTION_TO_PRINTER_FAILED,
                 _L("Connection to printer failed"),
-                _L("Please check the network connection of the printer and Studio."));
+                _L("Please check the network connection of the printer and Orca."));
         }
 
         m_hyperlink->Show();
@@ -514,6 +524,16 @@ void SideTools::show_status(int status)
         m_connection_info->Show();
         m_more_button->Show();
 
+    } 
+    else if ((status & (int) MonitorStatus::MONITOR_LOGIN_OFFLINE) != 0) {
+        m_hyperlink->Hide();
+        m_connection_info->SetLabel(_L("Account Offline,Connecting..."));
+        m_connection_info->SetBackgroundColor(0xF6CBC6);
+        m_connection_info->SetBorderColor(0xF6CBC6);
+        m_connection_info->SetTextColor(0xEA3522);
+        m_connection_info->Show();
+        m_more_button->Hide();
+        m_side_error_panel->Hide();
     }
     else if ((status & (int)MonitorStatus::MONITOR_NORMAL) != 0) {
         m_connection_info->Hide();
@@ -523,27 +543,35 @@ void SideTools::show_status(int status)
     else if ((status & (int)MonitorStatus::MONITOR_CONNECTING) != 0) {
         m_hyperlink->Hide();
         m_connection_info->SetLabel(_L("Connecting..."));
-        m_connection_info->SetBackgroundColor(0x009688);
-        m_connection_info->SetBorderColor(0x009688);
+        m_connection_info->SetBackgroundColor(0xC8F1DE);
+        m_connection_info->SetBorderColor(0xC8F1DE);
+        m_connection_info->SetTextColor(0x1FD37F);
+        m_connection_info->Show();
+        m_more_button->Hide();
+        m_side_error_panel->Hide();
+    }
+    else if ((status & (int)MonitorStatus::MONITOR_CONNECTED_FAILED) != 0) {
+        m_hyperlink->Hide();
+        m_connection_info->SetLabel(_L("Unable to connect to printer"));
+        m_connection_info->SetBackgroundColor(0xF6CBC6);
+        m_connection_info->SetBorderColor(0xF6CBC6);
+        m_connection_info->SetTextColor(0xEA3522);
         m_connection_info->Show();
         m_more_button->Hide();
         m_side_error_panel->Hide();
     }
 
-    if ((status & (int)MonitorStatus::MONITOR_NO_PRINTER) != 0) {
+    if ((status & (int) MonitorStatus::MONITOR_NO_PRINTER) != 0) {
         m_side_tools->set_none_printer_mode();
         m_connection_info->Hide();
         m_side_error_panel->Hide();
         m_more_button->Hide();
-    }
-    else if (((status & (int)MonitorStatus::MONITOR_NORMAL) != 0)
-        || ((status & (int)MonitorStatus::MONITOR_DISCONNECTED) != 0)
-        || ((status & (int)MonitorStatus::MONITOR_DISCONNECTED_SERVER) != 0)
-        || ((status & (int)MonitorStatus::MONITOR_CONNECTING) != 0)
-        ) {
-        if (((status & (int)MonitorStatus::MONITOR_DISCONNECTED) != 0)
-            || ((status & (int)MonitorStatus::MONITOR_DISCONNECTED_SERVER) != 0)
-            || ((status & (int)MonitorStatus::MONITOR_CONNECTING) != 0)) {
+    } else if (((status & (int) MonitorStatus::MONITOR_NORMAL) != 0) || ((status & (int) MonitorStatus::MONITOR_DISCONNECTED) != 0) ||
+               ((status & (int) MonitorStatus::MONITOR_DISCONNECTED_SERVER) != 0) ||
+               ((status & (int) MonitorStatus::MONITOR_CONNECTING) != 0)) {
+        if (((status & (int) MonitorStatus::MONITOR_DISCONNECTED) != 0) ||
+            ((status & (int) MonitorStatus::MONITOR_DISCONNECTED_SERVER) != 0) ||
+            ((status & (int) MonitorStatus::MONITOR_CONNECTING) != 0)) {
             m_side_tools->set_current_printer_signal(WifiSignal::NONE);
         }
     }
@@ -551,8 +579,29 @@ void SideTools::show_status(int status)
     Fit();
 }
 
-SideTools::~SideTools()
+int SideTools::getConnectInfoHeight() 
 {
+    if (m_connection_info->IsShown())
+        return m_connection_info->GetSize().y;
+    return 0;
 }
 
+void SideTools::setAccountState(bool state) 
+{
+    try {
+        m_account_online = state;
+    } catch (...) {
+        //BOOST_LOG_TRIVIAL(error) << "SideTools::setAccountState ERROR!";
+    } 
+}
+
+bool SideTools::getAccountState() 
+{ 
+    return m_account_online; 
+}
+
+SideTools::~SideTools() 
+{
+    BOOST_LOG_TRIVIAL(error) << "~SideTools()";
+}
 }}

@@ -80,7 +80,7 @@ enum PolyFillType { pftEvenOdd, pftNonZero, pftPositive, pftNegative };
 // If defined, Clipper will work with 32bit signed int coordinates to reduce memory
 // consumption and to speed up exact orientation predicate calculation.
 // In that case, coordinates and their differences (vectors of the coordinates) have to fit int32_t.
-#define CLIPPERLIB_INT32
+// #define CLIPPERLIB_INT32
 
 // Point coordinate type
 #ifdef CLIPPERLIB_INT32
@@ -337,7 +337,7 @@ public:
     TEdge *p_edge = edges.data();
     i = 0;
     for (const Path &pg : paths_provider) {
-      if (num_edges[i]) {
+      if (num_edges[i] && !pg.empty()) {
         bool res = AddPathInternal(pg, num_edges[i] - 1, PolyTyp, Closed, p_edge);
         if (res) {
           p_edge += num_edges[i];

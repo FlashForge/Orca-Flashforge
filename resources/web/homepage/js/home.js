@@ -1,20 +1,17 @@
-/*var TestData={"sequence_id":"0","command":"studio_send_recentfile","data":[{"path":"D:\\work\\Models\\Toy\\3d-puzzle-cube-model_files\\3d-puzzle-cube.3mf","time":"2022\/3\/24 20:33:10"},{"path":"D:\\work\\Models\\Art\\Carved Stone Vase - remeshed+drainage\\Carved Stone Vase.3mf","time":"2022\/3\/24 17:11:51"},{"path":"D:\\work\\Models\\Art\\Kity & Cat\\Cat.3mf","time":"2022\/3\/24 17:07:55"},{"path":"D:\\work\\Models\\Toy\\鐩村墤.3mf","time":"2022\/3\/24 17:06:02"},{"path":"D:\\work\\Models\\Toy\\minimalistic-dual-tone-whistle-model_files\\minimalistic-dual-tone-whistle.3mf","time":"2022\/3\/22 21:12:22"},{"path":"D:\\work\\Models\\Toy\\spiral-city-model_files\\spiral-city.3mf","time":"2022\/3\/22 18:58:37"},{"path":"D:\\work\\Models\\Toy\\impossible-dovetail-puzzle-box-model_files\\impossible-dovetail-puzzle-box.3mf","time":"2022\/3\/22 20:08:40"}]};*/
+//var TestData={"sequence_id":"0","command":"get_recent_projects","response":[{"path":"D:\\work\\Models\\Toy\\3d-puzzle-cube-model_files\\3d-puzzle-cube.3mf","time":"2022\/3\/24 20:33:10"},{"path":"D:\\work\\Models\\Art\\Carved Stone Vase - remeshed+drainage\\Carved Stone Vase.3mf","time":"2022\/3\/24 17:11:51"},{"path":"D:\\work\\Models\\Art\\Kity & Cat\\Cat.3mf","time":"2022\/3\/24 17:07:55"},{"path":"D:\\work\\Models\\Toy\\鐩村墤.3mf","time":"2022\/3\/24 17:06:02"},{"path":"D:\\work\\Models\\Toy\\minimalistic-dual-tone-whistle-model_files\\minimalistic-dual-tone-whistle.3mf","time":"2022\/3\/22 21:12:22"},{"path":"D:\\work\\Models\\Toy\\spiral-city-model_files\\spiral-city.3mf","time":"2022\/3\/22 18:58:37"},{"path":"D:\\work\\Models\\Toy\\impossible-dovetail-puzzle-box-model_files\\impossible-dovetail-puzzle-box.3mf","time":"2022\/3\/22 20:08:40"}]};
 
 var m_HotModelList=null;
 
 function OnInit()
-{	
-	//-----Test-----
-	//Set_RecentFile_MouseRightBtn_Event();
-	
+{
 	//-----Official-----
     TranslatePage();
+    TranslatePageMyPoint();
 
 	SendMsg_GetLoginInfo();
 	SendMsg_GetRecentFile();
 	SendMsg_GetStaffPick();
-	
-	//InitStaffPick();
+	GotoMenu('recent')
 }
 
 //------最佳打开文件的右键菜单功能----------
@@ -80,54 +77,61 @@ function Set_RecentFile_MouseRightBtn_Event()
 	
 }
 
-function SetLoginPanelVisibility(visible) {
-  var leftBoard = document.getElementById("LeftBoard");
-  if (visible) {
-    leftBoard.style.display = "block";
-  } else {
-    leftBoard.style.display = "none";
-  }
-}
 
 function HandleStudio( pVal )
 {
 	let strCmd = pVal['command'];
 	
-	if (strCmd == "get_recent_projects") {
-    ShowRecentFileList(pVal["response"]);
-  } else if (strCmd == "studio_userlogin") {
-    SetLoginInfo(pVal["data"]["avatar"], pVal["data"]["name"]);
-  } else if (strCmd == "studio_useroffline") {
-    SetUserOffline();
-  } else if (strCmd == "studio_set_mallurl") {
-    SetMallUrl(pVal["data"]["url"]);
-  } else if (strCmd == "studio_clickmenu") {
-    let strName = pVal["data"]["menu"];
+	if(strCmd=='get_recent_projects')
+	{
+		ShowRecentFileList(pVal['response']);
+	}
+	else if(strCmd=='studio_userlogin')
+	{
+		SetLoginInfo(pVal['data']['avatar'],pVal['data']['name']);
+	}
+	else if(strCmd=='studio_useroffline')
+	{
+		SetUserOffline();
+	}
+	else if( strCmd=="studio_set_mallurl" )
+	{
+		SetMallUrl( pVal['data']['url'] );
+	}
+	else if( strCmd=="studio_clickmenu" )
+	{
+		let strName=pVal['data']['menu'];
+		GotoMenu(strName);
+	}
+	else if( strCmd=="network_plugin_installtip" )
+	{
+		let nShow=pVal["show"]*1;
+		
+	    if(nShow==1)
+		{
+			$("#NoPluginTip").show();
+			$("#NoPluginTip").css("display","flex");
+		}
+		else
+		{
+			$("#NoPluginTip").hide();
+		}
+	}
+	else if( strCmd=="modelmall_model_advise_get")
+	{
+		//alert('hot');
+		if( m_HotModelList!=null )
+		{
+			let SS1=JSON.stringify(pVal['hits']);
+			let SS2=JSON.stringify(m_HotModelList);
+			
+			if( SS1==SS2 )
+				return;
+		}
 
-    GotoMenu(strName);
-  } else if (strCmd == "network_plugin_installtip") {
-    let nShow = pVal["show"] * 1;
-
-    if (nShow == 1) {
-      $("#NoPluginTip").show();
-      $("#NoPluginTip").css("display", "flex");
-    } else {
-      $("#NoPluginTip").hide();
-    }
-  } else if (strCmd == "modelmall_model_advise_get") {
-    //alert('hot');
-    if (m_HotModelList != null) {
-      let SS1 = JSON.stringify(pVal["hits"]);
-      let SS2 = JSON.stringify(m_HotModelList);
-
-      if (SS1 == SS2) return;
-    }
-
-    m_HotModelList = pVal["hits"];
-    ShowStaffPick(m_HotModelList);
-  } else if (data.cmd === "SetLoginPanelVisibility") {
-    SetLoginPanelVisibility(data.visible);
-  }
+	    m_HotModelList=pVal['hits'];		
+		ShowStaffPick( m_HotModelList );
+	}
 }
 
 function GotoMenu( strMenu )
@@ -149,17 +153,26 @@ function GotoMenu( strMenu )
 			$("div[board=\'"+strMenu+"\']").show();
 		}
 	}
+	if (strMenu == 'my_point') {
+		window.dispatchEvent(new CustomEvent("szOrcaMyPonitMounted"))
+	}
 }
 
-function SetLoginInfo( strAvatar, strName ) 
+function SetLoginInfo( strAvatar, strName, requestUrl, token ) 
 {
 	$("#Login1").hide();
 	
 	$("#UserName").text(strName);
 	
     let OriginAvatar=$("#UserAvatarIcon").prop("src");
+
 	if(strAvatar!=OriginAvatar)
-		$("#UserAvatarIcon").prop("src",strAvatar);
+	{
+		if(strAvatar != "default.jpg")
+		{
+			$("#UserAvatarIcon").prop("src",strAvatar);
+		}
+	}
 	else
 	{
 		//alert('Avatar is Same');
@@ -167,6 +180,7 @@ function SetLoginInfo( strAvatar, strName )
 	
 	$("#Login2").show();
 	$("#Login2").css("display","flex");
+	window.dispatchEvent(new CustomEvent("szOrcaMyPonitMounted"))
 }
 
 function SetUserOffline()
@@ -311,14 +325,7 @@ function OnOpenRecentFile( strPath )
 
 function OnDeleteRecentFile( )
 {
-	var tSend={};
-	tSend['sequence_id']=Math.round(new Date() / 1000);
-	tSend['command']="homepage_delete_recentfile";
-	tSend['data']={};
-	tSend['data']['path']=decodeURI(RightBtnFilePath);
-	
-	SendWXMessage( JSON.stringify(tSend) );	
-
+	//Clear in UI
 	$("#recnet_context_menu").hide();
 	
 	let AllFile=$(".FileItem");
@@ -331,19 +338,27 @@ function OnDeleteRecentFile( )
 	}	
 	
 	UpdateRecentClearBtnDisplay();
+	
+	//Send Msg to C++
+	var tSend={};
+	tSend['sequence_id']=Math.round(new Date() / 1000);
+	tSend['command']="homepage_delete_recentfile";
+	tSend['data']={};
+	tSend['data']['path']=RightBtnFilePath;
+	
+	SendWXMessage( JSON.stringify(tSend) );
 }
 
 function OnDeleteAllRecentFiles()
 {
+	$('#FileList').html('');
+	UpdateRecentClearBtnDisplay();
+	
 	var tSend={};
 	tSend['sequence_id']=Math.round(new Date() / 1000);
 	tSend['command']="homepage_delete_all_recentfile";
 	
-	SendWXMessage( JSON.stringify(tSend) );		
-	
-	$('#FileList').html('');
-	
-	UpdateRecentClearBtnDisplay();
+	SendWXMessage( JSON.stringify(tSend) );
 }
 
 function UpdateRecentClearBtnDisplay()
@@ -488,7 +503,7 @@ function ShowStaffPick( ModelList )
 		strPickHtml+='<div class="HotModelPiece swiper-slide"  onClick="OpenOneStaffPickModel('+ModelID+')" >'+
 			    '<div class="HotModel_Designer_Info"><img src="'+DesignerAvatar+'" /><span class="TextS2">'+DesignerName+'</span></div>'+
 				'	<div class="HotModel_PrevBlock"><img class="HotModel_PrevImg" src="'+ModelCover+'" /></div>'+
-				'	<div  class="HotModel_NameText TextS1" title="'+ModelName+'">'+ModelName+'</div>'+
+				'	<div  class="HotModel_NameText TextS1">'+ModelName+'</div>'+
 				'</div>';
 	}
 	
@@ -508,6 +523,58 @@ function OpenOneStaffPickModel( ModelID )
 	
 	SendWXMessage( JSON.stringify(tSend) );		
 }
+
+function OnClickOpenImageGenerate3D()
+{
+	
+	var tSend={};
+	tSend['sequence_id']=Math.round(new Date() / 1000);
+	tSend['command']="image_generate_3d";
+	
+	SendWXMessage( JSON.stringify(tSend) );		
+	console.log('OnClickOpenImageGenerate3D', tSend);
+}
+
+function OpenUrl(url)
+{
+	var tSend={};
+	tSend['sequence_id']=Math.round(new Date() / 1000);
+	tSend['command']="common_openurl";
+	tSend['url']=url;
+	
+	SendWXMessage( JSON.stringify(tSend) );		
+}
+
+function SendNetworkRequestGet(url, request_type)
+{
+	var tSend={};
+	tSend['sequence_id']=Math.round(new Date() / 1000);
+	tSend['command']="send_network_request_get";
+	tSend['data']={};
+	tSend['data']['url']=url;
+	tSend['data']['request_type']=request_type;
+	SendWXMessage( JSON.stringify(tSend) );	
+}
+
+// 点击获取积分card  仅限 1. 推荐注册  2. 推荐购买 这俩种情况
+function SendShowPromoShare(item)
+{
+	var tSend={};
+	tSend['sequence_id']=Math.round(new Date() / 1000);
+	tSend['command']="show_promo_share";
+	tSend['data']=item;
+	SendWXMessage( JSON.stringify(tSend) );	
+}
+
+// shopify跳转统计上报
+function SendTrackShopifyClick()
+{
+	var tSend={};
+	tSend['sequence_id']=Math.round(new Date() / 1000);
+	tSend['command']="track_shopify_click";
+	SendWXMessage( JSON.stringify(tSend) );	
+}
+
 
 
 //---------------Global-----------------
