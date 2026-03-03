@@ -36,6 +36,7 @@
         <key>CFBundleURLSchemes</key>
         <array>
           <string>orcaslicer</string>
+          <string>orcaflashforge</string>
         </array>
       </dict>
 		<dict>
@@ -44,6 +45,14 @@
         <key>CFBundleURLSchemes</key>
         <array>
           <string>bambustudioopen</string>
+        </array>
+      </dict>
+      <dict>
+        <key>CFBundleURLName</key>
+        <string>Orca-Flashforge Downloads</string>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>orcaflashforgeopen</string>
         </array>
       </dict>
     </array>

@@ -2569,6 +2569,7 @@ bool GUI_App::on_init_inner()
             associate_files(L"stp");
         }
         associate_url(L"orcaslicer");
+        associate_url(L"orcaflashforge");
 
         if (app_config->get("associate_gcode") == "true")
             associate_files(L"gcode");
@@ -6497,6 +6498,7 @@ void GUI_App::open_preferences(size_t open_on_tab, const std::string& highlight_
                 associate_files(L"stp");
             }
             associate_url(L"orcaslicer");
+            associate_url(L"orcaflashforge");
         }
         else {
             if (app_config->get("associate_gcode") == "true")
