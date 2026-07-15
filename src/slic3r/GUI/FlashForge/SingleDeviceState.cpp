@@ -22,6 +22,24 @@ namespace pt = boost::property_tree;
 namespace Slic3r {
 namespace GUI {
 
+namespace {
+
+constexpr auto FF_DEVICE_PAGE_PRIMARY_TEXT = "#333333";
+
+void apply_device_page_light_text(wxWindow* window, const wxColour& color)
+{
+#ifdef __APPLE__
+    if (window) {
+        window->SetForegroundColour(color);
+    }
+#else
+    (void) window;
+    (void) color;
+#endif
+}
+
+} // namespace
+
 wxDEFINE_EVENT(EVT_SWITCH_TO_FILETER, wxCommandEvent);
 
 const std::string CLOSE = "close";
@@ -166,6 +184,7 @@ void StartFilter::create_panel(wxWindow* parent)
     wxBoxSizer *bSizer_internal_circulate_hor = new wxBoxSizer(wxHORIZONTAL);
     wxPanel*    internal_circulate_panel      = new wxPanel(parent, wxID_ANY, wxDefaultPosition,wxDefaultSize, wxTAB_TRAVERSAL);
     auto m_staticText_internal_circulate = new wxStaticText(internal_circulate_panel, wxID_ANY, _L("Internal Circulate"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
+    apply_device_page_light_text(m_staticText_internal_circulate, wxColour(FF_DEVICE_PAGE_PRIMARY_TEXT));
     //m_staticText_internal_circulate->SetFont(wxFont(wxFontInfo(16)));
     m_internal_circulate_switch = new SwitchButton(internal_circulate_panel);
     m_internal_circulate_switch->SetBackgroundColour(*wxWHITE);
@@ -184,6 +203,7 @@ void StartFilter::create_panel(wxWindow* parent)
     wxBoxSizer *bSizer_external_circulate_hor = new wxBoxSizer(wxHORIZONTAL);
     wxPanel*    external_circulate_panel      = new wxPanel(parent, wxID_ANY, wxDefaultPosition,wxDefaultSize, wxTAB_TRAVERSAL);
     auto m_staticText_external_circulate = new wxStaticText(external_circulate_panel, wxID_ANY, _L("External Circulate"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
+    apply_device_page_light_text(m_staticText_external_circulate, wxColour(FF_DEVICE_PAGE_PRIMARY_TEXT));
     //m_staticText_external_circulate->SetFont(wxFont(wxFontInfo(16)));
     m_external_circulate_switch = new SwitchButton(external_circulate_panel);
     m_external_circulate_switch->SetBackgroundColour(*wxWHITE);
@@ -2345,10 +2365,10 @@ void SingleDeviceState::setupLayoutIdleInfoPage(wxBoxSizer* idleSizer, wxPanel* 
 
     auto idle_device_pic       = create_scaled_bitmap("adventurer_5m", 0, 200);
     m_idle_device_staticbitmap = new wxStaticBitmap(m_panel_idle, wxID_ANY, idle_device_pic);
-    m_staticText_idle          = new Label(m_panel_idle, Label::sysFont(16, false), _L(HAS_NO_PRINTING));
+    m_staticText_idle = new Label(
+        m_panel_idle, Label::sysFont(16, false), _L(HAS_NO_PRINTING), wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL);
     m_staticText_idle->SetForegroundColour(wxColour(51, 51, 51));
     m_staticText_idle->SetBackgroundColour(wxColour(255, 255, 255));
-    m_staticText_idle->SetWindowStyleFlag(wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL);
     m_idle_lamp_bar = new LampToolBar(m_panel_idle);
     bSizer_h_device_tip->Add(m_idle_device_staticbitmap, 0, wxALL | wxEXPAND, 0);
     bSizer_h_device_tip->AddSpacer(FromDIP(22));

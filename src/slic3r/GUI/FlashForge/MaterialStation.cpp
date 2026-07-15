@@ -9,6 +9,24 @@
 namespace Slic3r {
 namespace GUI {
 
+namespace {
+
+constexpr auto FF_DEVICE_PAGE_PRIMARY_TEXT = "#333333";
+
+void apply_device_page_light_text(wxWindow* window, const wxColour& color)
+{
+#ifdef __APPLE__
+    if (window) {
+        window->SetForegroundColour(color);
+    }
+#else
+    (void) window;
+    (void) color;
+#endif
+}
+
+} // namespace
+
 FFPrinterPid        MaterialStation::s_PrinterType = OTHER;
 MaterialSlotAreaU1* MaterialSlotAreaU1::s_self = nullptr;
 
@@ -702,6 +720,7 @@ void TipsArea::prepare_layout(wxWindow* parent)
     m_tips_area_title->SetForegroundColour(wxColour(50, 141, 251));
     m_tips_text = new wxStaticText(parent, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(FromDIP(254), FromDIP(120)), wxALIGN_LEFT);
     m_tips_text->SetFont(::Label::Body_14);
+    apply_device_page_light_text(m_tips_text, wxColour(FF_DEVICE_PAGE_PRIMARY_TEXT));
     m_progress  = new ProgressArea(parent, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(254), FromDIP(120)));
 
 }
@@ -1868,6 +1887,7 @@ void Palette::setup_layout(wxWindow* parent)
     m_station_color_lab             = new wxStaticText(area_station_title, wxID_ANY, _L("Material Station"), wxDefaultPosition,
                                                        wxSize(FromDIP(249), FromDIP(19)), wxALIGN_LEFT);
     m_station_color_lab->SetBackgroundColour(wxColour(255, 255, 255));
+    apply_device_page_light_text(m_station_color_lab, wxColour(FF_DEVICE_PAGE_PRIMARY_TEXT));
     sizer_station_title->AddSpacer(FromDIP(27));
     sizer_station_title->Add(m_station_color_lab, 0, wxTOP | wxBOTTOM, 0);
     sizer_station_title->AddStretchSpacer();
@@ -1922,6 +1942,7 @@ void Palette::setup_layout(wxWindow* parent)
     m_color_lib_lab = new wxStaticText(area_lib_title, wxID_ANY, _L("Color Library"), wxDefaultPosition, wxSize(FromDIP(250), FromDIP(19)),
                                        wxALIGN_LEFT);
     m_color_lib_lab->SetBackgroundColour(wxColour(255, 255, 255));
+    apply_device_page_light_text(m_color_lib_lab, wxColour(FF_DEVICE_PAGE_PRIMARY_TEXT));
     sizer_lib_title->AddSpacer(FromDIP(27));
     sizer_lib_title->Add(m_color_lib_lab, 0, wxTOP | wxBOTTOM, 0);
     sizer_lib_title->AddStretchSpacer();
@@ -2111,12 +2132,14 @@ void MaterialDialog::setup_layout(wxWindow* parent)
 
     m_type_lab = new wxStaticText(select_area, wxID_ANY, _L("Filament type"), wxDefaultPosition, wxSize(FromDIP(347), FromDIP(19)),
                                   wxALIGN_LEFT);
+    apply_device_page_light_text(m_type_lab, wxColour(FF_DEVICE_PAGE_PRIMARY_TEXT));
 
     m_comboBox = new CustomOwnerDrawnComboBox(select_area, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(FromDIP(347), FromDIP(34)), 0,
                                               NULL, wxCB_READONLY);
     init_comboBox();
 
     m_color_lab = new wxStaticText(select_area, wxID_ANY, _L("Color"), wxDefaultPosition, wxSize(FromDIP(347), FromDIP(19)), wxALIGN_LEFT);
+    apply_device_page_light_text(m_color_lab, wxColour(FF_DEVICE_PAGE_PRIMARY_TEXT));
 
     wxBoxSizer* color_sizer = new wxBoxSizer(wxHORIZONTAL);
     wxWindow*   color_area  = new wxWindow(select_area, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(347), FromDIP(26)));
@@ -2765,6 +2788,9 @@ void MaterialSlotU1::paintEvent(wxPaintEvent& event)
 
         wxFont font(FromDIP(12), wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
         dc.SetFont(font);
+        const unsigned char average_rgb =
+            (m_material_info.m_color.Red() + m_material_info.m_color.Green() + m_material_info.m_color.Blue()) / 3;
+        dc.SetTextForeground(average_rgb < 128 ? *wxWHITE : wxColour(FF_DEVICE_PAGE_PRIMARY_TEXT));
         render_name(m_material_info.m_name, dc);
         break;
     }
@@ -2904,6 +2930,7 @@ void MaterialSlotWgtU1::setup_layout(wxWindow* parent, const int& number)
     wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
     m_number = new wxStaticText(parent, wxID_ANY, wxString::Format(wxT("%i"), number), wxDefaultPosition, wxSize(FromDIP(20), FromDIP(20)),
                                 wxALIGN_CENTRE_HORIZONTAL);
+    apply_device_page_light_text(m_number, wxColour(FF_DEVICE_PAGE_PRIMARY_TEXT));
     m_material_slot = new MaterialSlotU1(parent, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(72), FromDIP(72)));
     sizer->AddSpacer(FromDIP(15));
     sizer->Add(m_number, 0, wxLEFT | wxRIGHT, (GetSize().GetWidth() - m_number->GetSize().GetWidth()) / 2);
@@ -3478,7 +3505,7 @@ void CustomOwnerDrawnComboBox::OnDrawItem(wxDC& dc, const wxRect& rect, int item
     dc.DrawRectangle(rect);
 
     wxString text = GetString(item);
-    dc.SetTextBackground(txt_color);
+    dc.SetTextForeground(txt_color);
     dc.DrawText(text, rect.x + FromDIP(17), rect.y + FromDIP(7));
 
 }
