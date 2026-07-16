@@ -6793,7 +6793,9 @@ LayerResult GCode::process_layer(
 
         std::string gcode_toolchange;
         if (has_wipe_tower) {
-            if (!m_wipe_tower->is_empty_wipe_tower_gcode(*this, extruder_id, extruder_id == layer_extruders.back())) {
+            const bool wipe_tower_gcode_empty =
+                m_wipe_tower->is_empty_wipe_tower_gcode(*this, extruder_id, extruder_id == layer_extruders.back());
+            if (!wipe_tower_gcode_empty) {
                 if (need_insert_timelapse_gcode_for_traditional && !has_insert_timelapse_gcode) {
                     bool should_insert = true;
                     if (m_config.nozzle_diameter.values.size() == 2){
@@ -6816,8 +6818,17 @@ LayerResult GCode::process_layer(
                     gcode += insert_wrapping_detection_gcode();
                     has_insert_wrapping_detection_gcode = true;
                 }
-                gcode_toolchange = m_wipe_tower->tool_change(*this, extruder_id, extruder_id == layer_extruders.back());
             }
+            // Even an empty sparse wipe-tower layer may need to synchronize the
+            // active tool with the upcoming object paths.
+            gcode_toolchange = m_wipe_tower->tool_change(*this, extruder_id, extruder_id == layer_extruders.back());
+
+            // Wipe-tower planning may end before the object layers or omit a
+            // sparse transition. The object paths still require a complete
+            // filament change when the requested tool was not activated.
+            const unsigned int real_extruder_id = resolve_extruder_for_layer(extruder_id + 1, layer_tools);
+            if (m_writer.need_toolchange(real_extruder_id))
+                gcode_toolchange += this->set_extruder(real_extruder_id, print_z);
         } else {
             if (need_insert_timelapse_gcode_for_traditional &&
                 !has_insert_timelapse_gcode &&
