@@ -8159,9 +8159,6 @@ void GUI_App::open_preferences(size_t open_on_tab, const std::string& highlight_
             this->plater_->get_current_canvas3D()->force_set_focus();
         wxGetApp().set_user_region();
         wxGetApp().set_app_version();
-        if (dlg.model_personalized_rec_visible()) {
-            wxGetApp().mainframe->m_webview->SetUserConfig(app_config->get("model_prersonalized_rec") == "true");
-        }
 #if ENABLE_GCODE_LINES_ID_IN_H_SLIDER
             if (dlg.seq_top_layer_only_changed() || dlg.seq_seq_top_gcode_indices_changed())
 #else
