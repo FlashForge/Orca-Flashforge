@@ -2712,6 +2712,26 @@ Sidebar::Sidebar(Plater *parent)
     p->m_panel_mixed_filaments_title->SetSizer(h_sizer_mixed_title);
     p->m_panel_mixed_filaments_title->Layout();
 
+    p->m_panel_mixed_filaments_title->Bind(wxEVT_LEFT_UP, [this](wxMouseEvent &e) {
+        wxPoint click_pos = e.GetPosition();
+        if (auto *source = dynamic_cast<wxWindow *>(e.GetEventObject());
+            source && source != p->m_panel_mixed_filaments_title)
+            click_pos = p->m_panel_mixed_filaments_title->ScreenToClient(source->ClientToScreen(click_pos));
+
+        auto is_action_button = [click_pos](wxWindow *button) {
+            return button && button->IsShown() && button->GetRect().Contains(click_pos);
+        };
+        if (is_action_button(p->m_btn_add_pattern) ||
+            is_action_button(p->m_btn_add_color) ||
+            is_action_button(p->m_bpButton_del_mixed_filament) ||
+            is_action_button(p->m_bpButton_add_mixed_filament))
+            return;
+
+        p->m_mixed_filaments_collapsed = !p->m_mixed_filaments_collapsed;
+        p->m_panel_mixed_filaments_content->Show(!p->m_mixed_filaments_collapsed);
+        m_scrolled_sizer->Layout();
+    });
+
     p->m_panel_mixed_filaments_content = new wxPanel(p->scrolled, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
     p->m_sizer_mixed_filaments_content = new wxBoxSizer(wxVERTICAL);
     p->m_sizer_mixed_filaments_content->AddSpacer(FromDIP(SidebarProps::ContentMargin()));
@@ -19820,7 +19840,7 @@ void Sidebar::update_mixed_filament_panel(bool sync_manager)
         if (p->m_staticline_mixed_bottom)
             p->m_staticline_mixed_bottom->Show(visible);
         p->m_panel_mixed_filaments_title->Show(visible);
-        p->m_panel_mixed_filaments_content->Show(visible);
+        p->m_panel_mixed_filaments_content->Show(visible && !p->m_mixed_filaments_collapsed);
     };
 
     const bool show_mixed_section = should_show_mixed_filament_section(preset_bundle, num_physical);
