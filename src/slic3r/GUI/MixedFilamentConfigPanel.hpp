@@ -56,11 +56,9 @@ private:
     // Static helpers — verbatim from FullSpectrum Plater.cpp:4943-6042.
     static std::vector<unsigned int> decode_gradient_ids(const std::string &s);
     static std::string               encode_gradient_ids(const std::vector<unsigned int> &ids);
-    static std::vector<unsigned int> decode_manual_pattern_ids(const std::string &pattern,
-                                                               unsigned int       a,
-                                                               unsigned int       b,
-                                                               size_t             num_physical,
-                                                               size_t             wall_loops = 0);
+    static std::vector<unsigned int> decode_manual_pattern_ids(const MixedFilament &mf,
+                                                               size_t               num_physical,
+                                                               size_t               wall_loops = 0);
     static std::vector<int>          decode_gradient_weights(const std::string &s, size_t n);
     static std::vector<int>          normalize_gradient_weights(const std::vector<int> &w, size_t n);
     static std::string               encode_gradient_weights(const std::vector<int> &w);

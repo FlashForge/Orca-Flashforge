@@ -5456,7 +5456,7 @@ void PresetBundle::update_multi_material_filament_presets(size_t to_delete_filam
     }
 
     if (deleting_filament) {
-        mixed_filaments.remove_physical_filament(unsigned(to_delete_filament_id + 1));
+        mixed_filaments.remove_physical_filament(unsigned(to_delete_filament_id + 1), num_filaments);
         sync_mixed_filaments_to_config();
     }
 
@@ -5478,18 +5478,12 @@ void PresetBundle::update_mixed_filament_id_remap(const std::vector<MixedFilamen
 
 static bool mixed_filament_depends_on_physical(const MixedFilament &mf, unsigned int physical_1based)
 {
-    const std::string normalized_pattern = MixedFilamentManager::normalize_manual_pattern(mf.manual_pattern);
-    if (!normalized_pattern.empty()) {
-        const std::vector<std::string> groups = MixedFilamentManager::split_pattern_groups(normalized_pattern);
-        for (const std::string &group : groups) {
-            const std::vector<std::string> tokens = MixedFilamentManager::split_pattern_group_to_tokens(group, 0);
-            for (const std::string &token : tokens)
-                if (MixedFilamentManager::physical_filament_from_token(token, mf, MixedFilamentManager::kMaxPhysicalFilaments) == physical_1based)
-                    return true;
-        }
-    }
+    const std::vector<unsigned int> manual_ids =
+        MixedFilamentManager::decode_manual_pattern_physical_ids(mf, MixedFilamentManager::kMaxPhysicalFilaments);
+    if (std::find(manual_ids.begin(), manual_ids.end(), physical_1based) != manual_ids.end())
+        return true;
 
-    if (normalized_pattern.empty()) {
+    if (manual_ids.empty()) {
         for (unsigned int component_id : MixedFilamentManager::decode_gradient_component_ids(mf.gradient_component_ids, 0))
             if (component_id == physical_1based)
                 return true;
@@ -5557,10 +5551,12 @@ void PresetBundle::build_filament_id_remap(const std::vector<MixedFilament> &old
             continue;
         }
 
-        const std::string normalized_pattern = MixedFilamentManager::normalize_manual_pattern(mf.manual_pattern);
+        const bool has_manual_pattern =
+            !MixedFilamentManager::decode_manual_pattern_physical_ids(
+                mf, MixedFilamentManager::kMaxPhysicalFilaments).empty();
         unsigned int a = mf.component_a;
         unsigned int b = mf.component_b;
-        if (normalized_pattern.empty() && (a == deleted_1based || b == deleted_1based)) {
+        if (!has_manual_pattern && (a == deleted_1based || b == deleted_1based)) {
             m_last_filament_id_remap[old_virtual_id] = 0;
             ++missing_hits;
         } else if (deleting_filament && mixed_filament_depends_on_physical(mf, deleted_1based)) {
@@ -5577,7 +5573,7 @@ void PresetBundle::build_filament_id_remap(const std::vector<MixedFilament> &old
                 }
             }
             if (!mapped_by_stable_id) {
-                if (deleting_filament && normalized_pattern.empty()) {
+                if (deleting_filament && !has_manual_pattern) {
                     if (a > deleted_1based)
                         --a;
                     if (b > deleted_1based)

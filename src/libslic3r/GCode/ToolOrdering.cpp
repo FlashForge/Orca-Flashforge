@@ -62,7 +62,7 @@ unsigned int resolve_mixed_with_layer_heights(const MixedFilamentManager *mixed_
     const MixedFilament *mixed_row = mixed_mgr->mixed_filament_from_id(filament_id_1based, num_physical);
     const bool is_custom_mixed = mixed_row != nullptr && mixed_row->custom;
     const bool has_manual_pattern = mixed_row != nullptr &&
-        !MixedFilamentManager::normalize_manual_pattern(mixed_row->manual_pattern).empty();
+        !MixedFilamentManager::decode_manual_pattern_physical_ids(*mixed_row, num_physical).empty();
     const bool has_multicolor_gradient = mixed_row != nullptr &&
         mixed_row->distribution_mode != int(MixedFilament::Simple) &&
         MixedFilamentManager::decode_gradient_component_ids(mixed_row->gradient_component_ids, num_physical).size() >= 3;
@@ -87,6 +87,40 @@ void append_unique_preserve_order(std::vector<unsigned int> &dst, unsigned int v
 {
     if (std::find(dst.begin(), dst.end(), value) == dst.end())
         dst.emplace_back(value);
+}
+
+unsigned int snapmaker_grouped_perimeter_filament_id(const LayerTools &layer_tools,
+                                                      unsigned int      configured_filament_id_1based)
+{
+    if (layer_tools.mixed_mgr == nullptr || layer_tools.num_physical == 0 ||
+        !layer_tools.mixed_mgr->is_mixed(configured_filament_id_1based, layer_tools.num_physical))
+        return 0;
+
+    const MixedFilament *mixed_row =
+        layer_tools.mixed_mgr->mixed_filament_from_id(configured_filament_id_1based, layer_tools.num_physical);
+    if (mixed_row == nullptr || mixed_row->ui_mode != 1 ||
+        mixed_row->manual_pattern.find(',') == std::string::npos)
+        return 0;
+
+    return configured_filament_id_1based;
+}
+
+unsigned int snapmaker_grouped_infill_filament_id(const LayerTools  &layer_tools,
+                                                   const PrintRegion &region,
+                                                   unsigned int       configured_filament_id_1based)
+{
+    const unsigned int grouped_id =
+        snapmaker_grouped_perimeter_filament_id(layer_tools, configured_filament_id_1based);
+    if (grouped_id == 0)
+        return 0;
+
+    const int innermost_perimeter_index = std::max(0, region.config().wall_loops.value - 1);
+    return layer_tools.mixed_mgr->resolve_perimeter(grouped_id,
+                                                     layer_tools.num_physical,
+                                                     layer_tools.layer_index,
+                                                     innermost_perimeter_index,
+                                                     float(layer_tools.print_z),
+                                                     float(layer_tools.layer_height));
 }
 
 bool internal_solid_infill_uses_sparse_filament(const PrintRegion &region, ExtrusionRole role)
@@ -199,7 +233,8 @@ unsigned int LayerTools::sparse_infill_filament(const PrintRegion &region) const
 	unsigned int id_1based = (this->extruder_override == 0)
         ? sparse_infill_filament_id_1based_impl(*this, region)
         : this->extruder_override;
-	return resolve_mixed_1based(id_1based) - 1;
+    const unsigned int grouped = snapmaker_grouped_infill_filament_id(*this, region, id_1based);
+	return (grouped != 0 ? grouped : resolve_mixed_1based(id_1based)) - 1;
 }
 
 unsigned int LayerTools::solid_infill_filament(const PrintRegion &region) const
@@ -208,7 +243,8 @@ unsigned int LayerTools::solid_infill_filament(const PrintRegion &region) const
 	unsigned int id_1based = (this->extruder_override == 0)
         ? region.config().solid_infill_filament.value
         : this->extruder_override;
-	return resolve_mixed_1based(id_1based) - 1;
+    const unsigned int grouped = snapmaker_grouped_infill_filament_id(*this, region, id_1based);
+	return (grouped != 0 ? grouped : resolve_mixed_1based(id_1based)) - 1;
 }
 
 // Returns a zero based extruder this eec should be printed with, according to PrintRegion config or extruder_override if overriden.
@@ -870,9 +906,35 @@ void ToolOrdering::collect_extruders(const PrintObject &object, const std::vecto
                                                                        layerCount,
                                                                        float(layer->print_z),
                                                                        float(layer->height));
-                    layer_tools.extruders.emplace_back(wall_ext);
-                    if (layerCount == 0)
-                        firstLayerExtruders.emplace_back(wall_ext);
+                    const unsigned int grouped_id =
+                        snapmaker_grouped_perimeter_filament_id(layer_tools, configured_wall);
+                    if (grouped_id != 0) {
+                        const std::vector<unsigned int> ordered =
+                            layer_tools.mixed_mgr->ordered_perimeter_extruders(
+                                grouped_id,
+                                layer_tools.num_physical,
+                                layer_tools.layer_index,
+                                float(layer_tools.print_z),
+                                float(layer_tools.layer_height));
+                        if (!ordered.empty()) {
+                            if (ordered.size() >= 2)
+                                layer_tools.preserve_extruder_order = true;
+                            for (const unsigned int extruder_id : ordered) {
+                                layer_tools.extruders.emplace_back(extruder_id);
+                                if (layerCount == 0 &&
+                                    std::find(firstLayerExtruders.begin(), firstLayerExtruders.end(), int(extruder_id)) == firstLayerExtruders.end())
+                                    firstLayerExtruders.emplace_back(int(extruder_id));
+                            }
+                        } else {
+                            layer_tools.extruders.emplace_back(wall_ext);
+                            if (layerCount == 0)
+                                firstLayerExtruders.emplace_back(wall_ext);
+                        }
+                    } else {
+                        layer_tools.extruders.emplace_back(wall_ext);
+                        if (layerCount == 0)
+                            firstLayerExtruders.emplace_back(wall_ext);
+                    }
                 }
 
                 layer_tools.has_object = true;

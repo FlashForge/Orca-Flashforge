@@ -66,6 +66,18 @@ struct MixedFilament
     // Optional Local-Z cap for this mixed row. 0 disables the cap.
     int local_z_max_sublayers = 0;
 
+    // Per-row Z-gradient state used by Snapmaker projects. These fields are
+    // persisted even when the current UI does not expose every gradient mode,
+    // so opening and saving a compatible 3MF never discards its recipe.
+    static constexpr float k_default_gradient_dominant = 0.8f;
+    static constexpr float k_default_gradient_minority = 0.2f;
+    static constexpr float k_min_gradient_difference   = 0.05f;
+
+    bool  gradient_enabled          = false;
+    bool  gradient_metadata_present = false;
+    float gradient_start            = k_default_gradient_dominant;
+    float gradient_end              = k_default_gradient_minority;
+
     // Additional XY surface offsets, in mm, applied when this mixed row
     // resolves to component A or B for an entire layer. Positive values
     // contract inward; negative values expand outward.
@@ -86,12 +98,19 @@ struct MixedFilament
     // generator. Kept only to round-trip old project data.
     bool origin_auto = false;
 
+    // Snapmaker UI mode that created this row (-1=unknown/legacy, 0=ratio,
+    // 1=perimeter cycle, 2=color match, 3=Z gradient). In particular, mode 1
+    // disambiguates Snapmaker's comma-separated perimeter groups from this
+    // fork's legacy comma-separated literal filament sequence.
+    int ui_mode = -1;
+
     // Computed display colour as "#RRGGBB".
     std::string display_color;
 
     bool operator==(const MixedFilament &rhs) const
     {
         constexpr float k_surface_offset_epsilon = 1e-6f;
+        constexpr float k_gradient_epsilon       = 1e-4f;
         return component_a == rhs.component_a &&
                component_b == rhs.component_b &&
                stable_id   == rhs.stable_id   &&
@@ -104,12 +123,17 @@ struct MixedFilament
                pointillism_all_filaments == rhs.pointillism_all_filaments &&
                distribution_mode == rhs.distribution_mode &&
                local_z_max_sublayers == rhs.local_z_max_sublayers &&
+               gradient_enabled == rhs.gradient_enabled &&
+               gradient_metadata_present == rhs.gradient_metadata_present &&
+               std::abs(gradient_start - rhs.gradient_start) <= k_gradient_epsilon &&
+               std::abs(gradient_end - rhs.gradient_end) <= k_gradient_epsilon &&
                std::abs(component_a_surface_offset - rhs.component_a_surface_offset) <= k_surface_offset_epsilon &&
                std::abs(component_b_surface_offset - rhs.component_b_surface_offset) <= k_surface_offset_epsilon &&
                enabled      == rhs.enabled &&
                deleted      == rhs.deleted &&
                custom       == rhs.custom &&
-               origin_auto  == rhs.origin_auto;
+               origin_auto  == rhs.origin_auto &&
+               ui_mode      == rhs.ui_mode;
     }
     bool operator!=(const MixedFilament &rhs) const { return !(*this == rhs); }
 };
@@ -178,7 +202,8 @@ public:
     // Remove a physical filament (1-based ID) from the mixed list.
     // Any mixed filament that contains the removed component is deleted.
     // Remaining component IDs are shifted down to stay aligned with physical IDs.
-    void remove_physical_filament(unsigned int deleted_filament_id);
+    void remove_physical_filament(unsigned int deleted_filament_id,
+                                  size_t       remaining_physical_count = 0);
 
     // Add a custom mixed filament.
     void add_custom_filament(unsigned int component_a, unsigned int component_b, int mix_b_percent, const std::vector<std::string> &filament_colours);
@@ -199,18 +224,30 @@ public:
     std::string serialize_custom_entries();
     void load_custom_entries(const std::string &serialized, const std::vector<std::string> &filament_colours);
 
-    // Normalize a manual mixed-pattern string into comma-separated numeric IDs.
-    // Legacy compact patterns are still accepted for backward compatibility.
-    // Returns empty string if invalid.
+    // Normalize a legacy manual pattern, or normalize according to the row's
+    // grammar (Snapmaker cm1 rows use comma-separated perimeter groups).
+    // Returns an empty string if invalid.
     static std::string normalize_manual_pattern(const std::string &pattern);
+    static std::string normalize_manual_pattern(const MixedFilament &mf);
     static int         mix_percent_from_manual_pattern(const std::string &pattern);
+    static int         mix_percent_from_manual_pattern(const MixedFilament &mf, size_t num_physical);
+    static bool        manual_pattern_is_valid_for_physical(const MixedFilament &mf, size_t num_physical);
 
-    // Pattern token helpers shared by preview/slicing code. Tokens are literal
-    // 1-based physical filament IDs; IDs greater than 9 may be written as
-    // bracketed tokens such as "[12]" before normalization.
+    // Legacy pattern token helpers shared by preview code. Row-aware callers
+    // should use the normalize/decode overloads above and below.
     static std::vector<std::string> split_pattern_group_to_tokens(const std::string &group, size_t num_physical = 0);
     static unsigned int physical_filament_from_token(const std::string &token, const MixedFilament &mf, size_t num_physical);
     static std::vector<std::string> split_pattern_groups(const std::string &pattern);
+    // Decode every physical filament referenced by either this fork's legacy
+    // literal sequence or a Snapmaker cm1 perimeter-group pattern.
+    static std::vector<unsigned int> decode_manual_pattern_physical_ids(const MixedFilament &mf,
+                                                                         size_t num_physical);
+    // Build a bounded preview sequence. Snapmaker wall groups contribute equal
+    // weight, while the tokens inside each group contribute equal layer-cycle
+    // weight; walls beyond the declared groups follow the last group.
+    static std::vector<unsigned int> manual_pattern_preview_sequence(const MixedFilament &mf,
+                                                                      size_t num_physical,
+                                                                      size_t wall_loops);
 
     // Gradient component ID encoding / decoding. Canonical extended form uses
     // slash-separated decimals when any ID is greater than 9.

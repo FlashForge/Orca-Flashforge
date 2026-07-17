@@ -373,7 +373,12 @@ static bool parse_row_definition(const std::string &row,
                                  int               &local_z_max_sublayers,
                                  float             &component_a_surface_offset,
                                  float             &component_b_surface_offset,
-                                 bool              &deleted)
+                                 bool              &deleted,
+                                 bool              &gradient_enabled,
+                                 bool              &gradient_metadata_present,
+                                 float             &gradient_start,
+                                 float             &gradient_end,
+                                 int               &ui_mode)
 {
     auto trim_copy = [](const std::string &s) {
         size_t lo = 0;
@@ -474,6 +479,11 @@ static bool parse_row_definition(const std::string &row,
     component_a_surface_offset = 0.f;
     component_b_surface_offset = 0.f;
     deleted = false;
+    gradient_enabled = false;
+    gradient_metadata_present = false;
+    gradient_start = MixedFilament::k_default_gradient_dominant;
+    gradient_end   = MixedFilament::k_default_gradient_minority;
+    ui_mode        = -1;
 
     size_t token_idx = 5;
     if (tokens.size() >= 6) {
@@ -485,7 +495,10 @@ static bool parse_row_definition(const std::string &row,
         if (legacy == "0" || legacy == "1") {
             pointillism_all_filaments = (legacy == "1");
             token_idx = 6;
-        } else if (legacy.empty() || legacy[0] == 'g' || legacy[0] == 'G' || legacy[0] == 'm' || legacy[0] == 'M') {
+        } else if (legacy.empty() || legacy[0] == 'g' || legacy[0] == 'G' ||
+                   legacy[0] == 'm' || legacy[0] == 'M' ||
+                   legacy[0] == 'r' || legacy[0] == 'R' ||
+                   legacy[0] == 'c' || legacy[0] == 'C') {
             token_idx = 5;
         } else {
             manual_pattern = legacy;
@@ -552,6 +565,34 @@ static bool parse_row_definition(const std::string &row,
                 stable_id = parsed_stable_id;
             continue;
         }
+        if ((tok[0] == 'c' || tok[0] == 'C') && tok.size() >= 3 &&
+            (tok[1] == 'm' || tok[1] == 'M')) {
+            int parsed_ui_mode = ui_mode;
+            if (parse_int_token(tok.substr(2), parsed_ui_mode))
+                ui_mode = std::clamp(parsed_ui_mode, -1, 3);
+            continue;
+        }
+        if (tok[0] == 'r' || tok[0] == 'R') {
+            const std::string body = tok.substr(1);
+            const size_t first_separator = body.find('/');
+            const size_t second_separator = first_separator == std::string::npos ?
+                std::string::npos : body.find('/', first_separator + 1);
+            if (first_separator != std::string::npos && second_separator != std::string::npos) {
+                int parsed_enabled = gradient_enabled ? 1 : 0;
+                float parsed_start = gradient_start;
+                float parsed_end   = gradient_end;
+                if (parse_int_token(body.substr(0, first_separator), parsed_enabled) &&
+                    parse_float_token(body.substr(first_separator + 1,
+                                                  second_separator - first_separator - 1), parsed_start) &&
+                    parse_float_token(body.substr(second_separator + 1), parsed_end)) {
+                    gradient_enabled = parsed_enabled != 0;
+                    gradient_metadata_present = true;
+                    gradient_start   = parsed_start;
+                    gradient_end     = parsed_end;
+                }
+            }
+            continue;
+        }
         pattern_tokens.push_back(tok);
     }
 
@@ -573,6 +614,12 @@ static bool parse_row_definition(const std::string &row,
 #endif
     pointillism_all_filaments = false;
     distribution_mode = normalize_distribution_mode_without_pointillism(distribution_mode, gradient_component_ids);
+
+    gradient_start = std::clamp(gradient_start, 0.01f, 0.99f);
+    gradient_end   = std::clamp(gradient_end, 0.01f, 0.99f);
+    if (gradient_enabled &&
+        std::abs(gradient_start - gradient_end) < MixedFilament::k_min_gradient_difference)
+        gradient_enabled = false;
     return true;
 }
 
@@ -876,6 +923,192 @@ unsigned int MixedFilamentManager::physical_filament_from_token(const std::strin
     return id;
 }
 
+static bool uses_snapmaker_perimeter_groups(const MixedFilament &mf)
+{
+    return mf.ui_mode == 1 && !mf.manual_pattern.empty();
+}
+
+// Snapmaker cycle rows use a different, otherwise ambiguous pattern grammar:
+// commas split perimeter groups, compact digits are layer tokens inside each
+// group, and brackets carry literal multi-digit physical IDs. Keep this
+// normalization separate from this fork's established comma-separated literal
+// ID sequence so existing projects retain their original meaning.
+static std::string normalize_snapmaker_manual_pattern(const std::string &pattern)
+{
+    if (pattern.empty())
+        return {};
+
+    std::string normalized;
+    normalized.reserve(pattern.size());
+    bool group_has_content = false;
+    for (size_t i = 0; i < pattern.size(); ++i) {
+        const char c = pattern[i];
+        if (c >= '1' && c <= '9') {
+            normalized.push_back(c);
+            group_has_content = true;
+            continue;
+        }
+        if (c == ',') {
+            if (!group_has_content)
+                return {};
+            normalized.push_back(c);
+            group_has_content = false;
+            continue;
+        }
+        if (c != '[')
+            return {};
+
+        size_t end = i + 1;
+        while (end < pattern.size() && std::isdigit(static_cast<unsigned char>(pattern[end])))
+            ++end;
+        if (end == i + 1 || end >= pattern.size() || pattern[end] != ']')
+            return {};
+
+        unsigned int id = 0;
+        if (!parse_manual_pattern_id_token(pattern.substr(i, end - i + 1), id) || id == 0 ||
+            id > MixedFilamentManager::kMaxPhysicalFilaments)
+            return {};
+
+        if (id <= 9)
+            normalized.push_back(char('0' + id));
+        else
+            normalized += '[' + std::to_string(id) + ']';
+        group_has_content = true;
+        i = end;
+    }
+
+    return group_has_content ? normalized : std::string();
+}
+
+static std::string normalized_manual_pattern_for_row(const MixedFilament &mf)
+{
+    return MixedFilamentManager::normalize_manual_pattern(mf);
+}
+
+static std::vector<std::string> tokenize_snapmaker_pattern_group(const std::string &group)
+{
+    std::vector<std::string> tokens;
+    for (size_t i = 0; i < group.size(); ++i) {
+        const char c = group[i];
+        if (c >= '1' && c <= '9') {
+            tokens.emplace_back(1, c);
+            continue;
+        }
+        if (c != '[')
+            continue;
+
+        size_t end = i + 1;
+        while (end < group.size() && std::isdigit(static_cast<unsigned char>(group[end])))
+            ++end;
+        if (end > i + 1 && end < group.size() && group[end] == ']') {
+            tokens.emplace_back(group.substr(i + 1, end - i - 1));
+            i = end;
+        }
+    }
+    return tokens;
+}
+
+static unsigned int snapmaker_physical_filament_from_token(const std::string &token,
+                                                            const MixedFilament &mf,
+                                                            size_t num_physical)
+{
+    if (token == "1")
+        return mf.component_a >= 1 && mf.component_a <= num_physical ? mf.component_a : 0;
+    if (token == "2")
+        return mf.component_b >= 1 && mf.component_b <= num_physical ? mf.component_b : 0;
+
+    unsigned int id = 0;
+    if (!parse_manual_pattern_id_token(token, id) || id > num_physical)
+        return 0;
+    return id;
+}
+
+static std::vector<unsigned int> decode_snapmaker_pattern_group(const std::string &group,
+                                                                 const MixedFilament &mf,
+                                                                 size_t num_physical)
+{
+    std::vector<unsigned int> ids;
+    for (const std::string &token : tokenize_snapmaker_pattern_group(group)) {
+        const unsigned int id = snapmaker_physical_filament_from_token(token, mf, num_physical);
+        if (id != 0)
+            ids.emplace_back(id);
+    }
+    return ids;
+}
+
+static std::vector<unsigned int> decode_snapmaker_pattern(const MixedFilament &mf, size_t num_physical)
+{
+    std::vector<unsigned int> ids;
+    const std::string normalized = normalize_snapmaker_manual_pattern(mf.manual_pattern);
+    for (const std::string &group : MixedFilamentManager::split_pattern_groups(normalized)) {
+        std::vector<unsigned int> group_ids = decode_snapmaker_pattern_group(group, mf, num_physical);
+        ids.insert(ids.end(), group_ids.begin(), group_ids.end());
+    }
+    return ids;
+}
+
+static bool snapmaker_pattern_is_valid_for_physical(const MixedFilament &mf, size_t num_physical)
+{
+    const std::string normalized = normalize_snapmaker_manual_pattern(mf.manual_pattern);
+    if (normalized.empty() || num_physical == 0)
+        return false;
+
+    const std::vector<std::string> groups = MixedFilamentManager::split_pattern_groups(normalized);
+    if (groups.empty())
+        return false;
+    for (const std::string &group : groups) {
+        const std::vector<std::string> tokens = tokenize_snapmaker_pattern_group(group);
+        if (tokens.empty())
+            return false;
+        for (const std::string &token : tokens)
+            if (snapmaker_physical_filament_from_token(token, mf, num_physical) == 0)
+                return false;
+    }
+    return true;
+}
+
+static bool remap_snapmaker_pattern_after_physical_deletion(const MixedFilament &mf,
+                                                             unsigned int         deleted_filament_id,
+                                                             size_t               remaining_physical_count,
+                                                             std::string         &out_pattern,
+                                                             unsigned int        &out_component_a,
+                                                             unsigned int        &out_component_b)
+{
+    const std::string normalized = normalize_snapmaker_manual_pattern(mf.manual_pattern);
+    if (normalized.empty())
+        return false;
+
+    std::ostringstream remapped;
+    const std::vector<std::string> groups = MixedFilamentManager::split_pattern_groups(normalized);
+    for (size_t group_index = 0; group_index < groups.size(); ++group_index) {
+        if (group_index != 0)
+            remapped << ',';
+        for (const std::string &token : tokenize_snapmaker_pattern_group(groups[group_index])) {
+            unsigned int id = snapmaker_physical_filament_from_token(
+                token, mf, MixedFilamentManager::kMaxPhysicalFilaments);
+            if (id == 0 || id == deleted_filament_id)
+                return false;
+            if (id > deleted_filament_id)
+                --id;
+            if (remaining_physical_count != 0 && id > remaining_physical_count)
+                return false;
+            if (id <= 9)
+                remapped << id;
+            else
+                remapped << '[' << id << ']';
+        }
+    }
+
+    // Snapmaker cycle rows define tokens 1/2 as aliases for components A/B.
+    // Re-canonicalize the row to the UI invariant A=physical 1, B=physical 2;
+    // any former alias targeting a higher physical ID is now emitted as a
+    // direct token. This keeps the serialized recipe readable by Snapmaker.
+    out_component_a = 1;
+    out_component_b = 2;
+    out_pattern = normalize_snapmaker_manual_pattern(remapped.str());
+    return !out_pattern.empty();
+}
+
 static std::vector<unsigned int> decode_manual_pattern_ids_for_physical(const std::string &pattern, size_t num_physical)
 {
     std::vector<unsigned int> parsed;
@@ -888,6 +1121,87 @@ static std::vector<unsigned int> decode_manual_pattern_ids_for_physical(const st
         if (id >= 1 && id <= num_physical)
             out.emplace_back(id);
     return out;
+}
+
+std::vector<unsigned int> MixedFilamentManager::decode_manual_pattern_physical_ids(const MixedFilament &mf,
+                                                                                    size_t num_physical)
+{
+    if (uses_snapmaker_perimeter_groups(mf))
+        return decode_snapmaker_pattern(mf, num_physical);
+    return decode_manual_pattern_ids_for_physical(normalize_manual_pattern(mf.manual_pattern), num_physical);
+}
+
+std::vector<unsigned int> MixedFilamentManager::manual_pattern_preview_sequence(const MixedFilament &mf,
+                                                                                 size_t num_physical,
+                                                                                 size_t wall_loops)
+{
+    if (!uses_snapmaker_perimeter_groups(mf))
+        return decode_manual_pattern_physical_ids(mf, num_physical);
+
+    const std::vector<std::string> groups = split_pattern_groups(
+        normalize_snapmaker_manual_pattern(mf.manual_pattern));
+    if (groups.empty() || num_physical == 0)
+        return {};
+
+    const size_t walls = wall_loops == 0 ? groups.size() : wall_loops;
+    if (walls == 0)
+        return {};
+
+    std::vector<std::vector<unsigned int>> wall_sequences;
+    wall_sequences.reserve(walls);
+    for (size_t wall_index = 0; wall_index < walls; ++wall_index) {
+        std::vector<unsigned int> ids = decode_snapmaker_pattern_group(
+            groups[std::min(wall_index, groups.size() - 1)], mf, num_physical);
+        if (ids.empty())
+            return {};
+        wall_sequences.emplace_back(std::move(ids));
+    }
+
+    // Use a common cycle length so each wall contributes exactly the same
+    // number of samples and, for normal patterns, every token is represented
+    // equally. Bound pathological least-common-multiple growth for GUI use.
+    const size_t max_samples_per_wall = std::max<size_t>(1, 4096 / walls);
+    size_t samples_per_wall = 1;
+    for (const std::vector<unsigned int> &ids : wall_sequences) {
+        const size_t factor = ids.size() / std::gcd(samples_per_wall, ids.size());
+        if (factor != 0 && samples_per_wall > max_samples_per_wall / factor) {
+            samples_per_wall = max_samples_per_wall;
+            break;
+        }
+        samples_per_wall *= factor;
+    }
+
+    std::vector<unsigned int> sequence;
+    sequence.reserve(walls * samples_per_wall);
+    for (const std::vector<unsigned int> &ids : wall_sequences)
+        for (size_t sample = 0; sample < samples_per_wall; ++sample)
+            sequence.emplace_back(ids[sample % ids.size()]);
+    return sequence;
+}
+
+static std::string format_gradient_ratio_token(float value)
+{
+    std::ostringstream ss;
+    ss.imbue(std::locale::classic());
+    ss << std::fixed << std::setprecision(4) << std::clamp(value, 0.01f, 0.99f);
+    return ss.str();
+}
+
+static int mix_percent_from_snapmaker_pattern(const MixedFilament &mf, size_t num_physical)
+{
+    const std::string normalized = normalize_snapmaker_manual_pattern(mf.manual_pattern);
+    const std::vector<std::string> groups = MixedFilamentManager::split_pattern_groups(normalized);
+    double component_b_share = 0.;
+    size_t valid_groups = 0;
+    for (const std::string &group : groups) {
+        const std::vector<unsigned int> ids = decode_snapmaker_pattern_group(group, mf, num_physical);
+        if (ids.empty())
+            continue;
+        component_b_share += double(std::count(ids.begin(), ids.end(), mf.component_b)) / double(ids.size());
+        ++valid_groups;
+    }
+    return valid_groups == 0 ? 50 :
+        clamp_int(int(std::lround(100. * component_b_share / double(valid_groups))), 0, 100);
 }
 
 static int mix_percent_from_normalized_pattern(const std::string &pattern)
@@ -1057,9 +1371,7 @@ std::vector<unsigned int> MixedFilamentManager::physical_extruder_indices_for_fi
     for (const unsigned int component_id : decode_gradient_component_ids(mf->gradient_component_ids, num_physical))
         push_physical(component_id);
 
-    const std::string normalized_pattern = normalize_manual_pattern(mf->manual_pattern);
-    const std::vector<unsigned int> pattern_ids =
-        decode_manual_pattern_ids_for_physical(normalized_pattern, num_physical);
+    const std::vector<unsigned int> pattern_ids = decode_manual_pattern_physical_ids(*mf, num_physical);
     for (const unsigned int pattern_id : pattern_ids)
         push_physical(pattern_id);
 
@@ -1256,27 +1568,6 @@ static std::vector<unsigned int> build_weighted_gradient_sequence(const std::vec
     return sequence;
 }
 
-static std::vector<unsigned int> build_manual_pattern_preview_sequence(const std::string &pattern,
-                                                                       unsigned int       component_a,
-                                                                       unsigned int       component_b,
-                                                                       size_t             num_physical,
-                                                                       size_t             wall_loops)
-{
-    (void)component_a;
-    (void)component_b;
-    (void)wall_loops;
-
-    std::vector<unsigned int> sequence;
-    if (num_physical == 0)
-        return sequence;
-
-    const std::string normalized = MixedFilamentManager::normalize_manual_pattern(pattern);
-    if (normalized.empty())
-        return sequence;
-
-    return decode_manual_pattern_ids_for_physical(normalized, num_physical);
-}
-
 static std::pair<int, int> effective_pair_preview_ratios(int percent_b)
 {
     const int mix_b = std::clamp(percent_b, 0, 100);
@@ -1371,6 +1662,38 @@ static std::string blend_display_color_from_sequence(const std::vector<std::stri
         return color_percents.front().first;
 
     return MixedFilamentManager::blend_color_multi(color_percents);
+}
+
+static std::string blend_snapmaker_grouped_display_color(const MixedFilament           &entry,
+                                                          const std::vector<std::string> &colors,
+                                                          size_t                         num_physical,
+                                                          size_t                         wall_loops)
+{
+    const std::vector<std::string> groups = MixedFilamentManager::split_pattern_groups(
+        normalize_snapmaker_manual_pattern(entry.manual_pattern));
+    if (groups.empty() || colors.empty() || num_physical == 0)
+        return {};
+
+    const size_t walls = wall_loops == 0 ? groups.size() : wall_loops;
+    std::vector<double> weights(num_physical + 1, 0.);
+    for (size_t wall_index = 0; wall_index < walls; ++wall_index) {
+        const std::vector<unsigned int> ids = decode_snapmaker_pattern_group(
+            groups[std::min(wall_index, groups.size() - 1)], entry, num_physical);
+        if (ids.empty())
+            continue;
+        const double token_weight = 1. / (double(walls) * double(ids.size()));
+        for (const unsigned int id : ids)
+            weights[id] += token_weight;
+    }
+
+    std::vector<std::pair<std::string, int>> color_percents;
+    for (size_t id = 1; id <= num_physical && id <= colors.size(); ++id) {
+        if (weights[id] <= 0.)
+            continue;
+        color_percents.emplace_back(colors[id - 1], std::max(1, int(std::lround(weights[id] * 10000.))));
+    }
+    return color_percents.empty() ? std::string() :
+        MixedFilamentManager::blend_color_multi(color_percents);
 }
 
 static std::vector<double> build_local_z_preview_pass_heights(double nominal_layer_height,
@@ -1642,7 +1965,7 @@ int mixed_filament_effective_local_z_preview_mix_b_percent(const MixedFilament  
     if (!preview_settings.local_z_mode)
         return std::clamp(mf.mix_b_percent, 0, 100);
 
-    const std::string normalized_pattern = MixedFilamentManager::normalize_manual_pattern(mf.manual_pattern);
+    const std::string normalized_pattern = normalized_manual_pattern_for_row(mf);
     if (!normalized_pattern.empty() || mf.distribution_mode == int(MixedFilament::SameLayerPointillisme))
         return std::clamp(mf.mix_b_percent, 0, 100);
 
@@ -1716,7 +2039,7 @@ bool mixed_filament_supports_bias_apparent_color(const MixedFilament            
         return false;
     if (mf.distribution_mode == int(MixedFilament::SameLayerPointillisme))
         return false;
-    if (!MixedFilamentManager::normalize_manual_pattern(mf.manual_pattern).empty())
+    if (!normalized_manual_pattern_for_row(mf).empty())
         return false;
     if (MixedFilamentManager::decode_gradient_component_ids(mf.gradient_component_ids, 0).size() >= 3)
         return false;
@@ -1759,10 +2082,15 @@ std::string compute_mixed_filament_display_color(const MixedFilament &entry, con
             apparent_pct_b);
     }
 
-    const std::string normalized_pattern = MixedFilamentManager::normalize_manual_pattern(entry.manual_pattern);
-    if (!normalized_pattern.empty()) {
-        const std::vector<unsigned int> sequence = build_manual_pattern_preview_sequence(
-            normalized_pattern, entry.component_a, entry.component_b, context.num_physical, context.preview_settings.wall_loops);
+    if (!entry.manual_pattern.empty()) {
+        if (uses_snapmaker_perimeter_groups(entry)) {
+            const std::string grouped_color = blend_snapmaker_grouped_display_color(
+                entry, context.physical_colors, context.num_physical, context.preview_settings.wall_loops);
+            if (!grouped_color.empty())
+                return grouped_color;
+        }
+        const std::vector<unsigned int> sequence =
+            MixedFilamentManager::decode_manual_pattern_physical_ids(entry, context.num_physical);
         if (!sequence.empty())
             return blend_display_color_from_sequence(context.physical_colors, context.num_physical, sequence, fallback);
     }
@@ -1802,7 +2130,7 @@ std::string compute_mixed_filament_display_color(const MixedFilament &entry, con
 
 std::string mixed_filament_standardized_name(const MixedFilament &entry, size_t num_physical)
 {
-    const std::string normalized_pattern = MixedFilamentManager::normalize_manual_pattern(entry.manual_pattern);
+    const std::string normalized_pattern = normalized_manual_pattern_for_row(entry);
     if (!normalized_pattern.empty())
         return std::string("Pattern ") + normalized_pattern;
 
@@ -1907,18 +2235,27 @@ void MixedFilamentManager::auto_generate(const std::vector<std::string> &filamen
     refresh_display_colors(filament_colours);
 }
 
-void MixedFilamentManager::remove_physical_filament(unsigned int deleted_filament_id)
+void MixedFilamentManager::remove_physical_filament(unsigned int deleted_filament_id,
+                                                     size_t       remaining_physical_count)
 {
     if (deleted_filament_id == 0 || m_mixed.empty())
         return;
+    if (remaining_physical_count != 0 && remaining_physical_count < 2) {
+        m_mixed.clear();
+        return;
+    }
 
     std::vector<MixedFilament> filtered;
     filtered.reserve(m_mixed.size());
     for (MixedFilament mf : m_mixed) {
-        const std::string normalized_pattern = normalize_manual_pattern(mf.manual_pattern);
-        std::vector<unsigned int> manual_ids;
+        bool snapmaker_components_remapped = false;
+        const bool snapmaker_groups = uses_snapmaker_perimeter_groups(mf);
+        const std::string normalized_pattern = snapmaker_groups ?
+            normalize_snapmaker_manual_pattern(mf.manual_pattern) : normalize_manual_pattern(mf.manual_pattern);
+        std::vector<unsigned int> manual_ids = snapmaker_groups ?
+            decode_snapmaker_pattern(mf, kMaxPhysicalFilaments) : std::vector<unsigned int>();
         const bool has_manual_pattern = !normalized_pattern.empty() &&
-            parse_manual_pattern_numeric_ids(normalized_pattern, manual_ids);
+            (snapmaker_groups || parse_manual_pattern_numeric_ids(normalized_pattern, manual_ids));
         const bool fallback_component_deleted =
             mf.component_a == deleted_filament_id || mf.component_b == deleted_filament_id;
         if (has_manual_pattern &&
@@ -1942,21 +2279,48 @@ void MixedFilamentManager::remove_physical_filament(unsigned int deleted_filamen
             for (unsigned int &id : manual_ids)
                 if (id > deleted_filament_id)
                     --id;
-            mf.manual_pattern = encode_manual_pattern_ids(manual_ids);
+            if (snapmaker_groups) {
+                std::string remapped_pattern;
+                unsigned int remapped_component_a = 0;
+                unsigned int remapped_component_b = 0;
+                if (!remap_snapmaker_pattern_after_physical_deletion(mf,
+                                                                      deleted_filament_id,
+                                                                      remaining_physical_count,
+                                                                      remapped_pattern,
+                                                                      remapped_component_a,
+                                                                      remapped_component_b))
+                    continue;
+                mf.manual_pattern = std::move(remapped_pattern);
+                mf.component_a = remapped_component_a;
+                mf.component_b = remapped_component_b;
+                snapmaker_components_remapped = true;
+            } else {
+                mf.manual_pattern = encode_manual_pattern_ids(manual_ids);
+            }
+            if (mf.manual_pattern.empty())
+                continue;
         }
 
         // component_a/component_b remain the fallback pair even for manual
         // rows. Keep them on the same 1-based physical-ID basis as the pattern.
-        if (mf.component_a > deleted_filament_id)
-            --mf.component_a;
-        if (mf.component_b > deleted_filament_id)
-            --mf.component_b;
+        if (!snapmaker_components_remapped) {
+            if (mf.component_a > deleted_filament_id)
+                --mf.component_a;
+            if (mf.component_b > deleted_filament_id)
+                --mf.component_b;
+        } else if (remaining_physical_count != 0) {
+            // Canonicalizing a Snapmaker row may swap which physical filament
+            // component_b represents. Keep the cached UI ratio consistent with
+            // the rewritten pattern in the same in-memory session.
+            mf.mix_b_percent = mix_percent_from_snapmaker_pattern(mf, remaining_physical_count);
+        }
 
         // If a manual row's compatibility pair referenced the removed spool,
         // rebuild it from retained pattern IDs. Keeping the same numeric value
         // for an exactly-deleted component silently retargets it to the next
         // spool (and deleting the last spool leaves it out of range).
-        if (has_manual_pattern && (fallback_component_deleted || mf.component_a == mf.component_b)) {
+        if (has_manual_pattern && !snapmaker_components_remapped &&
+            (fallback_component_deleted || mf.component_a == mf.component_b)) {
             std::vector<unsigned int> pair_candidates;
             pair_candidates.reserve(manual_ids.size() + 2);
             auto append_candidate = [&pair_candidates](unsigned int id) {
@@ -2090,9 +2454,38 @@ std::string MixedFilamentManager::normalize_manual_pattern(const std::string &pa
     return encode_manual_pattern_ids(ids);
 }
 
+std::string MixedFilamentManager::normalize_manual_pattern(const MixedFilament &mf)
+{
+    return uses_snapmaker_perimeter_groups(mf) ?
+        normalize_snapmaker_manual_pattern(mf.manual_pattern) : normalize_manual_pattern(mf.manual_pattern);
+}
+
+bool MixedFilamentManager::manual_pattern_is_valid_for_physical(const MixedFilament &mf,
+                                                                 size_t               num_physical)
+{
+    if (num_physical == 0)
+        return false;
+    if (uses_snapmaker_perimeter_groups(mf))
+        return snapmaker_pattern_is_valid_for_physical(mf, num_physical);
+
+    std::vector<unsigned int> ids;
+    const std::string normalized = normalize_manual_pattern(mf.manual_pattern);
+    return parse_manual_pattern_numeric_ids(normalized, ids) && !ids.empty() &&
+        std::all_of(ids.begin(), ids.end(), [num_physical](unsigned int id) {
+            return id >= 1 && id <= num_physical;
+        });
+}
+
 int MixedFilamentManager::mix_percent_from_manual_pattern(const std::string &pattern)
 {
     return mix_percent_from_normalized_pattern(normalize_manual_pattern(pattern));
+}
+
+int MixedFilamentManager::mix_percent_from_manual_pattern(const MixedFilament &mf,
+                                                           size_t               num_physical)
+{
+    return uses_snapmaker_perimeter_groups(mf) ?
+        mix_percent_from_snapmaker_pattern(mf, num_physical) : mix_percent_from_manual_pattern(mf.manual_pattern);
 }
 
 void MixedFilamentManager::apply_gradient_settings(int   gradient_mode,
@@ -2144,7 +2537,23 @@ std::string MixedFilamentManager::serialize_custom_entries()
            << 'd' << (mf.deleted ? 1 : 0) << ','
            << 'o' << (mf.origin_auto ? 1 : 0) << ','
            << 'u' << mf.stable_id;
-        const std::string normalized_pattern = normalize_manual_pattern(mf.manual_pattern);
+        if (mf.ui_mode >= 0) {
+            mf.ui_mode = std::clamp(mf.ui_mode, 0, 3);
+            ss << ",cm" << mf.ui_mode;
+        }
+        if (mf.gradient_enabled || mf.gradient_metadata_present) {
+            mf.gradient_metadata_present = true;
+            mf.gradient_start = std::clamp(mf.gradient_start, 0.01f, 0.99f);
+            mf.gradient_end   = std::clamp(mf.gradient_end, 0.01f, 0.99f);
+            if (mf.gradient_enabled &&
+                std::abs(mf.gradient_start - mf.gradient_end) < MixedFilament::k_min_gradient_difference)
+                mf.gradient_enabled = false;
+            ss << ",r" << (mf.gradient_enabled ? 1 : 0) << '/'
+               << format_gradient_ratio_token(mf.gradient_start) << '/'
+               << format_gradient_ratio_token(mf.gradient_end);
+        }
+        const std::string normalized_pattern = uses_snapmaker_perimeter_groups(mf) ?
+            normalize_snapmaker_manual_pattern(mf.manual_pattern) : normalize_manual_pattern(mf.manual_pattern);
         if (!normalized_pattern.empty())
             ss << ',' << normalized_pattern;
     }
@@ -2217,9 +2626,15 @@ void MixedFilamentManager::load_custom_entries(const std::string &serialized, co
         float component_a_surface_offset = 0.f;
         float component_b_surface_offset = 0.f;
         bool deleted = false;
+        bool gradient_enabled = false;
+        bool gradient_metadata_present = false;
+        float gradient_start = MixedFilament::k_default_gradient_dominant;
+        float gradient_end   = MixedFilament::k_default_gradient_minority;
+        int ui_mode = -1;
         if (!parse_row_definition(row, a, b, stable_id, enabled, custom, origin_auto, mix, pointillism_all_filaments,
                                   gradient_component_ids, gradient_component_weights, manual_pattern, distribution_mode,
-                                  local_z_max_sublayers, component_a_surface_offset, component_b_surface_offset, deleted)) {
+                                  local_z_max_sublayers, component_a_surface_offset, component_b_surface_offset, deleted,
+                                  gradient_enabled, gradient_metadata_present, gradient_start, gradient_end, ui_mode)) {
             ++skipped_rows;
             BOOST_LOG_TRIVIAL(warning) << "MixedFilamentManager::load_custom_entries invalid row format: " << row;
             continue;
@@ -2232,6 +2647,20 @@ void MixedFilamentManager::load_custom_entries(const std::string &serialized, co
                                        << ", b=" << b
                                        << ", physical_count=" << n;
             continue;
+        }
+        if (ui_mode == 1 && !manual_pattern.empty()) {
+            MixedFilament pattern_row;
+            pattern_row.component_a   = a;
+            pattern_row.component_b   = b;
+            pattern_row.manual_pattern = manual_pattern;
+            pattern_row.ui_mode       = ui_mode;
+            if (!snapmaker_pattern_is_valid_for_physical(pattern_row, n)) {
+                ++skipped_rows;
+                BOOST_LOG_TRIVIAL(warning) << "MixedFilamentManager::load_custom_entries invalid Snapmaker pattern"
+                                           << ", row=" << row
+                                           << ", physical_count=" << n;
+                continue;
+            }
         }
 
         if (!custom) {
@@ -2251,22 +2680,30 @@ void MixedFilamentManager::load_custom_entries(const std::string &serialized, co
             mf.component_a = std::min(a, b);
             mf.component_b = std::max(a, b);
             mf.stable_id = dedupe_stable_id(stable_id != 0 ? stable_id : mf.stable_id);
+            mf.ui_mode = ui_mode;
             mf.enabled = enabled;
             mf.pointillism_all_filaments = pointillism_all_filaments;
             mf.gradient_component_ids = normalize_gradient_component_ids(gradient_component_ids);
             mf.gradient_component_weights =
                 normalize_gradient_component_weights(gradient_component_weights, decode_gradient_component_ids(mf.gradient_component_ids, 0).size());
-            mf.manual_pattern = normalize_manual_pattern(manual_pattern);
+            mf.manual_pattern = ui_mode == 1 ? normalize_snapmaker_manual_pattern(manual_pattern) :
+                                               normalize_manual_pattern(manual_pattern);
             mf.distribution_mode = clamp_int(distribution_mode, int(MixedFilament::LayerCycle), int(MixedFilament::Simple));
             mf.local_z_max_sublayers = std::max(0, local_z_max_sublayers);
             mf.component_a_surface_offset = clamp_surface_offset(component_a_surface_offset);
             mf.component_b_surface_offset = clamp_surface_offset(component_b_surface_offset);
-            mf.mix_b_percent = mf.manual_pattern.empty() ? mix : mix_percent_from_normalized_pattern(mf.manual_pattern);
+            mf.mix_b_percent = mf.manual_pattern.empty() ? mix :
+                (mf.ui_mode == 1 ? mix_percent_from_snapmaker_pattern(mf, n) :
+                                   mix_percent_from_normalized_pattern(mf.manual_pattern));
             mf.deleted = deleted;
             if (mf.deleted)
                 mf.enabled = false;
             mf.custom = false;
             mf.origin_auto = true;
+            mf.gradient_enabled = gradient_enabled;
+            mf.gradient_metadata_present = gradient_metadata_present;
+            mf.gradient_start   = gradient_start;
+            mf.gradient_end     = gradient_end;
             disable_pointillism_mode(mf);
 
             rebuilt.push_back(std::move(mf));
@@ -2282,6 +2719,7 @@ void MixedFilamentManager::load_custom_entries(const std::string &serialized, co
         mf.component_a = a;
         mf.component_b = b;
         mf.stable_id = dedupe_stable_id(stable_id);
+        mf.ui_mode = ui_mode;
         mf.mix_b_percent = mix;
         mf.ratio_a = 1;
         mf.ratio_b = 1;
@@ -2289,19 +2727,25 @@ void MixedFilamentManager::load_custom_entries(const std::string &serialized, co
         mf.gradient_component_ids = normalize_gradient_component_ids(gradient_component_ids);
         mf.gradient_component_weights =
             normalize_gradient_component_weights(gradient_component_weights, decode_gradient_component_ids(mf.gradient_component_ids, 0).size());
-        mf.manual_pattern = normalize_manual_pattern(manual_pattern);
+        mf.manual_pattern = ui_mode == 1 ? normalize_snapmaker_manual_pattern(manual_pattern) :
+                                           normalize_manual_pattern(manual_pattern);
         mf.distribution_mode = clamp_int(distribution_mode, int(MixedFilament::LayerCycle), int(MixedFilament::Simple));
         mf.local_z_max_sublayers = std::max(0, local_z_max_sublayers);
         mf.component_a_surface_offset = clamp_surface_offset(component_a_surface_offset);
         mf.component_b_surface_offset = clamp_surface_offset(component_b_surface_offset);
         if (!mf.manual_pattern.empty())
-            mf.mix_b_percent = mix_percent_from_normalized_pattern(mf.manual_pattern);
+            mf.mix_b_percent = mf.ui_mode == 1 ? mix_percent_from_snapmaker_pattern(mf, n) :
+                                                 mix_percent_from_normalized_pattern(mf.manual_pattern);
         mf.enabled = enabled;
         mf.deleted = deleted;
         if (mf.deleted)
             mf.enabled = false;
         mf.custom = custom;
         mf.origin_auto = origin_auto;
+        mf.gradient_enabled = gradient_enabled;
+        mf.gradient_metadata_present = gradient_metadata_present;
+        mf.gradient_start   = gradient_start;
+        mf.gradient_end     = gradient_end;
         disable_pointillism_mode(mf);
         rebuilt.push_back(std::move(mf));
         ++loaded_rows;
@@ -2355,6 +2799,14 @@ unsigned int MixedFilamentManager::resolve(unsigned int filament_id,
     // Manual pattern takes precedence when provided.
     // Pattern stores comma-separated 1-based physical filament IDs.
     if (!mf.manual_pattern.empty()) {
+        if (uses_snapmaker_perimeter_groups(mf)) {
+            const std::vector<unsigned int> pattern_ids = decode_snapmaker_pattern(mf, num_physical);
+            if (!pattern_ids.empty()) {
+                const int pos = safe_mod(layer_index, int(pattern_ids.size()));
+                return pattern_ids[size_t(pos)];
+            }
+            return mf.component_a;
+        }
         const std::string normalized_pattern = normalize_manual_pattern(mf.manual_pattern);
         const std::vector<unsigned int> pattern_ids = decode_manual_pattern_ids_for_physical(normalized_pattern, num_physical);
         if (!pattern_ids.empty()) {
@@ -2413,11 +2865,24 @@ unsigned int MixedFilamentManager::resolve_perimeter(unsigned int filament_id,
                                                      float        layer_height,
                                                      bool         force_height_weighted) const
 {
-    (void)perimeter_index;
-
     const int mixed_idx = mixed_index_from_filament_id(filament_id, num_physical);
     if (mixed_idx < 0)
         return filament_id;
+
+    const MixedFilament &mf = m_mixed[size_t(mixed_idx)];
+    if (uses_snapmaker_perimeter_groups(mf)) {
+        const std::string normalized = normalize_snapmaker_manual_pattern(mf.manual_pattern);
+        const std::vector<std::string> groups = split_pattern_groups(normalized);
+        if (!groups.empty()) {
+            const size_t group_index = std::min<size_t>(size_t(std::max(0, perimeter_index)), groups.size() - 1);
+            const std::vector<unsigned int> pattern_ids =
+                decode_snapmaker_pattern_group(groups[group_index], mf, num_physical);
+            if (!pattern_ids.empty()) {
+                const int pos = safe_mod(layer_index, int(pattern_ids.size()));
+                return pattern_ids[size_t(pos)];
+            }
+        }
+    }
 
     return resolve(filament_id, num_physical, layer_index, layer_print_z, layer_height, force_height_weighted);
 }
@@ -2436,8 +2901,10 @@ unsigned int MixedFilamentManager::effective_painted_region_filament_id(unsigned
         return filament_id;
 
     const MixedFilament &mf = m_mixed[size_t(mixed_idx)];
-    if (mf.distribution_mode == int(MixedFilament::SameLayerPointillisme) ||
-        !normalize_manual_pattern(mf.manual_pattern).empty())
+    const bool has_manual_pattern = uses_snapmaker_perimeter_groups(mf) ?
+        !normalize_snapmaker_manual_pattern(mf.manual_pattern).empty() :
+        !normalize_manual_pattern(mf.manual_pattern).empty();
+    if (mf.distribution_mode == int(MixedFilament::SameLayerPointillisme) || has_manual_pattern)
         return filament_id;
 
     const bool is_custom_mixed = mf.custom;
@@ -2473,7 +2940,9 @@ float MixedFilamentManager::component_surface_offset(unsigned int filament_id,
     if (mixed_row->distribution_mode == int(MixedFilament::SameLayerPointillisme))
         return 0.f;
 
-    const std::string normalized_pattern = normalize_manual_pattern(mixed_row->manual_pattern);
+    const std::string normalized_pattern = uses_snapmaker_perimeter_groups(*mixed_row) ?
+        normalize_snapmaker_manual_pattern(mixed_row->manual_pattern) :
+        normalize_manual_pattern(mixed_row->manual_pattern);
     if (!normalized_pattern.empty())
         return 0.f;
 
@@ -2507,9 +2976,28 @@ std::vector<unsigned int> MixedFilamentManager::ordered_perimeter_extruders(unsi
     }
 
     const MixedFilament &mf = m_mixed[size_t(mixed_idx)];
+    if (uses_snapmaker_perimeter_groups(mf)) {
+        const std::vector<std::string> groups =
+            split_pattern_groups(normalize_snapmaker_manual_pattern(mf.manual_pattern));
+        ordered.reserve(groups.size());
+        for (size_t group_index = 0; group_index < groups.size(); ++group_index) {
+            const unsigned int resolved = resolve_perimeter(filament_id,
+                                                             num_physical,
+                                                             layer_index,
+                                                             int(group_index),
+                                                             layer_print_z,
+                                                             layer_height,
+                                                             force_height_weighted);
+            if (resolved >= 1 && resolved <= num_physical &&
+                std::find(ordered.begin(), ordered.end(), resolved) == ordered.end())
+                ordered.emplace_back(resolved);
+        }
+        if (!ordered.empty())
+            return ordered;
+    }
+
     if (!mf.manual_pattern.empty()) {
-        const std::string normalized_pattern = normalize_manual_pattern(mf.manual_pattern);
-        const std::vector<unsigned int> pattern_ids = decode_manual_pattern_ids_for_physical(normalized_pattern, num_physical);
+        const std::vector<unsigned int> pattern_ids = decode_manual_pattern_physical_ids(mf, num_physical);
         if (!pattern_ids.empty()) {
             ordered.reserve(pattern_ids.size());
             for (const unsigned int resolved : pattern_ids) {

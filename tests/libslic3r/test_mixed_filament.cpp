@@ -1,8 +1,10 @@
 #include <catch2/catch_all.hpp>
 
 #include "libslic3r/ExtrusionEntity.hpp"
+#include "libslic3r/Layer.hpp"
 #include "libslic3r/LocalZOrderOptimizer.hpp"
 #include "libslic3r/MixedFilament.hpp"
+#include "libslic3r/Model.hpp"
 #include "libslic3r/PresetBundle.hpp"
 #include "libslic3r/Print.hpp"
 #include "libslic3r/TriangleSelector.hpp"
@@ -200,6 +202,35 @@ TEST_CASE("Deleting a middle physical filament remaps every later physical ID", 
     CHECK(remap[2] == 0);
     CHECK(remap[3] == 2);
     CHECK(remap[4] == 3);
+}
+
+TEST_CASE("Deleting a physical filament keeps painted Snapmaker grouped rows by stable ID",
+          "[MixedFilament][Compatibility][Delete]")
+{
+    PresetBundle bundle;
+    bundle.filament_presets.assign(6, "Default Filament");
+    auto &colors = bundle.project_config.option<ConfigOptionStrings>("filament_colour")->values;
+    colors = {"#100000", "#200000", "#300000", "#400000", "#500000", "#600000"};
+    bundle.update_multi_material_filament_presets();
+
+    MixedFilamentManager &mgr = bundle.mixed_filaments;
+    mgr.add_custom_filament(1, 2, 50, colors);
+    REQUIRE(mgr.mixed_filaments().size() == 1);
+    MixedFilament &row = mgr.mixed_filaments().front();
+    row.ui_mode = 1;
+    row.manual_pattern = "333,444";
+    const uint64_t stable_id = row.stable_id;
+
+    bundle.filament_presets.erase(bundle.filament_presets.begin());
+    colors.erase(colors.begin());
+    bundle.update_multi_material_filament_presets(/*to_delete_filament_id=*/0,
+                                                   /*old_num_filaments=*/6);
+
+    REQUIRE(bundle.mixed_filaments.mixed_filaments().size() == 1);
+    CHECK(bundle.mixed_filaments.mixed_filaments().front().stable_id == stable_id);
+    const std::vector<unsigned int> remap = bundle.consume_last_filament_id_remap();
+    REQUIRE(remap.size() > 7);
+    CHECK(remap[7] == 6);
 }
 
 TEST_CASE("Mixed filament component surface offsets round-trip and bias the second layer component", "[MixedFilament]")
@@ -416,6 +447,203 @@ TEST_CASE("Mixed filament manual patterns resolve comma-separated physical IDs b
     const std::vector<unsigned int> ordered = mgr.ordered_perimeter_extruders(mixed_filament_id, 12, 0);
     const std::vector<unsigned int> expected_ordered{1, 2, 12, 11};
     CHECK(ordered == expected_ordered);
+}
+
+TEST_CASE("Snapmaker cycle patterns resolve independently for each perimeter", "[MixedFilament][Compatibility]")
+{
+    const std::vector<std::string> colors = {"#00FF00", "#FFFF00", "#FF0000", "#0000FF"};
+    const std::string definitions =
+        "3,4,1,1,50,0,g,w,m2,z0,xa0,xb0,d0,o0,u42,cm1,12,21";
+
+    MixedFilamentManager mgr;
+    mgr.load_custom_entries(definitions, colors);
+    REQUIRE(mgr.mixed_filaments().size() == 1);
+
+    const MixedFilament &row = mgr.mixed_filaments().front();
+    CHECK(row.ui_mode == 1);
+    CHECK(row.manual_pattern == "12,21");
+    CHECK(MixedFilamentManager::normalize_manual_pattern(row) == "12,21");
+    CHECK(MixedFilamentManager::manual_pattern_is_valid_for_physical(row, colors.size()));
+    CHECK(MixedFilamentManager::mix_percent_from_manual_pattern(row, colors.size()) == 50);
+    const std::vector<unsigned int> expected_preview{3, 4, 4, 3};
+    CHECK(MixedFilamentManager::decode_manual_pattern_physical_ids(row, colors.size()) == expected_preview);
+
+    MixedFilament invalid_row = row;
+    invalid_row.manual_pattern = "12,[5]";
+    CHECK_FALSE(MixedFilamentManager::manual_pattern_is_valid_for_physical(invalid_row, colors.size()));
+
+    const unsigned int mixed_filament_id = 5;
+    // Ordinary consumers use Snapmaker's flattened cycle: 1,2,2,1, where
+    // symbolic tokens 1/2 map to the row's physical components 3/4.
+    CHECK(mgr.resolve(mixed_filament_id, 4, 0) == 3);
+    CHECK(mgr.resolve(mixed_filament_id, 4, 1) == 4);
+    CHECK(mgr.resolve(mixed_filament_id, 4, 2) == 4);
+    CHECK(mgr.resolve(mixed_filament_id, 4, 3) == 3);
+
+    // Perimeter zero uses group "12"; perimeter one and later use "21".
+    CHECK(mgr.resolve_perimeter(mixed_filament_id, 4, 0, 0) == 3);
+    CHECK(mgr.resolve_perimeter(mixed_filament_id, 4, 1, 0) == 4);
+    CHECK(mgr.resolve_perimeter(mixed_filament_id, 4, 0, 1) == 4);
+    CHECK(mgr.resolve_perimeter(mixed_filament_id, 4, 1, 1) == 3);
+    CHECK(mgr.resolve_perimeter(mixed_filament_id, 4, 0, 8) == 4);
+
+    const std::vector<unsigned int> expected_ordered{3, 4};
+    CHECK(mgr.ordered_perimeter_extruders(mixed_filament_id, 4, 0) == expected_ordered);
+    const std::vector<unsigned int> expected_reversed{4, 3};
+    CHECK(mgr.ordered_perimeter_extruders(mixed_filament_id, 4, 1) == expected_reversed);
+
+    const std::string round_trip = mgr.serialize_custom_entries();
+    CHECK(round_trip.find(",cm1,12,21") != std::string::npos);
+
+    MixedFilamentManager weighted;
+    weighted.load_custom_entries(
+        "3,4,1,1,50,0,g,w,m2,z0,xa0,xb0,d0,o0,u43,cm1,12,2", colors);
+    REQUIRE(weighted.mixed_filaments().size() == 1);
+    const MixedFilament &weighted_row = weighted.mixed_filaments().front();
+    CHECK(weighted_row.mix_b_percent == 75);
+    const std::vector<unsigned int> expected_two_wall_preview{3, 4, 4, 4};
+    CHECK(MixedFilamentManager::manual_pattern_preview_sequence(weighted_row, colors.size(), 2) ==
+          expected_two_wall_preview);
+    const std::vector<unsigned int> expected_three_wall_preview{3, 4, 4, 4, 4, 4};
+    CHECK(MixedFilamentManager::manual_pattern_preview_sequence(weighted_row, colors.size(), 3) ==
+          expected_three_wall_preview);
+
+    MixedFilamentDisplayContext display_context;
+    display_context.num_physical = colors.size();
+    display_context.physical_colors = colors;
+    display_context.preview_settings.wall_loops = 2;
+    CHECK(compute_mixed_filament_display_color(weighted_row, display_context) ==
+          MixedFilamentManager::blend_color(colors[2], colors[3], 25, 75));
+    display_context.preview_settings.wall_loops = 0;
+    CHECK(compute_mixed_filament_display_color(weighted_row, display_context) ==
+          MixedFilamentManager::blend_color(colors[2], colors[3], 25, 75));
+    display_context.preview_settings.wall_loops = 2;
+
+    MixedFilamentManager long_groups;
+    long_groups.load_custom_entries(
+        "1,2,1,1,50,0,g,w,m2,z0,xa0.05,xb-0.05,d0,o0,u44,cm1,111,222", colors);
+    REQUIRE(long_groups.mixed_filaments().size() == 1);
+    display_context.component_bias_enabled = true;
+    CHECK_FALSE(mixed_filament_supports_bias_apparent_color(
+        long_groups.mixed_filaments().front(), display_context.preview_settings, true));
+    CHECK(mixed_filament_standardized_name(long_groups.mixed_filaments().front(), colors.size()) ==
+          "Pattern 111,222");
+    CHECK(compute_mixed_filament_display_color(long_groups.mixed_filaments().front(), display_context) ==
+          MixedFilamentManager::blend_color(colors[0], colors[1], 50, 50));
+}
+
+TEST_CASE("Snapmaker per-row gradient metadata survives project round-trip", "[MixedFilament][Compatibility]")
+{
+    const std::vector<std::string> colors = {"#FF0000", "#0000FF"};
+    const std::string definitions =
+        "1,2,1,1,50,0,g,w,m0,z2,xa0,xb0,d0,o0,u77,cm3,r1/0.8/0.2";
+
+    MixedFilamentManager mgr;
+    mgr.load_custom_entries(definitions, colors);
+    REQUIRE(mgr.mixed_filaments().size() == 1);
+
+    const MixedFilament &row = mgr.mixed_filaments().front();
+    CHECK(row.ui_mode == 3);
+    CHECK(row.gradient_enabled);
+    CHECK(row.gradient_start == Catch::Approx(0.8f));
+    CHECK(row.gradient_end == Catch::Approx(0.2f));
+
+    const std::string serialized = mgr.serialize_custom_entries();
+    CHECK(serialized.find(",cm3") != std::string::npos);
+    CHECK(serialized.find(",r1/0.8000/0.2000") != std::string::npos);
+
+    MixedFilamentManager reloaded;
+    reloaded.load_custom_entries(serialized, colors);
+    REQUIRE(reloaded.mixed_filaments().size() == 1);
+    CHECK(reloaded.mixed_filaments().front() == row);
+
+    const std::string disabled_definition =
+        "1,2,1,1,50,0,g,w,m0,z2,xa0,xb0,d0,o0,u78,cm3,r0/0.6/0.4";
+    MixedFilamentManager disabled;
+    disabled.load_custom_entries(disabled_definition, colors);
+    REQUIRE(disabled.mixed_filaments().size() == 1);
+    const MixedFilament &disabled_row = disabled.mixed_filaments().front();
+    CHECK_FALSE(disabled_row.gradient_enabled);
+    CHECK(disabled_row.gradient_metadata_present);
+    CHECK(disabled_row.gradient_start == Catch::Approx(0.6f));
+    CHECK(disabled_row.gradient_end == Catch::Approx(0.4f));
+    CHECK(disabled.serialize_custom_entries().find(",r0/0.6000/0.4000") != std::string::npos);
+}
+
+TEST_CASE("Snapmaker cycle patterns preserve literal low IDs after physical deletion",
+          "[MixedFilament][Compatibility][Delete]")
+{
+    const std::vector<std::string> colors(6, "#FFFFFF");
+    MixedFilamentManager mgr;
+    mgr.add_custom_filament(5, 6, 50, colors);
+    REQUIRE(mgr.mixed_filaments().size() == 1);
+
+    MixedFilament &row = mgr.mixed_filaments().front();
+    row.ui_mode = 1;
+    row.manual_pattern = "3,4";
+    mgr.remove_physical_filament(1, 5);
+
+    REQUIRE(mgr.mixed_filaments().size() == 1);
+    const MixedFilament &remapped = mgr.mixed_filaments().front();
+    CHECK(remapped.component_a == 1);
+    CHECK(remapped.component_b == 2);
+    CHECK(remapped.manual_pattern == "2,3");
+    CHECK(mgr.resolve_perimeter(6, 5, 0, 0) == 2);
+    CHECK(mgr.resolve_perimeter(6, 5, 0, 1) == 3);
+
+    const std::string serialized = mgr.serialize_custom_entries();
+    CHECK(serialized.find(",cm1,2,3") != std::string::npos);
+    MixedFilamentManager reloaded;
+    reloaded.load_custom_entries(serialized, std::vector<std::string>(5, "#FFFFFF"));
+    REQUIRE(reloaded.mixed_filaments().size() == 1);
+    CHECK(reloaded.resolve_perimeter(6, 5, 0, 0) == 2);
+    CHECK(reloaded.resolve_perimeter(6, 5, 0, 1) == 3);
+
+    MixedFilamentManager rewritten_alias;
+    rewritten_alias.add_custom_filament(5, 6, 50, colors);
+    REQUIRE(rewritten_alias.mixed_filaments().size() == 1);
+    rewritten_alias.mixed_filaments().front().ui_mode = 1;
+    rewritten_alias.mixed_filaments().front().manual_pattern = "2,2,3";
+    rewritten_alias.mixed_filaments().front().mix_b_percent = 67;
+    rewritten_alias.remove_physical_filament(1, 5);
+    REQUIRE(rewritten_alias.mixed_filaments().size() == 1);
+    CHECK(rewritten_alias.mixed_filaments().front().component_a == 1);
+    CHECK(rewritten_alias.mixed_filaments().front().component_b == 2);
+    CHECK(rewritten_alias.mixed_filaments().front().manual_pattern == "5,5,2");
+    CHECK(rewritten_alias.mixed_filaments().front().mix_b_percent == 33);
+    CHECK(rewritten_alias.resolve_perimeter(6, 5, 0, 0) == 5);
+    CHECK(rewritten_alias.resolve_perimeter(6, 5, 0, 1) == 5);
+    CHECK(rewritten_alias.resolve_perimeter(6, 5, 0, 2) == 2);
+
+    MixedFilamentManager single_direct;
+    single_direct.add_custom_filament(1, 2, 50, std::vector<std::string>(3, "#FFFFFF"));
+    REQUIRE(single_direct.mixed_filaments().size() == 1);
+    single_direct.mixed_filaments().front().ui_mode = 1;
+    single_direct.mixed_filaments().front().manual_pattern = "3";
+    single_direct.remove_physical_filament(1, 2);
+    REQUIRE(single_direct.mixed_filaments().size() == 1);
+    CHECK(single_direct.mixed_filaments().front().component_a == 1);
+    CHECK(single_direct.mixed_filaments().front().component_b == 2);
+    CHECK(single_direct.mixed_filaments().front().manual_pattern == "2");
+    CHECK(single_direct.resolve_perimeter(3, 2, 0, 0) == 2);
+
+    MixedFilamentManager one_physical_left;
+    one_physical_left.add_custom_filament(1, 2, 50, {"#FFFFFF", "#FFFFFF"});
+    REQUIRE(one_physical_left.mixed_filaments().size() == 1);
+    one_physical_left.mixed_filaments().front().ui_mode = 1;
+    one_physical_left.mixed_filaments().front().manual_pattern = "1";
+    one_physical_left.remove_physical_filament(2, 1);
+    CHECK(one_physical_left.mixed_filaments().empty());
+}
+
+TEST_CASE("Snapmaker cycle rows reject physical IDs unavailable on this printer",
+          "[MixedFilament][Compatibility]")
+{
+    MixedFilamentManager mgr;
+    mgr.load_custom_entries(
+        "1,2,1,1,50,0,g,w,m2,z0,xa0,xb0,d0,o0,u79,cm1,32",
+        {"#FF0000", "#0000FF"});
+    CHECK(mgr.mixed_filaments().empty());
 }
 
 TEST_CASE("Mixed filament manual patterns support multi-digit and bracketed physical IDs", "[MixedFilament]")
@@ -1477,4 +1705,152 @@ TEST_CASE("MixedFilament: direct multicolor 3-color proportional allocation", "[
     REQUIRE_THAT(frac1, Catch::Matchers::WithinAbs(0.50, 0.10));
     REQUIRE_THAT(frac2, Catch::Matchers::WithinAbs(0.25, 0.10));
     REQUIRE_THAT(frac3, Catch::Matchers::WithinAbs(0.25, 0.10));
+}
+
+TEST_CASE("LayerRegion resolves an ordinary mixed filament to each layer's physical nozzle",
+          "[MixedFilament][LayerRegion]")
+{
+    DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
+    config.set_num_extruders(2);
+    config.set_num_filaments(2);
+
+    const std::vector<std::string> colors = {"#FF0000", "#0000FF"};
+    config.option<ConfigOptionFloats>("nozzle_diameter")->values  = {0.4, 0.6};
+    config.option<ConfigOptionFloats>("filament_diameter")->values = {1.75, 1.75};
+    config.option<ConfigOptionStrings>("filament_colour")->values = colors;
+    config.option<ConfigOptionInts>("filament_map")->values = {1, 2};
+
+    MixedFilamentManager mixed;
+    mixed.add_custom_filament(1, 2, 50, colors);
+    config.option<ConfigOptionString>("mixed_filament_definitions")->value = mixed.serialize_custom_entries();
+
+    // Two physical filaments make the first enabled mixed row virtual ID 3.
+    config.option<ConfigOptionInt>("wall_filament")->value = 3;
+
+    Model model;
+    ModelObject *model_object = model.add_object();
+    model_object->add_volume(make_cube(10., 10., 1.));
+    model_object->add_instance();
+
+    Print print;
+    print.set_status_silent();
+    print.apply(model, config, true);
+
+    REQUIRE(print.objects().size() == 1);
+    REQUIRE(print.config().nozzle_diameter.size() == 2);
+    REQUIRE(print.mixed_filament_manager().mixed_filament_from_id(3, 2) != nullptr);
+
+    PrintObject *print_object = print.get_object(0);
+    REQUIRE(print_object != nullptr);
+    REQUIRE(print_object->num_printing_regions() == 1);
+    const PrintRegion &print_region = print_object->printing_region(0);
+    REQUIRE(print_region.config().wall_filament.value == 3);
+
+    Layer *layer_a = print_object->add_layer(0, 0.2, 0.2, 0.1);
+    Layer *layer_b = print_object->add_layer(1, 0.2, 0.4, 0.3);
+    LayerRegion *region_a = layer_a->add_region(&print_region);
+    LayerRegion *region_b = layer_b->add_region(&print_region);
+
+    // A 1:1 ordinary row resolves layer 0 to physical filament 1 and layer 1
+    // to physical filament 2. Flow construction must use those physical
+    // nozzle entries, never the out-of-range virtual ID 3.
+    CHECK(region_a->extruder(frPerimeter) == 1u);
+    CHECK(region_b->extruder(frPerimeter) == 2u);
+    CHECK(region_a->flow(frPerimeter).nozzle_diameter() == Catch::Approx(0.4f));
+    CHECK(region_b->flow(frPerimeter).nozzle_diameter() == Catch::Approx(0.6f));
+
+    const Flow bridge_a = region_a->bridging_flow(frPerimeter, true);
+    const Flow bridge_b = region_b->bridging_flow(frPerimeter, true);
+    CHECK(bridge_a.bridge());
+    CHECK(bridge_b.bridge());
+    CHECK(bridge_a.nozzle_diameter() == Catch::Approx(0.4f));
+    CHECK(bridge_b.nozzle_diameter() == Catch::Approx(0.6f));
+}
+
+TEST_CASE("LayerRegion uses Snapmaker perimeter groups for wall and infill flows",
+          "[MixedFilament][LayerRegion][Compatibility]")
+{
+    DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
+    config.set_num_extruders(2);
+    config.set_num_filaments(2);
+
+    const std::vector<std::string> colors = {"#FF0000", "#0000FF"};
+    config.option<ConfigOptionFloats>("nozzle_diameter")->values = {0.4, 0.6};
+    config.option<ConfigOptionFloats>("filament_diameter")->values = {1.75, 1.75};
+    config.option<ConfigOptionStrings>("filament_colour")->values = colors;
+    config.option<ConfigOptionInts>("filament_map")->values = {2, 1};
+
+    MixedFilamentManager mixed;
+    mixed.add_custom_filament(1, 2, 50, colors);
+    REQUIRE(mixed.mixed_filaments().size() == 1);
+    mixed.mixed_filaments().front().ui_mode = 1;
+    mixed.mixed_filaments().front().manual_pattern = "1,2";
+    config.option<ConfigOptionString>("mixed_filament_definitions")->value = mixed.serialize_custom_entries();
+    config.option<ConfigOptionInt>("wall_filament")->value = 3;
+    config.option<ConfigOptionInt>("sparse_infill_filament")->value = 3;
+    config.option<ConfigOptionInt>("solid_infill_filament")->value = 3;
+    config.set("wall_loops", 2);
+
+    Model model;
+    ModelObject *model_object = model.add_object();
+    model_object->add_volume(make_cube(10., 10., 1.));
+    model_object->add_instance();
+
+    Print print;
+    print.set_status_silent();
+    print.apply(model, config, true);
+    PrintObject *print_object = print.get_object(0);
+    REQUIRE(print_object != nullptr);
+    REQUIRE(print_object->num_printing_regions() == 1);
+    const PrintRegion &print_region = print_object->printing_region(0);
+
+    Layer *layer = print_object->add_layer(0, 0.2, 0.2, 0.1);
+    LayerRegion *layer_region = layer->add_region(&print_region);
+    REQUIRE(layer_region != nullptr);
+
+    CHECK(layer_region->extruder(frExternalPerimeter) == 1u);
+    CHECK(layer_region->extruder(frPerimeter) == 2u);
+    CHECK(layer_region->extruder(frInfill) == 2u);
+    CHECK(layer_region->extruder(frSolidInfill) == 2u);
+    CHECK(layer_region->extruder(frTopSolidInfill) == 2u);
+    CHECK(layer_region->flow(frExternalPerimeter).nozzle_diameter() == Catch::Approx(0.6f));
+    CHECK(layer_region->flow(frPerimeter).nozzle_diameter() == Catch::Approx(0.4f));
+    CHECK(layer_region->flow(frTopSolidInfill).nozzle_diameter() == Catch::Approx(0.4f));
+}
+
+TEST_CASE("LayerRegion sparse flow follows the per-layer infill override route",
+          "[MixedFilament][LayerRegion]")
+{
+    DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
+    config.set_num_extruders(2);
+    config.set_num_filaments(2);
+    config.option<ConfigOptionFloats>("nozzle_diameter")->values = {0.4, 0.6};
+    config.option<ConfigOptionFloats>("filament_diameter")->values = {1.75, 1.75};
+    config.option<ConfigOptionInts>("filament_map")->values = {1, 2};
+    config.option<ConfigOptionInt>("wall_filament")->value = 1;
+    config.option<ConfigOptionInt>("sparse_infill_filament")->value = 2;
+    config.option<ConfigOptionBool>("enable_infill_filament_override")->value = true;
+    config.option<ConfigOptionInt>("infill_filament_use_base_first_layers")->value = 1;
+
+    Model model;
+    ModelObject *model_object = model.add_object();
+    model_object->add_volume(make_cube(10., 10., 1.));
+    model_object->add_instance();
+
+    Print print;
+    print.set_status_silent();
+    print.apply(model, config, true);
+    PrintObject *print_object = print.get_object(0);
+    REQUIRE(print_object != nullptr);
+    REQUIRE(print_object->num_printing_regions() == 1);
+    const PrintRegion &print_region = print_object->printing_region(0);
+
+    LayerRegion *first = print_object->add_layer(0, 0.2, 0.2, 0.1)->add_region(&print_region);
+    LayerRegion *second = print_object->add_layer(1, 0.2, 0.4, 0.3)->add_region(&print_region);
+    REQUIRE(first != nullptr);
+    REQUIRE(second != nullptr);
+    CHECK(first->extruder(frInfill) == 1u);
+    CHECK(second->extruder(frInfill) == 2u);
+    CHECK(first->flow(frInfill).nozzle_diameter() == Catch::Approx(0.4f));
+    CHECK(second->flow(frInfill).nozzle_diameter() == Catch::Approx(0.6f));
 }

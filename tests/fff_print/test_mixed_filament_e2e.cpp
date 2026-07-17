@@ -22,6 +22,8 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -332,5 +334,112 @@ TEST_CASE("Mixed pattern and weighted color keep Local-Z wipe-tower planning in 
     GCodeProcessorResult gcode_result;
     REQUIRE_NOTHROW(print.export_gcode(gcode_path.string(), &gcode_result, nullptr));
     REQUIRE(boost::filesystem::file_size(gcode_path) > 0);
+    boost::filesystem::remove(gcode_path);
+}
+
+TEST_CASE("Snapmaker perimeter groups emit different physical tools for different walls",
+          "[MixedFilament][Compatibility][GCode]")
+{
+    DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
+    config.set_num_extruders(2);
+    config.set_num_filaments(2);
+
+    const std::vector<std::string> colors = {"#E53935", "#1E88E5"};
+    config.option<ConfigOptionFloats>("nozzle_diameter")->values   = {0.4, 0.4};
+    config.option<ConfigOptionFloats>("filament_diameter")->values = {1.75, 1.75};
+    config.option<ConfigOptionStrings>("filament_colour")->values = colors;
+    config.option<ConfigOptionFloats>("flush_volumes_matrix")->values = {0., 280., 280., 0.};
+    config.option<ConfigOptionInts>("filament_map")->values       = {1, 2};
+    config.option<ConfigOptionInts>("filament_printable")->values = {3, 3};
+    config.option<ConfigOptionEnum<FilamentMapMode>>("filament_map_mode")->value = FilamentMapMode::fmmManual;
+    ConfigOptionEnumsGenericNullable *nozzle_types =
+        config.option<ConfigOptionEnumsGenericNullable>("nozzle_type");
+    REQUIRE(nozzle_types != nullptr);
+    REQUIRE_FALSE(nozzle_types->values.empty());
+    nozzle_types->values.assign(2, nozzle_types->values.front());
+
+    MixedFilamentManager manager;
+    manager.add_custom_filament(1, 2, 50, colors);
+    REQUIRE(manager.mixed_filaments().size() == 1);
+    MixedFilament &grouped = manager.mixed_filaments().front();
+    grouped.ui_mode = 1;
+    grouped.manual_pattern = "1,2";
+    grouped.distribution_mode = int(MixedFilament::Simple);
+
+    config.option<ConfigOptionString>("mixed_filament_definitions")->value =
+        manager.serialize_custom_entries();
+    config.option<ConfigOptionInt>("wall_filament")->value = 3;
+    config.option<ConfigOptionInt>("sparse_infill_filament")->value = 3;
+    config.option<ConfigOptionInt>("solid_infill_filament")->value = 3;
+    config.set("wall_loops", 2);
+    config.set("layer_height", 0.20);
+    config.set("initial_layer_print_height", 0.20);
+    config.set("single_extruder_multi_material", false);
+    config.set("enable_prime_tower", false);
+
+    for (const std::string &key : config.keys()) {
+        ConfigOption *option = config.option(key);
+        if (option == nullptr || option->type() != coEnums)
+            continue;
+        const ConfigOptionDef *definition = print_config_def.get(key);
+        REQUIRE(definition != nullptr);
+        if (option->nullable())
+            dynamic_cast<ConfigOptionEnumsGenericNullable *>(option)->keys_map = definition->enum_keys_map;
+        else
+            dynamic_cast<ConfigOptionEnumsGeneric *>(option)->keys_map = definition->enum_keys_map;
+    }
+
+    Model model;
+    ModelObject *object = model.add_object();
+    object->name = "grouped-perimeters";
+    object->add_volume(make_cube(12., 12., 1.));
+    object->add_instance();
+    object->instances.front()->set_offset(Vec3d(40., 40., 0.));
+    object->ensure_on_bed();
+
+    DynamicPrintConfig printer_config = config;
+    printer_config.option<ConfigOptionString>("mixed_filament_definitions")->value.clear();
+
+    Model empty_model;
+    Print print;
+    print.is_BBL_printer() = false;
+    print.is_flashforge_printer() = true;
+    print.set_status_silent();
+    print.apply(empty_model, printer_config, true);
+    print.apply(model, config, true);
+    REQUIRE(print.mixed_filament_manager().mixed_filament_from_id(3, 2) != nullptr);
+    REQUIRE_NOTHROW(print.process());
+
+    const boost::filesystem::path gcode_path =
+        boost::filesystem::temp_directory_path() /
+        boost::filesystem::unique_path("orca-grouped-perimeters-%%%%-%%%%.gcode");
+    GCodeProcessorResult result;
+    REQUIRE_NOTHROW(print.export_gcode(gcode_path.string(), &result, nullptr));
+
+    std::map<unsigned int, std::set<unsigned int>> perimeter_tools_by_layer;
+    std::map<unsigned int, std::vector<unsigned int>> perimeter_order_by_layer;
+    std::set<unsigned int> infill_tools;
+    for (const GCodeProcessorResult::MoveVertex &move : result.moves) {
+        if ((move.extrusion_role == erExternalPerimeter || move.extrusion_role == erPerimeter) &&
+            move.type == EMoveType::Extrude && move.delta_extruder > 0.f) {
+            perimeter_tools_by_layer[move.layer_id].insert(unsigned(move.extruder_id));
+            std::vector<unsigned int> &order = perimeter_order_by_layer[move.layer_id];
+            if (order.empty() || order.back() != unsigned(move.extruder_id))
+                order.emplace_back(unsigned(move.extruder_id));
+        }
+        if (move.type == EMoveType::Extrude && move.delta_extruder > 0.f && is_infill(move.extrusion_role))
+            infill_tools.insert(unsigned(move.extruder_id));
+    }
+    CHECK(std::any_of(perimeter_tools_by_layer.begin(), perimeter_tools_by_layer.end(),
+                      [](const auto &layer_tools) {
+                          return layer_tools.second.count(0) != 0 && layer_tools.second.count(1) != 0;
+                      }));
+    CHECK(std::any_of(perimeter_order_by_layer.begin(), perimeter_order_by_layer.end(),
+                      [](const auto &layer_order) {
+                          return layer_order.second.size() >= 2 &&
+                                 layer_order.second.front() == 0 && layer_order.second[1] == 1;
+                      }));
+    CHECK(infill_tools == std::set<unsigned int>{1});
+
     boost::filesystem::remove(gcode_path);
 }

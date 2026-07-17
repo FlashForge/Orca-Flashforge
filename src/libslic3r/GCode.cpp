@@ -4190,6 +4190,53 @@ static bool split_extrusion_collection_for_pointillism_paths(
     return out_stats.segment_count > 0;
 }
 
+static bool split_extrusion_collection_for_snapmaker_perimeter_groups(
+    const ExtrusionEntityCollection&                         source,
+    const MixedFilamentManager&                              mixed_mgr,
+    unsigned int                                             mixed_filament_id,
+    size_t                                                   num_physical,
+    int                                                      layer_index,
+    std::vector<std::unique_ptr<ExtrusionEntityCollection>>& out_by_extruder,
+    size_t&                                                  out_bucket_count)
+{
+    out_by_extruder.clear();
+    out_by_extruder.resize(num_physical);
+    out_bucket_count = 0;
+
+    if (source.entities.empty() || num_physical == 0)
+        return false;
+
+    size_t split_entities = 0;
+    ExtrusionEntityCollection flattened = source.flatten(false);
+    for (const ExtrusionEntity *entity : flattened.entities) {
+        if (entity == nullptr)
+            continue;
+
+        int perimeter_index = entity->inset_idx;
+        if (perimeter_index < 0)
+            perimeter_index = entity->role() == erExternalPerimeter ? 0 : 1;
+
+        const unsigned int extruder_id = mixed_mgr.resolve_perimeter(
+            mixed_filament_id, num_physical, layer_index, perimeter_index);
+        if (extruder_id == 0 || extruder_id > num_physical)
+            continue;
+
+        std::unique_ptr<ExtrusionEntityCollection> &bucket = out_by_extruder[extruder_id - 1];
+        if (!bucket) {
+            bucket = std::make_unique<ExtrusionEntityCollection>();
+            bucket->no_sort = source.no_sort;
+        }
+        bucket->append(*entity);
+        ++split_entities;
+    }
+
+    for (const std::unique_ptr<ExtrusionEntityCollection> &bucket : out_by_extruder) {
+        if (bucket && !bucket->entities.empty())
+            ++out_bucket_count;
+    }
+    return split_entities > 0;
+}
+
 // Process all layers of all objects (non-sequential mode) with a parallel pipeline:
 // Generate G-code, run the filters (vase mode, cooling buffer), run the G-code analyser
 // and export G-code into file.
@@ -5762,6 +5809,7 @@ LayerResult GCode::process_layer(
     // Storage for dynamically-created split collections that must outlive the
     // by_extruder map (they are owned here, pointed to by ObjectByExtruder::Island::Region).
     std::vector<std::unique_ptr<ExtrusionEntityCollection>> pointillism_split_collections;
+    std::vector<std::unique_ptr<ExtrusionEntityCollection>> grouped_perimeter_split_collections;
 
     for (const LayerToPrint &layer_to_print : layers) {
         if (layer_to_print.support_layer != nullptr) {
@@ -6003,6 +6051,51 @@ LayerResult GCode::process_layer(
                         // This extrusion is part of certain Region, which tells us which extruder should be used for it:
                         int correct_extruder_id = layer_tools.extruder(*extrusions, region);
 
+                        // LayerTools is shared by print_z and may have been populated by
+                        // another object with a different object-layer index. Resolve a
+                        // grouped infill row against the current Layer so its cycle phase
+                        // stays aligned with the perimeters of this object.
+                        if (entity_type == ObjectByExtruder::Island::Region::INFILL &&
+                            layer_tools.mixed_mgr != nullptr && layer_tools.num_physical > 0) {
+                            const ExtrusionRole role = extrusions->entities.empty() ?
+                                erNone : extrusions->entities.front()->role();
+                            unsigned int configured_infill = unsigned(layer_tools.extruder_override);
+                            if (configured_infill == 0) {
+                                const bool sparse_role =
+                                    !is_solid_infill(role) ||
+                                    (role == erSolidInfill &&
+                                     std::abs(region.config().sparse_infill_density.value - 100.) < EPSILON);
+                                if (sparse_role) {
+                                    const bool use_base =
+                                        !region.config().enable_infill_filament_override.value ||
+                                        int(layer.id()) < std::max(0, region.config().infill_filament_use_base_first_layers.value) ||
+                                        int(layer.id()) >= int(layer.object()->layers().size()) -
+                                            std::max(0, region.config().infill_filament_use_base_last_layers.value);
+                                    configured_infill = unsigned(use_base ?
+                                        region.config().wall_filament.value :
+                                        region.config().sparse_infill_filament.value);
+                                } else {
+                                    configured_infill = unsigned(region.config().solid_infill_filament.value);
+                                }
+                            }
+
+                            const MixedFilament *mixed_row =
+                                layer_tools.mixed_mgr->mixed_filament_from_id(
+                                    configured_infill, layer_tools.num_physical);
+                            if (mixed_row != nullptr && mixed_row->ui_mode == 1 &&
+                                mixed_row->manual_pattern.find(',') != std::string::npos) {
+                                const unsigned int resolved = layer_tools.mixed_mgr->resolve_perimeter(
+                                    configured_infill,
+                                    layer_tools.num_physical,
+                                    int(layer.id()),
+                                    std::max(0, region.config().wall_loops.value - 1),
+                                    float(layer.print_z),
+                                    float(layer.height));
+                                if (resolved >= 1 && resolved <= layer_tools.num_physical)
+                                    correct_extruder_id = int(resolved - 1);
+                            }
+                        }
+
                         // Let's recover vector of extruder overrides:
                         const WipingExtrusions::ExtruderPerCopy *entity_overrides = nullptr;
                         if (! layer_tools.has_extruder(correct_extruder_id)) {
@@ -6095,6 +6188,85 @@ LayerResult GCode::process_layer(
 
                         }
                         // ---- end SameLayerPointillisme dispatch ----
+
+                        // Snapmaker cm1 rows encode one layer cycle per perimeter group.
+                        // Keep this path gated by ui_mode so this fork's established
+                        // comma-separated literal-ID sequences retain their old meaning.
+                        if (!is_anything_overridden &&
+                            entity_type == ObjectByExtruder::Island::Region::PERIMETERS &&
+                            layer_tools.mixed_mgr != nullptr &&
+                            layer_tools.num_physical > 0 &&
+                            correct_extruder_id >= 0) {
+                            const unsigned int configured_filament_id =
+                                layer_tools.extruder_override != 0 ?
+                                    layer_tools.extruder_override :
+                                    unsigned(region.config().wall_filament.value);
+                            const MixedFilament *mixed_row =
+                                layer_tools.mixed_mgr->mixed_filament_from_id(
+                                    configured_filament_id, layer_tools.num_physical);
+                            if (mixed_row != nullptr && mixed_row->ui_mode == 1 &&
+                                mixed_row->manual_pattern.find(',') != std::string::npos) {
+                                std::vector<std::unique_ptr<ExtrusionEntityCollection>> split_by_extruder;
+                                size_t bucket_count = 0;
+                                if (split_extrusion_collection_for_snapmaker_perimeter_groups(
+                                        *extrusions,
+                                        *layer_tools.mixed_mgr,
+                                        configured_filament_id,
+                                        layer_tools.num_physical,
+                                        int(layer.id()),
+                                        split_by_extruder,
+                                        bucket_count)) {
+                                    if (bucket_count >= 2) {
+                                        for (size_t extruder_idx = 0;
+                                             extruder_idx < split_by_extruder.size();
+                                             ++extruder_idx) {
+                                            std::unique_ptr<ExtrusionEntityCollection> &split_collection =
+                                                split_by_extruder[extruder_idx];
+                                            if (!split_collection || split_collection->entities.empty())
+                                                continue;
+
+                                            const ExtrusionEntityCollection *split_ptr = split_collection.get();
+                                            grouped_perimeter_split_collections.emplace_back(
+                                                std::move(split_collection));
+                                            std::vector<ObjectByExtruder::Island> &islands =
+                                                object_islands_by_extruder(
+                                                    by_extruder,
+                                                    unsigned(extruder_idx),
+                                                    &layer_to_print - layers.data(),
+                                                    layers.size(),
+                                                    n_slices + 1);
+                                            for (size_t i = 0; i <= n_slices; ++i) {
+                                                const bool   last       = i == n_slices;
+                                                const size_t island_idx = last ? n_slices : slices_test_order[i];
+                                                if (last || entity_matches_surface(island_idx, *split_ptr)) {
+                                                    if (islands[island_idx].by_region.empty())
+                                                        islands[island_idx].by_region.assign(
+                                                            print.num_print_regions(),
+                                                            ObjectByExtruder::Island::Region());
+                                                    islands[island_idx]
+                                                        .by_region[region.print_region_id()]
+                                                        .append(entity_type, split_ptr, nullptr);
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        continue;
+                                    }
+
+                                    if (bucket_count == 1) {
+                                        for (size_t extruder_idx = 0;
+                                             extruder_idx < split_by_extruder.size();
+                                             ++extruder_idx) {
+                                            if (split_by_extruder[extruder_idx] &&
+                                                !split_by_extruder[extruder_idx]->entities.empty()) {
+                                                correct_extruder_id = int(extruder_idx);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
 
                         printing_extruders.clear();
                         if (is_anything_overridden) {
@@ -6603,7 +6775,7 @@ LayerResult GCode::process_layer(
         gcode += "; local-z phase-b perimeter passes end\n";
     }
 
-    if (nominal_layer_start_extruder >= 0) {
+    if (!layer_tools.preserve_extruder_order && nominal_layer_start_extruder >= 0) {
         auto it = std::find(layer_extruders.begin(), layer_extruders.end(), unsigned(nominal_layer_start_extruder));
         if (it != layer_extruders.end())
             std::rotate(layer_extruders.begin(), it, layer_extruders.end());
