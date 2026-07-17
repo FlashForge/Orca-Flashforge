@@ -60,13 +60,6 @@ static bool is_hidden_profile_vendor(const std::string &vendor_name)
     return boost::iequals(vendor_name, "re3D");
 }
 
-static bool is_hidden_filament_vendor(const std::string &vendor_name)
-{
-    return boost::iequals(vendor_name, "FusRock") ||
-           boost::iequals(vendor_name, "kexcelled") ||
-           boost::iequals(vendor_name, "Polymaker");
-}
-
 static wxString update_custom_filaments()
 {
     json m_Res                                                                     = json::object();
@@ -1452,11 +1445,6 @@ int GuideFrame::LoadProfileFamily(std::string strVendor, std::string strFilePath
                         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << "Load Filament:" << s1 << ",GetFilamentInfo Failed, Vendor:" << sV << ",Type:"<< sT;
                         continue;
                     }
-                    if (is_hidden_filament_vendor(sV)) {
-                        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << "Load Filament:" << s1 << ", hidden filament vendor: " << sV;
-                        continue;
-                    }
-
                     OneFF["vendor"] = sV;
                     OneFF["type"]   = sT;
 
