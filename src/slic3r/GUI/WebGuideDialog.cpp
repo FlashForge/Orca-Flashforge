@@ -1066,12 +1066,13 @@ int GuideFrame::GetFilamentInfo( std::string VendorDirectory, json & pFilaList, 
 
                 std::string FPath = pFilaList[FName]["sub_path"];
                 BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " Before Format Inherits Path: VendorDirectory - " << VendorDirectory << ", sub_path - " << FPath;
-                wxString strNewFile = wxString::Format("%s%c%s", wxString(VendorDirectory.c_str(), wxConvUTF8), boost::filesystem::path::preferred_separator, FPath);
-                boost::filesystem::path inherits_path(w2s(strNewFile));
+                // Keep the path in the filesystem encoding. Converting it through wxString::mb_str()
+                // corrupts non-ASCII Windows paths and makes an existing vendor preset appear missing.
+                boost::filesystem::path inherits_path =
+                    (boost::filesystem::path(VendorDirectory) / boost::filesystem::path(FPath)).make_preferred();
                 if (!boost::filesystem::exists(inherits_path))
                     inherits_path = (boost::filesystem::path(m_OrcaFilaLibPath) / boost::filesystem::path(FPath)).make_preferred();
 
-                //boost::filesystem::path nf(strNewFile.c_str());
                 if (boost::filesystem::exists(inherits_path)) {
                     const int ret = GetFilamentInfo(VendorDirectory,pFilaList, inherits_path.string(), sVendor, sType);
                     filament_info_cache[filepath] = CachedFilamentInfo{ret, sVendor, sType};
