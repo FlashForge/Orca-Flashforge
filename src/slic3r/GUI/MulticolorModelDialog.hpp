@@ -126,6 +126,7 @@ private:
     void init_model_data(int initial_color_count, const MulticolorModelPrecomputedData *precomputed_data);
     void refresh_tab_style();
     void refresh_quantization_controls();
+    void focus_color_count_input(bool select_all);
     void switch_preview(PreviewMode mode);
     bool rebuild_quantized_preview(int color_count);
     bool rebuild_original_preview();
