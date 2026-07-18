@@ -12,6 +12,7 @@
 #include <memory>
 #include <mutex>
 #include <algorithm>
+#include <map>
 #include <numeric>
 #include <set>
 #include <unordered_map>
@@ -3254,6 +3255,34 @@ std::vector<int> Sidebar::apply_multicolor_import_filaments(const std::vector<Mu
     std::set<int> updated_filament_indices;
     const int preset_filament_count = static_cast<int>(preset_bundle->filament_presets.size());
     const int current_filament_count = static_cast<int>(combos_filament().size());
+
+    // The import dialog and the preparation page maintain independent filament numbering.
+    // If the first logical new-filament slot is beyond the end of the current filament list,
+    // compact the new slots so they are appended without creating placeholder filaments.
+    std::vector<MulticolorFilamentMapping> effective_mappings = mappings;
+    std::set<int> logical_new_filament_indices;
+    for (const MulticolorFilamentMapping& mapping : effective_mappings) {
+        if (mapping.allocated_new_filament_index >= 0)
+            logical_new_filament_indices.insert(mapping.allocated_new_filament_index);
+    }
+    if (!logical_new_filament_indices.empty() && preset_filament_count < *logical_new_filament_indices.begin()) {
+        std::map<int, int> compacted_new_filament_indices;
+        int actual_filament_index = preset_filament_count;
+        for (int logical_filament_index : logical_new_filament_indices)
+            compacted_new_filament_indices.emplace(logical_filament_index, actual_filament_index++);
+
+        for (MulticolorFilamentMapping& mapping : effective_mappings) {
+            if (auto allocated_it = compacted_new_filament_indices.find(mapping.allocated_new_filament_index);
+                allocated_it != compacted_new_filament_indices.end()) {
+                mapping.allocated_new_filament_index = allocated_it->second;
+            }
+            if (auto target_it = compacted_new_filament_indices.find(mapping.target_filament_index);
+                target_it != compacted_new_filament_indices.end()) {
+                mapping.target_filament_index = target_it->second;
+            }
+        }
+    }
+
     auto find_default_filament_preset = [preset_bundle]() -> std::string {
         static const char *default_name = "Flashforge PLA Basic";
         if (preset_bundle->filaments.find_preset(default_name) != nullptr) {
@@ -3271,7 +3300,7 @@ std::vector<int> Sidebar::apply_multicolor_import_filaments(const std::vector<Mu
     const std::string fallback_color = Plater::get_next_color_for_filament().GetAsString(wxC2S_HTML_SYNTAX).ToStdString();
     std::vector<InsertedFilament> inserted_filaments;
     std::set<int> inserted_indices;
-    for (const MulticolorFilamentMapping& mapping : mappings) {
+    for (const MulticolorFilamentMapping& mapping : effective_mappings) {
         if (mapping.allocated_new_filament_index < 0)
             continue;
         if (!inserted_indices.insert(mapping.allocated_new_filament_index).second)
@@ -3293,8 +3322,8 @@ std::vector<int> Sidebar::apply_multicolor_import_filaments(const std::vector<Mu
     const int target_filament_count = inserted_count > 0 ?
         std::max(preset_filament_count + inserted_count, insert_start + inserted_count) : preset_filament_count;
     std::vector<int> remapped_target_indices;
-    remapped_target_indices.reserve(mappings.size());
-    for (const MulticolorFilamentMapping& mapping : mappings) {
+    remapped_target_indices.reserve(effective_mappings.size());
+    for (const MulticolorFilamentMapping& mapping : effective_mappings) {
         int target_index = mapping.target_filament_index;
         if (inserted_count > 0 && !mapping.create_new && target_index >= insert_start)
             target_index += inserted_count;
@@ -3395,13 +3424,13 @@ std::vector<int> Sidebar::apply_multicolor_import_filaments(const std::vector<Mu
 
     if (filament_color != nullptr) {
         filament_color->values.resize(std::max<size_t>(filament_color->values.size(), target_filament_count), fallback_color);
-        for (const MulticolorFilamentMapping& mapping : mappings) {
+        for (const MulticolorFilamentMapping& mapping : effective_mappings) {
             if (mapping.allocated_new_filament_index >= 0 && mapping.allocated_new_filament_index < target_filament_count &&
                 !mapping.quantized_color.empty()) {
                 filament_color->values[mapping.allocated_new_filament_index] = mapping.quantized_color;
             }
         }
-        for (const MulticolorFilamentMapping& mapping : mappings) {
+        for (const MulticolorFilamentMapping& mapping : effective_mappings) {
             if (mapping.create_new && mapping.target_filament_index >= 0 && mapping.target_filament_index < target_filament_count &&
                 !mapping.filament_color.empty()) {
                 filament_color->values[mapping.target_filament_index] = mapping.filament_color;
@@ -3410,13 +3439,13 @@ std::vector<int> Sidebar::apply_multicolor_import_filaments(const std::vector<Mu
     }
     if (filament_multi_color != nullptr) {
         filament_multi_color->values.resize(std::max<size_t>(filament_multi_color->values.size(), target_filament_count), fallback_color);
-        for (const MulticolorFilamentMapping& mapping : mappings) {
+        for (const MulticolorFilamentMapping& mapping : effective_mappings) {
             if (mapping.allocated_new_filament_index >= 0 && mapping.allocated_new_filament_index < target_filament_count &&
                 !mapping.quantized_color.empty()) {
                 filament_multi_color->values[mapping.allocated_new_filament_index] = mapping.quantized_color;
             }
         }
-        for (const MulticolorFilamentMapping& mapping : mappings) {
+        for (const MulticolorFilamentMapping& mapping : effective_mappings) {
             if (mapping.create_new && mapping.target_filament_index >= 0 && mapping.target_filament_index < target_filament_count &&
                 !mapping.filament_color.empty()) {
                 filament_multi_color->values[mapping.target_filament_index] = mapping.filament_color;
@@ -3432,14 +3461,14 @@ std::vector<int> Sidebar::apply_multicolor_import_filaments(const std::vector<Mu
     }
 
     if (!default_preset.empty()) {
-        for (const MulticolorFilamentMapping& mapping : mappings) {
+        for (const MulticolorFilamentMapping& mapping : effective_mappings) {
             if (mapping.allocated_new_filament_index >= 0 &&
                 mapping.allocated_new_filament_index < static_cast<int>(preset_bundle->filament_presets.size())) {
                 preset_bundle->filament_presets[mapping.allocated_new_filament_index] = default_preset;
                 updated_filament_indices.insert(mapping.allocated_new_filament_index);
             }
         }
-        for (const MulticolorFilamentMapping& mapping : mappings) {
+        for (const MulticolorFilamentMapping& mapping : effective_mappings) {
             if (mapping.create_new && mapping.target_filament_index >= 0 &&
                 mapping.target_filament_index < static_cast<int>(preset_bundle->filament_presets.size())) {
                 preset_bundle->filament_presets[mapping.target_filament_index] = default_preset;
