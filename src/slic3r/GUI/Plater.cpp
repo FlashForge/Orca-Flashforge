@@ -3497,8 +3497,20 @@ std::vector<int> Sidebar::apply_multicolor_import_filaments(const std::vector<Mu
         auto_calc_flushing_volumes(filament_idx);
     }
     wxGetApp().plater()->update();
-    m_next_multicolor_import_filament_slot = std::min(static_cast<int>(MULTICOLOR_IMPORT_FILAMENT_LIMIT),
-        m_next_multicolor_import_filament_slot + inserted_count);
+    int next_multicolor_import_filament_slot = -1;
+    for (const MulticolorFilamentMapping& mapping : mappings) {
+        if (mapping.allocated_new_filament_index >= 0 &&
+            mapping.allocated_new_filament_index < static_cast<int>(MULTICOLOR_IMPORT_FILAMENT_LIMIT)) {
+            next_multicolor_import_filament_slot =
+                std::max(next_multicolor_import_filament_slot, mapping.allocated_new_filament_index + 1);
+        }
+    }
+    if (next_multicolor_import_filament_slot >= 0) {
+        // Commit the start used by the accepted dialog. This also rebases an exhausted logical
+        // sequence when the import was recovered from free preparation-page slots.
+        m_next_multicolor_import_filament_slot =
+            std::min(static_cast<int>(MULTICOLOR_IMPORT_FILAMENT_LIMIT), next_multicolor_import_filament_slot);
+    }
     return remapped_target_indices;
 }
 
@@ -9024,13 +9036,24 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                             }
                         }
                         const int remaining_multicolor_slots = wxGetApp().sidebar().remaining_multicolor_import_filament_slots();
-                        if (color_count > remaining_multicolor_slots) {
+                        int new_filament_start_index = wxGetApp().sidebar().next_multicolor_import_filament_slot();
+                        const PresetBundle *preset_bundle = wxGetApp().preset_bundle;
+                        const int current_filament_count = preset_bundle != nullptr ?
+                            static_cast<int>(preset_bundle->filament_presets.size()) :
+                            static_cast<int>(MULTICOLOR_IMPORT_FILAMENT_LIMIT);
+                        const bool can_reuse_preparation_slots =
+                            current_filament_count + color_count <= static_cast<int>(MULTICOLOR_IMPORT_FILAMENT_LIMIT);
+                        if (color_count > remaining_multicolor_slots && can_reuse_preparation_slots) {
+                            // The logical import slots are exhausted, but the preparation page still has
+                            // enough actual slots. Reuse its free tail for this import without changing the
+                            // global logical counter until the user confirms.
+                            new_filament_start_index = current_filament_count;
+                        } else if (color_count > remaining_multicolor_slots) {
                             GUI::show_error(q, _L("多色耗材颜色已满，无法新增，请重新开启项目"));
                             is_user_cancel = true;
                             continue;
                         }
 
-                        const int new_filament_start_index = wxGetApp().sidebar().next_multicolor_import_filament_slot();
                         MulticolorModelDialog multicolor_dlg(q, cm, convert_model_data, color_count,
                             new_filament_start_index, &prepared_data.preview_data);
                         if (multicolor_dlg.ShowModal() != wxID_OK) {
