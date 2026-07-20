@@ -15,10 +15,10 @@
 #include "slic3r/GUI/Widgets/FFButton.hpp"
 
 class wxSlider;
-class wxSpinCtrl;
 class wxBoxSizer;
 class wxCheckBox;
 class ComboBox;
+class SpinInput;
 
 namespace Slic3r { namespace GUI {
 
@@ -43,6 +43,7 @@ struct MulticolorFilamentMapping
     std::string quantized_color;
     int         existing_filament_index{-1};
     int         target_filament_index{-1};
+    int         allocated_new_filament_index{-1};
     std::string filament_color;
     std::string filament_preset_name;
     bool        matched_existing{false};
@@ -108,9 +109,10 @@ private:
 class MulticolorModelDialog : public DPIDialog
 {
 public:
-    MulticolorModelDialog(wxWindow *parent, ConvertModel &converter, convert_model_data_t &model_data, int initial_color_count);
     MulticolorModelDialog(wxWindow *parent, ConvertModel &converter, convert_model_data_t &model_data, int initial_color_count,
-        const MulticolorModelPrecomputedData *precomputed_data);
+        int new_filament_start_index = 0);
+    MulticolorModelDialog(wxWindow *parent, ConvertModel &converter, convert_model_data_t &model_data, int initial_color_count,
+        int new_filament_start_index, const MulticolorModelPrecomputedData *precomputed_data);
 
     const MulticolorImportResult &import_result() const { return m_result; }
     const cvt_colors_t &selected_colors() const { return m_result.selected_colors; }
@@ -124,6 +126,7 @@ private:
     void init_model_data(int initial_color_count, const MulticolorModelPrecomputedData *precomputed_data);
     void refresh_tab_style();
     void refresh_quantization_controls();
+    void focus_color_count_input(bool select_all);
     void switch_preview(PreviewMode mode);
     bool rebuild_quantized_preview(int color_count);
     bool rebuild_original_preview();
@@ -132,10 +135,11 @@ private:
     void apply_pending_color_count(bool force = false);
     void auto_quantize();
     void style_color_count_button(FFButton *button, bool selected);
-    void rebuild_filament_mappings(bool reset_new_numbering);
+    void rebuild_filament_mappings(bool reset_new_numbering, bool update_choice_items = true);
     void rebuild_filament_mapping_rows();
     void update_filament_mapping_row(size_t row_index, bool update_choice_items);
     void update_filament_mapping_choices();
+    void update_filament_mapping_selections();
     void select_filament_mapping(size_t row_index, int selection);
     bool rebuild_quantized_preview_from_mapping();
     void update_selected_colors_from_filament_mappings();
@@ -159,7 +163,7 @@ private:
     wxStaticText *m_quantized_tab{nullptr};
     wxStaticText *m_original_tab{nullptr};
     wxSlider *m_color_count_slider{nullptr};
-    wxSpinCtrl *m_color_count_input{nullptr};
+    SpinInput *m_color_count_input{nullptr};
     wxStaticText *m_quantization_changed_tip{nullptr};
     wxCheckBox *m_auto_match_filament_chk{nullptr};
     wxPanel *m_filament_mapping_panel{nullptr};
@@ -176,6 +180,8 @@ private:
     int m_pending_color_count{4};
     int m_styled_color_count{-1};
     int m_next_new_filament_index{0};
+    int m_new_filament_start_index{0};
+    int m_max_new_filament_count{4};
     bool m_auto_match_existing_filaments{true};
     bool m_quantization_dirty{false};
     bool m_mapping_dirty{false};

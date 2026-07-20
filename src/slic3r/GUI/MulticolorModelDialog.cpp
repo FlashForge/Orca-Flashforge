@@ -30,6 +30,7 @@
 #include "slic3r/Utils/ColorSpaceConvert.hpp"
 #include "slic3r/GUI/Widgets/ComboBox.hpp"
 #include "slic3r/GUI/Widgets/ProgressDialog.hpp"
+#include "slic3r/GUI/Widgets/SpinInput.hpp"
 
 namespace Slic3r { namespace GUI {
 namespace {
@@ -38,7 +39,6 @@ constexpr const char *DefaultFilamentPresetName = "Flashforge PLA Basic";
 constexpr float AutoMatchDeltaEThreshold = 5.0f;
 // Keep imported full-color OBJ/GLB filament ids inside the 16 states supported by mmu segmentation.
 constexpr int ImportExistingMatchLimit = 12;
-constexpr int ImportReservedNewFilamentStart = 12;
 constexpr int ImportFilamentLimit = 16;
 constexpr intptr_t ExistingFilamentChoiceBase = 1;
 constexpr intptr_t NewFilamentChoiceBase = 10000;
@@ -229,20 +229,6 @@ std::vector<ExistingFilamentInfo> collect_existing_filaments()
     return filaments;
 }
 
-int current_prepare_filament_count()
-{
-    PresetBundle *preset_bundle = wxGetApp().preset_bundle;
-    if (preset_bundle == nullptr)
-        return 0;
-    return std::clamp(static_cast<int>(preset_bundle->filament_presets.size()), 0, ImportFilamentLimit);
-}
-
-int import_new_filament_start_index()
-{
-    const int current_count = current_prepare_filament_count();
-    return current_count >= ImportReservedNewFilamentStart ? ImportReservedNewFilamentStart : current_count;
-}
-
 int find_best_existing_filament(const std::string &color, const std::vector<ExistingFilamentInfo> &filaments, const std::set<int> &used_existing)
 {
     ColorDistValue best;
@@ -283,7 +269,7 @@ bool is_matchable_existing_filament_index(int index)
 
 bool is_import_new_filament_index(int index)
 {
-    return index >= import_new_filament_start_index() && index < ImportFilamentLimit;
+    return index >= 0 && index < ImportFilamentLimit;
 }
 
 intptr_t existing_filament_choice_marker(int filament_index)
@@ -306,25 +292,34 @@ bool is_new_filament_choice(intptr_t marker)
     return marker >= NewFilamentChoiceBase;
 }
 
-std::set<int> collect_new_filament_indices(const std::vector<MulticolorFilamentMapping> &mappings)
+std::set<int> collect_allocated_new_filament_indices(const std::vector<MulticolorFilamentMapping> &mappings)
 {
     std::set<int> indices;
     for (const MulticolorFilamentMapping &mapping : mappings)
-        if (mapping.create_new && is_import_new_filament_index(mapping.target_filament_index))
-            indices.insert(mapping.target_filament_index);
+        if (is_import_new_filament_index(mapping.allocated_new_filament_index))
+            indices.insert(mapping.allocated_new_filament_index);
     return indices;
 }
 
-std::string new_filament_color_for_index(const std::vector<MulticolorFilamentMapping> &mappings, int filament_index)
+bool has_allocated_new_filament_index(const std::vector<MulticolorFilamentMapping> &mappings, int filament_index)
 {
     for (const MulticolorFilamentMapping &mapping : mappings)
-        if (mapping.create_new && mapping.target_filament_index == filament_index)
-            return mapping.filament_color;
+        if (mapping.allocated_new_filament_index == filament_index)
+            return true;
+    return false;
+}
+
+std::string allocated_new_filament_color_for_index(const std::vector<MulticolorFilamentMapping> &mappings, int filament_index)
+{
+    for (const MulticolorFilamentMapping &mapping : mappings) {
+        if (mapping.allocated_new_filament_index == filament_index)
+            return mapping.quantized_color.empty() ? std::string("#000000") : mapping.quantized_color;
+    }
     return "#000000";
 }
 
 void populate_filament_mapping_choice(ComboBox *choice, const MulticolorFilamentMapping &mapping,
-    const std::vector<ExistingFilamentInfo> &matchable_filaments, const std::set<int> &new_filament_indices,
+    const std::vector<ExistingFilamentInfo> &matchable_filaments, const std::set<int> &allocated_new_filament_indices,
     const std::vector<MulticolorFilamentMapping> &mappings)
 {
     if (choice == nullptr)
@@ -345,10 +340,10 @@ void populate_filament_mapping_choice(ComboBox *choice, const MulticolorFilament
             selected_choice = item_idx;
     }
 
-    if (!new_filament_indices.empty())
+    if (!allocated_new_filament_indices.empty())
         choice->Append(new_group, wxNullBitmap, nullptr, DD_ITEM_STYLE_DISABLED);
-    for (int filament_index : new_filament_indices) {
-        const std::string new_filament_color = new_filament_color_for_index(mappings, filament_index);
+    for (int filament_index : allocated_new_filament_indices) {
+        const std::string new_filament_color = allocated_new_filament_color_for_index(mappings, filament_index);
         const int item_idx = choice->Append(wxString::Format("%d  ", filament_index + 1) + wxString::FromUTF8(DefaultFilamentPresetName),
             filament_choice_bitmap(choice, new_filament_color),
             reinterpret_cast<void *>(new_filament_choice_marker(filament_index)));
@@ -566,10 +561,13 @@ void MulticolorModelPreviewCanvas::render()
     SwapBuffers();
 }
 
-MulticolorModelDialog::MulticolorModelDialog(wxWindow *parent, ConvertModel &converter, convert_model_data_t &model_data, int initial_color_count)
+MulticolorModelDialog::MulticolorModelDialog(wxWindow *parent, ConvertModel &converter, convert_model_data_t &model_data,
+    int initial_color_count, int new_filament_start_index)
     : DPIDialog(parent, wxID_ANY, _L("Import Model"), wxDefaultPosition, wxDefaultSize, wxCAPTION | wxCLOSE_BOX)
     , m_converter(converter)
     , m_model_data(model_data)
+    , m_new_filament_start_index(std::clamp(new_filament_start_index, 0, ImportFilamentLimit))
+    , m_max_new_filament_count(std::max(0, ImportFilamentLimit - m_new_filament_start_index))
 {
     build_ui();
     init_model_data(initial_color_count, nullptr);
@@ -578,10 +576,12 @@ MulticolorModelDialog::MulticolorModelDialog(wxWindow *parent, ConvertModel &con
 }
 
 MulticolorModelDialog::MulticolorModelDialog(wxWindow *parent, ConvertModel &converter, convert_model_data_t &model_data,
-    int initial_color_count, const MulticolorModelPrecomputedData *precomputed_data)
+    int initial_color_count, int new_filament_start_index, const MulticolorModelPrecomputedData *precomputed_data)
     : DPIDialog(parent, wxID_ANY, _L("Import Model"), wxDefaultPosition, wxDefaultSize, wxCAPTION | wxCLOSE_BOX)
     , m_converter(converter)
     , m_model_data(model_data)
+    , m_new_filament_start_index(std::clamp(new_filament_start_index, 0, ImportFilamentLimit))
+    , m_max_new_filament_count(std::max(0, ImportFilamentLimit - m_new_filament_start_index))
 {
     build_ui();
     init_model_data(initial_color_count, precomputed_data);
@@ -635,37 +635,61 @@ void MulticolorModelDialog::build_ui()
     color_count_title->SetForegroundColour(wxColour("#333333"));
     settings_sizer->Add(color_count_title, 0, wxEXPAND | wxBOTTOM, FromDIP(14));
 
+    const int max_selectable_color_count = std::max(m_quantization_config.min_count,
+        std::min(m_quantization_config.max_count, m_max_new_filament_count));
+    const int initial_pending_color_count = std::clamp(m_pending_color_count, m_quantization_config.min_count, max_selectable_color_count);
+
     auto *count_buttons_sizer = new wxBoxSizer(wxHORIZONTAL);
     for (int count : m_quantization_config.selectable_counts) {
         auto *count_btn = new FFButton(settings_panel, wxID_ANY, wxString::Format("%d", count), FromDIP(18), true);
         count_btn->SetSize(wxSize(FromDIP(56), FromDIP(36)));
         count_btn->SetMinSize(wxSize(FromDIP(56), FromDIP(36)));
         count_btn->SetMaxSize(wxSize(FromDIP(56), FromDIP(36)));
-        count_btn->Bind(wxEVT_BUTTON, [this, count](wxCommandEvent &) { set_pending_color_count(count, true); });
+        count_btn->Enable(count <= max_selectable_color_count);
+        count_btn->Bind(wxEVT_BUTTON, [this, count](wxCommandEvent &) {
+            set_pending_color_count(count, true);
+            focus_color_count_input(true);
+        });
         m_color_count_buttons.emplace_back(count, count_btn);
         count_buttons_sizer->Add(count_btn, 0, wxRIGHT, FromDIP(10));
     }
     settings_sizer->Add(count_buttons_sizer, 0, wxEXPAND | wxBOTTOM, FromDIP(18));
 
     auto *count_input_sizer = new wxBoxSizer(wxHORIZONTAL);
-    m_color_count_slider = new wxSlider(settings_panel, wxID_ANY, m_pending_color_count, m_quantization_config.min_count,
-        m_quantization_config.max_count, wxDefaultPosition, wxSize(-1, FromDIP(28)), wxSL_HORIZONTAL);
+    m_color_count_slider = new wxSlider(settings_panel, wxID_ANY, initial_pending_color_count, m_quantization_config.min_count,
+        max_selectable_color_count, wxDefaultPosition, wxSize(FromDIP(320), FromDIP(28)), wxSL_HORIZONTAL);
+    m_color_count_slider->SetMinSize(wxSize(FromDIP(260), FromDIP(28)));
     m_color_count_slider->SetBackgroundColour(*wxWHITE);
-    m_color_count_slider->Bind(wxEVT_SLIDER, [this](wxCommandEvent &event) {
+    m_color_count_slider->Bind(wxEVT_SLIDER, [this](wxCommandEvent &) {
         if (!m_updating_color_count_controls)
-            set_pending_color_count(event.GetInt(), true);
+            set_pending_color_count(m_color_count_slider->GetValue(), true);
     });
-    m_color_count_input = new wxSpinCtrl(settings_panel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(FromDIP(64), FromDIP(28)),
-        wxSP_ARROW_KEYS | wxTE_PROCESS_ENTER, m_quantization_config.min_count, m_quantization_config.max_count, m_pending_color_count);
-    m_color_count_input->SetRange(m_quantization_config.min_count, m_quantization_config.max_count);
-    m_color_count_input->SetValue(m_pending_color_count);
-    m_color_count_input->Bind(wxEVT_SPINCTRL, [this](wxSpinEvent &event) {
-        if (!m_updating_color_count_controls)
-            set_pending_color_count(event.GetPosition(), true);
-    });
-    m_color_count_input->Bind(wxEVT_TEXT, [this](wxCommandEvent &) {
+    m_color_count_input = new SpinInput(settings_panel, wxEmptyString, wxEmptyString, wxDefaultPosition, wxSize(FromDIP(72), FromDIP(28)),
+        wxTE_PROCESS_ENTER, m_quantization_config.min_count, max_selectable_color_count, initial_pending_color_count);
+    m_color_count_input->SetRange(m_quantization_config.min_count, max_selectable_color_count);
+    m_color_count_input->SetValue(initial_pending_color_count);
+    m_color_count_input->Bind(wxEVT_SPINCTRL, [this](wxCommandEvent &) {
         if (!m_updating_color_count_controls)
             set_pending_color_count(m_color_count_input->GetValue(), true);
+    });
+    wxTextCtrl *color_count_text_ctrl = m_color_count_input->GetTextCtrl();
+    auto ensure_color_count_text_focus = [this](wxMouseEvent &event) {
+        event.Skip();
+        focus_color_count_input(false);
+    };
+    m_color_count_input->Bind(wxEVT_LEFT_DOWN, ensure_color_count_text_focus);
+    color_count_text_ctrl->Bind(wxEVT_LEFT_DOWN, ensure_color_count_text_focus);
+    color_count_text_ctrl->Bind(wxEVT_TEXT, [this, color_count_text_ctrl](wxCommandEvent &) {
+        if (m_updating_color_count_controls)
+            return;
+
+        long value = 0;
+        if (!color_count_text_ctrl->GetValue().ToLong(&value))
+            return;
+        if (value < m_color_count_input->GetMin() || value > m_color_count_input->GetMax())
+            return;
+
+        set_pending_color_count(static_cast<int>(value), true);
     });
     count_input_sizer->Add(m_color_count_slider, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(10));
     count_input_sizer->Add(m_color_count_input, 0, wxALIGN_CENTER_VERTICAL);
@@ -712,7 +736,7 @@ void MulticolorModelDialog::build_ui()
     m_auto_match_filament_chk->SetBackgroundColour(*wxWHITE);
     m_auto_match_filament_chk->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent &event) {
         m_auto_match_existing_filaments = event.IsChecked();
-        rebuild_filament_mappings(false);
+        rebuild_filament_mappings(false, false);
         m_mapping_dirty = true;
         refresh_quantization_controls();
     });
@@ -884,6 +908,22 @@ void MulticolorModelDialog::refresh_quantization_controls()
     }
 }
 
+void MulticolorModelDialog::focus_color_count_input(bool select_all)
+{
+    if (m_color_count_input == nullptr)
+        return;
+
+    wxTextCtrl *text_ctrl = m_color_count_input->GetTextCtrl();
+    text_ctrl->CallAfter([text_ctrl, select_all]() {
+        if (!text_ctrl->IsShownOnScreen() || !text_ctrl->IsEnabled())
+            return;
+
+        text_ctrl->SetFocus();
+        if (select_all)
+            text_ctrl->SelectAll();
+    });
+}
+
 void MulticolorModelDialog::switch_preview(PreviewMode mode)
 {
     m_preview_mode = mode;
@@ -913,7 +953,9 @@ bool MulticolorModelDialog::rebuild_quantized_preview(int color_count)
 
 int MulticolorModelDialog::clamp_color_count(int color_count) const
 {
-    return std::clamp(color_count, m_quantization_config.min_count, m_quantization_config.max_count);
+    const int max_count = std::max(m_quantization_config.min_count,
+        std::min(m_quantization_config.max_count, m_max_new_filament_count));
+    return std::clamp(color_count, m_quantization_config.min_count, max_count);
 }
 
 void MulticolorModelDialog::set_pending_color_count(int color_count, bool mark_changed)
@@ -982,6 +1024,7 @@ void MulticolorModelDialog::apply_pending_color_count(bool force)
     if (m_preview_mode == PreviewMode::Quantized)
         m_canvas->set_model(m_result.quantized_model);
     refresh_quantization_controls();
+    focus_color_count_input(true);
 }
 
 void MulticolorModelDialog::auto_quantize()
@@ -1006,11 +1049,11 @@ void MulticolorModelDialog::style_color_count_button(FFButton *button, bool sele
     }
 }
 
-void MulticolorModelDialog::rebuild_filament_mappings(bool reset_new_numbering)
+void MulticolorModelDialog::rebuild_filament_mappings(bool reset_new_numbering, bool update_choice_items)
 {
     const std::vector<ExistingFilamentInfo> existing_filaments = collect_existing_filaments();
     const std::vector<ExistingFilamentInfo> matchable_filaments = collect_matchable_existing_filaments(existing_filaments);
-    const int new_filament_start = import_new_filament_start_index();
+    const int new_filament_start = m_new_filament_start_index;
     if (reset_new_numbering) {
         m_next_new_filament_index = new_filament_start;
         m_result.filament_mappings.clear();
@@ -1019,30 +1062,91 @@ void MulticolorModelDialog::rebuild_filament_mappings(bool reset_new_numbering)
     std::vector<MulticolorFilamentMapping> previous_mappings = m_result.filament_mappings;
     std::vector<MulticolorFilamentMapping> new_mappings;
     std::set<int> used_existing;
+    std::set<int> used_allocated_new;
 
-    auto assign_new_filament = [this, new_filament_start](MulticolorFilamentMapping &mapping, const MulticolorFilamentMapping *previous) {
+    auto reserve_allocated_new_filament = [this, &used_allocated_new](int filament_index) {
+        if (!is_import_new_filament_index(filament_index))
+            return false;
+        if (!used_allocated_new.insert(filament_index).second)
+            return false;
+        m_next_new_filament_index = std::max(m_next_new_filament_index, filament_index + 1);
+        return true;
+    };
+
+    auto next_allocated_new_filament = [this, new_filament_start, &used_allocated_new]() {
+        if (m_next_new_filament_index < new_filament_start)
+            m_next_new_filament_index = new_filament_start;
+        for (int filament_index = m_next_new_filament_index; filament_index < ImportFilamentLimit; ++filament_index) {
+            if (used_allocated_new.insert(filament_index).second) {
+                m_next_new_filament_index = filament_index + 1;
+                return filament_index;
+            }
+        }
+        for (int filament_index = new_filament_start; filament_index < ImportFilamentLimit; ++filament_index) {
+            if (used_allocated_new.insert(filament_index).second) {
+                m_next_new_filament_index = filament_index + 1;
+                return filament_index;
+            }
+        }
+        return -1;
+    };
+
+    auto previous_new_filament_index = [](const MulticolorFilamentMapping *previous) {
+        if (previous == nullptr)
+            return -1;
+        if (is_import_new_filament_index(previous->allocated_new_filament_index))
+            return previous->allocated_new_filament_index;
+        if (previous->create_new && is_import_new_filament_index(previous->target_filament_index))
+            return previous->target_filament_index;
+        return -1;
+    };
+
+    auto preserve_allocated_new_filament = [&](MulticolorFilamentMapping &mapping, const MulticolorFilamentMapping *previous) {
+        if (reserve_allocated_new_filament(mapping.allocated_new_filament_index))
+            return true;
+
+        const int previous_filament_index = previous_new_filament_index(previous);
+        if (reserve_allocated_new_filament(previous_filament_index)) {
+            mapping.allocated_new_filament_index = previous_filament_index;
+            return true;
+        }
+
+        if (is_import_new_filament_index(previous_filament_index)) {
+            mapping.allocated_new_filament_index = next_allocated_new_filament();
+            return is_import_new_filament_index(mapping.allocated_new_filament_index);
+        }
+
+        mapping.allocated_new_filament_index = -1;
+        return false;
+    };
+
+    auto ensure_allocated_new_filament = [&](MulticolorFilamentMapping &mapping, const MulticolorFilamentMapping *previous) {
+        if (preserve_allocated_new_filament(mapping, previous))
+            return;
+        mapping.allocated_new_filament_index = next_allocated_new_filament();
+    };
+
+    auto assign_new_filament = [&next_allocated_new_filament](MulticolorFilamentMapping &mapping) {
+        if (!is_import_new_filament_index(mapping.allocated_new_filament_index))
+            mapping.allocated_new_filament_index = next_allocated_new_filament();
         mapping.existing_filament_index = -1;
         mapping.matched_existing = false;
         mapping.create_new = true;
         mapping.filament_color = mapping.quantized_color;
         mapping.filament_preset_name = DefaultFilamentPresetName;
         mapping.source = MulticolorFilamentMappingSource::NewGenerated;
-        if (previous != nullptr && previous->create_new && is_import_new_filament_index(previous->target_filament_index)) {
-            mapping.target_filament_index = previous->target_filament_index;
-            m_next_new_filament_index = std::max(m_next_new_filament_index, mapping.target_filament_index + 1);
-        } else {
-            if (m_next_new_filament_index < new_filament_start)
-                m_next_new_filament_index = new_filament_start;
-            if (m_next_new_filament_index >= ImportFilamentLimit)
-                m_next_new_filament_index = ImportFilamentLimit - 1;
-            mapping.target_filament_index = m_next_new_filament_index++;
-        }
+        mapping.target_filament_index = mapping.allocated_new_filament_index;
     };
 
     const cvt_colors_t &source_colors = !m_quantized_source_colors.empty() ? m_quantized_source_colors : m_result.selected_colors;
-    for (const cvt_color_t &color : source_colors) {
+    const int current_new_filament_end = std::min(ImportFilamentLimit, new_filament_start + static_cast<int>(source_colors.size()));
+    for (size_t source_color_index = 0; source_color_index < source_colors.size(); ++source_color_index) {
+        const cvt_color_t &color = source_colors[source_color_index];
         MulticolorFilamentMapping mapping;
         mapping.quantized_color = normalize_hex_color(color_to_hex(color));
+        mapping.allocated_new_filament_index = new_filament_start + static_cast<int>(source_color_index);
+        if (!is_import_new_filament_index(mapping.allocated_new_filament_index))
+            mapping.allocated_new_filament_index = -1;
 
         const MulticolorFilamentMapping *previous = nullptr;
         for (const MulticolorFilamentMapping &candidate : previous_mappings) {
@@ -1052,13 +1156,15 @@ void MulticolorModelDialog::rebuild_filament_mappings(bool reset_new_numbering)
             }
         }
 
-        if (previous != nullptr && previous->source == MulticolorFilamentMappingSource::ManualSelected) {
+        if (previous != nullptr && previous->source == MulticolorFilamentMappingSource::ManualSelected && m_auto_match_existing_filaments) {
             mapping = *previous;
+            const int allocated_new_filament_index = new_filament_start + static_cast<int>(source_color_index);
+            mapping.allocated_new_filament_index = is_import_new_filament_index(allocated_new_filament_index) ?
+                allocated_new_filament_index : -1;
+            ensure_allocated_new_filament(mapping, previous);
             if (mapping.create_new) {
-                if (is_import_new_filament_index(mapping.target_filament_index))
-                    m_next_new_filament_index = std::max(m_next_new_filament_index, mapping.target_filament_index + 1);
-                else
-                    assign_new_filament(mapping, previous);
+                if (mapping.target_filament_index < new_filament_start || mapping.target_filament_index >= current_new_filament_end)
+                    assign_new_filament(mapping);
             } else if (const ExistingFilamentInfo *filament = find_existing_filament(matchable_filaments, mapping.target_filament_index)) {
                 mapping.existing_filament_index = filament->index;
                 mapping.filament_color = filament->color;
@@ -1066,7 +1172,7 @@ void MulticolorModelDialog::rebuild_filament_mappings(bool reset_new_numbering)
                 mapping.matched_existing = true;
                 used_existing.insert(filament->index);
             } else {
-                assign_new_filament(mapping, previous);
+                assign_new_filament(mapping);
                 mapping.source = MulticolorFilamentMappingSource::ManualSelected;
             }
             new_mappings.push_back(mapping);
@@ -1087,13 +1193,16 @@ void MulticolorModelDialog::rebuild_filament_mappings(bool reset_new_numbering)
             mapping.source = MulticolorFilamentMappingSource::AutoMatched;
             used_existing.insert(filament->index);
         } else {
-            assign_new_filament(mapping, previous);
+            assign_new_filament(mapping);
         }
         new_mappings.push_back(mapping);
     }
 
     m_result.filament_mappings = std::move(new_mappings);
-    rebuild_filament_mapping_rows();
+    if (update_choice_items)
+        update_filament_mapping_choices();
+    else
+        update_filament_mapping_selections();
 }
 
 void MulticolorModelDialog::update_selected_colors_from_filament_mappings()
@@ -1198,8 +1307,8 @@ void MulticolorModelDialog::update_filament_mapping_row(size_t row_index, bool u
     if (update_choice_items) {
         const std::vector<ExistingFilamentInfo> existing_filaments = collect_existing_filaments();
         const std::vector<ExistingFilamentInfo> matchable_filaments = collect_matchable_existing_filaments(existing_filaments);
-        populate_filament_mapping_choice(row.choice, mapping, matchable_filaments, collect_new_filament_indices(m_result.filament_mappings),
-            m_result.filament_mappings);
+        populate_filament_mapping_choice(row.choice, mapping, matchable_filaments,
+            collect_allocated_new_filament_indices(m_result.filament_mappings), m_result.filament_mappings);
     }
     if (row.row_panel != nullptr)
         row.row_panel->Layout();
@@ -1214,11 +1323,41 @@ void MulticolorModelDialog::update_filament_mapping_choices()
 
     const std::vector<ExistingFilamentInfo> existing_filaments = collect_existing_filaments();
     const std::vector<ExistingFilamentInfo> matchable_filaments = collect_matchable_existing_filaments(existing_filaments);
-    const std::set<int> new_filament_indices = collect_new_filament_indices(m_result.filament_mappings);
+    const std::set<int> allocated_new_filament_indices = collect_allocated_new_filament_indices(m_result.filament_mappings);
     for (size_t row_index = 0; row_index < m_result.filament_mappings.size(); ++row_index) {
         update_filament_mapping_row(row_index, false);
         populate_filament_mapping_choice(m_filament_mapping_rows[row_index].choice, m_result.filament_mappings[row_index],
-            matchable_filaments, new_filament_indices, m_result.filament_mappings);
+            matchable_filaments, allocated_new_filament_indices, m_result.filament_mappings);
+    }
+}
+
+void MulticolorModelDialog::update_filament_mapping_selections()
+{
+    if (m_filament_mapping_rows.size() != m_result.filament_mappings.size()) {
+        rebuild_filament_mapping_rows();
+        return;
+    }
+
+    for (size_t row_index = 0; row_index < m_result.filament_mappings.size(); ++row_index) {
+        update_filament_mapping_row(row_index, false);
+
+        ComboBox *choice = m_filament_mapping_rows[row_index].choice;
+        if (choice == nullptr)
+            continue;
+
+        const MulticolorFilamentMapping &mapping = m_result.filament_mappings[row_index];
+        const intptr_t target_marker = mapping.create_new ?
+            new_filament_choice_marker(mapping.target_filament_index) :
+            existing_filament_choice_marker(mapping.target_filament_index);
+        int selected_choice = wxNOT_FOUND;
+        for (unsigned int item_idx = 0; item_idx < choice->GetCount(); ++item_idx) {
+            if (reinterpret_cast<intptr_t>(choice->GetClientData(item_idx)) == target_marker) {
+                selected_choice = static_cast<int>(item_idx);
+                break;
+            }
+        }
+        if (choice->GetSelection() != selected_choice)
+            choice->SetSelection(selected_choice);
     }
 }
 
@@ -1230,7 +1369,6 @@ void MulticolorModelDialog::select_filament_mapping(size_t row_index, int select
     const std::vector<ExistingFilamentInfo> existing_filaments = collect_existing_filaments();
     const std::vector<ExistingFilamentInfo> matchable_filaments = collect_matchable_existing_filaments(existing_filaments);
     MulticolorFilamentMapping &mapping = m_result.filament_mappings[row_index];
-    const std::set<int> old_new_filament_indices = collect_new_filament_indices(m_result.filament_mappings);
     const intptr_t marker = static_cast<intptr_t>(selection);
     if (is_existing_filament_choice(marker)) {
         const int filament_index = static_cast<int>(marker - ExistingFilamentChoiceBase);
@@ -1249,28 +1387,25 @@ void MulticolorModelDialog::select_filament_mapping(size_t row_index, int select
         mapping.source = MulticolorFilamentMappingSource::ManualSelected;
     } else if (is_new_filament_choice(marker)) {
         const int filament_index = static_cast<int>(marker - NewFilamentChoiceBase);
-        if (!is_import_new_filament_index(filament_index))
+        if (!is_import_new_filament_index(filament_index) ||
+            !has_allocated_new_filament_index(m_result.filament_mappings, filament_index))
             return;
 
-        const std::string target_filament_color = new_filament_color_for_index(m_result.filament_mappings, filament_index);
         mapping.existing_filament_index = -1;
         mapping.target_filament_index = filament_index;
-        mapping.filament_color = target_filament_color;
+        mapping.filament_color = allocated_new_filament_color_for_index(m_result.filament_mappings, filament_index);
         mapping.filament_preset_name = DefaultFilamentPresetName;
         mapping.matched_existing = false;
         mapping.create_new = true;
         mapping.source = MulticolorFilamentMappingSource::ManualSelected;
-        m_next_new_filament_index = std::max(m_next_new_filament_index, mapping.target_filament_index + 1);
+        m_next_new_filament_index = std::max(m_next_new_filament_index, mapping.allocated_new_filament_index + 1);
     } else {
         return;
     }
 
     m_mapping_dirty = true;
     refresh_quantization_controls();
-    if (old_new_filament_indices != collect_new_filament_indices(m_result.filament_mappings))
-        update_filament_mapping_choices();
-    else
-        update_filament_mapping_row(row_index, true);
+    update_filament_mapping_row(row_index, true);
 }
 
 void MulticolorModelDialog::finalize_skip_result()

@@ -429,11 +429,11 @@ void WebViewPanel::SetLoginPanelVisibility(bool bshow)
     wxString strJS = wxString::Format("SetLoginPanelVisibility(%s)", bshow ? "true" : "false");
     RunScript(strJS);
 }
-void WebViewPanel::SendRecentList(int images)
+void WebViewPanel::SendRecentList()
 {
     boost::property_tree::wptree req;
     boost::property_tree::wptree data;
-    wxGetApp().mainframe->get_recent_projects(data, images);
+    wxGetApp().mainframe->get_recent_projects(data);
     req.put(L"sequence_id", "");
     req.put(L"command", L"get_recent_projects");
     req.put_child(L"response", data);

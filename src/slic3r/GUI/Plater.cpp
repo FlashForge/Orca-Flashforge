@@ -12,6 +12,7 @@
 #include <memory>
 #include <mutex>
 #include <algorithm>
+#include <map>
 #include <numeric>
 #include <set>
 #include <unordered_map>
@@ -244,7 +245,8 @@ wxDEFINE_EVENT(EVT_NOTICE_FULL_SCREEN_CHANGED, IntEvent);
 #define PRINTER_PANEL_RADIUS (6) // ORCA
 #define BTN_SYNC_SIZE (wxSize(FromDIP(96), FromDIP(98)))
 
-static constexpr size_t PREPARE_PAGE_FILAMENT_LIMIT = 16;
+static constexpr size_t MULTICOLOR_IMPORT_FILAMENT_LIMIT = 16;
+static constexpr size_t MULTICOLOR_IMPORT_EXISTING_FILAMENT_LIMIT = 12;
 
 static string get_diameter_string(float diameter)
 {
@@ -3163,7 +3165,7 @@ void Sidebar::on_filaments_delete(size_t filament_id)
 }
 
 void Sidebar::add_filament() {
-    if (p->combos_filament.size() >= PREPARE_PAGE_FILAMENT_LIMIT) return;
+    if (p->combos_filament.size() >= MAXIMUM_EXTRUDER_NUMBER) return;
     wxColour    new_col        = Plater::get_next_color_for_filament();
     add_custom_filament(new_col);
 }
@@ -3215,7 +3217,7 @@ void Sidebar::edit_filament()
 
 void Sidebar::add_custom_filament(wxColour new_col) {
     if (is_new_project_in_gcode3mf()) { return; }
-    if (p->combos_filament.size() >= PREPARE_PAGE_FILAMENT_LIMIT) return;
+    if (p->combos_filament.size() >= MAXIMUM_EXTRUDER_NUMBER) return;
 
     int         filament_count = p->combos_filament.size() + 1;
     std::string new_color      = new_col.GetAsString(wxC2S_HTML_SYNTAX).ToStdString();
@@ -3227,38 +3229,57 @@ void Sidebar::add_custom_filament(wxColour new_col) {
     auto_calc_flushing_volumes(filament_count - 1);
 }
 
-void Sidebar::apply_multicolor_import_filaments(const std::vector<MulticolorFilamentMapping>& mappings)
+int Sidebar::remaining_multicolor_import_filament_slots() const
+{
+    return std::max(0, static_cast<int>(MULTICOLOR_IMPORT_FILAMENT_LIMIT) - m_next_multicolor_import_filament_slot);
+}
+
+std::vector<int> Sidebar::apply_multicolor_import_filaments(const std::vector<MulticolorFilamentMapping>& mappings)
 {
     if (mappings.empty() || is_new_project_in_gcode3mf()) {
-        return;
+        return {};
     }
 
     PresetBundle *preset_bundle = wxGetApp().preset_bundle;
     if (preset_bundle == nullptr) {
-        return;
+        return {};
     }
+
+    struct InsertedFilament
+    {
+        int         index{-1};
+        std::string color;
+        std::string preset_name;
+    };
 
     std::set<int> updated_filament_indices;
     const int preset_filament_count = static_cast<int>(preset_bundle->filament_presets.size());
     const int current_filament_count = static_cast<int>(combos_filament().size());
-    int target_filament_count = current_filament_count;
-    for (const MulticolorFilamentMapping& mapping : mappings) {
-        if (mapping.target_filament_index >= 0) {
-            target_filament_count = std::max(target_filament_count, mapping.target_filament_index + 1);
-        }
-    }
 
-    if (target_filament_count > static_cast<int>(PREPARE_PAGE_FILAMENT_LIMIT)) {
-        return;
+    // The import dialog and the preparation page maintain independent filament numbering.
+    // If the first logical new-filament slot is beyond the end of the current filament list,
+    // compact the new slots so they are appended without creating placeholder filaments.
+    std::vector<MulticolorFilamentMapping> effective_mappings = mappings;
+    std::set<int> logical_new_filament_indices;
+    for (const MulticolorFilamentMapping& mapping : effective_mappings) {
+        if (mapping.allocated_new_filament_index >= 0)
+            logical_new_filament_indices.insert(mapping.allocated_new_filament_index);
     }
+    if (!logical_new_filament_indices.empty() && preset_filament_count < *logical_new_filament_indices.begin()) {
+        std::map<int, int> compacted_new_filament_indices;
+        int actual_filament_index = preset_filament_count;
+        for (int logical_filament_index : logical_new_filament_indices)
+            compacted_new_filament_indices.emplace(logical_filament_index, actual_filament_index++);
 
-    const std::string fallback_color = Plater::get_next_color_for_filament().GetAsString(wxC2S_HTML_SYNTAX).ToStdString();
-    std::vector<std::string> new_colors(std::max(0, target_filament_count - preset_filament_count));
-    std::fill(new_colors.begin(), new_colors.end(), fallback_color);
-    for (const MulticolorFilamentMapping& mapping : mappings) {
-        if (mapping.target_filament_index >= preset_filament_count && mapping.target_filament_index < target_filament_count &&
-            !mapping.filament_color.empty()) {
-            new_colors[mapping.target_filament_index - preset_filament_count] = mapping.filament_color;
+        for (MulticolorFilamentMapping& mapping : effective_mappings) {
+            if (auto allocated_it = compacted_new_filament_indices.find(mapping.allocated_new_filament_index);
+                allocated_it != compacted_new_filament_indices.end()) {
+                mapping.allocated_new_filament_index = allocated_it->second;
+            }
+            if (auto target_it = compacted_new_filament_indices.find(mapping.target_filament_index);
+                target_it != compacted_new_filament_indices.end()) {
+                mapping.target_filament_index = target_it->second;
+            }
         }
     }
 
@@ -3275,32 +3296,163 @@ void Sidebar::apply_multicolor_import_filaments(const std::vector<MulticolorFila
         return preset_bundle->filament_presets.empty() ? std::string() : preset_bundle->filament_presets.back();
     };
 
-    if (target_filament_count > preset_filament_count) {
-        if (new_colors.empty())
-            wxGetApp().preset_bundle->set_num_filaments(target_filament_count, fallback_color);
-        else
-            wxGetApp().preset_bundle->set_num_filaments(target_filament_count, new_colors);
+    const std::string default_preset = find_default_filament_preset();
+    const std::string fallback_color = Plater::get_next_color_for_filament().GetAsString(wxC2S_HTML_SYNTAX).ToStdString();
+    std::vector<InsertedFilament> inserted_filaments;
+    std::set<int> inserted_indices;
+    for (const MulticolorFilamentMapping& mapping : effective_mappings) {
+        if (mapping.allocated_new_filament_index < 0)
+            continue;
+        if (!inserted_indices.insert(mapping.allocated_new_filament_index).second)
+            continue;
+        InsertedFilament inserted;
+        inserted.index = mapping.allocated_new_filament_index;
+        inserted.color = mapping.quantized_color.empty() ? fallback_color : mapping.quantized_color;
+        inserted.preset_name = default_preset.empty() ? mapping.filament_preset_name : default_preset;
+        if (inserted.preset_name.empty())
+            inserted.preset_name = preset_bundle->filament_presets.empty() ? std::string() : preset_bundle->filament_presets.back();
+        inserted_filaments.push_back(std::move(inserted));
+    }
+    std::sort(inserted_filaments.begin(), inserted_filaments.end(),
+        [](const InsertedFilament& lhs, const InsertedFilament& rhs) { return lhs.index < rhs.index; });
+
+    const int inserted_count = static_cast<int>(inserted_filaments.size());
+    const int insert_start = inserted_count > 0 ? inserted_filaments.front().index :
+        std::min(preset_filament_count, static_cast<int>(MULTICOLOR_IMPORT_EXISTING_FILAMENT_LIMIT));
+    const int target_filament_count = inserted_count > 0 ?
+        std::max(preset_filament_count + inserted_count, insert_start + inserted_count) : preset_filament_count;
+    std::vector<int> remapped_target_indices;
+    remapped_target_indices.reserve(effective_mappings.size());
+    for (const MulticolorFilamentMapping& mapping : effective_mappings) {
+        int target_index = mapping.target_filament_index;
+        if (inserted_count > 0 && !mapping.create_new && target_index >= insert_start)
+            target_index += inserted_count;
+        remapped_target_indices.push_back(target_index);
     }
 
-    if (ConfigOptionStrings *filament_color = preset_bundle->project_config.option<ConfigOptionStrings>("filament_colour")) {
+    const std::vector<std::string> old_presets = preset_bundle->filament_presets;
+    ConfigOptionStrings *filament_color = preset_bundle->project_config.option<ConfigOptionStrings>("filament_colour");
+    ConfigOptionStrings *filament_multi_color = preset_bundle->project_config.option<ConfigOptionStrings>("filament_multi_colour");
+    ConfigOptionStrings *filament_color_type = preset_bundle->project_config.option<ConfigOptionStrings>("filament_colour_type");
+    ConfigOptionInts *filament_map = preset_bundle->project_config.option<ConfigOptionInts>("filament_map");
+    const std::vector<std::string> old_colors = filament_color != nullptr ? filament_color->values : std::vector<std::string>();
+    const std::vector<std::string> old_multi_colors = filament_multi_color != nullptr ? filament_multi_color->values : std::vector<std::string>();
+    const std::vector<std::string> old_color_types = filament_color_type != nullptr ? filament_color_type->values : std::vector<std::string>();
+    const std::vector<int> old_filament_maps = filament_map != nullptr ? filament_map->values : std::vector<int>();
+    const std::vector<std::vector<std::string>> old_ams_multi_colors = preset_bundle->ams_multi_color_filment;
+
+    if (inserted_count > 0) {
+        for (size_t ordinal = 0; ordinal < inserted_filaments.size(); ++ordinal) {
+            const int expected_index = insert_start + static_cast<int>(ordinal);
+            if (inserted_filaments[ordinal].index != expected_index) {
+                inserted_filaments[ordinal].index = expected_index;
+            }
+        }
+
+        preset_bundle->set_num_filaments(target_filament_count, fallback_color);
+
+        filament_color = preset_bundle->project_config.option<ConfigOptionStrings>("filament_colour");
+        filament_multi_color = preset_bundle->project_config.option<ConfigOptionStrings>("filament_multi_colour");
+        filament_color_type = preset_bundle->project_config.option<ConfigOptionStrings>("filament_colour_type");
+        filament_map = preset_bundle->project_config.option<ConfigOptionInts>("filament_map");
+
+        auto old_string_at = [](const std::vector<std::string>& values, int index, const std::string& fallback) {
+            return index >= 0 && index < static_cast<int>(values.size()) ? values[index] : fallback;
+        };
+        auto old_int_at = [](const std::vector<int>& values, int index, int fallback) {
+            return index >= 0 && index < static_cast<int>(values.size()) ? values[index] : fallback;
+        };
+        auto old_string_vector_at = [](const std::vector<std::vector<std::string>>& values, int index) {
+            return index >= 0 && index < static_cast<int>(values.size()) ? values[index] : std::vector<std::string>();
+        };
+
+        for (int old_index = 0; old_index < preset_filament_count; ++old_index) {
+            const int new_index = old_index < insert_start ? old_index : old_index + inserted_count;
+            if (new_index < 0 || new_index >= target_filament_count)
+                continue;
+
+            preset_bundle->filament_presets[new_index] = old_string_at(old_presets, old_index, default_preset);
+            if (filament_color != nullptr)
+                filament_color->values[new_index] = old_string_at(old_colors, old_index, fallback_color);
+            if (filament_multi_color != nullptr)
+                filament_multi_color->values[new_index] = old_string_at(old_multi_colors, old_index,
+                    filament_color != nullptr ? filament_color->values[new_index] : fallback_color);
+            if (filament_color_type != nullptr)
+                filament_color_type->values[new_index] = old_string_at(old_color_types, old_index, "1");
+            if (filament_map != nullptr)
+                filament_map->values[new_index] = old_int_at(old_filament_maps, old_index, 1);
+            if (new_index < static_cast<int>(preset_bundle->ams_multi_color_filment.size()))
+                preset_bundle->ams_multi_color_filment[new_index] = old_string_vector_at(old_ams_multi_colors, old_index);
+        }
+
+        for (const InsertedFilament& inserted : inserted_filaments) {
+            if (inserted.index < 0 || inserted.index >= target_filament_count)
+                continue;
+
+            preset_bundle->filament_presets[inserted.index] = inserted.preset_name;
+            if (filament_color != nullptr)
+                filament_color->values[inserted.index] = inserted.color;
+            if (filament_multi_color != nullptr)
+                filament_multi_color->values[inserted.index] = inserted.color;
+            if (filament_color_type != nullptr)
+                filament_color_type->values[inserted.index] = "1";
+            if (filament_map != nullptr)
+                filament_map->values[inserted.index] = 1;
+            if (inserted.index < static_cast<int>(preset_bundle->ams_multi_color_filment.size()))
+                preset_bundle->ams_multi_color_filment[inserted.index].clear();
+            updated_filament_indices.insert(inserted.index);
+        }
+
+        auto shift_config_filament_index = [insert_start, inserted_count](auto& config, const char *key) {
+            if (!config.has(key))
+                return;
+            const int value = config.opt_int(key);
+            if (value > insert_start)
+                config.set_key_value(key, new ConfigOptionInt(value + inserted_count));
+        };
+
+        static const char *filament_index_keys[] = {"extruder", "support_filament", "support_interface_filament"};
+        for (ModelObject *object : wxGetApp().model().objects) {
+            for (const char *key : filament_index_keys)
+                shift_config_filament_index(object->config, key);
+            for (ModelVolume *volume : object->volumes) {
+                for (const char *key : filament_index_keys)
+                    shift_config_filament_index(volume->config, key);
+            }
+        }
+    }
+
+    if (filament_color != nullptr) {
         filament_color->values.resize(std::max<size_t>(filament_color->values.size(), target_filament_count), fallback_color);
-        for (const MulticolorFilamentMapping& mapping : mappings) {
-            if (mapping.target_filament_index >= 0 && mapping.target_filament_index < target_filament_count &&
+        for (const MulticolorFilamentMapping& mapping : effective_mappings) {
+            if (mapping.allocated_new_filament_index >= 0 && mapping.allocated_new_filament_index < target_filament_count &&
+                !mapping.quantized_color.empty()) {
+                filament_color->values[mapping.allocated_new_filament_index] = mapping.quantized_color;
+            }
+        }
+        for (const MulticolorFilamentMapping& mapping : effective_mappings) {
+            if (mapping.create_new && mapping.target_filament_index >= 0 && mapping.target_filament_index < target_filament_count &&
                 !mapping.filament_color.empty()) {
                 filament_color->values[mapping.target_filament_index] = mapping.filament_color;
             }
         }
     }
-    if (ConfigOptionStrings *filament_multi_color = preset_bundle->project_config.option<ConfigOptionStrings>("filament_multi_colour")) {
+    if (filament_multi_color != nullptr) {
         filament_multi_color->values.resize(std::max<size_t>(filament_multi_color->values.size(), target_filament_count), fallback_color);
-        for (const MulticolorFilamentMapping& mapping : mappings) {
-            if (mapping.target_filament_index >= 0 && mapping.target_filament_index < target_filament_count &&
+        for (const MulticolorFilamentMapping& mapping : effective_mappings) {
+            if (mapping.allocated_new_filament_index >= 0 && mapping.allocated_new_filament_index < target_filament_count &&
+                !mapping.quantized_color.empty()) {
+                filament_multi_color->values[mapping.allocated_new_filament_index] = mapping.quantized_color;
+            }
+        }
+        for (const MulticolorFilamentMapping& mapping : effective_mappings) {
+            if (mapping.create_new && mapping.target_filament_index >= 0 && mapping.target_filament_index < target_filament_count &&
                 !mapping.filament_color.empty()) {
                 filament_multi_color->values[mapping.target_filament_index] = mapping.filament_color;
             }
         }
     }
-    if (ConfigOptionStrings *filament_color_type = preset_bundle->project_config.option<ConfigOptionStrings>("filament_colour_type")) {
+    if (filament_color_type != nullptr) {
         filament_color_type->values.resize(std::max<size_t>(filament_color_type->values.size(), target_filament_count), "1");
         for (int i = current_filament_count; i < target_filament_count; ++i) {
             if (filament_color_type->values[i].empty())
@@ -3308,12 +3460,15 @@ void Sidebar::apply_multicolor_import_filaments(const std::vector<MulticolorFila
         }
     }
 
-    const std::string default_preset = find_default_filament_preset();
     if (!default_preset.empty()) {
-        for (int i = preset_filament_count; i < target_filament_count && i < static_cast<int>(preset_bundle->filament_presets.size()); ++i) {
-            preset_bundle->filament_presets[i] = default_preset;
+        for (const MulticolorFilamentMapping& mapping : effective_mappings) {
+            if (mapping.allocated_new_filament_index >= 0 &&
+                mapping.allocated_new_filament_index < static_cast<int>(preset_bundle->filament_presets.size())) {
+                preset_bundle->filament_presets[mapping.allocated_new_filament_index] = default_preset;
+                updated_filament_indices.insert(mapping.allocated_new_filament_index);
+            }
         }
-        for (const MulticolorFilamentMapping& mapping : mappings) {
+        for (const MulticolorFilamentMapping& mapping : effective_mappings) {
             if (mapping.create_new && mapping.target_filament_index >= 0 &&
                 mapping.target_filament_index < static_cast<int>(preset_bundle->filament_presets.size())) {
                 preset_bundle->filament_presets[mapping.target_filament_index] = default_preset;
@@ -3328,19 +3483,35 @@ void Sidebar::apply_multicolor_import_filaments(const std::vector<MulticolorFila
             wxGetApp().plater()->get_partplate_list().on_filament_added(filament_count);
         }
         wxGetApp().plater()->on_filament_count_change(target_filament_count);
-    } else {
-        for (int filament_idx : updated_filament_indices) {
-            if (filament_idx >= 0 && filament_idx < static_cast<int>(p->combos_filament.size()))
-                p->combos_filament[filament_idx]->update();
-        }
-        update_dynamic_filament_list();
     }
+    for (int filament_idx = 0; filament_idx < static_cast<int>(p->combos_filament.size()); ++filament_idx)
+        p->combos_filament[filament_idx]->update();
+    update_dynamic_filament_list();
     wxGetApp().get_tab(Preset::TYPE_PRINT)->update();
     wxGetApp().preset_bundle->export_selections(*wxGetApp().app_config);
+    for (const InsertedFilament& inserted : inserted_filaments) {
+        if (inserted.index >= 0)
+            auto_calc_flushing_volumes(inserted.index);
+    }
     for (int filament_idx = current_filament_count; filament_idx < target_filament_count; ++filament_idx) {
         auto_calc_flushing_volumes(filament_idx);
     }
     wxGetApp().plater()->update();
+    int next_multicolor_import_filament_slot = -1;
+    for (const MulticolorFilamentMapping& mapping : mappings) {
+        if (mapping.allocated_new_filament_index >= 0 &&
+            mapping.allocated_new_filament_index < static_cast<int>(MULTICOLOR_IMPORT_FILAMENT_LIMIT)) {
+            next_multicolor_import_filament_slot =
+                std::max(next_multicolor_import_filament_slot, mapping.allocated_new_filament_index + 1);
+        }
+    }
+    if (next_multicolor_import_filament_slot >= 0) {
+        // Commit the start used by the accepted dialog. This also rebases an exhausted logical
+        // sequence when the import was recovered from free preparation-page slots.
+        m_next_multicolor_import_filament_slot =
+            std::min(static_cast<int>(MULTICOLOR_IMPORT_FILAMENT_LIMIT), next_multicolor_import_filament_slot);
+    }
+    return remapped_target_indices;
 }
 
 bool Sidebar::is_new_project_in_gcode3mf()
@@ -4775,6 +4946,16 @@ static wxString mesh_repair_progress_message(const std::string &message)
         return _L("Finalizing repaired mesh");
     if (message == "Remapping repaired mesh colors")
         return _L("Remapping repaired mesh colors");
+    if (message == "Exporting objects")
+        return _L("Exporting objects");
+    if (message == "Repairing object by Windows service")
+        return _L("Repairing object by Windows service");
+    if (message == "Loading repaired objects")
+        return _L("Loading repaired objects");
+    if (message == "Repair finished")
+        return _L("Repair finished");
+    if (message == "Repair canceled")
+        return _L("Repair canceled");
     if (message == "Done")
         return _L("Done");
     return from_u8(message);
@@ -5489,17 +5670,41 @@ static bool is_current_single_color_import_printer(const std::string &printer_te
 static std::string multicolor_printer_key(const std::string &printer_text)
 {
     const std::string normalized = normalized_printer_text(printer_text);
-    if (normalized == "ad5x" || normalized == "flashforgead5x")
+    if (boost::starts_with(normalized, "ad5x") || boost::starts_with(normalized, "flashforgead5x") ||
+        boost::starts_with(normalized, "ffad5x"))
         return "ad5x";
-    if (normalized == "c5" || normalized == "creator5" || normalized == "flashforgecreator5")
-        return "c5";
-    if (normalized == "c5p" || normalized == "creator5pro" || normalized == "flashforgecreator5pro")
+    if (boost::starts_with(normalized, "c5p") || boost::starts_with(normalized, "creator5pro") ||
+        boost::starts_with(normalized, "flashforgecreator5pro"))
         return "c5p";
-    if (normalized == "guider2s" || normalized == "flashforgeguider2s")
+    if (boost::starts_with(normalized, "c5") || boost::starts_with(normalized, "creator5") ||
+        boost::starts_with(normalized, "flashforgecreator5"))
+        return "c5";
+    if (boost::starts_with(normalized, "guider2s") || boost::starts_with(normalized, "flashforgeguider2s"))
         return "guider2s";
-    if (normalized == "guider3ultra" || normalized == "flashforgeguider3ultra")
+    if (boost::starts_with(normalized, "guider3ultra") || boost::starts_with(normalized, "flashforgeguider3ultra"))
         return "guider3ultra";
-    if (normalized == "guider4" || normalized == "flashforgeguider4")
+    if (boost::starts_with(normalized, "guider4pro") || boost::starts_with(normalized, "flashforgeguider4pro"))
+        return "guider4pro";
+    if (boost::starts_with(normalized, "guider4") || boost::starts_with(normalized, "flashforgeguider4"))
+        return "guider4";
+    return {};
+}
+
+static std::string multicolor_printer_key_from_model_id(const std::string &model_id)
+{
+    if (model_id == FFUtils::getPrinterModelId(AD5X))
+        return "ad5x";
+    if (model_id == FFUtils::getPrinterModelId(C5))
+        return "c5";
+    if (model_id == FFUtils::getPrinterModelId(C5P))
+        return "c5p";
+    if (model_id == "Flashforge-Guider-2s")
+        return "guider2s";
+    if (model_id == FFUtils::getPrinterModelId(GUIDER_3_ULTRA))
+        return "guider3ultra";
+    if (model_id == FFUtils::getPrinterModelId(GUIDER_4_PRO))
+        return "guider4pro";
+    if (model_id == FFUtils::getPrinterModelId(GUIDER_4))
         return "guider4";
     return {};
 }
@@ -5520,6 +5725,7 @@ static bool preset_matches_multicolor_key(const Preset &preset, const std::strin
 {
     return !key.empty() &&
            (multicolor_printer_key(printer_model_text(preset)) == key ||
+            multicolor_printer_key_from_model_id(printer_model_text(preset)) == key ||
             multicolor_printer_key(preset.name) == key);
 }
 
@@ -7954,7 +8160,7 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                         int size = extruderIds.size() == 0 ? 0 : *(extruderIds.rbegin());
 
                         int filament_size = sidebar->combos_filament().size();
-                        while (filament_size < static_cast<int>(PREPARE_PAGE_FILAMENT_LIMIT) && filament_size < size) {
+                        while (filament_size < MAXIMUM_EXTRUDER_NUMBER && filament_size < size) {
                             int         filament_count = filament_size + 1;
                             wxColour    new_col        = Plater::get_next_color_for_filament();
                             std::string new_color      = new_col.GetAsString(wxC2S_HTML_SYNTAX).ToStdString();
@@ -8635,7 +8841,7 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                                     full_color_import_choice = FullColorImportChoice::KeepCurrentPrinterAsMono;
                                 }
                             } else {
-                                full_color_import_choice = FullColorImportChoice::KeepCurrentPrinterAsMono;
+                                full_color_import_choice = FullColorImportChoice::ImportDirectlyAsMono;
                             }
                         }
                     }
@@ -8829,7 +9035,27 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                                 }
                             }
                         }
-                        MulticolorModelDialog multicolor_dlg(q, cm, convert_model_data, color_count, &prepared_data.preview_data);
+                        const int remaining_multicolor_slots = wxGetApp().sidebar().remaining_multicolor_import_filament_slots();
+                        int new_filament_start_index = wxGetApp().sidebar().next_multicolor_import_filament_slot();
+                        const PresetBundle *preset_bundle = wxGetApp().preset_bundle;
+                        const int current_filament_count = preset_bundle != nullptr ?
+                            static_cast<int>(preset_bundle->filament_presets.size()) :
+                            static_cast<int>(MULTICOLOR_IMPORT_FILAMENT_LIMIT);
+                        const bool can_reuse_preparation_slots =
+                            current_filament_count + color_count <= static_cast<int>(MULTICOLOR_IMPORT_FILAMENT_LIMIT);
+                        if (color_count > remaining_multicolor_slots && can_reuse_preparation_slots) {
+                            // The logical import slots are exhausted, but the preparation page still has
+                            // enough actual slots. Reuse its free tail for this import without changing the
+                            // global logical counter until the user confirms.
+                            new_filament_start_index = current_filament_count;
+                        } else if (color_count > remaining_multicolor_slots) {
+                            GUI::show_error(q, _L("多色耗材颜色已满，无法新增，请重新开启项目"));
+                            is_user_cancel = true;
+                            continue;
+                        }
+
+                        MulticolorModelDialog multicolor_dlg(q, cm, convert_model_data, color_count,
+                            new_filament_start_index, &prepared_data.preview_data);
                         if (multicolor_dlg.ShowModal() != wxID_OK) {
                             is_user_cancel = true;
                             q->skip_thumbnail_invalid = false;
@@ -8842,10 +9068,15 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                             colors = cm.clusterColors(convert_model_data, color_count);
                         if (colors.empty())
                             throw Slic3r::RuntimeError(is_textured_obj ? "Loading of a textured OBJ model file failed." : "Loading of a GLB model file failed.");
-                        wxGetApp().sidebar().apply_multicolor_import_filaments(import_result.filament_mappings);
+                        const std::vector<int> remapped_filament_indices =
+                            wxGetApp().sidebar().apply_multicolor_import_filaments(import_result.filament_mappings);
                         glb_convert_filament_ids.clear();
-                        for (const MulticolorFilamentMapping& mapping : import_result.filament_mappings) {
-                            glb_convert_filament_ids.push_back(mapping.target_filament_index + 1);
+                        if (!remapped_filament_indices.empty()) {
+                            for (int filament_index : remapped_filament_indices)
+                                glb_convert_filament_ids.push_back(filament_index + 1);
+                        } else {
+                            for (const MulticolorFilamentMapping& mapping : import_result.filament_mappings)
+                                glb_convert_filament_ids.push_back(mapping.target_filament_index + 1);
                         }
                         glb_convert_colors = colors;
 
@@ -14214,6 +14445,7 @@ int Plater::new_project(bool skip_confirm, bool silent, const wxString& project_
     reset(transfer_preset_changes);
     reset_project_dirty_after_save();
     reset_project_dirty_initial_presets();
+    sidebar().reset_multicolor_import_filament_slots();
     wxGetApp().update_saved_preset_from_current_preset();
     update_project_dirty_from_presets();
 
@@ -14330,6 +14562,7 @@ void Plater::load_project(wxString const& filename2,
     std::vector<size_t> res = load_files(input_paths, strategy);
 
     reset_project_dirty_initial_presets();
+    sidebar().reset_multicolor_import_filament_slots();
     update_project_dirty_from_presets();
     wxGetApp().preset_bundle->export_selections(*wxGetApp().app_config);
 
