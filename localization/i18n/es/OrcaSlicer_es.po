@@ -6468,6 +6468,12 @@ msgstr "Exportación exitosa"
 msgid "Model file downloaded."
 msgstr "Archivo de modelo descargado."
 
+msgid "Shared profiles may be available for this printer."
+msgstr "Puede haber perfiles compartidos disponibles para esta impresora."
+
+msgid "Browse shared profiles"
+msgstr "Explorar perfiles compartidos"
+
 msgid "Serious warning:"
 msgstr "Advertencia grave:"
 

@@ -6465,6 +6465,12 @@ msgstr "Export erfolgreich."
 msgid "Model file downloaded."
 msgstr "Modelldatei heruntergeladen."
 
+msgid "Shared profiles may be available for this printer."
+msgstr "Für diesen Drucker sind möglicherweise freigegebene Profile verfügbar."
+
+msgid "Browse shared profiles"
+msgstr "Freigegebene Profile durchsuchen"
+
 msgid "Serious warning:"
 msgstr "Wichtige Warnung:"
 

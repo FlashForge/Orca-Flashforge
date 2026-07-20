@@ -6436,6 +6436,12 @@ msgstr "导出成功."
 msgid "Model file downloaded."
 msgstr "已下载模型文件。"
 
+msgid "Shared profiles may be available for this printer."
+msgstr "该打印机可能有可用的共享配置文件。"
+
+msgid "Browse shared profiles"
+msgstr "浏览共享配置文件"
+
 msgid "Serious warning:"
 msgstr "严重警告："
 

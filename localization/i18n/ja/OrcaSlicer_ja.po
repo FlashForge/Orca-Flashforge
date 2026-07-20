@@ -6439,6 +6439,12 @@ msgstr "エクスポートが成功しました。"
 msgid "Model file downloaded."
 msgstr "モデルファイルがダウンロードされました。"
 
+msgid "Shared profiles may be available for this printer."
+msgstr "このプリンターでは共有プロファイルを利用できる場合があります。"
+
+msgid "Browse shared profiles"
+msgstr "共有プロファイルを参照"
+
 msgid "Serious warning:"
 msgstr "重大な警告:"
 

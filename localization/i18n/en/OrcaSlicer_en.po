@@ -6633,6 +6633,12 @@ msgstr ""
 msgid "Model file downloaded."
 msgstr ""
 
+msgid "Shared profiles may be available for this printer."
+msgstr ""
+
+msgid "Browse shared profiles"
+msgstr ""
+
 msgid "Serious warning:"
 msgstr ""
 

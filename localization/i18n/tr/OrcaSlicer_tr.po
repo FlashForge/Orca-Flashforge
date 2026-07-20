@@ -6600,6 +6600,12 @@ msgstr "Başarıyla dışarı aktarıldı"
 msgid "Model file downloaded."
 msgstr "Model dosyası indirildi."
 
+msgid "Shared profiles may be available for this printer."
+msgstr "Bu yazıcı için paylaşılan profiller mevcut olabilir."
+
+msgid "Browse shared profiles"
+msgstr "Paylaşılan profillere göz at"
+
 msgid "Serious warning:"
 msgstr "Ciddi uyarı:"
 

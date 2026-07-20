@@ -5932,6 +5932,12 @@ msgstr "Успешно экспортировано."
 msgid "Model file downloaded."
 msgstr "Файл модели скачан."
 
+msgid "Shared profiles may be available for this printer."
+msgstr "Для этого принтера могут быть доступны общие профили."
+
+msgid "Browse shared profiles"
+msgstr "Просмотреть общие профили"
+
 msgid "Serious warning:"
 msgstr "Серьезное предупреждение:"
 

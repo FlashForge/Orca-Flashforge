@@ -6472,6 +6472,12 @@ msgstr "Exportation réussie."
 msgid "Model file downloaded."
 msgstr "Modèle téléchargé."
 
+msgid "Shared profiles may be available for this printer."
+msgstr "Des profils partagés peuvent être disponibles pour cette imprimante."
+
+msgid "Browse shared profiles"
+msgstr "Parcourir les profils partagés"
+
 msgid "Serious warning:"
 msgstr "Avertissement sérieux :"
 
