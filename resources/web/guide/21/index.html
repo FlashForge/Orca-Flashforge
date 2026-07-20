@@ -20,9 +20,30 @@
 <div id="Title">
 	<div class="trans" tid="t10">Printer Selection</div>
 </div>
-<div class="wrap">
-	<div class="search">
-		<input type="text" class="searchTerm" placeholder="Device keyword" oninput="textInput(this)">
+
+<div id="SidebarContainer">
+	<div id="Sidebar" class="thin-scroll">
+		<div class="title">Vendors</div>
+		<div class="area" id="SidebarVendors">
+			<!-- <div class="SidebarItem"></div> -->
+		</div>
+	</div>
+	<div class="back" onclick="document.getElementById('SidebarContainer').setAttribute('open', '0')"></div>
+</div>
+<div class="SidebarBtn ButtonStyleRegular" onclick="document.getElementById('SidebarContainer').setAttribute('open', '1')">
+	<div class="icon16"></div>
+</div>
+
+<div class="search" hasvalue="0">
+	<div class="search-icon icon16"></div>
+	<input type="text" class="searchTerm" placeholder=" " oninput="textInput(this)">
+	<span class="search-placeholder trans">Search...</span>
+</div>
+<div class="LayoutSelector">
+	<div class="TabGroup">
+		<div class="TabButton" onclick="LayoutMode('compact-list')"><div class="icon16"></div></div>
+		<div class="TabButton" onclick="LayoutMode('compact-cover')"><div class="icon16"></div></div>
+		<div class="TabButton" onclick="LayoutMode('large-cover')"><div class="icon16"></div></div>
 	</div>
 </div>
 
