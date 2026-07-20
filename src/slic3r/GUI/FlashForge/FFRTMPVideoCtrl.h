@@ -3,7 +3,6 @@
 
 #include <wx/panel.h>
 #include <wx/bitmap.h>
-#include <wx/timer.h>
 #include <wx/dialog.h>
 #include <atomic>
 #include <chrono>
@@ -52,7 +51,7 @@ public:
     // Records current communication identifier
     void setCurComId(com_id_t comId);
 
-    // Start streaming from the given URL
+    // Cache the stream URL; start immediately only when the popup is open.
     void setStreamUrl(const std::string &streamUrl);
 
     // 设置“下次起流的显示暂停偏好”：true=起流后停在暂停(显示缺省图+播放按钮)，false=直接播放。
@@ -104,7 +103,7 @@ private:
     bool     playButtonAvailable() const;// 播放/暂停按钮是否可用（仅播放中/已暂停时可操作）
     void     drawOverlayBar(wxDC &dc);   // 绘制底部状态条
     void     togglePause();              // 切换 播放/暂停
-    void     pauseStream();              // 暂停：停解码/保活，冻结最后一帧
+    void     pauseStream();              // 暂停显示：解码继续，冻结最后一帧
     void     resumeStream();             // 恢复：按最新地址重新开流
     void     OnLeftDown(wxMouseEvent &event);
 
@@ -184,11 +183,6 @@ private:
     // Com ID for this camera (from PrinterCameraPanel API)
     com_id_t m_curComId{ComInvalidId};
 
-    // 推流保活：播放期间周期性重发 camera "open"，维持打印机推流会话，
-    // 避免云端会话超时（约 10s）后停止产出分片。
-    wxTimer m_keepalive_timer;
-    int     m_keepalive_interval_ms{5000};
-
     // Popup dialog for full-screen view
     wxDialog *m_popup_dlg{nullptr};
     wxWindow *m_inline_parent{nullptr}; // 内联时的父窗口，弹窗关闭后需归还，避免控件被孤立到 mainframe
@@ -198,9 +192,9 @@ private:
     std::string m_url;
 
     // Reconnect
-    // 首次连接前的等待时间。设为 0 以最小化首帧延迟；若摄像头尚未开始推流，
-    // OpenStream 会失败并由重连逻辑自动重试，无需在此白等。
-    int m_initial_delay_ms{0};
+    // 首次连接前等待设备生成 HLS 播放列表。旧网页播放器在 camera open 后同样
+    // 延迟约 3 秒再创建播放器，可减少 Creator 5 起流阶段的无效 404。
+    int m_initial_delay_ms{3000};
     int m_reconnect_delay_ms{1000};  // 首连失败时快速重试，缩短首帧出现前的等待
     int m_reconnect_delay_max_ms{5000}; // 退避上限：直播源持续重连，不永久放弃
     int m_reconnect_attempts{0};

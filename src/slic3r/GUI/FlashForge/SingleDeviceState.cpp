@@ -16,6 +16,9 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <wx/dcgraph.h>
 #include <chrono>
+#include <functional>
+#include <iomanip>
+#include <sstream>
 using namespace std::literals;
 using json   = nlohmann::json;
 namespace pt = boost::property_tree;
@@ -64,6 +67,17 @@ void apply_device_page_light_text(wxWindow* window, const wxColour& color)
 #else
     (void) window;
     (void) color;
+#endif
+}
+
+static const bool g_device_detail_layout_log_enabled = false;
+
+void log_device_detail_layout(const std::string& message)
+{
+    if (!g_device_detail_layout_log_enabled) return;
+    BOOST_LOG_TRIVIAL(info) << "[DeviceDetailLayout] " << message;
+#ifdef _WIN32
+    OutputDebugStringA(("[DeviceDetailLayout] " + message + "\n").c_str());
 #endif
 }
 
@@ -404,6 +418,14 @@ DeviceDetail::DeviceDetail(wxWindow* parent)
 {
     SetBackgroundColour(*wxWHITE);
     create_panel(this);
+    Bind(wxEVT_SIZE, [this](wxSizeEvent& event) {
+        event.Skip();
+        const wxSize size = event.GetSize();
+        if (size != m_last_logged_size) {
+            m_last_logged_size = size;
+            CallAfter([this] { logLayoutState("size"); });
+        }
+    });
 }
 
 void DeviceDetail::setCurId(int curId) 
@@ -456,6 +478,7 @@ void DeviceDetail::create_panel(wxWindow* parent)
     sizer->AddSpacer(FromDIP(15));
     bSizer_confirm_row->AddStretchSpacer();
     bSizer_confirm_row->Add(confirm_push_btn, 0, wxRIGHT, FromDIP(20));
+    confirm_push_btn->Hide();
     sizer->Add(bSizer_confirm_row, 0, wxEXPAND, 0);
 //
     auto m_panel_separotor10 = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
@@ -464,7 +487,7 @@ void DeviceDetail::create_panel(wxWindow* parent)
 
     sizer->Add(m_panel_separotor10);
 //
-    m_grid_sizer = new wxGridSizer(2, FromDIP(35), 0);
+    m_grid_sizer = new wxFlexGridSizer(2, FromDIP(35), 0);
     m_panel_rows = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, -1), wxTAB_TRAVERSAL);
 
     m_device_material            = new IconText(m_panel_rows, wxString("device_material"), 16, wxString("PLA-12345678901234567890"), 12);
@@ -492,7 +515,11 @@ void DeviceDetail::create_panel(wxWindow* parent)
     m_device_cooling_fan->setLimit(0, 100);
     m_device_cooling_fan->setAdjustValue(10);
 
-    m_panel_rows->SetSizer(m_grid_sizer);
+    auto rows_sizer = new wxBoxSizer(wxHORIZONTAL);
+    rows_sizer->AddStretchSpacer();
+    rows_sizer->Add(m_grid_sizer, 0, wxALIGN_CENTER_VERTICAL);
+    rows_sizer->AddStretchSpacer();
+    m_panel_rows->SetSizer(rows_sizer);
     updateGridSizer(AD5X);
 
     sizer->Add(m_panel_rows, 0, wxLEFT | wxRIGHT | wxALIGN_CENTER | wxEXPAND, FromDIP(36));
@@ -523,7 +550,7 @@ void DeviceDetail::switchPage()
     }
 }
 
-void DeviceDetail::setMaterialName(wxString materialName) 
+void DeviceDetail::setMaterialName(wxString materialName)
 {
     m_device_material->setText(materialName);
 }
@@ -600,11 +627,12 @@ void DeviceDetail::updateGridSizer(int pid)
         return;
     }
 
+    m_layout_pid = pid;
     m_grid_sizer->Clear();
     auto addGrid = [=](wxWindow* window, bool show = true) { 
         if (show) {
             window->Show();
-            m_grid_sizer->Add(window, 1, wxALL | wxEXPAND, 0);
+            m_grid_sizer->Add(window, 0, wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 0);
         } else {
             window->Hide();
         }
@@ -620,6 +648,86 @@ void DeviceDetail::updateGridSizer(int pid)
     addGrid(m_device_cooling_fan, FFUtils::isPrinterSupportCoolingFan(pid));
     m_grid_sizer->Layout();
     m_panel_rows->Layout();
+    Layout();
+    SetMinSize(wxSize(-1, -1));
+    InvalidateBestSize();
+    SetMinSize(wxSize(-1, std::max(FromDIP(277), GetBestSize().GetHeight())));
+    logLayoutState("grid-updated");
+    CallAfter([this] { logLayoutState("grid-settled"); });
+}
+
+void DeviceDetail::logLayoutState(const char* reason) const
+{
+    if (!m_grid_sizer || !m_panel_rows) {
+        return;
+    }
+
+    const auto log_size = [](const wxSize& size) {
+        return std::to_string(size.GetWidth()) + "x" + std::to_string(size.GetHeight());
+    };
+    const auto log_point = [](const wxPoint& point) {
+        return std::to_string(point.x) + "," + std::to_string(point.y);
+    };
+    auto* mutable_this = const_cast<DeviceDetail*>(this);
+    const wxSize panel_size = GetClientSize();
+    const wxSize rows_size  = m_panel_rows->GetClientSize();
+    const wxSize grid_min   = m_grid_sizer->GetMinSize();
+    std::ostringstream summary;
+    summary << "reason=" << reason << " pid=0x" << std::hex << m_layout_pid << std::dec << " panel=" << log_size(panel_size)
+            << " panel_best=" << log_size(GetBestSize()) << " panel_min=" << log_size(GetMinSize()) << " rows=" << log_size(rows_size)
+            << " grid_min=" << log_size(grid_min) << " cols=" << m_grid_sizer->GetCols() << " items=" << m_grid_sizer->GetItemCount();
+    log_device_detail_layout(summary.str());
+
+    const auto log_window = [&](const char* name, const wxWindow* window) {
+        if (!window) {
+            return;
+        }
+        const wxPoint screen_pos = window->ClientToScreen(wxPoint(0, 0));
+        const wxPoint detail_pos = mutable_this->ScreenToClient(screen_pos);
+        std::ostringstream child;
+        child << "child=" << name << " shown=" << window->IsShown() << " size=" << log_size(window->GetSize())
+              << " best=" << log_size(window->GetBestSize()) << " min=" << log_size(window->GetMinSize())
+              << " parent_pos=" << log_point(window->GetPosition()) << " detail_pos=" << log_point(detail_pos)
+              << " screen_pos=" << log_point(screen_pos);
+        log_device_detail_layout(child.str());
+    };
+    log_window("material", m_device_material);
+    log_window("layer", m_device_layer);
+    log_window("initial_speed", m_device_initial_speed);
+    log_window("fill_rate", m_device_fill_rate);
+    log_window("speed", m_device_speed);
+    log_window("speed_mode", m_device_speed_u1);
+    log_window("nozzle_fan", m_device_nozzle_fan);
+    log_window("z_axis", m_device_z_axis);
+    log_window("cooling_fan", m_device_cooling_fan);
+
+    // Log every element (any wxWindow) under the panel, not just wxPanels.
+    std::function<void(wxWindow*, const std::string&, int)> log_elements;
+    log_elements = [&](wxWindow* parent, const std::string& parent_path, int depth) {
+        int child_index = 0;
+        for (wxWindowList::compatibility_iterator node = parent->GetChildren().GetFirst(); node; node = node->GetNext()) {
+            auto* child = node->GetData();
+            if (!child) {
+                continue;
+            }
+
+            const std::string class_name = wxString(child->GetClassInfo()->GetClassName()).ToStdString();
+            const std::string child_path = parent_path + "/" + class_name + "[" + std::to_string(child_index++) + "]";
+            const wxPoint screen_pos = child->ClientToScreen(wxPoint(0, 0));
+            const wxPoint detail_pos = mutable_this->ScreenToClient(screen_pos);
+            std::ostringstream element;
+            element << "element_path=" << child_path << " depth=" << depth << " class=" << class_name
+                    << " id=" << child->GetId() << " shown=" << child->IsShown()
+                    << " parent_pos=" << log_point(child->GetPosition())
+                    << " detail_pos=" << log_point(detail_pos) << " screen_pos=" << log_point(screen_pos)
+                    << " size=" << log_size(child->GetSize()) << " best=" << log_size(child->GetBestSize())
+                    << " min=" << log_size(child->GetMinSize());
+            log_device_detail_layout(element.str());
+
+            log_elements(child, child_path, depth + 1);
+        }
+    };
+    log_elements(mutable_this, "DeviceDetail", 1);
 }
 
 G3UDetail::G3UDetail(wxWindow* parent)
@@ -2690,6 +2798,12 @@ void SingleDeviceState::setupLayoutBusyCtrlPage(wxBoxSizer* busySizer, wxPanel* 
     m_device_info_button->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e) {
         // m_device_info_button->SetIcon("device_idle_file_info");
         m_device_info_button->Refresh();
+        {
+            std::ostringstream selection;
+            selection << "device-info-click pid=0x" << std::hex << m_pid << std::dec
+                      << " selected=" << (m_pid == GUIDER_3_ULTRA ? "m_busy_G3U_detail" : "m_busy_device_detial");
+            log_device_detail_layout(selection.str());
+        }
         if (m_pid == 0x001F && m_busy_G3U_detail) {
             if (m_busy_device_detial) {
                 m_busy_device_detial->Hide();
@@ -2710,6 +2824,7 @@ void SingleDeviceState::setupLayoutBusyCtrlPage(wxBoxSizer* busySizer, wxPanel* 
                 bool bShow = !m_busy_device_detial->IsShown();
                 m_busy_device_detial->Show(bShow);
                 m_busy_device_detial->Layout();
+                log_device_detail_layout(std::string("m_busy_device_detial shown=") + (bShow ? "true" : "false"));
                 if (bShow) {
                     m_device_info_button->SetBackgroundColor(wxColour(217, 234, 255));
                 } else {

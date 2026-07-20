@@ -99,8 +99,6 @@ FFRTMPVideoCtrl::FFRTMPVideoCtrl(wxWindow *parent)
     });
     Bind(wxEVT_LEFT_DOWN, &FFRTMPVideoCtrl::OnLeftDown, this);  // 左下角播放/暂停按钮
 
-    // 保活定时器：播放期间周期性重发 camera "open"，维持打印机推流。
-    m_keepalive_timer.Bind(wxEVT_TIMER, [this](wxTimerEvent &) { sendCameraOpen(); });
     logPanelState("constructor complete");
 }
 
@@ -159,16 +157,6 @@ void FFRTMPVideoCtrl::StartStream(const std::string &url)
 {
     m_force_default_placeholder = false;
 
-    bool valid = false;
-    const com_dev_data_t &data = MultiComMgr::inst()->devData(m_curComId, &valid);
-    if (valid && data.devDetail != nullptr && data.devDetail->camera != 1) {
-        // Ignore delayed/stale stream URL updates for devices without a camera.
-        m_paused = false;
-        StopStream();
-        setPlayState(PlayState::NoCamera);
-        return;
-    }
-
     // Unconditional debug output — always fires regardless of FFRTMP_USE_FFMPEG
     ffrtmp_log("StartStream called, url='" + url + "'");
     // [UNBIND] 若解绑期间意外触发了 StartStream，它内部会同步 StopStream()（见 SS0..SS4），
@@ -194,9 +182,6 @@ void FFRTMPVideoCtrl::StartStream(const std::string &url)
         return;
     }
 
-    // 是否为同一路流的重启（用于跳过 2s 预热等待，实现快速恢复）
-    const bool same_url = (!m_url.empty() && m_url == url);
-
     StopStream();
 
     m_url = url;
@@ -206,7 +191,10 @@ void FFRTMPVideoCtrl::StartStream(const std::string &url)
     m_ever_got_frame = false;                // 新会话：尚未出过画面（首次加载中不报断开）
     m_paused = m_display_paused_pref.load();  // 进设备页默认“暂停”(显示缺省图+播放按钮)；
                                               // 用户播放过则保持播放（切设备沿用）。atomic 需 .load()
-    m_skip_initial_delay = same_url;
+    // A URL may already be cached before the first user click; that must not be
+    // mistaken for an already-warmed stream. Every newly created decoder
+    // session gets the initial publisher warm-up delay.
+    m_skip_initial_delay = false;
     // 默认暂停 → 直接进入 Paused（显示缺省图 + 播放按钮，等用户点播放）；
     // 否则进入 Initializing（加载阶段）。
     setPlayState(m_paused ? PlayState::Paused : PlayState::Initializing);
@@ -223,12 +211,16 @@ void FFRTMPVideoCtrl::StartStream(const std::string &url)
         Refresh();
     });
 
-    m_thread = std::make_unique<std::thread>(&FFRTMPVideoCtrl::DecoderThreadFunc, this);
-
-    // 立即通知设备开流，并启动定时保活 —— 让打印机（经云端）开始并持续推流。
-    // 这条 open 指令走 WAN 云链路，是画面真正出现的前提；仅拉流而不开流拿到的是空地址。
+    // Notify the printer before FFmpeg starts opening the HLS manifest. The
+    // legacy web player used the same order: camera open first, then player
+    // startup after a short warm-up. Creator 5 otherwise returns 404 until its
+    // publisher has created the first playlist.
+    // Match PrinterCameraPanel: request camera startup once for this playback
+    // session. Repeating "open" every few seconds can continually retrigger the
+    // Creator 5 camera task and block unrelated printer controls.
     sendCameraOpen();
-    m_keepalive_timer.Start(m_keepalive_interval_ms);
+
+    m_thread = std::make_unique<std::thread>(&FFRTMPVideoCtrl::DecoderThreadFunc, this);
 #else
     (void)url;
     ffrtmp_err("FFmpeg not available (FFRTMP_USE_FFMPEG not defined)");
@@ -249,7 +241,6 @@ void FFRTMPVideoCtrl::StopStream()
     // 若解码线程正卡在 avformat_open_input（见 [decode] 日志），这里会阻塞 UI —— 重点排查。
     // 若解绑期间出现 SS0/SS3 之间的大时间空档，说明卡顿源就是这里（多半由 StartStream 触发）。
     ffrtmp_ts("SS0. StopStream ENTER (同步, 会在本线程 join 解码线程)");
-    m_keepalive_timer.Stop();  // 停止推流保活（wxTimer 仅可在主线程操作）
     m_running = false;
 
     // 先等待上一次异步停止的后台回收结束，避免新旧解码线程并发访问 FFmpeg 上下文。
@@ -287,7 +278,6 @@ void FFRTMPVideoCtrl::showOfflineImmediate(bool show_default_placeholder)
     if (show_default_placeholder) m_force_default_placeholder = true;
     // 立即（非阻塞）把画面切到“断开连接”并隐藏，同时置停止标志让解码线程开始退出。
     // 只做这些秒级返回的操作，绝不 join 解码线程——供解绑/登出时优先给用户视觉反馈。
-    m_keepalive_timer.Stop();
     m_running = false;   // 非阻塞：通知解码线程退出，且 OnFrameReady 会据此停止刷新（避免残帧闪回）
     m_paused  = false;   // 断连清除显示暂停态
     setPlayState(m_force_default_placeholder.load() ? PlayState::Not : PlayState::Disconnected);
@@ -349,16 +339,10 @@ void FFRTMPVideoCtrl::ShowFullScreenPopup()
     logPanelState("ShowFullScreenPopup enter");
     if (m_popup_dlg) return;
 
-    // 打开摄像头窗口：恢复上次关闭时的显示状态（首次打开默认播放，见 m_popup_last_paused 初值）。
-    // 后台解码/拉流始终在跑（暂停与拉流解耦），这里仅决定是否冻结显示。
-    // 断连时保持“断开连接”状态条，不改播放/暂停显示。
-    if (m_play_state.load() == PlayState::Disconnected || m_play_state.load() == PlayState::NoCamera) {
-        // Keep unavailable-state overlay.
-    } else if (m_popup_last_paused) {
-        pauseStream();
-    } else {
-        resumeStream();
-    }
+    // StartStream() has already restored the display preference for this
+    // device. In particular, the first open intentionally remains Paused so
+    // the play button is available. Do not force it to Loading here by calling
+    // resumeStream() before the user clicks Play.
 
     // 保存内联时的固定尺寸，弹窗关闭后需恢复（否则会残留 640x480 的约束把内联区域撑大）
     m_inline_size = GetSize();
@@ -387,9 +371,13 @@ void FFRTMPVideoCtrl::ShowFullScreenPopup()
         logPanelState("popup close enter");
         // 记录关闭时的显示状态（暂停/播放），下次打开弹窗时恢复，实现“保持原状”。
         m_popup_last_paused = m_paused;
+        // The popup owns the media session. Closing it must release the
+        // FFmpeg/network connection instead of decoding invisibly while the
+        // printer control panel is in use.
+        StopStream();
         // 弹窗专属：关闭后控件必须先从即将销毁的弹窗中 Reparent 出去（否则会随弹窗一起销毁），
         // 归还给内联父窗口后保持 Hidden —— 设备状态面板上不显示任何视频画面。
-        // 解码线程不停止，保证再次打开弹窗时能立即出画面。
+        // 解码线程已在上方停止；再次打开弹窗时按缓存地址重新建立连接。
         Reparent(m_inline_parent ? m_inline_parent : wxGetApp().mainframe);
         logPanelState("popup close after Reparent inline");
         setSize(m_inline_size);  // 复位为内联占位尺寸（隐藏状态下不占布局空间）
@@ -458,7 +446,7 @@ void FFRTMPVideoCtrl::DecoderThreadFunc()
             // 最近一次“有数据”的时间点，用于 HLS 到达直播边缘时的宽限判定。
             auto last_progress = std::chrono::steady_clock::now();
             // HLS 直播边缘 EOF 宽限期：期间在同一连接上原地重试读取，
-            // 等待设备（经保活）产出新分片，避免为了一次边缘 EOF 就整路重连。
+            // 等待设备产出新分片，避免为了一次边缘 EOF 就整路重连。
             // 取 8s：既能容忍正常直播分片间隔（通常 2~4s），又能在推流真正停止时
             // 较快进入重连/断开流程（避免画面长时间冻结在最后一帧）。可按分片时长调整。
             const auto hls_eof_grace = std::chrono::seconds(8);
@@ -880,20 +868,17 @@ void FFRTMPVideoCtrl::setDisplayMode(DisplayMode mode)
 
 void FFRTMPVideoCtrl::setCurComId(com_id_t comId)
 {
-    // 切换设备：摄像头画面跟随切换（新地址由后续 setStreamUrl 触发 StartStream 正常播放）。
-    // 暂停只是显示层面的冻结，不在这里干预。
-    m_curComId = comId;
+    if (m_curComId == comId) return;
 
-    bool valid = false;
-    const com_dev_data_t &data = MultiComMgr::inst()->devData(comId, &valid);
-    if (valid && data.devDetail != nullptr && data.devDetail->camera != 1) {
-        // 与设备页摄像头按钮使用相同的能力判断。切到无摄像头设备时停止旧流，
-        // 清除旧设备残帧，并在缺省图上显示明确的“未检测到摄像头”状态。
-        m_force_default_placeholder = false;
-        m_paused = false;
-        StopStream();
-        setPlayState(PlayState::NoCamera);
-    }
+    // Device detail may not be populated yet at switch time. Clear the old
+    // device's stream and wait for the new URL instead of treating the camera
+    // field's initialization value as a final capability result.
+    StopStream();
+    m_curComId = comId;
+    m_url.clear();
+    m_force_default_placeholder = false;
+    m_paused = false;
+    setPlayState(PlayState::Not);
 }
 
 void FFRTMPVideoCtrl::sendCameraOpen()
@@ -908,13 +893,35 @@ void FFRTMPVideoCtrl::sendCameraOpen()
     // putCommand 内部对 WAN 未在线的情况会拒绝并记录日志，无需在此判断。
     bool ok = MultiComMgr::inst()->putCommand(m_curComId, new ComCameraStreamCtrl("open"));
     if (!ok) {
-        // 仅在失败时记录（通常意味着 WAN 未在线）；成功的保活不打日志，避免刷屏。
+        // 仅在失败时记录（通常意味着 WAN 未在线）。
         ffrtmp_err("sendCameraOpen putCommand rejected, comId=" + std::to_string(m_curComId));
     }
 }
 
 void FFRTMPVideoCtrl::setStreamUrl(const std::string &streamUrl)
 {
+    ffrtmp_log("setStreamUrl: popup=" + std::string(m_popup_dlg ? "open" : "closed")
+               + ", running=" + std::string(m_running ? "true" : "false")
+               + ", urlEmpty=" + std::string(streamUrl.empty() ? "true" : "false"));
+    // A non-empty stream URL is authoritative evidence that this device has a
+    // camera. The capability field may still contain its initialization value
+    // when setCurComId() runs, so do not leave a stale NoCamera state behind.
+    if (!streamUrl.empty() && m_play_state.load() == PlayState::NoCamera) {
+        setPlayState(PlayState::Not);
+    }
+
+    // Keep the stream dormant while the inline camera panel is not being
+    // viewed.  PrinterCameraPanel used to defer creating its web player until
+    // the user opened/started the camera view; eagerly starting FFmpeg here
+    // keeps a media connection open for the whole device-page lifetime and can
+    // starve printers with a small connection/worker limit (notably Creator 5).
+    if (!m_popup_dlg) {
+        m_url = streamUrl;
+        return;
+    }
+
+    // An address refresh while the popup is already open must still switch the
+    // active stream immediately.
     StartStream(streamUrl);
 }
 
@@ -953,7 +960,27 @@ void FFRTMPVideoCtrl::setOffline(bool show_default_placeholder)
 
 void FFRTMPVideoCtrl::showPopup()
 {
+    ffrtmp_log("showPopup ENTER: popup=" + std::string(m_popup_dlg ? "open" : "closed")
+               + ", running=" + std::string(m_running ? "true" : "false")
+               + ", urlEmpty=" + std::string(m_url.empty() ? "true" : "false")
+               + ", playState=" + std::to_string(static_cast<int>(m_play_state.load())));
+    if (!m_popup_dlg && m_url.empty()) {
+        bool valid = false;
+        const com_dev_data_t &data = MultiComMgr::inst()->devData(m_curComId, &valid);
+        if (valid && data.devDetail != nullptr && data.devDetail->camera != 1) {
+            setPlayState(PlayState::NoCamera);
+        }
+    }
+    if (!m_popup_dlg && !m_url.empty() && !m_running) {
+        // Opening the camera popup is now the point at which the media network
+        // connection is created.
+        StartStream(m_url);
+    }
     ShowFullScreenPopup();
+    ffrtmp_log("showPopup EXIT: popup=" + std::string(m_popup_dlg ? "open" : "closed")
+               + ", running=" + std::string(m_running ? "true" : "false")
+               + ", paused=" + std::string(m_paused ? "true" : "false")
+               + ", playState=" + std::to_string(static_cast<int>(m_play_state.load())));
 }
 
 void FFRTMPVideoCtrl::closePopup()
@@ -1137,9 +1164,15 @@ void FFRTMPVideoCtrl::setPlayState(PlayState s)
         return;
     }
     // 仅在状态变化时刷新，避免解码线程每帧 setPlayState(Playing) 造成刷新风暴。
-    if (m_play_state.exchange(s) == s) {
+    PlayState old = m_play_state.exchange(s);
+    if (old == s) {
         return;
     }
+    ffrtmp_log("play state " + std::to_string(static_cast<int>(old)) + " -> "
+               + std::to_string(static_cast<int>(s))
+               + ", running=" + std::string(m_running ? "true" : "false")
+               + ", paused=" + std::string(m_paused ? "true" : "false")
+               + ", frameReady=" + std::string(m_frame_ready ? "true" : "false"));
     CallAfter([this]() { Refresh(false); });
 }
 
@@ -1163,11 +1196,12 @@ wxString FFRTMPVideoCtrl::statusText() const
 
 bool FFRTMPVideoCtrl::playButtonAvailable() const
 {
-    // 仅当视频真正在播放或已暂停时，播放/暂停按钮才可用。
-    // 初始化中(Initializing)、加载中(Loading)、断开连接(Disconnected) 等状态下
-    // 不显示按钮，用户无法操作。
+    // A cached URL in the initial state means the stream is ready to be
+    // started by the user's first click. This is the inline control's actual
+    // entry point because the legacy camera-toolbar popup binding is disabled.
     PlayState s = m_play_state.load();
-    return s == PlayState::Playing || s == PlayState::Paused;
+    return s == PlayState::Playing || s == PlayState::Paused
+        || (s == PlayState::Not && !m_url.empty());
 }
 
 wxRect FFRTMPVideoCtrl::playButtonRect()
@@ -1201,7 +1235,7 @@ void FFRTMPVideoCtrl::drawOverlayBar(wxDC &dc)
     std::string selectIcon = "";
     if (!playButtonAvailable()) {
         selectIcon = "offline";
-    } else if (m_paused){
+    } else if (m_paused || m_play_state.load() == PlayState::Not) {
         selectIcon = "play";
     } else {
         selectIcon = "pause";
@@ -1220,7 +1254,7 @@ void FFRTMPVideoCtrl::pauseStream()
     if (m_paused) {
         return;
     }
-    // 暂停与拉流解耦：后台解码/拉流/保活继续运行，只是“冻结显示”——
+    // 暂停与拉流解耦：后台解码/拉流继续运行，只是“冻结显示”——
     // OnFrameReady 不再把最新帧刷到显示位图，画面停在当前帧。
     ffrtmp_log("pauseStream (display-only, decode keeps running)");
     m_paused = true;
@@ -1262,8 +1296,19 @@ void FFRTMPVideoCtrl::togglePause()
 
 void FFRTMPVideoCtrl::OnLeftDown(wxMouseEvent &event)
 {
-    // 仅在按钮可用（播放中/已暂停）时响应点击；加载中/断连等状态忽略。
-    if (playButtonAvailable() && playButtonRect().Contains(event.GetPosition())) {
+    const bool in_play_button = playButtonRect().Contains(event.GetPosition());
+    ffrtmp_log("OnLeftDown: inPlayButton=" + std::string(in_play_button ? "true" : "false")
+               + ", playState=" + std::to_string(static_cast<int>(m_play_state.load()))
+               + ", urlEmpty=" + std::string(m_url.empty() ? "true" : "false"));
+
+    if (in_play_button && m_play_state.load() == PlayState::Not && !m_url.empty()) {
+        // First user click owns stream startup. StartStream restores the
+        // initial Paused preference; resume immediately because this click is
+        // the explicit Play action.
+        const std::string url = m_url;
+        StartStream(url);
+        resumeStream();
+    } else if (in_play_button && playButtonAvailable()) {
         togglePause();
     }
     event.Skip();
