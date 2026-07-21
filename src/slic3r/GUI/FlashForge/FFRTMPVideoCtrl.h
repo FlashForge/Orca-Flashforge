@@ -3,6 +3,7 @@
 
 #include <wx/panel.h>
 #include <wx/bitmap.h>
+#include <wx/timer.h>
 #include <wx/dialog.h>
 #include <atomic>
 #include <chrono>
@@ -10,6 +11,7 @@
 #include <string>
 #include <memory>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
 #include "MultiComDef.hpp"
@@ -51,6 +53,9 @@ public:
     // Records current communication identifier
     void setCurComId(com_id_t comId);
 
+    // Updates the selected device's reported camera capability.
+    void setCameraAvailable(bool available);
+
     // Cache the stream URL; start immediately only when the popup is open.
     void setStreamUrl(const std::string &streamUrl);
 
@@ -61,6 +66,10 @@ public:
     // Stop streaming and show an offline/default placeholder. Account logout uses
     // the default placeholder and keeps the inline panel visible.
     void setOffline(bool show_default_placeholder = false);
+
+    // Device removal/unbind path: immediately invalidate the old camera source,
+    // stop networking non-blockingly, and keep the video window visible offline.
+    void handleDeviceUnbound();
 
     // Show popup (full-screen) dialog
     void showPopup();
@@ -93,7 +102,8 @@ private:
 
     // 向设备发送 camera "open" 指令：WAN 下经云端让打印机开始/持续推流
     // （LAN 下命令层会自行忽略）。对齐 PrinterCameraPanel 的 rtsp_player_continue 机制。
-    void sendCameraOpen();
+    void sendCameraOpen(com_id_t comId);
+    void sendCameraClose();
 
     // ---- 播放器覆盖层（底部状态条：左下角播放/暂停按钮，右下角状态文字）----
     enum class PlayState { Initializing, Loading, Playing, Paused, Disconnected, NoCamera, Not };
@@ -117,13 +127,15 @@ private:
 
     // 单次读取结果：区分“读到数据/直播到达边缘(EOF)/真正错误”，
     // 以便对 HLS 等分段协议的 EOF 做容忍处理，而不是简单断流重连。
-    enum class ReadStatus { Frame, Eof, Error };
+    enum class ReadStatus { Frame, Progress, Eof, Error };
     ReadStatus ReadAndDecodeOneFrame();
 
     // Synchronisation
     std::atomic<bool>              m_running{false};
     std::atomic<bool>              m_frame_ready{false};
-    std::atomic<bool>              m_skip_initial_delay{false}; // 同一路流重启时跳过预热等待
+    // Timestamp of the latest successfully decoded video frame. Unlike
+    // m_frame_ready, this cannot mistake a frozen old frame for a healthy stream.
+    std::atomic<int64_t>           m_last_frame_time_ms{0};
     // 阻塞 I/O 硬超时截止点（steady_clock 毫秒，0 表示无截止）。设备/服务器失联时，
     // avformat_open_input / av_read_frame 可能无限阻塞——interruptCb 依据此值超时中止，
     // 让重连计数得以推进、最终判定“打印机断开连接”，而不是永远卡住冻结最后一帧。
@@ -182,6 +194,13 @@ private:
 
     // Com ID for this camera (from PrinterCameraPanel API)
     com_id_t m_curComId{ComInvalidId};
+    std::atomic<bool> m_camera_available{false};
+
+    // Device for which an "open" command was successfully queued. A matching
+    // "close" is sent exactly once when the media session ends.
+    com_id_t m_open_camera_com_id{ComInvalidId};
+    uint64_t m_camera_session_sequence{0};
+    uint64_t m_active_camera_session_id{0};
 
     // Popup dialog for full-screen view
     wxDialog *m_popup_dlg{nullptr};
@@ -194,7 +213,11 @@ private:
     // Reconnect
     // 首次连接前等待设备生成 HLS 播放列表。旧网页播放器在 camera open 后同样
     // 延迟约 3 秒再创建播放器，可减少 Creator 5 起流阶段的无效 404。
-    int m_initial_delay_ms{3000};
+    int m_connect_timeout_ms{60000};
+    // Renew an expired five-minute publisher only after sustained playback
+    // followed by a real decoded-frame gap.
+    int m_republish_min_play_ms{240000};
+    int m_republish_stale_frame_ms{10000};
     int m_reconnect_delay_ms{1000};  // 首连失败时快速重试，缩短首帧出现前的等待
     int m_reconnect_delay_max_ms{5000}; // 退避上限：直播源持续重连，不永久放弃
     int m_reconnect_attempts{0};

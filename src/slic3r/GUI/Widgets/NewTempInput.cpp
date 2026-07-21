@@ -1807,29 +1807,29 @@ void NewTempInputPanel::UpdateTempatrue(const com_dev_data_t& data)
 
     auto pid = FFUtils::getPid(m_cur_id);
     if (pid == C5) {
-        std::vector<double> nozzlesTemp;
-        std::vector<double> nozzlesTagTemp;
-        for (int i = 0; i < data.devDetail->nozzleCnt; i++) {
-            nozzlesTemp.push_back(data.devDetail->nozzleTemps[i]);
-            nozzlesTagTemp.push_back(data.devDetail->nozzleTargetTemps[i]);
-        }
         for (int i = 1; i <= m_count; i++) {
-            m_tempInputs["t" + std::to_string(i)]->SetCurrTemp(nozzlesTemp[m_count - 1], true);
-            m_tempInputs["t" + std::to_string(i)]->SetTagTemp(nozzlesTagTemp[m_count - 1], true);
+            NewTempInput* input = m_tempInputs["t" + std::to_string(i)];
+            if (i <= data.devDetail->nozzleCnt && data.devDetail->nozzleTemps
+                && data.devDetail->nozzleTargetTemps) {
+                input->SetCurrTemp(data.devDetail->nozzleTemps[i - 1], true);
+                input->SetTagTemp(data.devDetail->nozzleTargetTemps[i - 1], true);
+            } else {
+                input->SetCurrTemp(NO_TEMP);
+            }
         }
         m_tempInputs["bottom"]->SetCurrTemp(data.devDetail->platTemp, true);
         m_tempInputs["bottom"]->SetTagTemp(data.devDetail->platTargetTemp, true);
     } 
     else if (pid == C5P) {
-        std::vector<double> nozzlesTemp;
-        std::vector<double> nozzlesTagTemp;
-        for (int i = 0; i < data.devDetail->nozzleCnt; i++) {
-            nozzlesTemp.push_back(data.devDetail->nozzleTemps[i]);
-            nozzlesTagTemp.push_back(data.devDetail->nozzleTargetTemps[i]);
-        }
         for (int i = 1; i <= m_count; i++) {
-            m_tempInputs["t" + std::to_string(i)]->SetCurrTemp(nozzlesTemp[m_count - 1], true);
-            m_tempInputs["t" + std::to_string(i)]->SetTagTemp(nozzlesTagTemp[m_count - 1], true);
+            NewTempInput* input = m_tempInputs["t" + std::to_string(i)];
+            if (i <= data.devDetail->nozzleCnt && data.devDetail->nozzleTemps
+                && data.devDetail->nozzleTargetTemps) {
+                input->SetCurrTemp(data.devDetail->nozzleTemps[i - 1], true);
+                input->SetTagTemp(data.devDetail->nozzleTargetTemps[i - 1], true);
+            } else {
+                input->SetCurrTemp(NO_TEMP);
+            }
         }
         m_tempInputs["bottom"]->SetCurrTemp(data.devDetail->platTemp, true);
         m_tempInputs["bottom"]->SetTagTemp(data.devDetail->platTargetTemp, true);

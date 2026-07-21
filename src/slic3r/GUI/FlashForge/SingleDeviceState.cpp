@@ -25,7 +25,7 @@ namespace pt = boost::property_tree;
 
 // 临时诊断日志：与 [FFRTMP] 一起输出到 VS 调试窗口，定位“设备断线”根因，定位后可撤。
 // [CAMDBG] 调试日志总开关：置 false 关闭全部 [CAMDBG] 输出（需要排查时改回 true）。
-static const bool g_camdbg_log_enabled = false;
+static const bool g_camdbg_log_enabled = true;
 
 static void camdbg_log(const std::string &msg)
 {
@@ -57,6 +57,41 @@ namespace GUI {
 namespace {
 
 constexpr auto FF_DEVICE_PAGE_PRIMARY_TEXT = "#333333";
+
+enum class CameraStreamProtocol { Source, Hls, Rtmp };
+
+// Change this single value to compare the device's fixed HLS and RTMP URLs.
+static constexpr CameraStreamProtocol g_camera_stream_protocol = CameraStreamProtocol::Source;
+
+std::string switch_camera_stream_url(const std::string& source, CameraStreamProtocol protocol)
+{
+    if (source.empty()) return source;
+
+    std::string result = source;
+    if (protocol == CameraStreamProtocol::Rtmp) {
+        if (result.rfind("https://", 0) == 0)
+            result.replace(0, 8, "rtmp://");
+        else if (result.rfind("http://", 0) == 0)
+            result.replace(0, 7, "rtmp://");
+
+        // RTMP uses the same fixed host/path without the HLS playlist suffix.
+        const size_t suffix = result.find(".m3u8");
+        if (suffix != std::string::npos) result.erase(suffix, 5);
+    } else if (protocol == CameraStreamProtocol::Hls) {
+        if (result.rfind("rtmps://", 0) == 0)
+            result.replace(0, 8, "https://");
+        else if (result.rfind("rtmp://", 0) == 0)
+            result.replace(0, 7, "http://");
+
+        const size_t query = result.find('?');
+        const std::string path = result.substr(0, query);
+        if (path.size() < 5 || path.substr(path.size() - 5) != ".m3u8")
+            result.insert(query == std::string::npos ? result.size() : query, ".m3u8");
+    } else if (protocol == CameraStreamProtocol::Source) {
+    
+    }
+    return result;
+}
 
 void apply_device_page_light_text(wxWindow* window, const wxColour& color)
 {
@@ -3229,11 +3264,10 @@ void SingleDeviceState::onConnectExit(ComConnectionExitEvent &event)
         CallAfter([this]() {          // 延后一 tick,避免与整页重建叠加成长卡顿
             if (!m_camera_panel) return;
             m_camera_panel->logPanelState("onConnectExit CallAfter before camera offline");
-            // 连接退出事件可能早于账号维护事件到达。这里直接进入“缺省图 +
-            // 不可播放按钮”状态，避免 showOfflineImmediate() 因标志尚未设置而 Hide()。
-            m_camera_panel->showOfflineImmediate(true);
-            m_camera_panel->closePopup();
-            m_camera_panel->logPanelState("onConnectExit CallAfter after visible default placeholder");
+            // Device unbind/removal has a dedicated path: invalidate the old
+            // URL/comId and keep the current camera surface visible offline.
+            m_camera_panel->handleDeviceUnbound();
+            m_camera_panel->logPanelState("onConnectExit CallAfter after camera disconnected");
             CallAfter([this]() {
                 if (!m_camera_panel) return;
                 m_camera_panel->reapStoppedStream();  // 回收解码线程
@@ -4029,14 +4063,16 @@ void SingleDeviceState::fillValue(const com_dev_data_t& data,bool wanDev)
         m_material_weight_label->SetLabel(weight);
     }
 
+    // Temperature telemetry is present in devDetail for both LAN and WAN.
+    // WAN updates call fillValue(data, true), so this must be a common path.
+    setTempurature(data);
+
     if (!wanDev) {
         if (!m_isCloudState) {
             double printProgress = data.devDetail->printProgress; // 打印进度
             m_progress_bar->SetProgress(printProgress * 100);
             m_progress_bar->Show();
         }
-
-        setTempurature(data);
 
         std::string lightStatus = data.devDetail->lightStatus; // 灯状态
         /*if (data.devProduct->lightCtrlState == 1 && lightStatus.compare(CLOSE) == 0) {
@@ -4376,12 +4412,30 @@ void SingleDeviceState::refreshCameraStream()
     if (!valid) {
         return;  // 设备数据暂不可用：保持当前视频流不变
     }
+    if (data.devDetail == nullptr) {
+        return;
+    }
+
+    // Match the device-capability rule introduced by 2f0e39dcb3f: only the
+    // explicit camera field determines whether this printer has a camera.
+    // cameraStreamUrl may be populated for models without camera hardware and
+    // must never be treated as capability evidence.
+    const bool camera_available = data.devDetail->camera == 1;
+    m_camera_panel->setCameraAvailable(camera_available);
+    if (!camera_available) {
+        m_camera_stream_url.clear();
+        return;
+    }
+
+    const std::string source_url = data.devDetail->cameraStreamUrl;
     // 仅在拿到“新的、非空”拉流地址时才切流；空地址/设备离线一律保持当前流。
-    std::string stream_url = data.devDetail->cameraStreamUrl;
+    std::string stream_url = switch_camera_stream_url(source_url, g_camera_stream_protocol);
     if (!stream_url.empty() && m_camera_stream_url != stream_url) {
         m_camera_stream_url = stream_url;
         camdbg_log("camera stream url (comId=" + std::to_string(m_camera_cur_id)
-                   + ") -> " + m_camera_stream_url);
+                   + ", protocol="
+                   + std::string(g_camera_stream_protocol == CameraStreamProtocol::Rtmp ? "rtmp" : "hls")
+                   + ") source=" + source_url + " selected=" + m_camera_stream_url);
         m_camera_panel->setStreamUrl(m_camera_stream_url);
     }
 }
@@ -4391,14 +4445,6 @@ void SingleDeviceState::switchCameraStreamTo(int comId)
     // 把摄像头视频流切换到指定设备（切设备/点摄像头按钮均走此处）。
     if (!m_camera_panel || comId < 0 || comId == m_camera_cur_id) {
         return;
-    }
-    // 关闭旧绑定设备(WAN)的推流会话，避免云端继续为不再观看的设备推流。
-    if (m_camera_cur_id >= 0) {
-        bool oldValid = false;
-        const com_dev_data_t &oldData = MultiComMgr::inst()->devData(m_camera_cur_id, &oldValid);
-        if (oldValid && oldData.connectMode == COM_CONNECT_WAN && !oldData.wanDevInfo.devTopic.empty()) {
-            MultiComMgr::inst()->putCommand(m_camera_cur_id, new ComCameraStreamCtrl(CLOSE));
-        }
     }
     m_camera_cur_id = comId;
     m_camera_stream_url.clear();          // 强制 refreshCameraStream 按新设备重新 setStreamUrl

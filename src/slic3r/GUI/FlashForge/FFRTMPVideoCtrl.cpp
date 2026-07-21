@@ -12,7 +12,7 @@
 #include <sstream>
 
 // [FFRTMP] 调试日志总开关：置 false 关闭全部 [FFRTMP] 输出（需要排查时改回 true）。
-static const bool g_ffrtmp_log_enabled = false;
+static const bool g_ffrtmp_log_enabled = true;
 // Independent diagnostic switch: visibility/layout logs remain available while
 // verbose stream decoding logs are disabled.
 static const bool g_camera_panel_state_log_enabled = false;
@@ -170,7 +170,7 @@ void FFRTMPVideoCtrl::StartStream(const std::string &url)
         return;
     }
 
-    if (m_paused && m_url == url) {
+    if (m_running && m_paused && m_url == url) {
         ffrtmp_log("paused, ignoring same-url StartStream");
         return;
     }
@@ -189,12 +189,12 @@ void FFRTMPVideoCtrl::StartStream(const std::string &url)
     m_reconnect_attempts = 0;
     m_offline_shown = false;
     m_ever_got_frame = false;                // 新会话：尚未出过画面（首次加载中不报断开）
+    m_last_frame_time_ms = 0;
     m_paused = m_display_paused_pref.load();  // 进设备页默认“暂停”(显示缺省图+播放按钮)；
                                               // 用户播放过则保持播放（切设备沿用）。atomic 需 .load()
     // A URL may already be cached before the first user click; that must not be
     // mistaken for an already-warmed stream. Every newly created decoder
     // session gets the initial publisher warm-up delay.
-    m_skip_initial_delay = false;
     // 默认暂停 → 直接进入 Paused（显示缺省图 + 播放按钮，等用户点播放）；
     // 否则进入 Initializing（加载阶段）。
     setPlayState(m_paused ? PlayState::Paused : PlayState::Initializing);
@@ -215,10 +215,8 @@ void FFRTMPVideoCtrl::StartStream(const std::string &url)
     // legacy web player used the same order: camera open first, then player
     // startup after a short warm-up. Creator 5 otherwise returns 404 until its
     // publisher has created the first playlist.
-    // Match PrinterCameraPanel: request camera startup once for this playback
-    // session. Repeating "open" every few seconds can continually retrigger the
-    // Creator 5 camera task and block unrelated printer controls.
-    sendCameraOpen();
+    // Send exactly one openstream command for this user-started session.
+    sendCameraOpen(m_curComId);
 
     m_thread = std::make_unique<std::thread>(&FFRTMPVideoCtrl::DecoderThreadFunc, this);
 #else
@@ -257,6 +255,12 @@ void FFRTMPVideoCtrl::StopStream()
 #ifdef FFRTMP_USE_FFMPEG
     CloseStream();
 #endif
+    sendCameraClose();
+    // A stopped media session is no longer Playing/Paused. Keep the cached URL
+    // so the next Play click creates a fresh session and sends one new open.
+    // Offline/no-camera callers overwrite Not with their more specific state.
+    m_paused = false;
+    setPlayState(PlayState::Not);
     ffrtmp_ts("SS4. CloseStream END; StopStream EXIT");
 
     {
@@ -280,6 +284,7 @@ void FFRTMPVideoCtrl::showOfflineImmediate(bool show_default_placeholder)
     // 只做这些秒级返回的操作，绝不 join 解码线程——供解绑/登出时优先给用户视觉反馈。
     m_running = false;   // 非阻塞：通知解码线程退出，且 OnFrameReady 会据此停止刷新（避免残帧闪回）
     m_paused  = false;   // 断连清除显示暂停态
+    sendCameraClose();
     setPlayState(m_force_default_placeholder.load() ? PlayState::Not : PlayState::Disconnected);
     {
         wxCriticalSectionLocker lock(m_frame_cs);
@@ -422,20 +427,15 @@ static std::string av_err_str(int err)
 void FFRTMPVideoCtrl::DecoderThreadFunc()
 {
     ffrtmp_log("Decode thread started");
-
-    // 首次连接前等待，给摄像头时间启动推流（RTMP 直播流需要几秒准备）。
-    // 同一路流重启（m_skip_initial_delay）时跳过，避免每次重连都白等 2 秒。
-    if (m_reconnect_attempts == 0 && m_initial_delay_ms > 0 && !m_skip_initial_delay) {
-        ffrtmp_log("Waiting " + std::to_string(m_initial_delay_ms) + "ms for camera stream to become ready...");
-        std::this_thread::sleep_for(std::chrono::milliseconds(m_initial_delay_ms));
-    }
-    m_skip_initial_delay = false;
+    auto connect_started_at = std::chrono::steady_clock::now();
+    std::chrono::steady_clock::time_point first_frame_at;
 
     while (m_running) {
-        ffrtmp_log("Attempting OpenStream (attempt " + std::to_string(m_reconnect_attempts + 1)
+        ffrtmp_log("Attempting FFmpeg stream open (attempt " + std::to_string(m_reconnect_attempts + 1)
                    + ") for " + m_url);
 
-        if (OpenStream(m_url)) {
+        const bool stream_opened = OpenStream(m_url);
+        if (stream_opened) {
             m_reconnect_attempts = 0;
             m_offline_shown = false;
             // 显示暂停时（进设备页默认暂停+缺省图）不改动状态，保持“已暂停”显示。
@@ -462,12 +462,18 @@ void FFRTMPVideoCtrl::DecoderThreadFunc()
                     if (frame_count == 1) {
                         ffrtmp_log("First frame decoded successfully!");
                         m_ever_got_frame = true;   // 本会话已出过画面
+                        if (first_frame_at.time_since_epoch().count() == 0)
+                            first_frame_at = std::chrono::steady_clock::now();
                     }
                     // 显示暂停时（进设备页默认暂停 / 用户暂停）解码照常，但不置 Playing，
                     // 保持“已暂停 + 缺省图”显示；用户点播放(resumeStream)后才转 Playing。
                     if (!m_paused) {
                         setPlayState(PlayState::Playing);   // 视频播放中（内部去重，不会频繁刷新）
                     }
+                    continue;
+                }
+                if (st == ReadStatus::Progress) {
+                    last_progress = std::chrono::steady_clock::now();
                     continue;
                 }
                 if (st == ReadStatus::Eof && m_is_hls) {
@@ -500,6 +506,113 @@ void FFRTMPVideoCtrl::DecoderThreadFunc()
             break;
         }
 
+        if (m_is_hls && m_ever_got_frame.load()) {
+            // A live HLS demuxer can reach the end of its current media
+            // playlist (commonly around one minute). This ends only the local
+            // FFmpeg input, not the printer-side camera session. Reopen the
+            // manifest without sending another openstream or a closestream.
+            const auto now = std::chrono::steady_clock::now();
+            const int64_t last_frame_ms = m_last_frame_time_ms.load();
+            const int64_t now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                       now.time_since_epoch()).count();
+            const int64_t frame_age_ms = last_frame_ms > 0 ? now_ms - last_frame_ms : 0;
+            const int64_t played_ms = first_frame_at.time_since_epoch().count() == 0
+                                          ? 0
+                                          : std::chrono::duration_cast<std::chrono::milliseconds>(now - first_frame_at).count();
+
+            if (played_ms >= m_republish_min_play_ms
+                && frame_age_ms >= m_republish_stale_frame_ms) {
+                const com_id_t recovery_com_id = m_curComId;
+                ffrtmp_log("Camera publisher appears expired; renewing stream, playedMs="
+                           + std::to_string(played_ms)
+                           + ", frameAgeMs=" + std::to_string(frame_age_ms));
+
+                // Pair the old device session before creating a new one. The
+                // command queue preserves close/open order for this device.
+                sendCameraClose();
+                sendCameraOpen(recovery_com_id);
+                m_ever_got_frame = false;
+                m_last_frame_time_ms = 0;
+                m_reconnect_attempts = 0;
+                connect_started_at = now;
+                first_frame_at = {};
+                if (!m_paused) setPlayState(PlayState::Loading);
+                CallAfter([this]() {
+                    wxCriticalSectionLocker lock(m_frame_cs);
+                    m_frame_ready = false;
+                    m_rgb_buffer.clear();
+                    m_rgb_bitmap = wxBitmap();
+                    Refresh();
+                });
+            } else {
+                ffrtmp_log("HLS media input ended after playback; reopening manifest in same camera session"
+                           ", playedMs=" + std::to_string(played_ms)
+                           + ", frameAgeMs=" + std::to_string(frame_age_ms));
+            }
+            for (int elapsed = 0; elapsed < 500 && m_running; elapsed += 100) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+            continue;
+        }
+
+        if (m_is_hls && !m_ever_got_frame.load()) {
+            // Keep the printer-side session open. Firmware needs roughly 8s
+            // to start encoding and up to 20s to establish its RTMP publisher;
+            // the HLS manifest can legitimately return 404 during that time.
+            // This also covers a manifest that opened but produced no
+            // decodable video frame. Retry only the media URL--never send
+            // another openstream here.
+            ++m_reconnect_attempts;
+            const auto connect_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                             std::chrono::steady_clock::now() - connect_started_at)
+                                             .count();
+            if (connect_elapsed >= m_connect_timeout_ms) {
+                ffrtmp_log("Camera media initial wait exceeded "
+                           + std::to_string(connect_elapsed)
+                           + "ms; resetting camera view to initial state");
+                m_running = false;
+                sendCameraClose();
+                m_paused = false;
+                m_display_paused_pref = true;
+                m_ever_played = false;
+                setPlayState(PlayState::Not);
+                CallAfter([this]() {
+                    wxCriticalSectionLocker lock(m_frame_cs);
+                    m_frame_ready = false;
+                    m_rgb_buffer.clear();
+                    m_rgb_bitmap = wxBitmap();
+                    Refresh();
+                });
+                break;
+            }
+            setPlayState(PlayState::Loading);
+            const int delay = std::min(m_reconnect_delay_ms * m_reconnect_attempts,
+                                       m_reconnect_delay_max_ms);
+            ffrtmp_log("Camera media not ready; retrying HLS request in "
+                       + std::to_string(delay) + "ms (attempt "
+                       + std::to_string(m_reconnect_attempts + 1) + ")");
+            for (int elapsed = 0; elapsed < delay && m_running; elapsed += 100) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+            continue;
+        }
+
+        // Do not automatically reopen the media URL. Close the matching
+        // printer-side session and wait for another explicit Play click.
+        m_running = false;
+        sendCameraClose();
+        m_paused = false;
+        setPlayState(PlayState::Not);
+        CallAfter([this]() {
+            wxCriticalSectionLocker lock(m_frame_cs);
+            m_frame_ready = false;
+            m_rgb_buffer.clear();
+            m_rgb_bitmap = wxBitmap();
+            Refresh();
+        });
+        break;
+
+#if 0 // Automatic reconnect intentionally disabled.
         m_reconnect_attempts++;
 
         // 关键：区分“首次加载中(从未出过画面)”与“曾经在播又断了”。
@@ -538,6 +651,7 @@ void FFRTMPVideoCtrl::DecoderThreadFunc()
         for (int i = 0; i < delay / 100 && m_running; ++i) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
+#endif
     }
 
     ffrtmp_log("Decode thread exiting");
@@ -653,6 +767,7 @@ bool FFRTMPVideoCtrl::OpenStream(const std::string &url)
     if (ret < 0) {
         ffrtmp_err("avformat_open_input failed: " + av_err_str(ret)
                    + " (code=" + std::to_string(ret) + ")");
+        if (fmt_ctx) avformat_free_context(fmt_ctx);
         return false;
     }
 
@@ -781,17 +896,18 @@ FFRTMPVideoCtrl::ReadStatus FFRTMPVideoCtrl::ReadAndDecodeOneFrame()
 
     // 读到了一个包（连接存活即算“有进展”），无论它是否属于视频流。
     if (packet->stream_index != m_video_stream_idx) {
-        av_packet_unref(packet); return ReadStatus::Frame;
+        av_packet_unref(packet); return ReadStatus::Progress;
     }
 
     ret = avcodec_send_packet(codec_ctx, packet);
     av_packet_unref(packet);
-    if (ret < 0) { return ReadStatus::Frame; }
+    if (ret < 0) { return ReadStatus::Progress; }
 
+    bool decoded_frame = false;
     while (ret >= 0) {
         ret = avcodec_receive_frame(codec_ctx, frame);
         if (ret == AVERROR(EAGAIN)) break;
-        if (ret < 0) return ReadStatus::Frame;
+        if (ret < 0) return ReadStatus::Progress;
 
         // Lazy-init or re-create scaler when resolution changes
         SwsContext *sws = SWS_CTX(m_sws_ctx);
@@ -804,7 +920,7 @@ FFRTMPVideoCtrl::ReadStatus FFRTMPVideoCtrl::ReadAndDecodeOneFrame()
             m_sws_ctx = sws;
             m_video_width  = codec_ctx->width;
             m_video_height = codec_ctx->height;
-            if (!sws) { av_frame_unref(frame); return ReadStatus::Frame; }
+            if (!sws) { av_frame_unref(frame); return ReadStatus::Progress; }
             ffrtmp_log("Scaler (re)created: " + std::to_string(m_video_width) + "x" + std::to_string(m_video_height));
         }
 
@@ -829,12 +945,14 @@ FFRTMPVideoCtrl::ReadStatus FFRTMPVideoCtrl::ReadAndDecodeOneFrame()
             m_buf_width   = fw;
             m_buf_height  = fh;
             m_frame_ready = true;
+            m_last_frame_time_ms = ffrtmp_now_ms();
+            decoded_frame = true;
         }
 
         CallAfter(&FFRTMPVideoCtrl::OnFrameReady);
         av_frame_unref(frame);
     }
-    return ReadStatus::Frame;
+    return decoded_frame ? ReadStatus::Frame : ReadStatus::Progress;
 }
 
 #else  // !FFRTMP_USE_FFMPEG
@@ -881,9 +999,31 @@ void FFRTMPVideoCtrl::setCurComId(com_id_t comId)
     setPlayState(PlayState::Not);
 }
 
-void FFRTMPVideoCtrl::sendCameraOpen()
+void FFRTMPVideoCtrl::setCameraAvailable(bool available)
 {
-    if (m_curComId == ComInvalidId) {
+    const bool was_available = m_camera_available.exchange(available);
+    if (!available) {
+        if (was_available) StopStream();
+        m_url.clear();
+        m_paused = false;
+        setPlayState(PlayState::NoCamera);
+        return;
+    }
+    if (!was_available && m_play_state.load() == PlayState::NoCamera) {
+        setPlayState(PlayState::Not);
+    }
+}
+
+void FFRTMPVideoCtrl::sendCameraOpen(com_id_t comId)
+{
+    if (comId == ComInvalidId) {
+        ffrtmp_err("sendCameraOpen skipped: invalid comId");
+        return;
+    }
+
+    if (m_open_camera_com_id != ComInvalidId) {
+        ffrtmp_log("sendCameraOpen skipped: camera session already open, comId="
+                   + std::to_string(m_open_camera_com_id));
         return;
     }
     // 无条件下发，与 PrinterCameraPanel::onScriptMessage 一致：
@@ -891,10 +1031,38 @@ void FFRTMPVideoCtrl::sendCameraOpen()
     //           云端通知打印机启动摄像头并推流；
     //   · LAN → exec 返回 COM_UNSUPPORTED，自动忽略，无副作用。
     // putCommand 内部对 WAN 未在线的情况会拒绝并记录日志，无需在此判断。
-    bool ok = MultiComMgr::inst()->putCommand(m_curComId, new ComCameraStreamCtrl("open"));
+    bool ok = MultiComMgr::inst()->putCommand(comId, new ComCameraStreamCtrl("open"));
     if (!ok) {
         // 仅在失败时记录（通常意味着 WAN 未在线）。
-        ffrtmp_err("sendCameraOpen putCommand rejected, comId=" + std::to_string(m_curComId));
+        ffrtmp_err("[CAMERA_STREAM_SESSION] OPENSTREAM rejected, comId="
+                   + std::to_string(comId));
+    } else {
+        m_open_camera_com_id = comId;
+        m_active_camera_session_id = ++m_camera_session_sequence;
+        ffrtmp_log("[CAMERA_STREAM_SESSION] OPENSTREAM queued, sessionId="
+                   + std::to_string(m_active_camera_session_id)
+                   + ", comId=" + std::to_string(comId));
+    }
+}
+
+void FFRTMPVideoCtrl::sendCameraClose()
+{
+    const com_id_t com_id = m_open_camera_com_id;
+    if (com_id == ComInvalidId) return;
+    const uint64_t session_id = m_active_camera_session_id;
+
+    // Clear first so repeated stop/offline/destructor paths cannot enqueue a
+    // second close for the same media session.
+    m_open_camera_com_id = ComInvalidId;
+    m_active_camera_session_id = 0;
+    if (!MultiComMgr::inst()->putCommand(com_id, new ComCameraStreamCtrl("close"))) {
+        ffrtmp_err("[CAMERA_STREAM_SESSION] CLOSESTREAM rejected, sessionId="
+                   + std::to_string(session_id)
+                   + ", comId=" + std::to_string(com_id));
+    } else {
+        ffrtmp_log("[CAMERA_STREAM_SESSION] CLOSESTREAM queued, sessionId="
+                   + std::to_string(session_id)
+                   + ", comId=" + std::to_string(com_id));
     }
 }
 
@@ -906,23 +1074,18 @@ void FFRTMPVideoCtrl::setStreamUrl(const std::string &streamUrl)
     // A non-empty stream URL is authoritative evidence that this device has a
     // camera. The capability field may still contain its initialization value
     // when setCurComId() runs, so do not leave a stale NoCamera state behind.
+    if (!m_camera_available.load()) {
+        m_url.clear();
+        setPlayState(PlayState::NoCamera);
+        return;
+    }
     if (!streamUrl.empty() && m_play_state.load() == PlayState::NoCamera) {
         setPlayState(PlayState::Not);
     }
 
-    // Keep the stream dormant while the inline camera panel is not being
-    // viewed.  PrinterCameraPanel used to defer creating its web player until
-    // the user opened/started the camera view; eagerly starting FFmpeg here
-    // keeps a media connection open for the whole device-page lifetime and can
-    // starve printers with a small connection/worker limit (notably Creator 5).
-    if (!m_popup_dlg) {
-        m_url = streamUrl;
-        return;
-    }
-
-    // An address refresh while the popup is already open must still switch the
-    // active stream immediately.
-    StartStream(streamUrl);
+    // URL updates never start a printer/media session. Playback is owned by an
+    // explicit click on the Play button.
+    m_url = streamUrl;
 }
 
 void FFRTMPVideoCtrl::setStartPausedPreference(bool paused)
@@ -958,6 +1121,38 @@ void FFRTMPVideoCtrl::setOffline(bool show_default_placeholder)
     });
 }
 
+void FFRTMPVideoCtrl::handleDeviceUnbound()
+{
+    ffrtmp_log("handleDeviceUnbound ENTER: comId=" + std::to_string(m_curComId)
+               + ", running=" + std::string(m_running ? "true" : "false")
+               + ", urlEmpty=" + std::string(m_url.empty() ? "true" : "false"));
+    // Give immediate UI feedback without joining the decoder thread here.
+    // reapStoppedStream() is scheduled by the caller on the following UI tick.
+    m_running = false;
+    sendCameraClose();
+    m_paused = false;
+    m_display_paused_pref = true;
+    m_ever_played = false;
+    m_camera_available = false;
+    m_curComId = ComInvalidId;
+    m_url.clear();
+    m_force_default_placeholder = false;
+    setPlayState(PlayState::Disconnected);
+
+    {
+        wxCriticalSectionLocker lock(m_frame_cs);
+        m_frame_ready = false;
+        m_rgb_buffer.clear();
+        m_rgb_bitmap = wxBitmap();
+    }
+
+    // Keep whichever camera surface is currently in use (inline or popup)
+    // visible and repaint it with the disconnected placeholder/status.
+    if (!m_popup_dlg) Show();
+    Refresh();
+    ffrtmp_log("handleDeviceUnbound EXIT: state=Disconnected, source cleared");
+}
+
 void FFRTMPVideoCtrl::showPopup()
 {
     ffrtmp_log("showPopup ENTER: popup=" + std::string(m_popup_dlg ? "open" : "closed")
@@ -970,11 +1165,6 @@ void FFRTMPVideoCtrl::showPopup()
         if (valid && data.devDetail != nullptr && data.devDetail->camera != 1) {
             setPlayState(PlayState::NoCamera);
         }
-    }
-    if (!m_popup_dlg && !m_url.empty() && !m_running) {
-        // Opening the camera popup is now the point at which the media network
-        // connection is created.
-        StartStream(m_url);
     }
     ShowFullScreenPopup();
     ffrtmp_log("showPopup EXIT: popup=" + std::string(m_popup_dlg ? "open" : "closed")
@@ -1163,6 +1353,13 @@ void FFRTMPVideoCtrl::setPlayState(PlayState s)
     if (m_force_default_placeholder.load() && s != PlayState::Not) {
         return;
     }
+    // Once the selected device has no valid camera capability (notably after
+    // unbind), reject late decoder callbacks that try to restore active states.
+    if (!m_camera_available.load()
+        && (s == PlayState::Initializing || s == PlayState::Loading
+            || s == PlayState::Playing || s == PlayState::Paused)) {
+        return;
+    }
     // 仅在状态变化时刷新，避免解码线程每帧 setPlayState(Playing) 造成刷新风暴。
     PlayState old = m_play_state.exchange(s);
     if (old == s) {
@@ -1200,6 +1397,7 @@ bool FFRTMPVideoCtrl::playButtonAvailable() const
     // started by the user's first click. This is the inline control's actual
     // entry point because the legacy camera-toolbar popup binding is disabled.
     PlayState s = m_play_state.load();
+    if (!m_camera_available.load()) return false;
     return s == PlayState::Playing || s == PlayState::Paused
         || (s == PlayState::Not && !m_url.empty());
 }
