@@ -25,7 +25,7 @@ namespace pt = boost::property_tree;
 
 // 临时诊断日志：与 [FFRTMP] 一起输出到 VS 调试窗口，定位“设备断线”根因，定位后可撤。
 // [CAMDBG] 调试日志总开关：置 false 关闭全部 [CAMDBG] 输出（需要排查时改回 true）。
-static const bool g_camdbg_log_enabled = true;
+static const bool g_camdbg_log_enabled = false;
 
 static void camdbg_log(const std::string &msg)
 {
@@ -4421,6 +4421,7 @@ void SingleDeviceState::refreshCameraStream()
     // cameraStreamUrl may be populated for models without camera hardware and
     // must never be treated as capability evidence.
     const bool camera_available = data.devDetail->camera == 1;
+    
     m_camera_panel->setCameraAvailable(camera_available);
     if (!camera_available) {
         m_camera_stream_url.clear();

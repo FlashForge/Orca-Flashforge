@@ -12,7 +12,7 @@
 #include <sstream>
 
 // [FFRTMP] 调试日志总开关：置 false 关闭全部 [FFRTMP] 输出（需要排查时改回 true）。
-static const bool g_ffrtmp_log_enabled = true;
+static const bool g_ffrtmp_log_enabled = false;
 // Independent diagnostic switch: visibility/layout logs remain available while
 // verbose stream decoding logs are disabled.
 static const bool g_camera_panel_state_log_enabled = false;
