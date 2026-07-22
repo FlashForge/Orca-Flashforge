@@ -4429,13 +4429,21 @@ void SingleDeviceState::refreshCameraStream()
     }
 
     const std::string source_url = data.devDetail->cameraStreamUrl;
+    // The LAN detail response already contains the address expected by the
+    // printer's local camera service. Keep it unchanged; protocol conversion
+    // is only applicable to remote/WAN stream addresses.
+    const CameraStreamProtocol stream_protocol = data.connectMode == COM_CONNECT_LAN
+                                                      ? CameraStreamProtocol::Source
+                                                      : g_camera_stream_protocol;
     // 仅在拿到“新的、非空”拉流地址时才切流；空地址/设备离线一律保持当前流。
-    std::string stream_url = switch_camera_stream_url(source_url, g_camera_stream_protocol);
+    std::string stream_url = switch_camera_stream_url(source_url, stream_protocol);
     if (!stream_url.empty() && m_camera_stream_url != stream_url) {
         m_camera_stream_url = stream_url;
         camdbg_log("camera stream url (comId=" + std::to_string(m_camera_cur_id)
                    + ", protocol="
-                   + std::string(g_camera_stream_protocol == CameraStreamProtocol::Rtmp ? "rtmp" : "hls")
+                   + std::string(stream_protocol == CameraStreamProtocol::Source
+                                     ? "source"
+                                     : stream_protocol == CameraStreamProtocol::Rtmp ? "rtmp" : "hls")
                    + ") source=" + source_url + " selected=" + m_camera_stream_url);
         m_camera_panel->setStreamUrl(m_camera_stream_url);
     }
