@@ -61,7 +61,7 @@ constexpr auto FF_DEVICE_PAGE_PRIMARY_TEXT = "#333333";
 enum class CameraStreamProtocol { Source, Hls, Rtmp };
 
 // Change this single value to compare the device's fixed HLS and RTMP URLs.
-static constexpr CameraStreamProtocol g_camera_stream_protocol = CameraStreamProtocol::Source;
+static constexpr CameraStreamProtocol g_camera_stream_protocol = CameraStreamProtocol::Rtmp;
 
 std::string switch_camera_stream_url(const std::string& source, CameraStreamProtocol protocol)
 {

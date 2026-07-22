@@ -26,6 +26,7 @@ public:
     //   Fit   : 等比缩放完整显示，留黑边（letterbox / contain）—— 默认，行为对齐 VLC 等播放器
     //   Cover : 等比缩放铺满控件，超出部分裁掉（铺满/裁边）
     enum class DisplayMode { Fit, Cover };
+    enum class VideoProtocol { Unknown, Rtmp, Hls, Http };
 
     FFRTMPVideoCtrl(wxWindow *parent);
     ~FFRTMPVideoCtrl();
@@ -95,7 +96,7 @@ protected:
 private:
     // Threading
     void DecoderThreadFunc();
-    void OnFrameReady();
+    void OnFrameReady(uint64_t posted_frame_sequence, int64_t posted_at_ms);
 
     // 等待上一次后台回收结束（供同步 StopStream/析构复用，防止新旧解码线程并发访问 FFmpeg 上下文）。
     void joinStopReaper();
@@ -118,7 +119,12 @@ private:
     void     OnLeftDown(wxMouseEvent &event);
 
     // FFmpeg helpers (only called from decode thread)
+    static VideoProtocol DetectVideoProtocol(const std::string &url);
     bool OpenStream(const std::string &url);
+    bool OpenRtmpStream(const std::string &url);
+    bool OpenHlsStream(const std::string &url);
+    bool OpenHttpStream(const std::string &url);
+    bool OpenStreamForProtocol(const std::string &url, VideoProtocol protocol);
     void CloseStream();
 
     // FFmpeg 阻塞 I/O 中断回调：m_running 变 false 时立即中止 open/read，
@@ -129,6 +135,11 @@ private:
     // 以便对 HLS 等分段协议的 EOF 做容忍处理，而不是简单断流重连。
     enum class ReadStatus { Frame, Progress, Eof, Error };
     ReadStatus ReadAndDecodeOneFrame();
+    ReadStatus ReadAndDecodeRtmpFrame();
+    ReadStatus ReadAndDecodeHlsFrame();
+    ReadStatus ReadAndDecodeHttpFrame();
+    ReadStatus ReadAndDecodeCommonFrame();
+    void PaceHlsFrame(void *frame);
 
     // Synchronisation
     std::atomic<bool>              m_running{false};
@@ -136,6 +147,15 @@ private:
     // Timestamp of the latest successfully decoded video frame. Unlike
     // m_frame_ready, this cannot mistake a frozen old frame for a healthy stream.
     std::atomic<int64_t>           m_last_frame_time_ms{0};
+    // Frame-pipeline diagnostics. Sequence numbers let the log distinguish
+    // decoder loss from UI callback coalescing/latency and paint-frame skips.
+    std::atomic<uint64_t>          m_decoded_frame_count{0};
+    std::atomic<uint64_t>          m_ui_callback_posted_count{0};
+    std::atomic<uint64_t>          m_ui_callback_completed_count{0};
+    std::atomic<uint64_t>          m_bitmap_frame_count{0};
+    std::atomic<uint64_t>          m_painted_frame_count{0};
+    std::atomic<int>               m_pending_frame_callbacks{0};
+    std::atomic<int64_t>           m_last_frame_diag_summary_ms{0};
     // 阻塞 I/O 硬超时截止点（steady_clock 毫秒，0 表示无截止）。设备/服务器失联时，
     // avformat_open_input / av_read_frame 可能无限阻塞——interruptCb 依据此值超时中止，
     // 让重连计数得以推进、最终判定“打印机断开连接”，而不是永远卡住冻结最后一帧。
@@ -149,7 +169,12 @@ private:
     std::vector<uint8_t> m_rgb_buffer;  // raw RGB data from decoder thread
     int                  m_buf_width{0};   // m_rgb_buffer 对应的帧宽（与 buffer 一起在锁内更新，避免与解码线程竞争）
     int                  m_buf_height{0};  // m_rgb_buffer 对应的帧高
+    uint64_t             m_buf_frame_sequence{0};
     wxBitmap             m_rgb_bitmap;  // created on main thread in OnFrameReady
+    uint64_t             m_bitmap_frame_sequence{0};
+    uint64_t             m_last_painted_frame_sequence{0};
+    int64_t              m_last_ui_frame_time_ms{0};
+    int64_t              m_last_paint_frame_time_ms{0};
     int                  m_video_width{1280};  // 解码线程内部使用（scaler 尺寸），非渲染依据
     int                  m_video_height{720};
 
@@ -170,8 +195,14 @@ private:
     void *m_packet{nullptr};
     int   m_video_stream_idx{-1};
 
-    // 当前流是否为 HLS(.m3u8)：仅解码线程读写，用于对直播边缘 EOF 做容忍。
-    bool  m_is_hls{false};
+    // 当前会话的协议类型，仅由解码线程在 FFmpeg 上下文存活期间使用。
+    VideoProtocol m_video_protocol{VideoProtocol::Unknown};
+    // HLS demuxers return all frames from a downloaded segment as fast as the
+    // CPU can decode them. This clock restores the source PTS cadence.
+    bool    m_hls_clock_initialized{false};
+    int64_t m_hls_first_media_ms{0};
+    int64_t m_hls_first_wall_ms{0};
+    int64_t m_hls_last_target_ms{0};
 
     // Offline / placeholder image
     wxBitmap m_offline_bitmap;
@@ -213,11 +244,6 @@ private:
     // Reconnect
     // 首次连接前等待设备生成 HLS 播放列表。旧网页播放器在 camera open 后同样
     // 延迟约 3 秒再创建播放器，可减少 Creator 5 起流阶段的无效 404。
-    int m_connect_timeout_ms{60000};
-    // Renew an expired five-minute publisher only after sustained playback
-    // followed by a real decoded-frame gap.
-    int m_republish_min_play_ms{240000};
-    int m_republish_stale_frame_ms{10000};
     int m_reconnect_delay_ms{1000};  // 首连失败时快速重试，缩短首帧出现前的等待
     int m_reconnect_delay_max_ms{5000}; // 退避上限：直播源持续重连，不永久放弃
     int m_reconnect_attempts{0};

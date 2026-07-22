@@ -16,6 +16,27 @@ static const bool g_ffrtmp_log_enabled = false;
 // Independent diagnostic switch: visibility/layout logs remain available while
 // verbose stream decoding logs are disabled.
 static const bool g_camera_panel_state_log_enabled = false;
+// Frame diagnostics are deliberately independent from the verbose stream log.
+// Normal traffic is summarized once per second; only large gaps/latency are
+// logged immediately so diagnostics do not become a new source of frame loss.
+static const bool g_ffrtmp_frame_diag_enabled = false;
+static constexpr int64_t g_ffrtmp_frame_gap_warn_ms = 100;
+static constexpr int64_t g_ffrtmp_ui_latency_warn_ms = 100;
+
+static int64_t ffrtmp_frame_now_ms()
+{
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+               std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
+static void ffrtmp_frame_log(const std::string &msg)
+{
+    if (!g_ffrtmp_frame_diag_enabled) return;
+    BOOST_LOG_TRIVIAL(info) << "[FFRTMP_FRAME] " << msg;
+#ifdef _WIN32
+    OutputDebugStringA(("[FFRTMP_FRAME] " + msg + "\n").c_str());
+#endif
+}
 
 // Debug output helper — writes to both Boost log and Visual Studio / DebugView on Windows
 static void ffrtmp_log(const std::string &msg)
@@ -190,6 +211,7 @@ void FFRTMPVideoCtrl::StartStream(const std::string &url)
     m_offline_shown = false;
     m_ever_got_frame = false;                // 新会话：尚未出过画面（首次加载中不报断开）
     m_last_frame_time_ms = 0;
+    m_last_frame_diag_summary_ms = 0;
     m_paused = m_display_paused_pref.load();  // 进设备页默认“暂停”(显示缺省图+播放按钮)；
                                               // 用户播放过则保持播放（切设备沿用）。atomic 需 .load()
     // A URL may already be cached before the first user click; that must not be
@@ -427,8 +449,6 @@ static std::string av_err_str(int err)
 void FFRTMPVideoCtrl::DecoderThreadFunc()
 {
     ffrtmp_log("Decode thread started");
-    auto connect_started_at = std::chrono::steady_clock::now();
-    std::chrono::steady_clock::time_point first_frame_at;
 
     while (m_running) {
         ffrtmp_log("Attempting FFmpeg stream open (attempt " + std::to_string(m_reconnect_attempts + 1)
@@ -443,14 +463,6 @@ void FFRTMPVideoCtrl::DecoderThreadFunc()
                 setPlayState(PlayState::Loading);   // 已连接，等待首帧：视频加载中
             }
             int frame_count = 0;
-            // 最近一次“有数据”的时间点，用于 HLS 到达直播边缘时的宽限判定。
-            auto last_progress = std::chrono::steady_clock::now();
-            // HLS 直播边缘 EOF 宽限期：期间在同一连接上原地重试读取，
-            // 等待设备产出新分片，避免为了一次边缘 EOF 就整路重连。
-            // 取 8s：既能容忍正常直播分片间隔（通常 2~4s），又能在推流真正停止时
-            // 较快进入重连/断开流程（避免画面长时间冻结在最后一帧）。可按分片时长调整。
-            const auto hls_eof_grace = std::chrono::seconds(8);
-
             while (m_running) {
                 // 不做人工帧率限制：av_read_frame 会阻塞等待网络数据，天然按源帧率节流。
                 // 若加 30fps 睡眠上限，连接时服务端一次性下发的 GOP 缓存无法被快速消费，
@@ -458,12 +470,9 @@ void FFRTMPVideoCtrl::DecoderThreadFunc()
                 ReadStatus st = ReadAndDecodeOneFrame();
                 if (st == ReadStatus::Frame) {
                     ++frame_count;
-                    last_progress = std::chrono::steady_clock::now();
                     if (frame_count == 1) {
                         ffrtmp_log("First frame decoded successfully!");
                         m_ever_got_frame = true;   // 本会话已出过画面
-                        if (first_frame_at.time_since_epoch().count() == 0)
-                            first_frame_at = std::chrono::steady_clock::now();
                     }
                     // 显示暂停时（进设备页默认暂停 / 用户暂停）解码照常，但不置 Playing，
                     // 保持“已暂停 + 缺省图”显示；用户点播放(resumeStream)后才转 Playing。
@@ -473,19 +482,14 @@ void FFRTMPVideoCtrl::DecoderThreadFunc()
                     continue;
                 }
                 if (st == ReadStatus::Progress) {
-                    last_progress = std::chrono::steady_clock::now();
                     continue;
                 }
-                if (st == ReadStatus::Eof && m_is_hls) {
-                    // 直播到达边缘：不断流。短暂等待后在同一连接上继续读，
-                    // 等待新分片到来；仅当超过宽限期仍无数据才重开连接。
-                    if (std::chrono::steady_clock::now() - last_progress > hls_eof_grace) {
-                        ffrtmp_log("HLS EOF grace exceeded, reopening stream (frames="
-                                   + std::to_string(frame_count) + ")");
-                        break;
-                    }
-                    std::this_thread::sleep_for(std::chrono::milliseconds(300));
-                    continue;
+                if (st == ReadStatus::Eof && m_video_protocol == VideoProtocol::Hls) {
+                    // EOF is sticky for the current demuxer. Reopen the HLS
+                    // manifest instead of polling the exhausted context for
+                    // several seconds and freezing the last displayed frame.
+                    ffrtmp_log("HLS input reached EOF, reopening manifest (frames="
+                               + std::to_string(frame_count) + ")");
                 }
                 // 非 HLS 的 EOF 视为真正断流；或读取错误 —— 退出内层循环走重连。
                 ffrtmp_log("Read ended (status="
@@ -506,113 +510,6 @@ void FFRTMPVideoCtrl::DecoderThreadFunc()
             break;
         }
 
-        if (m_is_hls && m_ever_got_frame.load()) {
-            // A live HLS demuxer can reach the end of its current media
-            // playlist (commonly around one minute). This ends only the local
-            // FFmpeg input, not the printer-side camera session. Reopen the
-            // manifest without sending another openstream or a closestream.
-            const auto now = std::chrono::steady_clock::now();
-            const int64_t last_frame_ms = m_last_frame_time_ms.load();
-            const int64_t now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                       now.time_since_epoch()).count();
-            const int64_t frame_age_ms = last_frame_ms > 0 ? now_ms - last_frame_ms : 0;
-            const int64_t played_ms = first_frame_at.time_since_epoch().count() == 0
-                                          ? 0
-                                          : std::chrono::duration_cast<std::chrono::milliseconds>(now - first_frame_at).count();
-
-            if (played_ms >= m_republish_min_play_ms
-                && frame_age_ms >= m_republish_stale_frame_ms) {
-                const com_id_t recovery_com_id = m_curComId;
-                ffrtmp_log("Camera publisher appears expired; renewing stream, playedMs="
-                           + std::to_string(played_ms)
-                           + ", frameAgeMs=" + std::to_string(frame_age_ms));
-
-                // Pair the old device session before creating a new one. The
-                // command queue preserves close/open order for this device.
-                sendCameraClose();
-                sendCameraOpen(recovery_com_id);
-                m_ever_got_frame = false;
-                m_last_frame_time_ms = 0;
-                m_reconnect_attempts = 0;
-                connect_started_at = now;
-                first_frame_at = {};
-                if (!m_paused) setPlayState(PlayState::Loading);
-                CallAfter([this]() {
-                    wxCriticalSectionLocker lock(m_frame_cs);
-                    m_frame_ready = false;
-                    m_rgb_buffer.clear();
-                    m_rgb_bitmap = wxBitmap();
-                    Refresh();
-                });
-            } else {
-                ffrtmp_log("HLS media input ended after playback; reopening manifest in same camera session"
-                           ", playedMs=" + std::to_string(played_ms)
-                           + ", frameAgeMs=" + std::to_string(frame_age_ms));
-            }
-            for (int elapsed = 0; elapsed < 500 && m_running; elapsed += 100) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            }
-            continue;
-        }
-
-        if (m_is_hls && !m_ever_got_frame.load()) {
-            // Keep the printer-side session open. Firmware needs roughly 8s
-            // to start encoding and up to 20s to establish its RTMP publisher;
-            // the HLS manifest can legitimately return 404 during that time.
-            // This also covers a manifest that opened but produced no
-            // decodable video frame. Retry only the media URL--never send
-            // another openstream here.
-            ++m_reconnect_attempts;
-            const auto connect_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                             std::chrono::steady_clock::now() - connect_started_at)
-                                             .count();
-            if (connect_elapsed >= m_connect_timeout_ms) {
-                ffrtmp_log("Camera media initial wait exceeded "
-                           + std::to_string(connect_elapsed)
-                           + "ms; resetting camera view to initial state");
-                m_running = false;
-                sendCameraClose();
-                m_paused = false;
-                m_display_paused_pref = true;
-                m_ever_played = false;
-                setPlayState(PlayState::Not);
-                CallAfter([this]() {
-                    wxCriticalSectionLocker lock(m_frame_cs);
-                    m_frame_ready = false;
-                    m_rgb_buffer.clear();
-                    m_rgb_bitmap = wxBitmap();
-                    Refresh();
-                });
-                break;
-            }
-            setPlayState(PlayState::Loading);
-            const int delay = std::min(m_reconnect_delay_ms * m_reconnect_attempts,
-                                       m_reconnect_delay_max_ms);
-            ffrtmp_log("Camera media not ready; retrying HLS request in "
-                       + std::to_string(delay) + "ms (attempt "
-                       + std::to_string(m_reconnect_attempts + 1) + ")");
-            for (int elapsed = 0; elapsed < delay && m_running; elapsed += 100) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            }
-            continue;
-        }
-
-        // Do not automatically reopen the media URL. Close the matching
-        // printer-side session and wait for another explicit Play click.
-        m_running = false;
-        sendCameraClose();
-        m_paused = false;
-        setPlayState(PlayState::Not);
-        CallAfter([this]() {
-            wxCriticalSectionLocker lock(m_frame_cs);
-            m_frame_ready = false;
-            m_rgb_buffer.clear();
-            m_rgb_bitmap = wxBitmap();
-            Refresh();
-        });
-        break;
-
-#if 0 // Automatic reconnect intentionally disabled.
         m_reconnect_attempts++;
 
         // 关键：区分“首次加载中(从未出过画面)”与“曾经在播又断了”。
@@ -651,7 +548,6 @@ void FFRTMPVideoCtrl::DecoderThreadFunc()
         for (int i = 0; i < delay / 100 && m_running; ++i) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
-#endif
     }
 
     ffrtmp_log("Decode thread exiting");
@@ -696,8 +592,58 @@ int FFRTMPVideoCtrl::interruptCb(void *opaque)
     return 0;
 }
 
+FFRTMPVideoCtrl::VideoProtocol FFRTMPVideoCtrl::DetectVideoProtocol(const std::string &url)
+{
+    std::string lower_url = url;
+    std::transform(lower_url.begin(), lower_url.end(), lower_url.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    if (lower_url.rfind("rtmp://", 0) == 0 || lower_url.rfind("rtmpe://", 0) == 0
+        || lower_url.rfind("rtmps://", 0) == 0 || lower_url.rfind("rtmpt://", 0) == 0)
+        return VideoProtocol::Rtmp;
+    if (lower_url.find(".m3u8") != std::string::npos)
+        return VideoProtocol::Hls;
+    if (lower_url.rfind("http://", 0) == 0 || lower_url.rfind("https://", 0) == 0)
+        return VideoProtocol::Http;
+    return VideoProtocol::Unknown;
+}
+
 bool FFRTMPVideoCtrl::OpenStream(const std::string &url)
 {
+    m_video_protocol = DetectVideoProtocol(url);
+    switch (m_video_protocol) {
+    case VideoProtocol::Rtmp: return OpenRtmpStream(url);
+    case VideoProtocol::Hls:  return OpenHlsStream(url);
+    case VideoProtocol::Http: return OpenHttpStream(url);
+    case VideoProtocol::Unknown:
+    default:
+        ffrtmp_err("Unsupported video protocol: " + url);
+        return false;
+    }
+}
+
+bool FFRTMPVideoCtrl::OpenRtmpStream(const std::string &url)
+{
+    return OpenStreamForProtocol(url, VideoProtocol::Rtmp);
+}
+
+bool FFRTMPVideoCtrl::OpenHlsStream(const std::string &url)
+{
+    return OpenStreamForProtocol(url, VideoProtocol::Hls);
+}
+
+bool FFRTMPVideoCtrl::OpenHttpStream(const std::string &url)
+{
+    return OpenStreamForProtocol(url, VideoProtocol::Http);
+}
+
+bool FFRTMPVideoCtrl::OpenStreamForProtocol(const std::string &url, VideoProtocol protocol)
+{
+    if (protocol == VideoProtocol::Hls) {
+        m_hls_clock_initialized = false;
+        m_hls_first_media_ms = 0;
+        m_hls_first_wall_ms = 0;
+        m_hls_last_target_ms = 0;
+    }
     AVFormatContext *fmt_ctx = avformat_alloc_context();
     AVDictionary    *opts    = nullptr;
     int              ret;
@@ -716,14 +662,6 @@ bool FFRTMPVideoCtrl::OpenStream(const std::string &url)
     //   *.m3u8         —— HLS 直播/点播（Apple HTTP Live Streaming）
     //   其它 http(s)   —— HTTP-FLV 等
     // 之前无条件设置 RTMP 专属选项会让 HLS(.m3u8) 无法正常播放，这里分协议配置。
-    std::string lurl = url;
-    std::transform(lurl.begin(), lurl.end(), lurl.begin(),
-                   [](unsigned char c) { return (char)std::tolower(c); });
-    const bool is_rtmp = lurl.rfind("rtmp://", 0) == 0 || lurl.rfind("rtmpe://", 0) == 0
-                      || lurl.rfind("rtmps://", 0) == 0 || lurl.rfind("rtmpt://", 0) == 0;
-    const bool is_hls  = lurl.find(".m3u8") != std::string::npos;
-    m_is_hls = is_hls;
-
     // 通用低延迟解复用选项（对所有协议生效）
     av_dict_set(&opts, "max_delay",       "100000",   0);  // max demux-decode delay (us)
     av_dict_set(&opts, "probesize",       "32768",    0);  // smaller probe for faster start
@@ -731,7 +669,7 @@ bool FFRTMPVideoCtrl::OpenStream(const std::string &url)
     av_dict_set(&opts, "analyzeduration", "1000000",  0);  // 1s analysis (default 5s)
     av_dict_set(&opts, "flush_packets",   "1",        0);  // flush packets immediately
 
-    if (is_rtmp) {
+    if (protocol == VideoProtocol::Rtmp) {
         // RTMP live stream options — tuned for low latency
         av_dict_set(&opts, "rtmp_live",   "live", 0);
         av_dict_set(&opts, "rtmp_listen", "0",    0);  // 显式关闭 listen 模式（timeout 选项会导致 listen 被强制开启，故移除 timeout）
@@ -745,13 +683,15 @@ bool FFRTMPVideoCtrl::OpenStream(const std::string &url)
         av_dict_set(&opts, "reconnect",           "1", 0);
         av_dict_set(&opts, "reconnect_streamed",  "1", 0);
         av_dict_set(&opts, "reconnect_delay_max", "2", 0);
-        if (is_hls) {
+        if (protocol == VideoProtocol::Hls) {
             // 直播 HLS 从最新分片开始，贴近直播边缘、降低起播延迟。
             av_dict_set(&opts, "live_start_index", "-1", 0);
         }
     }
 
-    ffrtmp_log(std::string("avformat_open_input... (") + (is_rtmp ? "rtmp" : is_hls ? "hls" : "http") + ")");
+    const char *protocol_name = protocol == VideoProtocol::Rtmp ? "rtmp"
+                                : protocol == VideoProtocol::Hls ? "hls" : "http";
+    ffrtmp_log(std::string("avformat_open_input... (") + protocol_name + ")");
 
     // 打开阶段设硬超时：服务器失联时 TCP 连接/握手可能长时间阻塞，
     // 超时后 interruptCb 会让 avformat_open_input 返回错误，避免永久卡住。
@@ -871,9 +811,36 @@ void FFRTMPVideoCtrl::CloseStream()
     if (fmt_ctx)   { avformat_close_input(&fmt_ctx);   m_format_ctx = nullptr; }
 
     m_video_stream_idx = -1;
+    m_video_protocol = VideoProtocol::Unknown;
 }
 
 FFRTMPVideoCtrl::ReadStatus FFRTMPVideoCtrl::ReadAndDecodeOneFrame()
+{
+    switch (m_video_protocol) {
+    case VideoProtocol::Rtmp: return ReadAndDecodeRtmpFrame();
+    case VideoProtocol::Hls:  return ReadAndDecodeHlsFrame();
+    case VideoProtocol::Http: return ReadAndDecodeHttpFrame();
+    case VideoProtocol::Unknown:
+    default:                  return ReadStatus::Error;
+    }
+}
+
+FFRTMPVideoCtrl::ReadStatus FFRTMPVideoCtrl::ReadAndDecodeRtmpFrame()
+{
+    return ReadAndDecodeCommonFrame();
+}
+
+FFRTMPVideoCtrl::ReadStatus FFRTMPVideoCtrl::ReadAndDecodeHlsFrame()
+{
+    return ReadAndDecodeCommonFrame();
+}
+
+FFRTMPVideoCtrl::ReadStatus FFRTMPVideoCtrl::ReadAndDecodeHttpFrame()
+{
+    return ReadAndDecodeCommonFrame();
+}
+
+FFRTMPVideoCtrl::ReadStatus FFRTMPVideoCtrl::ReadAndDecodeCommonFrame()
 {
     AVFormatContext *fmt_ctx  = FMT_CTX(m_format_ctx);
     AVCodecContext  *codec_ctx = CDC_CTX(m_codec_ctx);
@@ -909,6 +876,13 @@ FFRTMPVideoCtrl::ReadStatus FFRTMPVideoCtrl::ReadAndDecodeOneFrame()
         if (ret == AVERROR(EAGAIN)) break;
         if (ret < 0) return ReadStatus::Progress;
 
+        if (m_video_protocol == VideoProtocol::Hls)
+            PaceHlsFrame(frame);
+        if (!m_running) {
+            av_frame_unref(frame);
+            return ReadStatus::Error;
+        }
+
         // Lazy-init or re-create scaler when resolution changes
         SwsContext *sws = SWS_CTX(m_sws_ctx);
         if (!sws || codec_ctx->width != m_video_width || codec_ctx->height != m_video_height) {
@@ -937,6 +911,9 @@ FFRTMPVideoCtrl::ReadStatus FFRTMPVideoCtrl::ReadAndDecodeOneFrame()
         sws_scale(sws, frame->data, frame->linesize, 0, codec_ctx->height,
                   dst, &dst_stride);
 
+        const int64_t decoded_at_ms = ffrtmp_now_ms();
+        const int64_t previous_frame_ms = m_last_frame_time_ms.exchange(decoded_at_ms);
+        const uint64_t frame_sequence = m_decoded_frame_count.fetch_add(1) + 1;
         {
             // buffer 与其尺寸必须一起在锁内更新，主线程读取时才能保证一致，
             // 否则渲染时用到不匹配的宽高会导致画面尺寸错乱（突然变小）甚至内存越界。
@@ -944,24 +921,121 @@ FFRTMPVideoCtrl::ReadStatus FFRTMPVideoCtrl::ReadAndDecodeOneFrame()
             m_rgb_buffer  = std::move(buffer);
             m_buf_width   = fw;
             m_buf_height  = fh;
+            m_buf_frame_sequence = frame_sequence;
             m_frame_ready = true;
-            m_last_frame_time_ms = ffrtmp_now_ms();
             decoded_frame = true;
         }
 
-        CallAfter(&FFRTMPVideoCtrl::OnFrameReady);
+        const int pending = m_pending_frame_callbacks.fetch_add(1) + 1;
+        m_ui_callback_posted_count.fetch_add(1);
+        if (previous_frame_ms > 0 && decoded_at_ms - previous_frame_ms >= g_ffrtmp_frame_gap_warn_ms) {
+            ffrtmp_frame_log("decode-gap seq=" + std::to_string(frame_sequence)
+                             + " gapMs=" + std::to_string(decoded_at_ms - previous_frame_ms)
+                             + " pendingUi=" + std::to_string(pending));
+        }
+        const int64_t previous_summary_ms = m_last_frame_diag_summary_ms.load();
+        if (previous_summary_ms == 0 || decoded_at_ms - previous_summary_ms >= 1000) {
+            m_last_frame_diag_summary_ms = decoded_at_ms;
+            ffrtmp_frame_log("summary decoded=" + std::to_string(m_decoded_frame_count.load())
+                             + " uiPosted=" + std::to_string(m_ui_callback_posted_count.load())
+                             + " uiDone=" + std::to_string(m_ui_callback_completed_count.load())
+                             + " bitmap=" + std::to_string(m_bitmap_frame_count.load())
+                             + " painted=" + std::to_string(m_painted_frame_count.load())
+                             + " pendingUi=" + std::to_string(pending)
+                             + " size=" + std::to_string(fw) + "x" + std::to_string(fh));
+        }
+        CallAfter([this, frame_sequence, decoded_at_ms]() { OnFrameReady(frame_sequence, decoded_at_ms); });
         av_frame_unref(frame);
     }
     return decoded_frame ? ReadStatus::Frame : ReadStatus::Progress;
+}
+
+void FFRTMPVideoCtrl::PaceHlsFrame(void *opaque_frame)
+{
+    AVFrame *frame = static_cast<AVFrame *>(opaque_frame);
+    AVFormatContext *fmt_ctx = FMT_CTX(m_format_ctx);
+    if (!frame || !fmt_ctx || m_video_stream_idx < 0
+        || m_video_stream_idx >= static_cast<int>(fmt_ctx->nb_streams))
+        return;
+
+    AVStream *stream = fmt_ctx->streams[m_video_stream_idx];
+    int64_t pts = frame->best_effort_timestamp;
+    if (pts == AV_NOPTS_VALUE)
+        pts = frame->pts;
+
+    const int64_t now_ms = ffrtmp_now_ms();
+    int64_t media_ms = 0;
+    bool has_timestamp = pts != AV_NOPTS_VALUE;
+    if (has_timestamp)
+        media_ms = av_rescale_q(pts, stream->time_base, AVRational{1, 1000});
+
+    if (!m_hls_clock_initialized) {
+        m_hls_clock_initialized = true;
+        m_hls_first_media_ms = has_timestamp ? media_ms : 0;
+        m_hls_first_wall_ms = now_ms;
+        m_hls_last_target_ms = now_ms;
+        ffrtmp_frame_log("hls-clock-start ptsMs=" + std::to_string(m_hls_first_media_ms));
+        return;
+    }
+
+    int64_t target_ms;
+    if (has_timestamp) {
+        target_ms = m_hls_first_wall_ms + media_ms - m_hls_first_media_ms;
+        // A playlist discontinuity or timestamp reset starts a new local
+        // presentation epoch instead of creating a long sleep or frame burst.
+        if (target_ms < m_hls_last_target_ms - 100
+            || target_ms > m_hls_last_target_ms + 10000) {
+            ffrtmp_frame_log("hls-clock-reset mediaMs=" + std::to_string(media_ms)
+                             + " previousTargetMs=" + std::to_string(m_hls_last_target_ms));
+            m_hls_first_media_ms = media_ms;
+            m_hls_first_wall_ms = now_ms;
+            target_ms = now_ms;
+        }
+    } else {
+        AVRational rate = av_guess_frame_rate(fmt_ctx, stream, frame);
+        int64_t frame_duration_ms = rate.num > 0 && rate.den > 0
+                                        ? av_rescale_q(1, av_inv_q(rate), AVRational{1, 1000})
+                                        : 33;
+        target_ms = m_hls_last_target_ms + std::max<int64_t>(1, frame_duration_ms);
+    }
+
+    // If rendering or network recovery has already put playback far behind,
+    // rebase to live time. Otherwise a large stale queue would be played back.
+    if (now_ms - target_ms > 500) {
+        ffrtmp_frame_log("hls-clock-late lateMs=" + std::to_string(now_ms - target_ms));
+        if (has_timestamp) {
+            m_hls_first_media_ms = media_ms;
+            m_hls_first_wall_ms = now_ms;
+        }
+        target_ms = now_ms;
+    }
+
+    m_hls_last_target_ms = target_ms;
+    while (m_running) {
+        const int64_t remaining_ms = target_ms - ffrtmp_now_ms();
+        if (remaining_ms <= 0)
+            break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(std::min<int64_t>(remaining_ms, 10)));
+    }
 }
 
 #else  // !FFRTMP_USE_FFMPEG
 
 // Stubs when FFmpeg is not available
 void   FFRTMPVideoCtrl::DecoderThreadFunc()                           {}
+FFRTMPVideoCtrl::VideoProtocol FFRTMPVideoCtrl::DetectVideoProtocol(const std::string &) { return VideoProtocol::Unknown; }
 bool   FFRTMPVideoCtrl::OpenStream(const std::string &)              { return false; }
+bool   FFRTMPVideoCtrl::OpenRtmpStream(const std::string &)          { return false; }
+bool   FFRTMPVideoCtrl::OpenHlsStream(const std::string &)           { return false; }
+bool   FFRTMPVideoCtrl::OpenHttpStream(const std::string &)          { return false; }
+bool   FFRTMPVideoCtrl::OpenStreamForProtocol(const std::string &, VideoProtocol) { return false; }
 void   FFRTMPVideoCtrl::CloseStream()                                {}
 FFRTMPVideoCtrl::ReadStatus FFRTMPVideoCtrl::ReadAndDecodeOneFrame() { return ReadStatus::Error; }
+FFRTMPVideoCtrl::ReadStatus FFRTMPVideoCtrl::ReadAndDecodeRtmpFrame() { return ReadStatus::Error; }
+FFRTMPVideoCtrl::ReadStatus FFRTMPVideoCtrl::ReadAndDecodeHlsFrame() { return ReadStatus::Error; }
+FFRTMPVideoCtrl::ReadStatus FFRTMPVideoCtrl::ReadAndDecodeHttpFrame() { return ReadStatus::Error; }
+FFRTMPVideoCtrl::ReadStatus FFRTMPVideoCtrl::ReadAndDecodeCommonFrame() { return ReadStatus::Error; }
+void FFRTMPVideoCtrl::PaceHlsFrame(void *) {}
 
 #endif // FFRTMP_USE_FFMPEG
 
@@ -1186,12 +1260,19 @@ void FFRTMPVideoCtrl::closePopup()
 //  Main-Thread Callbacks (always compiled)
 // ============================================================================
 
-void FFRTMPVideoCtrl::OnFrameReady()
+void FFRTMPVideoCtrl::OnFrameReady(uint64_t posted_frame_sequence, int64_t posted_at_ms)
 {
+    m_pending_frame_callbacks.fetch_sub(1);
+    m_ui_callback_completed_count.fetch_add(1);
+    const int64_t ui_now_ms = ffrtmp_frame_now_ms();
+    const int64_t callback_latency_ms = ui_now_ms - posted_at_ms;
     // Called on main thread via CallAfter — safe to create GDI objects here
     // 已停止（如解绑/登出触发的异步停流）：解码线程退出前可能仍有若干帧回调在队列里，
     // 此时不再更新显示位图/触发重绘，避免在页面拆除期间做无谓渲染、加重卡顿。
     if (!m_running) {
+        if (callback_latency_ms >= g_ffrtmp_ui_latency_warn_ms)
+            ffrtmp_frame_log("ui-stale-callback postedSeq=" + std::to_string(posted_frame_sequence)
+                             + " latencyMs=" + std::to_string(callback_latency_ms));
         return;
     }
     // 显示暂停：后台解码仍在把最新帧写入 m_rgb_buffer，但这里不更新显示位图，
@@ -1203,9 +1284,25 @@ void FFRTMPVideoCtrl::OnFrameReady()
     // 缓冲尾部含安全边距，可能比有效像素大，故用 >= 判断，并只拷贝有效像素 w*h*3。
     const size_t need = (size_t)m_buf_width * m_buf_height * 3;
     if (m_frame_ready && m_buf_width > 0 && m_buf_height > 0 && m_rgb_buffer.size() >= need) {
+        const uint64_t source_sequence = m_buf_frame_sequence;
         wxImage img(m_buf_width, m_buf_height, false);
         memcpy(img.GetData(), m_rgb_buffer.data(), need);
         m_rgb_bitmap = wxBitmap(img);
+        const uint64_t skipped = source_sequence > m_bitmap_frame_sequence + 1
+                                     ? source_sequence - m_bitmap_frame_sequence - 1
+                                     : 0;
+        m_bitmap_frame_sequence = source_sequence;
+        m_bitmap_frame_count.fetch_add(1);
+        const int64_t ui_gap_ms = m_last_ui_frame_time_ms == 0 ? 0 : ui_now_ms - m_last_ui_frame_time_ms;
+        m_last_ui_frame_time_ms = ui_now_ms;
+        if (callback_latency_ms >= g_ffrtmp_ui_latency_warn_ms || skipped > 0 || ui_gap_ms >= g_ffrtmp_frame_gap_warn_ms) {
+            ffrtmp_frame_log("ui-frame postedSeq=" + std::to_string(posted_frame_sequence)
+                             + " sourceSeq=" + std::to_string(source_sequence)
+                             + " skippedDecoded=" + std::to_string(skipped)
+                             + " callbackLatencyMs=" + std::to_string(callback_latency_ms)
+                             + " uiGapMs=" + std::to_string(ui_gap_ms)
+                             + " pendingUi=" + std::to_string(m_pending_frame_callbacks.load()));
+        }
     }
     Refresh(false);
 }
@@ -1225,6 +1322,22 @@ void FFRTMPVideoCtrl::OnPaint(wxPaintEvent & /*event*/)
     const int videoH = std::max(1, client.y - barH);
 
     if (m_frame_ready && m_rgb_bitmap.IsOk() && client.x > 0 && videoH > 0) {
+        const int64_t paint_now_ms = ffrtmp_frame_now_ms();
+        if (m_bitmap_frame_sequence != m_last_painted_frame_sequence) {
+            const uint64_t skipped = m_bitmap_frame_sequence > m_last_painted_frame_sequence + 1
+                                         ? m_bitmap_frame_sequence - m_last_painted_frame_sequence - 1
+                                         : 0;
+            const int64_t paint_gap_ms = m_last_paint_frame_time_ms == 0 ? 0 : paint_now_ms - m_last_paint_frame_time_ms;
+            m_last_painted_frame_sequence = m_bitmap_frame_sequence;
+            m_last_paint_frame_time_ms = paint_now_ms;
+            m_painted_frame_count.fetch_add(1);
+            if (skipped > 0 || paint_gap_ms >= g_ffrtmp_frame_gap_warn_ms) {
+                ffrtmp_frame_log("paint-frame seq=" + std::to_string(m_bitmap_frame_sequence)
+                                 + " skippedBitmap=" + std::to_string(skipped)
+                                 + " paintGapMs=" + std::to_string(paint_gap_ms)
+                                 + " pendingUi=" + std::to_string(m_pending_frame_callbacks.load()));
+            }
+        }
         wxMemoryDC memDC;
         memDC.SelectObject(m_rgb_bitmap);
 
