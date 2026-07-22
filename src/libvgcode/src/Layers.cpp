@@ -14,7 +14,9 @@ namespace libvgcode {
 
 static bool is_colorprint_option(const PathVertex& v)
 {
-    return v.type == EMoveType::PausePrint || v.type == EMoveType::CustomGCode;
+    // PausePrint already has its own option marker. Treating it as a layer-wide
+    // color-print option would recolor every extrusion on the layer to gray.
+    return v.type == EMoveType::CustomGCode;
 }
 
 void Layers::update(const PathVertex& vertex, uint32_t vertex_id)

@@ -19,6 +19,7 @@ if (APPLE)
 endif()
 
 add_subdirectory(libnest2d)
+add_subdirectory(libvgcode)
 add_subdirectory(libslic3r)
 add_subdirectory(slic3rutils)
 add_subdirectory(fff_print)
