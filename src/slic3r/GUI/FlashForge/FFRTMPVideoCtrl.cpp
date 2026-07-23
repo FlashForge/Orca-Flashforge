@@ -22,6 +22,9 @@ static const bool g_camera_panel_state_log_enabled = false;
 static const bool g_ffrtmp_frame_diag_enabled = false;
 static constexpr int64_t g_ffrtmp_frame_gap_warn_ms = 100;
 static constexpr int64_t g_ffrtmp_ui_latency_warn_ms = 100;
+// Independent low-volume timing diagnostic for HTTP/MJPEG stalls.
+static const bool g_mjpeg_perf_diag_enabled = false;
+static constexpr int64_t g_mjpeg_perf_warn_ms = 100;
 
 static int64_t ffrtmp_frame_now_ms()
 {
@@ -39,6 +42,15 @@ static void ffrtmp_frame_log(const std::string &msg)
 }
 
 // Debug output helper — writes to both Boost log and Visual Studio / DebugView on Windows
+static void ffrtmp_mjpeg_perf_log(const std::string &msg)
+{
+    if (!g_mjpeg_perf_diag_enabled) return;
+    BOOST_LOG_TRIVIAL(info) << "[MJPEG_PERF] " << msg;
+#ifdef _WIN32
+    OutputDebugStringA(("[MJPEG_PERF] " + msg + "\n").c_str());
+#endif
+}
+
 static void ffrtmp_log(const std::string &msg)
 {
     if (!g_ffrtmp_log_enabled) return;
@@ -211,6 +223,7 @@ void FFRTMPVideoCtrl::StartStream(const std::string &url)
     m_offline_shown = false;
     m_ever_got_frame = false;                // 新会话：尚未出过画面（首次加载中不报断开）
     m_last_frame_time_ms = 0;
+    m_stream_started_at_ms = ffrtmp_frame_now_ms();
     m_last_frame_diag_summary_ms = 0;
     m_paused = m_display_paused_pref.load();  // 进设备页默认“暂停”(显示缺省图+播放按钮)；
                                               // 用户播放过则保持播放（切设备沿用）。atomic 需 .load()
@@ -446,9 +459,77 @@ static std::string av_err_str(int err)
     return std::string(buf);
 }
 
+static void configure_common_demux_options(AVDictionary **opts)
+{
+    av_dict_set(opts, "max_delay",     "100000", 0); // Maximum demux/decode delay in microseconds.
+    av_dict_set(opts, "flush_packets", "1",      0); // Consume live packets without output-side batching.
+}
+
+static void configure_rtmp_demux_options(AVDictionary **opts)
+{
+    // RTMP is a continuous low-latency stream, so keep probing and format
+    // buffering small.
+    av_dict_set(opts, "probesize",       "32768",   0);
+    av_dict_set(opts, "analyzeduration", "1000000", 0);
+    av_dict_set(opts, "fflags",          "nobuffer", 0);
+    av_dict_set(opts, "rtmp_live",       "live",     0);
+    av_dict_set(opts, "rtmp_listen",     "0",        0);
+    av_dict_set(opts, "rtmp_buffer",     "100",      0);
+}
+
+static void configure_hls_demux_options(AVDictionary **opts)
+{
+    // HLS needs enough data to inspect MPEG-TS/fMP4 segments. Applying the
+    // small RTMP probe and nobuffer policy here can cause missing stream info,
+    // unstable startup, or repeated manifest reopen cycles.
+    av_dict_set(opts, "probesize",       "262144",  0);
+    av_dict_set(opts, "analyzeduration", "2000000", 0);
+    av_dict_set(opts, "protocol_whitelist",
+                "file,crypto,data,http,https,tcp,tls,hls,applehttp", 0);
+    av_dict_set(opts, "reconnect",                    "1", 0);
+    av_dict_set(opts, "reconnect_streamed",           "1", 0);
+    av_dict_set(opts, "reconnect_at_eof",             "1", 0);
+    av_dict_set(opts, "reconnect_on_network_error",   "1", 0);
+    av_dict_set(opts, "reconnect_delay_max",          "2", 0);
+    av_dict_set(opts, "live_start_index",             "-1", 0);
+}
+
+static void configure_http_demux_options(AVDictionary **opts)
+{
+    // Generic HTTP includes HTTP-FLV and multipart MJPEG. Both are continuous
+    // streams and benefit from a small probe and minimal format buffering.
+    av_dict_set(opts, "probesize",       "32768",   0);
+    av_dict_set(opts, "analyzeduration", "1000000", 0);
+    av_dict_set(opts, "fflags",          "nobuffer", 0);
+    av_dict_set(opts, "protocol_whitelist", "http,https,tcp,tls", 0);
+    av_dict_set(opts, "reconnect",           "1", 0);
+    av_dict_set(opts, "reconnect_streamed",  "1", 0);
+    av_dict_set(opts, "reconnect_delay_max", "2", 0);
+}
+
 void FFRTMPVideoCtrl::DecoderThreadFunc()
 {
     ffrtmp_log("Decode thread started");
+
+    auto reset_if_no_frames = [this]() -> bool {
+        if (!m_running.load() || !m_is_wan_stream.load()) return false;
+
+        const int64_t now_ms        = ffrtmp_frame_now_ms();
+        const int64_t last_frame_ms = m_last_frame_time_ms.load();
+        const int64_t reference_ms  = last_frame_ms > 0 ? last_frame_ms : m_stream_started_at_ms.load();
+        if (reference_ms <= 0 || now_ms - reference_ms < 20000) return false;
+
+        ffrtmp_log("WAN stream produced no frame for 20s; resetting player to initial state");
+        m_running = false;
+        m_paused = false;
+        m_display_paused_pref = true;
+        m_ever_played = false;
+        m_ever_got_frame = false;
+        m_stream_started_at_ms = 0;
+        sendCameraClose();
+        setPlayState(PlayState::Not);
+        return true;
+    };
 
     while (m_running) {
         ffrtmp_log("Attempting FFmpeg stream open (attempt " + std::to_string(m_reconnect_attempts + 1)
@@ -468,6 +549,9 @@ void FFRTMPVideoCtrl::DecoderThreadFunc()
                 // 若加 30fps 睡眠上限，连接时服务端一次性下发的 GOP 缓存无法被快速消费，
                 // 会造成延迟不断累积且永不恢复，这是直播画面高延迟的主因。
                 ReadStatus st = ReadAndDecodeOneFrame();
+                // Audio/metadata packets may keep the demuxer progressing
+                // without producing video, so check every read result.
+                if (reset_if_no_frames()) break;
                 if (st == ReadStatus::Frame) {
                     ++frame_count;
                     if (frame_count == 1) {
@@ -505,6 +589,7 @@ void FFRTMPVideoCtrl::DecoderThreadFunc()
             ffrtmp_err("OpenStream failed for " + m_url);
         }
 
+        if (reset_if_no_frames()) break;
         if (!m_running) {
             ffrtmp_ts("[decode] 观察到 m_running=false, 退出重连循环");
             break;
@@ -547,6 +632,7 @@ void FFRTMPVideoCtrl::DecoderThreadFunc()
 
         for (int i = 0; i < delay / 100 && m_running; ++i) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            if (reset_if_no_frames()) break;
         }
     }
 
@@ -581,12 +667,16 @@ int FFRTMPVideoCtrl::interruptCb(void *opaque)
     }
     // 主动停止/暂停：立即中止。
     if (!self->m_running) {
+        int expected = 0;
+        self->m_io_interrupt_reason.compare_exchange_strong(expected, 1);
         return 1;
     }
     // 阻塞 I/O 超时：设备/服务器失联时 open/read 可能无限阻塞，超过截止点即中止，
     // 让 open/read 返回错误、重连计数推进，最终判定“打印机断开连接”。
     int64_t dl = self->m_io_deadline_ms.load();
     if (dl != 0 && ffrtmp_now_ms() > dl) {
+        int expected = 0;
+        self->m_io_interrupt_reason.compare_exchange_strong(expected, 2);
         return 1;
     }
     return 0;
@@ -643,6 +733,10 @@ bool FFRTMPVideoCtrl::OpenStreamForProtocol(const std::string &url, VideoProtoco
         m_hls_first_media_ms = 0;
         m_hls_first_wall_ms = 0;
         m_hls_last_target_ms = 0;
+        m_hls_last_media_ms = 0;
+        m_hls_estimated_frame_duration_ms = 33;
+        m_hls_playback_speed = 1.0;
+        m_hls_catch_up_level = 0;
     }
     AVFormatContext *fmt_ctx = avformat_alloc_context();
     AVDictionary    *opts    = nullptr;
@@ -657,70 +751,102 @@ bool FFRTMPVideoCtrl::OpenStreamForProtocol(const std::string &url, VideoProtoco
     fmt_ctx->interrupt_callback.callback = &FFRTMPVideoCtrl::interruptCb;
     fmt_ctx->interrupt_callback.opaque   = this;
 
-    // 按 URL 协议/扩展名选择解复用参数，实现多协议支持：
-    //   rtmp(e/s/t):// —— RTMP 直播流
-    //   *.m3u8         —— HLS 直播/点播（Apple HTTP Live Streaming）
-    //   其它 http(s)   —— HTTP-FLV 等
-    // 之前无条件设置 RTMP 专属选项会让 HLS(.m3u8) 无法正常播放，这里分协议配置。
-    // 通用低延迟解复用选项（对所有协议生效）
-    av_dict_set(&opts, "max_delay",       "100000",   0);  // max demux-decode delay (us)
-    av_dict_set(&opts, "probesize",       "32768",    0);  // smaller probe for faster start
-    av_dict_set(&opts, "fflags",          "nobuffer", 0);  // disable format-level buffering
-    av_dict_set(&opts, "analyzeduration", "1000000",  0);  // 1s analysis (default 5s)
-    av_dict_set(&opts, "flush_packets",   "1",        0);  // flush packets immediately
-
-    if (protocol == VideoProtocol::Rtmp) {
-        // RTMP live stream options — tuned for low latency
-        av_dict_set(&opts, "rtmp_live",   "live", 0);
-        av_dict_set(&opts, "rtmp_listen", "0",    0);  // 显式关闭 listen 模式（timeout 选项会导致 listen 被强制开启，故移除 timeout）
-        av_dict_set(&opts, "rtmp_buffer", "100",  0);  // 客户端向 RTMP 服务端请求的缓冲时长，FFmpeg 默认 3000ms 是直播高延迟的主因，改小以降低延迟
-    } else {
-        // HLS(.m3u8) / HTTP(-FLV) options
-        // 允许 HLS 播放列表内嵌 https/tls 加密分片，否则会因协议白名单拒绝加载子分片而失败。
-        av_dict_set(&opts, "protocol_whitelist",
-                    "file,crypto,data,http,https,tcp,tls,hls,applehttp", 0);
-        // HTTP 断流自动重连：分片偶发 404/超时时不至于整路失败。
-        av_dict_set(&opts, "reconnect",           "1", 0);
-        av_dict_set(&opts, "reconnect_streamed",  "1", 0);
-        av_dict_set(&opts, "reconnect_delay_max", "2", 0);
-        if (protocol == VideoProtocol::Hls) {
-            // 直播 HLS 从最新分片开始，贴近直播边缘、降低起播延迟。
-            av_dict_set(&opts, "live_start_index", "-1", 0);
-        }
+    configure_common_demux_options(&opts);
+    switch (protocol) {
+    case VideoProtocol::Rtmp: configure_rtmp_demux_options(&opts); break;
+    case VideoProtocol::Hls:  configure_hls_demux_options(&opts);  break;
+    case VideoProtocol::Http: configure_http_demux_options(&opts); break;
+    case VideoProtocol::Unknown: break;
     }
 
     const char *protocol_name = protocol == VideoProtocol::Rtmp ? "rtmp"
                                 : protocol == VideoProtocol::Hls ? "hls" : "http";
     ffrtmp_log(std::string("avformat_open_input... (") + protocol_name + ")");
 
+    const bool is_mjpeg_url = protocol == VideoProtocol::Http
+                              && url.find("action=stream") != std::string::npos;
+    if (is_mjpeg_url) {
+        const AVInputFormat *mpjpeg_demuxer = av_find_input_format("mpjpeg");
+        const AVCodec       *mjpeg_decoder  = avcodec_find_decoder(AV_CODEC_ID_MJPEG);
+        ffrtmp_log(std::string("MJPEG capability: mpjpeg demuxer=")
+                   + (mpjpeg_demuxer ? "available" : "MISSING")
+                   + ", mjpeg decoder=" + (mjpeg_decoder ? "available" : "MISSING"));
+    }
+
+    std::string option_log;
+    const AVDictionaryEntry *entry = nullptr;
+    while ((entry = av_dict_iterate(opts, entry)) != nullptr) {
+        if (!option_log.empty()) option_log += ", ";
+        option_log += std::string(entry->key) + "=" + entry->value;
+    }
+    ffrtmp_log("Open diagnostics: url=" + url
+               + ", protocol=" + protocol_name
+               + ", mjpeg_candidate=" + (is_mjpeg_url ? "true" : "false")
+               + ", running=" + (m_running.load() ? "true" : "false")
+               + ", timeout_ms=" + std::to_string(m_open_timeout_ms)
+               + ", options={" + option_log + "}");
+
     // 打开阶段设硬超时：服务器失联时 TCP 连接/握手可能长时间阻塞，
     // 超时后 interruptCb 会让 avformat_open_input 返回错误，避免永久卡住。
-    m_io_deadline_ms = ffrtmp_now_ms() + m_open_timeout_ms;
+    const int64_t open_started_ms = ffrtmp_now_ms();
+    m_io_interrupt_reason = 0;
+    m_io_deadline_ms = open_started_ms + m_open_timeout_ms;
     // 这是解绑时最可能卡住的地方：DNS 解析 / TCP connect 无法被 interruptCb 打断，
     // 会一直阻塞到 OS 超时。看这两条日志的时间戳差即可判断本次 open 阻塞了多久。
     ffrtmp_ts("[decode] avformat_open_input BEGIN (DNS/连接, 可能长阻塞)");
+    // Leave the input format unspecified. In particular, LAN
+    // */?action=stream endpoints identify themselves as multipart MJPEG via
+    // Content-Type, and libavformat must parse that response (including its
+    // boundary) before selecting the mpjpeg demuxer.
     ret = avformat_open_input(&fmt_ctx, url.c_str(), nullptr, &opts);
+    const int64_t open_elapsed_ms = ffrtmp_now_ms() - open_started_ms;
     ffrtmp_ts(std::string("[decode] avformat_open_input END ret=") + std::to_string(ret));
     m_io_deadline_ms = 0;
     av_dict_free(&opts);
 
     if (ret < 0) {
+        const int interrupt_reason = m_io_interrupt_reason.exchange(0);
+        const char *reason_text = interrupt_reason == 1 ? "stream stopped"
+                                  : interrupt_reason == 2 ? "I/O deadline exceeded"
+                                                          : "not interrupted by callback";
         ffrtmp_err("avformat_open_input failed: " + av_err_str(ret)
-                   + " (code=" + std::to_string(ret) + ")");
+                   + " (code=" + std::to_string(ret)
+                   + ", elapsed_ms=" + std::to_string(open_elapsed_ms)
+                   + ", interrupt_reason=" + reason_text + ")");
         if (fmt_ctx) avformat_free_context(fmt_ctx);
         return false;
     }
 
+    m_io_interrupt_reason = 0;
+    ffrtmp_log("avformat_open_input succeeded: elapsed_ms=" + std::to_string(open_elapsed_ms)
+               + ", detected_format="
+               + (fmt_ctx->iformat && fmt_ctx->iformat->name ? fmt_ctx->iformat->name : "unknown")
+               + ", detected_long_name="
+               + (fmt_ctx->iformat && fmt_ctx->iformat->long_name ? fmt_ctx->iformat->long_name : "unknown"));
+
     ffrtmp_log("avformat_find_stream_info...");
 
-    m_io_deadline_ms = ffrtmp_now_ms() + m_open_timeout_ms;
+    const int64_t stream_info_started_ms = ffrtmp_now_ms();
+    m_io_interrupt_reason = 0;
+    m_io_deadline_ms = stream_info_started_ms + m_open_timeout_ms;
     ret = avformat_find_stream_info(fmt_ctx, nullptr);
+    const int64_t stream_info_elapsed_ms = ffrtmp_now_ms() - stream_info_started_ms;
     m_io_deadline_ms = 0;
     if (ret < 0) {
-        ffrtmp_err("avformat_find_stream_info failed: " + av_err_str(ret));
+        const int interrupt_reason = m_io_interrupt_reason.exchange(0);
+        const char *reason_text = interrupt_reason == 1 ? "stream stopped"
+                                  : interrupt_reason == 2 ? "I/O deadline exceeded"
+                                                          : "not interrupted by callback";
+        ffrtmp_err("avformat_find_stream_info failed: " + av_err_str(ret)
+                   + " (code=" + std::to_string(ret)
+                   + ", elapsed_ms=" + std::to_string(stream_info_elapsed_ms)
+                   + ", interrupt_reason=" + reason_text + ")");
         avformat_close_input(&fmt_ctx);
         return false;
     }
+    m_io_interrupt_reason = 0;
+    ffrtmp_log("avformat_find_stream_info succeeded: elapsed_ms="
+               + std::to_string(stream_info_elapsed_ms));
 
     ffrtmp_log("Stream info: nb_streams=" + std::to_string(fmt_ctx->nb_streams)
                + " format=" + (fmt_ctx->iformat ? fmt_ctx->iformat->name : "unknown")
@@ -735,7 +861,10 @@ bool FFRTMPVideoCtrl::OpenStreamForProtocol(const std::string &url, VideoProtoco
             cp->codec_type == AVMEDIA_TYPE_AUDIO   ? "AUDIO"  :
             cp->codec_type == AVMEDIA_TYPE_SUBTITLE ? "SUBTITLE" : "OTHER";
         ffrtmp_log("stream[" + std::to_string(i) + "] type=" + type_str
-                   + " codec_id=" + std::to_string(cp->codec_id));
+                   + " codec_id=" + std::to_string(cp->codec_id)
+                   + " codec_name=" + avcodec_get_name(cp->codec_id)
+                   + " width=" + std::to_string(cp->width)
+                   + " height=" + std::to_string(cp->height));
         if (cp->codec_type == AVMEDIA_TYPE_VIDEO && video_idx < 0) {
             video_idx = i; codecpar = cp;
         }
@@ -850,7 +979,9 @@ FFRTMPVideoCtrl::ReadStatus FFRTMPVideoCtrl::ReadAndDecodeCommonFrame()
     // 读取阶段设硬超时：连接已建立但设备停止推流（不再产出帧）时，av_read_frame 可能
     // 长时间阻塞等待数据，超时后 interruptCb 令其返回错误，走重连→最终判定断开。
     m_io_deadline_ms = ffrtmp_now_ms() + m_read_timeout_ms;
+    const int64_t read_begin_ms = ffrtmp_now_ms();
     int ret = av_read_frame(fmt_ctx, packet);
+    const int64_t read_elapsed_ms = ffrtmp_now_ms() - read_begin_ms;
     m_io_deadline_ms = 0;
     if (ret < 0) {
         if (ret == AVERROR_EOF) {
@@ -866,6 +997,8 @@ FFRTMPVideoCtrl::ReadStatus FFRTMPVideoCtrl::ReadAndDecodeCommonFrame()
         av_packet_unref(packet); return ReadStatus::Progress;
     }
 
+    const int packet_bytes = packet->size;
+    const int64_t decode_begin_ms = ffrtmp_now_ms();
     ret = avcodec_send_packet(codec_ctx, packet);
     av_packet_unref(packet);
     if (ret < 0) { return ReadStatus::Progress; }
@@ -875,6 +1008,7 @@ FFRTMPVideoCtrl::ReadStatus FFRTMPVideoCtrl::ReadAndDecodeCommonFrame()
         ret = avcodec_receive_frame(codec_ctx, frame);
         if (ret == AVERROR(EAGAIN)) break;
         if (ret < 0) return ReadStatus::Progress;
+        const int64_t decode_elapsed_ms = ffrtmp_now_ms() - decode_begin_ms;
 
         if (m_video_protocol == VideoProtocol::Hls)
             PaceHlsFrame(frame);
@@ -908,8 +1042,24 @@ FFRTMPVideoCtrl::ReadStatus FFRTMPVideoCtrl::ReadAndDecodeCommonFrame()
         std::vector<uint8_t> buffer((size_t)dst_stride * fh + 64);
         uint8_t *dst[1]     = { buffer.data() };
 
+        const int64_t scale_begin_ms = ffrtmp_now_ms();
         sws_scale(sws, frame->data, frame->linesize, 0, codec_ctx->height,
                   dst, &dst_stride);
+        const int64_t scale_elapsed_ms = ffrtmp_now_ms() - scale_begin_ms;
+
+        const int64_t pipeline_elapsed_ms =
+            read_elapsed_ms + decode_elapsed_ms + scale_elapsed_ms;
+        if (m_video_protocol == VideoProtocol::Http
+            && pipeline_elapsed_ms >= g_mjpeg_perf_warn_ms) {
+            ffrtmp_mjpeg_perf_log(
+                "read_ms=" + std::to_string(read_elapsed_ms)
+                + " decode_ms=" + std::to_string(decode_elapsed_ms)
+                + " scale_ms=" + std::to_string(scale_elapsed_ms)
+                + " pipeline_ms=" + std::to_string(pipeline_elapsed_ms)
+                + " packet_bytes=" + std::to_string(packet_bytes)
+                + " frame=" + std::to_string(codec_ctx->width) + "x"
+                + std::to_string(codec_ctx->height));
+        }
 
         const int64_t decoded_at_ms = ffrtmp_now_ms();
         const int64_t previous_frame_ms = m_last_frame_time_ms.exchange(decoded_at_ms);
@@ -926,8 +1076,12 @@ FFRTMPVideoCtrl::ReadStatus FFRTMPVideoCtrl::ReadAndDecodeCommonFrame()
             decoded_frame = true;
         }
 
-        const int pending = m_pending_frame_callbacks.fetch_add(1) + 1;
-        m_ui_callback_posted_count.fetch_add(1);
+        // Always overwrite the shared RGB slot with the newest frame, but
+        // queue at most one UI callback. This prevents UI event backlog from
+        // becoming accumulated live latency.
+        const bool post_ui_callback = !m_paused && m_pending_frame_callbacks.exchange(1) == 0;
+        if (post_ui_callback) m_ui_callback_posted_count.fetch_add(1);
+        const int pending = m_pending_frame_callbacks.load();
         if (previous_frame_ms > 0 && decoded_at_ms - previous_frame_ms >= g_ffrtmp_frame_gap_warn_ms) {
             ffrtmp_frame_log("decode-gap seq=" + std::to_string(frame_sequence)
                              + " gapMs=" + std::to_string(decoded_at_ms - previous_frame_ms)
@@ -944,7 +1098,8 @@ FFRTMPVideoCtrl::ReadStatus FFRTMPVideoCtrl::ReadAndDecodeCommonFrame()
                              + " pendingUi=" + std::to_string(pending)
                              + " size=" + std::to_string(fw) + "x" + std::to_string(fh));
         }
-        CallAfter([this, frame_sequence, decoded_at_ms]() { OnFrameReady(frame_sequence, decoded_at_ms); });
+        if (post_ui_callback)
+            CallAfter([this, frame_sequence, decoded_at_ms]() { OnFrameReady(frame_sequence, decoded_at_ms); });
         av_frame_unref(frame);
     }
     return decoded_frame ? ReadStatus::Frame : ReadStatus::Progress;
@@ -969,46 +1124,89 @@ void FFRTMPVideoCtrl::PaceHlsFrame(void *opaque_frame)
     if (has_timestamp)
         media_ms = av_rescale_q(pts, stream->time_base, AVRational{1, 1000});
 
-    if (!m_hls_clock_initialized) {
+    auto reset_clock = [this, now_ms, media_ms, has_timestamp](const char *reason) {
         m_hls_clock_initialized = true;
         m_hls_first_media_ms = has_timestamp ? media_ms : 0;
         m_hls_first_wall_ms = now_ms;
         m_hls_last_target_ms = now_ms;
-        ffrtmp_frame_log("hls-clock-start ptsMs=" + std::to_string(m_hls_first_media_ms));
+        m_hls_last_media_ms = has_timestamp ? media_ms : 0;
+        m_hls_playback_speed = 1.0;
+        m_hls_catch_up_level = 0;
+        ffrtmp_frame_log(std::string("hls-clock-reset reason=") + reason
+                         + " ptsMs=" + std::to_string(m_hls_first_media_ms));
+    };
+
+    if (!m_hls_clock_initialized) {
+        reset_clock("start");
         return;
     }
 
-    int64_t target_ms;
+    int64_t source_target_ms;
+    int64_t frame_duration_ms = m_hls_estimated_frame_duration_ms;
     if (has_timestamp) {
-        target_ms = m_hls_first_wall_ms + media_ms - m_hls_first_media_ms;
-        // A playlist discontinuity or timestamp reset starts a new local
-        // presentation epoch instead of creating a long sleep or frame burst.
-        if (target_ms < m_hls_last_target_ms - 100
-            || target_ms > m_hls_last_target_ms + 10000) {
-            ffrtmp_frame_log("hls-clock-reset mediaMs=" + std::to_string(media_ms)
-                             + " previousTargetMs=" + std::to_string(m_hls_last_target_ms));
-            m_hls_first_media_ms = media_ms;
-            m_hls_first_wall_ms = now_ms;
-            target_ms = now_ms;
+        const int64_t media_delta_ms = media_ms - m_hls_last_media_ms;
+        // HLS discontinuities and reconnects commonly reset PTS. Rebase the
+        // local clock instead of sleeping for a forward jump or bursting
+        // through frames after a backward jump.
+        if (media_delta_ms < -500) {
+            reset_clock("pts-backward");
+            return;
         }
+        if (media_delta_ms > 10000) {
+            reset_clock("pts-forward");
+            return;
+        }
+
+        if (media_delta_ms > 0 && media_delta_ms < 1000)
+            m_hls_estimated_frame_duration_ms = media_delta_ms;
+        if (media_delta_ms > 0 && media_delta_ms < 1000)
+            frame_duration_ms = media_delta_ms;
+        m_hls_last_media_ms = media_ms;
+        source_target_ms = m_hls_first_wall_ms + media_ms - m_hls_first_media_ms;
     } else {
         AVRational rate = av_guess_frame_rate(fmt_ctx, stream, frame);
-        int64_t frame_duration_ms = rate.num > 0 && rate.den > 0
-                                        ? av_rescale_q(1, av_inv_q(rate), AVRational{1, 1000})
-                                        : 33;
-        target_ms = m_hls_last_target_ms + std::max<int64_t>(1, frame_duration_ms);
+        if (rate.num > 0 && rate.den > 0)
+            m_hls_estimated_frame_duration_ms = std::max<int64_t>(
+                1, av_rescale_q(1, av_inv_q(rate), AVRational{1, 1000}));
+        frame_duration_ms = m_hls_estimated_frame_duration_ms;
+        source_target_ms = m_hls_last_target_ms + frame_duration_ms;
     }
 
-    // If rendering or network recovery has already put playback far behind,
-    // rebase to live time. Otherwise a large stale queue would be played back.
-    if (now_ms - target_ms > 500) {
-        ffrtmp_frame_log("hls-clock-late lateMs=" + std::to_string(now_ms - target_ms));
-        if (has_timestamp) {
-            m_hls_first_media_ms = media_ms;
-            m_hls_first_wall_ms = now_ms;
-        }
-        target_ms = now_ms;
+    // Smooth catch-up without dropping frames. A modest playback speed-up
+    // shortens presentation intervals until the source clock catches up, then
+    // steps back down to normal speed. Hysteresis avoids oscillation near a
+    // threshold and the 1.15 cap keeps motion visually continuous.
+    const int64_t lateness_ms = now_ms - source_target_ms;
+    int catch_up_level;
+    if (lateness_ms > 2000)
+        catch_up_level = 3;
+    else if (lateness_ms > 1000)
+        catch_up_level = 2;
+    else if (lateness_ms > 400)
+        catch_up_level = 1;
+    else if (lateness_ms < 200)
+        catch_up_level = 0;
+    else
+        catch_up_level = m_hls_catch_up_level;
+
+    static constexpr double catch_up_speeds[] = {1.0, 1.05, 1.10, 1.15};
+    if (catch_up_level != m_hls_catch_up_level) {
+        m_hls_catch_up_level = catch_up_level;
+        ffrtmp_frame_log("hls-catch-up-level=" + std::to_string(catch_up_level)
+                         + " lateMs=" + std::to_string(lateness_ms));
     }
+    const double desired_speed = catch_up_speeds[m_hls_catch_up_level];
+    constexpr double speed_step_per_frame = 0.002;
+    if (m_hls_playback_speed < desired_speed)
+        m_hls_playback_speed = std::min(desired_speed, m_hls_playback_speed + speed_step_per_frame);
+    else if (m_hls_playback_speed > desired_speed)
+        m_hls_playback_speed = std::max(desired_speed, m_hls_playback_speed - speed_step_per_frame);
+
+    const int64_t paced_duration_ms = std::max<int64_t>(
+        1, static_cast<int64_t>(frame_duration_ms / m_hls_playback_speed + 0.5));
+    // Never schedule into the past: doing so would release a burst of frames
+    // and recreate the visible stutter that frame-dropping catch-up caused.
+    const int64_t target_ms = std::max(m_hls_last_target_ms, now_ms) + paced_duration_ms;
 
     m_hls_last_target_ms = target_ms;
     while (m_running) {
@@ -1067,6 +1265,9 @@ void FFRTMPVideoCtrl::setCurComId(com_id_t comId)
     // field's initialization value as a final capability result.
     StopStream();
     m_curComId = comId;
+    bool valid = false;
+    const com_dev_data_t &data = MultiComMgr::inst()->devData(comId, &valid);
+    m_is_wan_stream = valid && data.connectMode == COM_CONNECT_WAN;
     m_url.clear();
     m_force_default_placeholder = false;
     m_paused = false;
@@ -1496,7 +1697,8 @@ wxString FFRTMPVideoCtrl::statusText() const
     // 首次进页面的默认暂停（从未主动播放过）不显示“视频已暂停”文字，仅露出缺省图 + 播放按钮；
     // 用户主动播放过后再暂停才显示。
     case PlayState::Paused:       return m_ever_played.load() ? _L("Video is paused") : wxString();
-    case PlayState::Disconnected: return _L("Printer disconnected");
+    case PlayState::Disconnected:
+        return m_is_wan_stream.load() ? _L("Loading video...") : _L("Printer disconnected");
     case PlayState::NoCamera:     return _L("No camera detected");
     // 初始不可用状态：左侧显示不可播放图标，右侧不显示任何状态文字。
     case PlayState::Not:          return wxString();

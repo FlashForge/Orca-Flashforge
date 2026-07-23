@@ -156,10 +156,17 @@ private:
     std::atomic<uint64_t>          m_painted_frame_count{0};
     std::atomic<int>               m_pending_frame_callbacks{0};
     std::atomic<int64_t>           m_last_frame_diag_summary_ms{0};
+    // WAN stream health: after 20 seconds without a decoded frame, return to
+    // the initial device-page state instead of leaving a disconnected player.
+    std::atomic<bool>              m_is_wan_stream{false};
+    std::atomic<int64_t>           m_stream_started_at_ms{0};
     // 阻塞 I/O 硬超时截止点（steady_clock 毫秒，0 表示无截止）。设备/服务器失联时，
     // avformat_open_input / av_read_frame 可能无限阻塞——interruptCb 依据此值超时中止，
     // 让重连计数得以推进、最终判定“打印机断开连接”，而不是永远卡住冻结最后一帧。
     std::atomic<int64_t>           m_io_deadline_ms{0};
+    // Set by interruptCb and consumed after the blocking FFmpeg call returns:
+    // 0 = none, 1 = stream stopped, 2 = I/O deadline exceeded.
+    std::atomic<int>               m_io_interrupt_reason{0};
     wxCriticalSection              m_frame_cs;
     std::unique_ptr<std::thread> m_thread;
     // 后台回收线程：异步停止时用它 join 旧的解码线程，避免阻塞 UI 线程。
@@ -203,6 +210,10 @@ private:
     int64_t m_hls_first_media_ms{0};
     int64_t m_hls_first_wall_ms{0};
     int64_t m_hls_last_target_ms{0};
+    int64_t m_hls_last_media_ms{0};
+    int64_t m_hls_estimated_frame_duration_ms{33};
+    double  m_hls_playback_speed{1.0};
+    int     m_hls_catch_up_level{0};
 
     // Offline / placeholder image
     wxBitmap m_offline_bitmap;

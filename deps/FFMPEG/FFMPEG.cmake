@@ -93,17 +93,20 @@ else ()
             --disable-filters
             --enable-filter=*null*,afade,*fifo,*format,*resample,aeval,allrgb,allyuv,atempo,pan,*bars,color,*key,crop,draw*,eq*,framerate,*_qsv,*_vaapi,*v4l2*,hw*,scale,volume,test*
             --disable-protocols
-            # tcp → 基础网络; rtmp → RTMP 推拉流; http/https → HLS/HLS 播放
-            --enable-protocol=file,fd,pipe,rtp,udp,tcp,rtmp,http,https
+            # tcp → 基础网络; rtmp → RTMP 推拉流; http/https → HLS/HLS 播放; 补充 tls, httpproxy
+            --enable-protocol=file,fd,pipe,rtp,udp,tcp,rtmp,http,https,tls,httpproxy
             --disable-muxers
             # flv → RTMP 推流; hls → HLS 输出
             --enable-muxer=rtp,flv
             --disable-encoders
             --disable-decoders
-            --enable-decoder=*aac*,h264*,mp3*,mjpeg,rv*
+            # 补充 hevc* 解码器
+            --enable-decoder=*aac*,h264*,hevc*,mp3*,mjpeg,rv*
             --disable-demuxers
-            # flv → RTMP 拉流; hls + mpegts → HLS (.m3u8) 播放
-            --enable-demuxer=h264,mp3,mov,flv,hls,mpegts
+            # flv → RTMP 拉流; hls + mpegts → HLS (.m3u8) 播放;
+            # mpjpeg → LAN 摄像头的 multipart/x-mixed-replace MJPEG 流
+            # 补充 hevc, rtp, rtsp, sdp 解复用器
+            --enable-demuxer=h264,hevc,mp3,mov,flv,hls,mpegts,mpjpeg,rtp,rtsp,sdp
             --disable-zlib
             --disable-avdevice
         BUILD_IN_SOURCE ON
