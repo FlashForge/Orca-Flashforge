@@ -119,6 +119,8 @@ private:
 
     void setMaintainThdReqHeader(bool isCheckVersionTestServer);
 
+    void setWanDevOffline();
+
     void subscribeWanDevTopic();
 
     void updateWanDevDetail();

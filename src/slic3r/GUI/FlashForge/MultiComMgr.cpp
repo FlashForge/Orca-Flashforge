@@ -501,8 +501,21 @@ void MultiComMgr::onTimer(const wxTimerEvent &event)
         }
     }
     if (m_connOnline && m_httpOnline) {
-        // A message timeout only means that this client has lost recent communication.
-        // Keep the last cloud-reported device state, matching MachineObject::is_connected().
+        for (auto comId : m_readyIdSet) {
+            com_dev_data_t &devData = m_datMap.at(comId);
+            if (devData.connectMode == COM_CONNECT_WAN) {
+                std::chrono::duration<double> duration = std_precise_clock::now() - m_devAliveTimeMap.at(comId);
+                if (duration.count() > 20 && devData.wanDevInfo.status != "offline") {
+                    devData.wanDevInfo.status = "offline";
+                    QueueEvent(new ComWanDevInfoUpdateEvent(COM_WAN_DEV_INFO_UPDATE_EVENT, comId));
+                    BOOST_LOG_TRIVIAL(warning) << devData.wanDevInfo.devId << ", "
+                        << devData.wanDevInfo.serialNumber << ", timeout offline";
+#ifdef _WIN32
+                    OutputDebugStringA("[CAMDBG] MultiComMgr: 20s no-heartbeat -> mark offline\n");
+#endif
+                }
+            }
+        }
         if (m_pendingSetUpdateWanDevTime != std_precise_clock::time_point::max()) {
             std::chrono::duration<double> duration = std_precise_clock::now() - m_pendingSetUpdateWanDevTime;
             if (duration.count() > 3) {
@@ -769,6 +782,7 @@ void MultiComMgr::onWanConnStatus(const WanConnStatusEvent &event)
         break;
     case FNET_CONN_STATUS_DISCONNECTED:
         m_connOnline = false;
+        setWanDevOffline();
         QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, false, COM_ERROR));
         break;
     }
@@ -981,6 +995,7 @@ void MultiComMgr::maintianWanDev(ComErrno ret, bool needLogout)
     if (ret != COM_OK && m_httpOnline) {
         m_httpOnline = false;
         m_wanDevMaintainThd->setReloginHttp();
+        setWanDevOffline();
         QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, false, ret));
     }
 }
@@ -1003,6 +1018,17 @@ void MultiComMgr::setMaintainThdReqHeader(bool isCheckVersionOnTestServer)
     }
 #endif
     m_wanDevMaintainThd->setReqHeaders(m_clientId, appId, platId);
+}
+
+void MultiComMgr::setWanDevOffline()
+{
+    for (auto &item : m_ptrMap.left) {
+        if (item.second->connectMode() == COM_CONNECT_WAN) {
+            com_dev_data_t &devData = m_datMap.at(item.first);
+            devData.wanDevInfo.status = "offline";
+            QueueEvent(new ComWanDevInfoUpdateEvent(COM_WAN_DEV_INFO_UPDATE_EVENT, item.first));
+        }
+    }
 }
 
 void MultiComMgr::subscribeWanDevTopic()
