@@ -4447,9 +4447,9 @@ void SingleDeviceState::refreshCameraStream()
     // explicit camera field determines whether this printer has a camera.
     // cameraStreamUrl may be populated for models without camera hardware and
     // must never be treated as capability evidence.
-    // const bool camera_available = data.devDetail->camera == 1;
-    const bool camera_available = data.devDetail->cameraStreamUrl != nullptr
-      && data.devDetail->cameraStreamUrl[0] != '\0';
+    const bool camera_available = data.devDetail->camera == 1;
+    // const bool camera_available = data.devDetail->cameraStreamUrl != nullptr
+    //   && data.devDetail->cameraStreamUrl[0] != '\0';
     const char *camera_stream_url = data.devDetail->cameraStreamUrl;
     camera_capability_log(
         "refresh: cameraComId=" + std::to_string(m_camera_cur_id)
