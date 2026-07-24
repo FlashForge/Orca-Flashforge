@@ -4448,6 +4448,7 @@ void SingleDeviceState::refreshCameraStream()
     // cameraStreamUrl may be populated for models without camera hardware and
     // must never be treated as capability evidence.
     const bool camera_available = data.devDetail->camera == 1;
+    BOOST_LOG_TRIVIAL(debug) << "camera_available: " << data.devDetail->camera;
     // const bool camera_available = data.devDetail->cameraStreamUrl != nullptr
     //   && data.devDetail->cameraStreamUrl[0] != '\0';
     const char *camera_stream_url = data.devDetail->cameraStreamUrl;
