@@ -449,8 +449,6 @@ set(lisbslic3r_sources
     Timer.hpp
     TriangleMesh.cpp
     TriangleMesh.hpp
-    MeshDiagnostics.hpp
-    MeshDiagnostics.cpp
     TriangleMeshDeal.cpp
     TriangleMeshDeal.hpp
     TriangleMeshSlicer.cpp
@@ -463,7 +461,6 @@ set(lisbslic3r_sources
     TriangulateWall.hpp
     utils.cpp
     Utils.hpp
-    Win10ModelRepair.hpp
     VariableWidth.cpp
     VariableWidth.hpp
     Zipper.cpp
@@ -505,7 +502,6 @@ cmake_policy(POP)
 add_library(libslic3r_cgal STATIC 
     CutSurface.hpp CutSurface.cpp
     IntersectionPoints.hpp IntersectionPoints.cpp
-    MeshRepair.hpp MeshRepair.cpp
     MeshBoolean.hpp MeshBoolean.cpp
     TryCatchSignal.hpp TryCatchSignal.cpp
     Triangulation.hpp Triangulation.cpp
