@@ -11,6 +11,7 @@
 #include <string>
 #include <memory>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
 #include "MultiComDef.hpp"
@@ -25,6 +26,7 @@ public:
     //   Fit   : 等比缩放完整显示，留黑边（letterbox / contain）—— 默认，行为对齐 VLC 等播放器
     //   Cover : 等比缩放铺满控件，超出部分裁掉（铺满/裁边）
     enum class DisplayMode { Fit, Cover };
+    enum class VideoProtocol { Unknown, Rtmp, Hls, Http };
 
     FFRTMPVideoCtrl(wxWindow *parent);
     ~FFRTMPVideoCtrl();
@@ -52,7 +54,10 @@ public:
     // Records current communication identifier
     void setCurComId(com_id_t comId);
 
-    // Start streaming from the given URL
+    // Updates the selected device's reported camera capability.
+    void setCameraAvailable(bool available);
+
+    // Cache the stream URL; start immediately only when the popup is open.
     void setStreamUrl(const std::string &streamUrl);
 
     // 设置“下次起流的显示暂停偏好”：true=起流后停在暂停(显示缺省图+播放按钮)，false=直接播放。
@@ -62,6 +67,10 @@ public:
     // Stop streaming and show an offline/default placeholder. Account logout uses
     // the default placeholder and keeps the inline panel visible.
     void setOffline(bool show_default_placeholder = false);
+
+    // Device removal/unbind path: immediately invalidate the old camera source,
+    // stop networking non-blockingly, and keep the video window visible offline.
+    void handleDeviceUnbound();
 
     // Show popup (full-screen) dialog
     void showPopup();
@@ -87,14 +96,15 @@ protected:
 private:
     // Threading
     void DecoderThreadFunc();
-    void OnFrameReady();
+    void OnFrameReady(uint64_t posted_frame_sequence, int64_t posted_at_ms);
 
     // 等待上一次后台回收结束（供同步 StopStream/析构复用，防止新旧解码线程并发访问 FFmpeg 上下文）。
     void joinStopReaper();
 
     // 向设备发送 camera "open" 指令：WAN 下经云端让打印机开始/持续推流
     // （LAN 下命令层会自行忽略）。对齐 PrinterCameraPanel 的 rtsp_player_continue 机制。
-    void sendCameraOpen();
+    void sendCameraOpen(com_id_t comId);
+    void sendCameraClose();
 
     // ---- 播放器覆盖层（底部状态条：左下角播放/暂停按钮，右下角状态文字）----
     enum class PlayState { Initializing, Loading, Playing, Paused, Disconnected, NoCamera, Not };
@@ -104,12 +114,17 @@ private:
     bool     playButtonAvailable() const;// 播放/暂停按钮是否可用（仅播放中/已暂停时可操作）
     void     drawOverlayBar(wxDC &dc);   // 绘制底部状态条
     void     togglePause();              // 切换 播放/暂停
-    void     pauseStream();              // 暂停：停解码/保活，冻结最后一帧
+    void     pauseStream();              // 暂停显示：解码继续，冻结最后一帧
     void     resumeStream();             // 恢复：按最新地址重新开流
     void     OnLeftDown(wxMouseEvent &event);
 
     // FFmpeg helpers (only called from decode thread)
+    static VideoProtocol DetectVideoProtocol(const std::string &url);
     bool OpenStream(const std::string &url);
+    bool OpenRtmpStream(const std::string &url);
+    bool OpenHlsStream(const std::string &url);
+    bool OpenHttpStream(const std::string &url);
+    bool OpenStreamForProtocol(const std::string &url, VideoProtocol protocol);
     void CloseStream();
 
     // FFmpeg 阻塞 I/O 中断回调：m_running 变 false 时立即中止 open/read，
@@ -118,17 +133,40 @@ private:
 
     // 单次读取结果：区分“读到数据/直播到达边缘(EOF)/真正错误”，
     // 以便对 HLS 等分段协议的 EOF 做容忍处理，而不是简单断流重连。
-    enum class ReadStatus { Frame, Eof, Error };
+    enum class ReadStatus { Frame, Progress, Eof, Error };
     ReadStatus ReadAndDecodeOneFrame();
+    ReadStatus ReadAndDecodeRtmpFrame();
+    ReadStatus ReadAndDecodeHlsFrame();
+    ReadStatus ReadAndDecodeHttpFrame();
+    ReadStatus ReadAndDecodeCommonFrame();
+    void PaceHlsFrame(void *frame);
 
     // Synchronisation
     std::atomic<bool>              m_running{false};
     std::atomic<bool>              m_frame_ready{false};
-    std::atomic<bool>              m_skip_initial_delay{false}; // 同一路流重启时跳过预热等待
+    // Timestamp of the latest successfully decoded video frame. Unlike
+    // m_frame_ready, this cannot mistake a frozen old frame for a healthy stream.
+    std::atomic<int64_t>           m_last_frame_time_ms{0};
+    // Frame-pipeline diagnostics. Sequence numbers let the log distinguish
+    // decoder loss from UI callback coalescing/latency and paint-frame skips.
+    std::atomic<uint64_t>          m_decoded_frame_count{0};
+    std::atomic<uint64_t>          m_ui_callback_posted_count{0};
+    std::atomic<uint64_t>          m_ui_callback_completed_count{0};
+    std::atomic<uint64_t>          m_bitmap_frame_count{0};
+    std::atomic<uint64_t>          m_painted_frame_count{0};
+    std::atomic<int>               m_pending_frame_callbacks{0};
+    std::atomic<int64_t>           m_last_frame_diag_summary_ms{0};
+    // WAN stream health: after 20 seconds without a decoded frame, return to
+    // the initial device-page state instead of leaving a disconnected player.
+    std::atomic<bool>              m_is_wan_stream{false};
+    std::atomic<int64_t>           m_stream_started_at_ms{0};
     // 阻塞 I/O 硬超时截止点（steady_clock 毫秒，0 表示无截止）。设备/服务器失联时，
     // avformat_open_input / av_read_frame 可能无限阻塞——interruptCb 依据此值超时中止，
     // 让重连计数得以推进、最终判定“打印机断开连接”，而不是永远卡住冻结最后一帧。
     std::atomic<int64_t>           m_io_deadline_ms{0};
+    // Set by interruptCb and consumed after the blocking FFmpeg call returns:
+    // 0 = none, 1 = stream stopped, 2 = I/O deadline exceeded.
+    std::atomic<int>               m_io_interrupt_reason{0};
     wxCriticalSection              m_frame_cs;
     std::unique_ptr<std::thread> m_thread;
     // 后台回收线程：异步停止时用它 join 旧的解码线程，避免阻塞 UI 线程。
@@ -138,7 +176,12 @@ private:
     std::vector<uint8_t> m_rgb_buffer;  // raw RGB data from decoder thread
     int                  m_buf_width{0};   // m_rgb_buffer 对应的帧宽（与 buffer 一起在锁内更新，避免与解码线程竞争）
     int                  m_buf_height{0};  // m_rgb_buffer 对应的帧高
+    uint64_t             m_buf_frame_sequence{0};
     wxBitmap             m_rgb_bitmap;  // created on main thread in OnFrameReady
+    uint64_t             m_bitmap_frame_sequence{0};
+    uint64_t             m_last_painted_frame_sequence{0};
+    int64_t              m_last_ui_frame_time_ms{0};
+    int64_t              m_last_paint_frame_time_ms{0};
     int                  m_video_width{1280};  // 解码线程内部使用（scaler 尺寸），非渲染依据
     int                  m_video_height{720};
 
@@ -159,8 +202,18 @@ private:
     void *m_packet{nullptr};
     int   m_video_stream_idx{-1};
 
-    // 当前流是否为 HLS(.m3u8)：仅解码线程读写，用于对直播边缘 EOF 做容忍。
-    bool  m_is_hls{false};
+    // 当前会话的协议类型，仅由解码线程在 FFmpeg 上下文存活期间使用。
+    VideoProtocol m_video_protocol{VideoProtocol::Unknown};
+    // HLS demuxers return all frames from a downloaded segment as fast as the
+    // CPU can decode them. This clock restores the source PTS cadence.
+    bool    m_hls_clock_initialized{false};
+    int64_t m_hls_first_media_ms{0};
+    int64_t m_hls_first_wall_ms{0};
+    int64_t m_hls_last_target_ms{0};
+    int64_t m_hls_last_media_ms{0};
+    int64_t m_hls_estimated_frame_duration_ms{33};
+    double  m_hls_playback_speed{1.0};
+    int     m_hls_catch_up_level{0};
 
     // Offline / placeholder image
     wxBitmap m_offline_bitmap;
@@ -183,11 +236,13 @@ private:
 
     // Com ID for this camera (from PrinterCameraPanel API)
     com_id_t m_curComId{ComInvalidId};
+    std::atomic<bool> m_camera_available{false};
 
-    // 推流保活：播放期间周期性重发 camera "open"，维持打印机推流会话，
-    // 避免云端会话超时（约 10s）后停止产出分片。
-    wxTimer m_keepalive_timer;
-    int     m_keepalive_interval_ms{5000};
+    // Device for which an "open" command was successfully queued. A matching
+    // "close" is sent exactly once when the media session ends.
+    com_id_t m_open_camera_com_id{ComInvalidId};
+    uint64_t m_camera_session_sequence{0};
+    uint64_t m_active_camera_session_id{0};
 
     // Popup dialog for full-screen view
     wxDialog *m_popup_dlg{nullptr};
@@ -198,9 +253,8 @@ private:
     std::string m_url;
 
     // Reconnect
-    // 首次连接前的等待时间。设为 0 以最小化首帧延迟；若摄像头尚未开始推流，
-    // OpenStream 会失败并由重连逻辑自动重试，无需在此白等。
-    int m_initial_delay_ms{0};
+    // 首次连接前等待设备生成 HLS 播放列表。旧网页播放器在 camera open 后同样
+    // 延迟约 3 秒再创建播放器，可减少 Creator 5 起流阶段的无效 404。
     int m_reconnect_delay_ms{1000};  // 首连失败时快速重试，缩短首帧出现前的等待
     int m_reconnect_delay_max_ms{5000}; // 退避上限：直播源持续重连，不永久放弃
     int m_reconnect_attempts{0};
