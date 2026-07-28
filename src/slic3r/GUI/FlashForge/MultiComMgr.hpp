@@ -73,8 +73,6 @@ public:
 private:
     using std_precise_clock = std::chrono::high_resolution_clock;
 
-    typedef std::map<com_id_t, std_precise_clock::time_point> dev_alive_time_map_t;
-
     typedef std::shared_ptr<ComConnection> com_ptr_t;
 
     typedef boost::bimap<com_id_t, ComConnection*> com_ptr_map_t;
@@ -109,17 +107,24 @@ private:
 
     void onRefreshToken(const ComRefreshTokenEvent &event);
 
+    void onMqttConfigRefresh(const ComMqttConfigRefreshEvent &event);
+
+    void requestMqttConfigRefresh();
+
     std::string generateClientId();
 
     std::string getDevTopic(const std::string &devId);
 
     com_dev_data_t makeWanDevData(const fnet_wan_dev_info_t *wanDevInfo);
 
+    bool updateWanDeviceState(com_id_t id, WanDevicePresence presence, WanDeviceStatusSource source,
+        const std::string *workStatus = nullptr, bool notify = true, bool forceNotify = false);
+
+    bool mergeWanDeviceInfo(com_id_t id, const fnet_wan_dev_info_t &wanDevInfo);
+
     void maintianWanDev(ComErrno ret, bool needLogout);
 
     void setMaintainThdReqHeader(bool isCheckVersionTestServer);
-
-    void setWanDevOffline();
 
     void subscribeWanDevTopic();
 
@@ -132,7 +137,8 @@ private:
     bool                                     m_login;
     bool                                     m_httpOnline;
     bool                                     m_connOnline;
-    bool                                     m_connFirstConnected;
+    std::atomic<uint64_t>                    m_mqttGeneration { 0 };
+    std::atomic_bool                         m_mqttConfigRefreshInFlight { false };
     std::string                              m_clientId;
     com_mqtt_config_t                        m_mqttConfig;
     std::list<com_ptr_t>                     m_comPtrs;
@@ -141,7 +147,6 @@ private:
     std::set<com_id_t>                       m_readyIdSet;
     std::unordered_map<std::string, std::vector<std::string>> m_unUpdateDevList;
     std::map<std::string, com_id_t>          m_devIdMap;
-    dev_alive_time_map_t                     m_devAliveTimeMap;
     std::list<com_dev_data_t>                m_pendingWanDevDatas;
     wxTimer                                  m_loopCheckTimer;
     std::atomic_bool                         m_blockCommandFailedUpdate;
