@@ -1083,3 +1083,24 @@ msgstr "Загрузка прошла успешно"
 
 msgid "Upload failed"
 msgstr "Ошибка загрузки"
+
+msgid "No camera detected"
+msgstr "Камера не обнаружена"
+
+msgid "Repairing polygon soup"
+msgstr "Исправление полигональных данных"
+
+msgid "Orienting polygon soup"
+msgstr "Ориентация полигональных данных"
+
+msgid "Converting to mesh"
+msgstr "Преобразование в сетку"
+
+msgid "Repairing mesh boundaries"
+msgstr "Исправление границ сетки"
+
+msgid "Finalizing repaired mesh"
+msgstr "Завершение исправленной сетки"
+
+msgid "Remapping repaired mesh colors"
+msgstr "Переназначение цветов исправленной сетки"

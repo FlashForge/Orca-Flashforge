@@ -19007,3 +19007,6 @@ msgstr ""
 
 msgid "Printer disconnected"
 msgstr ""
+
+msgid "No camera detected"
+msgstr ""

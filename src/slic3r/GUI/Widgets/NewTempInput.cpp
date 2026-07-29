@@ -1014,6 +1014,7 @@ void TempMixDevice::setState(int state, bool lampState)
         } else {
             m_idle_filter_button->SetIcon("device_filter");
         }
+        m_idle_device_info_button->Unbind(wxEVT_LEFT_DOWN, &TempMixDevice::onDevInfoBtnClicked, this);
         m_idle_device_info_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onDevInfoBtnClicked, this);
         //m_idle_lamp_control_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onLampBtnClicked, this);
         m_idle_filter_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onFilterBtnClicked, this);
@@ -1028,6 +1029,7 @@ void TempMixDevice::setState(int state, bool lampState)
         } else {
             m_idle_filter_button->SetIcon("device_filter");
         }
+        m_idle_device_info_button->Unbind(wxEVT_LEFT_DOWN, &TempMixDevice::onDevInfoBtnClicked, this);
         m_idle_device_info_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onDevInfoBtnClicked, this);
         //m_idle_lamp_control_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onLampBtnClicked, this);
         m_idle_filter_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onFilterBtnClicked, this);
@@ -1181,7 +1183,10 @@ void TempMixDevice::changeMachineType(unsigned short pid)
         m_panel_idle_device_title->Show();
         m_panel_u_device->Show();
     } else {
-        m_panel_idle_device_info->Hide();
+        // Device information is already populated by the periodic detail
+        // update. Show it immediately when entering the page; the filter
+        // button may still switch to the filter panel when requested.
+        m_panel_idle_device_info->Show();
         m_panel_idle_device_state->Show();
         m_panel_idle_device_title->Hide();
         m_panel_u_device->Hide();

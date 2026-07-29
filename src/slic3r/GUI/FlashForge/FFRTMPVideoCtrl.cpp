@@ -9,9 +9,13 @@
 #include <cctype>
 #include <algorithm>
 #include <cstring>
+#include <sstream>
 
 // [FFRTMP] 调试日志总开关：置 false 关闭全部 [FFRTMP] 输出（需要排查时改回 true）。
 static const bool g_ffrtmp_log_enabled = false;
+// Independent diagnostic switch: visibility/layout logs remain available while
+// verbose stream decoding logs are disabled.
+static const bool g_camera_panel_state_log_enabled = false;
 
 // Debug output helper — writes to both Boost log and Visual Studio / DebugView on Windows
 static void ffrtmp_log(const std::string &msg)
@@ -89,10 +93,56 @@ FFRTMPVideoCtrl::FFRTMPVideoCtrl(wxWindow *parent)
 
     Bind(wxEVT_PAINT, &FFRTMPVideoCtrl::OnPaint, this);
     Bind(wxEVT_SIZE,  &FFRTMPVideoCtrl::OnSize,  this);
+    Bind(wxEVT_SHOW, [this](wxShowEvent &event) {
+        logPanelState(event.IsShown() ? "wxEVT_SHOW shown" : "wxEVT_SHOW hidden");
+        event.Skip();
+    });
     Bind(wxEVT_LEFT_DOWN, &FFRTMPVideoCtrl::OnLeftDown, this);  // 左下角播放/暂停按钮
 
     // 保活定时器：播放期间周期性重发 camera "open"，维持打印机推流。
     m_keepalive_timer.Bind(wxEVT_TIMER, [this](wxTimerEvent &) { sendCameraOpen(); });
+    logPanelState("constructor complete");
+}
+
+void FFRTMPVideoCtrl::logPanelState(const char *reason) const
+{
+    if (!g_camera_panel_state_log_enabled) return;
+
+    const wxSize size   = GetSize();
+    const wxSize client = GetClientSize();
+    const wxSize min    = GetMinSize();
+    const wxSize max    = GetMaxSize();
+    FFRTMPVideoCtrl *self = const_cast<FFRTMPVideoCtrl *>(this);
+    wxSizer *sizer        = self->GetContainingSizer();
+    wxSizerItem *item     = sizer ? sizer->GetItem(self) : nullptr;
+    wxWindow *parent      = self->GetParent();
+    const wxSize parent_size = parent ? parent->GetClientSize() : wxDefaultSize;
+
+    std::ostringstream os;
+    os << "[CAMERA_PANEL_STATE] " << (reason ? reason : "")
+       << " this=" << static_cast<const void *>(this)
+       << " parent=" << static_cast<void *>(parent)
+       << " parentShown=" << (parent ? parent->IsShown() : false)
+       << " parentClient=" << parent_size.x << 'x' << parent_size.y
+       << " shown=" << IsShown()
+       << " shownOnScreen=" << IsShownOnScreen()
+       << " enabled=" << IsEnabled()
+       << " size=" << size.x << 'x' << size.y
+       << " client=" << client.x << 'x' << client.y
+       << " min=" << min.x << 'x' << min.y
+       << " max=" << max.x << 'x' << max.y
+       << " hasSizer=" << (sizer != nullptr)
+       << " sizerItem=" << static_cast<void *>(item)
+       << " itemShown=" << (item ? item->IsShown() : false)
+       << " itemMin=" << (item ? std::to_string(item->GetMinSize().x) + "x" + std::to_string(item->GetMinSize().y) : "n/a")
+       << " itemRect=" << (item ? std::to_string(item->GetRect().width) + "x" + std::to_string(item->GetRect().height) : "n/a")
+       << " popup=" << static_cast<void *>(m_popup_dlg)
+       << " forcePlaceholder=" << m_force_default_placeholder.load()
+       << " playState=" << static_cast<int>(m_play_state.load());
+    BOOST_LOG_TRIVIAL(info) << os.str();
+#ifdef _WIN32
+    OutputDebugStringA((os.str() + "\n").c_str());
+#endif
 }
 
 FFRTMPVideoCtrl::~FFRTMPVideoCtrl()
@@ -107,6 +157,18 @@ FFRTMPVideoCtrl::~FFRTMPVideoCtrl()
 
 void FFRTMPVideoCtrl::StartStream(const std::string &url)
 {
+    m_force_default_placeholder = false;
+
+    bool valid = false;
+    const com_dev_data_t &data = MultiComMgr::inst()->devData(m_curComId, &valid);
+    if (valid && data.devDetail != nullptr && data.devDetail->camera != 1) {
+        // Ignore delayed/stale stream URL updates for devices without a camera.
+        m_paused = false;
+        StopStream();
+        setPlayState(PlayState::NoCamera);
+        return;
+    }
+
     // Unconditional debug output — always fires regardless of FFRTMP_USE_FFMPEG
     ffrtmp_log("StartStream called, url='" + url + "'");
     // [UNBIND] 若解绑期间意外触发了 StartStream，它内部会同步 StopStream()（见 SS0..SS4），
@@ -217,23 +279,33 @@ void FFRTMPVideoCtrl::StopStream()
     CallAfter([this]() { Refresh(); });
 }
 
-void FFRTMPVideoCtrl::showOfflineImmediate()
+void FFRTMPVideoCtrl::showOfflineImmediate(bool show_default_placeholder)
 {
+    logPanelState("showOfflineImmediate enter");
+    // Connection-exit may arrive before account-maintenance. Select the visible
+    // default state here so the result does not depend on event ordering.
+    if (show_default_placeholder) m_force_default_placeholder = true;
     // 立即（非阻塞）把画面切到“断开连接”并隐藏，同时置停止标志让解码线程开始退出。
     // 只做这些秒级返回的操作，绝不 join 解码线程——供解绑/登出时优先给用户视觉反馈。
     m_keepalive_timer.Stop();
     m_running = false;   // 非阻塞：通知解码线程退出，且 OnFrameReady 会据此停止刷新（避免残帧闪回）
     m_paused  = false;   // 断连清除显示暂停态
-    setPlayState(PlayState::Disconnected);   // 右下角状态：打印机断开连接
+    setPlayState(m_force_default_placeholder.load() ? PlayState::Not : PlayState::Disconnected);
     {
         wxCriticalSectionLocker lock(m_frame_cs);
         m_frame_ready = false;
         m_rgb_buffer.clear();
         m_rgb_bitmap = wxBitmap();
     }
-    // 弹窗打开时保持显示（黑底 + “打印机断开连接”状态条）；仅内联时隐藏。
-    if (!m_popup_dlg) Hide();
+    // 账号登出时内联区域必须保留并显示缺省图；普通解绑仍沿用原有隐藏行为。
+    if (!m_popup_dlg) {
+        if (m_force_default_placeholder.load())
+            Show();
+        else
+            Hide();
+    }
     Refresh();
+    logPanelState("showOfflineImmediate exit");
 }
 
 void FFRTMPVideoCtrl::reapStoppedStream()
@@ -274,13 +346,14 @@ bool FFRTMPVideoCtrl::IsStreaming() const { return m_running; }
 
 void FFRTMPVideoCtrl::ShowFullScreenPopup()
 {
+    logPanelState("ShowFullScreenPopup enter");
     if (m_popup_dlg) return;
 
     // 打开摄像头窗口：恢复上次关闭时的显示状态（首次打开默认播放，见 m_popup_last_paused 初值）。
     // 后台解码/拉流始终在跑（暂停与拉流解耦），这里仅决定是否冻结显示。
     // 断连时保持“断开连接”状态条，不改播放/暂停显示。
-    if (m_play_state.load() == PlayState::Disconnected) {
-        // keep disconnected overlay
+    if (m_play_state.load() == PlayState::Disconnected || m_play_state.load() == PlayState::NoCamera) {
+        // Keep unavailable-state overlay.
     } else if (m_popup_last_paused) {
         pauseStream();
     } else {
@@ -295,6 +368,7 @@ void FFRTMPVideoCtrl::ShowFullScreenPopup()
     // 而该 sizer 仍持有指向本控件的 item，会对已经 Reparent 到弹窗的控件调用 SetSize(内联尺寸)，
     // 把弹窗里 640x480 的画面强行缩回内联大小 —— 这就是“画面时大时小”的根因。
     if (wxSizer *s = GetContainingSizer()) s->Detach(this);
+    logPanelState("ShowFullScreenPopup after Detach");
 
     // 弹窗尺寸 = 画面区(640x480 = 4:3，与摄像头分辨率一致) + 状态条(FromDIP(30))。
     // 这样画面区正好是 4:3，Cover 铺满不裁边也不留黑边，状态条在下方拼接。
@@ -304,23 +378,32 @@ void FFRTMPVideoCtrl::ShowFullScreenPopup()
     m_popup_dlg->CenterOnParent();
 
     Reparent(m_popup_dlg);
+    logPanelState("ShowFullScreenPopup after Reparent popup");
     setSize(videoSize);  // min==max==640x510，弹窗内尺寸固定
     Show();              // 控件此前可能处于 Hidden 状态，必须显式显示，否则弹窗内一片黑
     Refresh();
 
     m_popup_dlg->Bind(wxEVT_CLOSE_WINDOW, [this](wxCloseEvent &event) {
+        logPanelState("popup close enter");
         // 记录关闭时的显示状态（暂停/播放），下次打开弹窗时恢复，实现“保持原状”。
         m_popup_last_paused = m_paused;
         // 弹窗专属：关闭后控件必须先从即将销毁的弹窗中 Reparent 出去（否则会随弹窗一起销毁），
         // 归还给内联父窗口后保持 Hidden —— 设备状态面板上不显示任何视频画面。
         // 解码线程不停止，保证再次打开弹窗时能立即出画面。
         Reparent(m_inline_parent ? m_inline_parent : wxGetApp().mainframe);
+        logPanelState("popup close after Reparent inline");
         setSize(m_inline_size);  // 复位为内联占位尺寸（隐藏状态下不占布局空间）
-        Hide();
+        if (m_force_default_placeholder.load())
+            Show();
+        else
+            Hide();
         if (m_inline_parent && m_inline_parent->GetSizer()) {
-            m_inline_parent->GetSizer()->Add(this, 0, wxALL, 0);
+            // 恢复与初始内联布局一致的 EXPAND 标志；否则登出关闭弹窗后会留下
+            // 一个有 sizer 占位但没有正确铺开的空白区域，直到窗口尺寸变化才重排。
+            m_inline_parent->GetSizer()->Add(this, 0, wxALL | wxEXPAND, 0);
             m_inline_parent->Layout();
         }
+        logPanelState("popup close after inline Layout");
         m_popup_dlg->Destroy();
         m_popup_dlg = nullptr;
     });
@@ -782,8 +865,10 @@ FFRTMPVideoCtrl::ReadStatus FFRTMPVideoCtrl::ReadAndDecodeOneFrame() { return Re
 
 void FFRTMPVideoCtrl::setSize(wxSize size)
 {
+    logPanelState("setSize before");
     SetSize(size);
     SetMinSize(size);
+    logPanelState("setSize after");
 }
 
 void FFRTMPVideoCtrl::setDisplayMode(DisplayMode mode)
@@ -798,6 +883,17 @@ void FFRTMPVideoCtrl::setCurComId(com_id_t comId)
     // 切换设备：摄像头画面跟随切换（新地址由后续 setStreamUrl 触发 StartStream 正常播放）。
     // 暂停只是显示层面的冻结，不在这里干预。
     m_curComId = comId;
+
+    bool valid = false;
+    const com_dev_data_t &data = MultiComMgr::inst()->devData(comId, &valid);
+    if (valid && data.devDetail != nullptr && data.devDetail->camera != 1) {
+        // 与设备页摄像头按钮使用相同的能力判断。切到无摄像头设备时停止旧流，
+        // 清除旧设备残帧，并在缺省图上显示明确的“未检测到摄像头”状态。
+        m_force_default_placeholder = false;
+        m_paused = false;
+        StopStream();
+        setPlayState(PlayState::NoCamera);
+    }
 }
 
 void FFRTMPVideoCtrl::sendCameraOpen()
@@ -826,22 +922,32 @@ void FFRTMPVideoCtrl::setStartPausedPreference(bool paused)
 {
     // 下次 StartStream 的显示暂停偏好。切设备时置 true，使每台设备进入都默认暂停(与首次一致)。
     m_display_paused_pref = paused;
+    // 进设备页/切设备视为“首次进入”：复位播放标志，使默认暂停不显示“视频已暂停”文字。
+    m_ever_played = false;
 }
 
-void FFRTMPVideoCtrl::setOffline()
+void FFRTMPVideoCtrl::setOffline(bool show_default_placeholder)
 {
+    logPanelState("setOffline enter");
     ffrtmp_log("setOffline called");
 
+    m_force_default_placeholder = show_default_placeholder;
     m_paused = false;                          // 断连清除显示暂停态
     StopStream();
-    setPlayState(PlayState::Disconnected);      // 右下角状态：打印机断开连接
+    setPlayState(show_default_placeholder ? PlayState::Not : PlayState::Disconnected);
     CallAfter([this]() {
+        logPanelState("setOffline CallAfter before clear/show");
         wxCriticalSectionLocker lock(m_frame_cs);
         m_frame_ready = false;
         m_rgb_buffer.clear();
         m_rgb_bitmap = wxBitmap();
-        // 内联控件常驻显示：离线时不隐藏，保持可见并露出黑底占位图 + “打印机断开连接”状态条。
+        // 登出可能与连接退出事件交错；这里再次恢复可见性，确保延迟回调后仍显示缺省图。
+        if (m_force_default_placeholder.load() && !m_popup_dlg) {
+            Show();
+            if (wxSizer *sizer = GetContainingSizer()) sizer->Layout();
+        }
         Refresh();
+        logPanelState("setOffline CallAfter after Layout/Refresh");
     });
 }
 
@@ -946,14 +1052,12 @@ void FFRTMPVideoCtrl::OnPaint(wxPaintEvent & /*event*/)
 
         memDC.SelectObject(wxNullBitmap);
     } else if (client.x > 0 && videoH > 0) {
-        // 无可显示视频帧：
-        //   · 断开连接 → 黑底占位（m_offline_bitmap）；
-        //   · 其余（进设备页/暂停/加载中且尚无画面）→ 缺省图 m_placeholder_bitmap。
+        // 无可显示视频帧时统一显示缺省图，包括设备/视频流断开连接的状态。
         // 缺省图未加载成功时回退为黑底占位。同样只画在“画面区”(videoH)内，不进入状态条。
-        const bool disconnected = (m_play_state.load() == PlayState::Disconnected);
-        wxBitmap &bg = (!disconnected && m_placeholder_bitmap.IsOk())
-                           ? m_placeholder_bitmap
-                           : m_offline_bitmap;
+        // Use the default camera image whenever no video frame is available,
+        // including after a connected device/stream disconnects. The generated
+        // black bitmap remains only as a fallback if the resource cannot load.
+        wxBitmap &bg = m_placeholder_bitmap.IsOk() ? m_placeholder_bitmap : m_offline_bitmap;
         if (bg.IsOk()) {
             const int w = bg.GetWidth();
             const int h = bg.GetHeight();
@@ -985,6 +1089,7 @@ void FFRTMPVideoCtrl::OnPaint(wxPaintEvent & /*event*/)
 
 void FFRTMPVideoCtrl::OnSize(wxSizeEvent & /*event*/)
 {
+    logPanelState("OnSize enter");
     // 内联模式：控件宽度随左栏横向拉伸，这里让总高 = 画面区(宽/摄像头宽高比) + 状态条高，
     // 随宽度动态调整，使"画面区"正好等于摄像头宽高比 —— 既不裁也不留黑边，画面与状态条纵向拼接。
     // 弹窗模式尺寸固定，不参与。设备遥测刷新不改变左栏宽度，故 desiredH 稳定、不会抖动。
@@ -1015,6 +1120,7 @@ void FFRTMPVideoCtrl::OnSize(wxSizeEvent & /*event*/)
         }
     }
     Refresh();
+    logPanelState("OnSize exit");
 }
 
 // ============================================================================
@@ -1023,6 +1129,13 @@ void FFRTMPVideoCtrl::OnSize(wxSizeEvent & /*event*/)
 
 void FFRTMPVideoCtrl::setPlayState(PlayState s)
 {
+    // 登出/连接退出已要求显示初始不可用状态后，解码线程可能仍从一次正在
+    // 进行的阻塞读取中返回，并尝试写入 Loading/Playing。在线程完全退出前
+    // 拒绝这些迟到状态，避免右下角重新显示“视频播放中”。StartStream()
+    // 会先清除 m_force_default_placeholder，正常起流不受影响。
+    if (m_force_default_placeholder.load() && s != PlayState::Not) {
+        return;
+    }
     // 仅在状态变化时刷新，避免解码线程每帧 setPlayState(Playing) 造成刷新风暴。
     if (m_play_state.exchange(s) == s) {
         return;
@@ -1037,10 +1150,14 @@ wxString FFRTMPVideoCtrl::statusText() const
     case PlayState::Initializing: return _L("Initializing camera...");
     case PlayState::Loading:      return _L("Loading video...");
     case PlayState::Playing:      return _L("Video is playing");
-    case PlayState::Paused:       return _L("Video is paused");
+    // 首次进页面的默认暂停（从未主动播放过）不显示“视频已暂停”文字，仅露出缺省图 + 播放按钮；
+    // 用户主动播放过后再暂停才显示。
+    case PlayState::Paused:       return m_ever_played.load() ? _L("Video is paused") : wxString();
     case PlayState::Disconnected: return _L("Printer disconnected");
-    case PlayState::Not:
-    default:                      return _L("No camera detected");
+    case PlayState::NoCamera:     return _L("No camera detected");
+    // 初始不可用状态：左侧显示不可播放图标，右侧不显示任何状态文字。
+    case PlayState::Not:          return wxString();
+    default:                      return wxString();
     }
 }
 
@@ -1121,6 +1238,7 @@ void FFRTMPVideoCtrl::resumeStream()
     ffrtmp_log("resumeStream (display-only)");
     m_paused = false;
     m_display_paused_pref = false;  // 记住播放偏好：切设备/重开流沿用
+    m_ever_played = true;           // 用户已主动播放：此后暂停才显示“视频已暂停”
     // 不能仅凭 m_running 就报“播放中”：m_running 只表示解码线程在跑，
     // 此时可能仍在连接/等待首帧（画面为黑）。只有确实已解码出帧才报“播放中”，
     // 否则报“加载中”，等首帧到达后由解码线程置为“播放中”，

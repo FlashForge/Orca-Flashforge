@@ -1052,3 +1052,21 @@ msgstr "フィードバックが受領されました。"
 
 msgid "This will prevent data from being transmitted to cloud services. Users who only utilize local network functionality can safely enable this option."
 msgstr "これはデータがクラウドサービスへ送信されるのを防ぎます。ローカルネットワーク機能のみを使用するユーザーは、このオプションを安全に有効化できます。"
+
+msgid "Repairing polygon soup"
+msgstr "ポリゴンデータを修復中"
+
+msgid "Orienting polygon soup"
+msgstr "ポリゴンの向きを調整中"
+
+msgid "Converting to mesh"
+msgstr "メッシュに変換中"
+
+msgid "Repairing mesh boundaries"
+msgstr "メッシュ境界を修復中"
+
+msgid "Finalizing repaired mesh"
+msgstr "修復したメッシュを仕上げ中"
+
+msgid "Remapping repaired mesh colors"
+msgstr "修復したメッシュの色を再割り当て中"

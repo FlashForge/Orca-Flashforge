@@ -59,8 +59,9 @@ public:
     // 切设备时由外部置 true，使每台设备进入都与首次一致（默认暂停）。
     void setStartPausedPreference(bool paused);
 
-    // Stop streaming and show offline placeholder
-    void setOffline();
+    // Stop streaming and show an offline/default placeholder. Account logout uses
+    // the default placeholder and keeps the inline panel visible.
+    void setOffline(bool show_default_placeholder = false);
 
     // Show popup (full-screen) dialog
     void showPopup();
@@ -71,10 +72,13 @@ public:
     // 立即把画面切到“断开连接”并隐藏（非阻塞，不回收解码线程）。
     // 用于解绑/登出：先给用户即时的视觉反馈（设备已解绑、摄像头画面已隐藏），
     // 真正的解码线程回收由 reapStoppedStream() 延后完成。
-    void showOfflineImmediate();
+    void showOfflineImmediate(bool show_default_placeholder = false);
     // 回收已停止的解码线程（可能因 DNS/连接/关闭阻塞，交后台线程 join，不阻塞 UI）。
     // 需与 showOfflineImmediate() 配合：先置停止标志+更新 UI，再于后续 tick 调用本函数回收。
     void reapStoppedStream();
+
+    // Diagnostic snapshot for unexpected Hide() or zero-height layout changes.
+    void logPanelState(const char *reason) const;
 
 protected:
     void OnPaint(wxPaintEvent &event);
@@ -93,7 +97,7 @@ private:
     void sendCameraOpen();
 
     // ---- 播放器覆盖层（底部状态条：左下角播放/暂停按钮，右下角状态文字）----
-    enum class PlayState { Initializing, Loading, Playing, Paused, Disconnected, Not };
+    enum class PlayState { Initializing, Loading, Playing, Paused, Disconnected, NoCamera, Not };
     void     setPlayState(PlayState s);  // 线程安全，可从解码线程调用
     wxString statusText() const;         // 右下角状态文字
     wxRect   playButtonRect();           // 左下角播放/暂停按钮的点击区域
@@ -162,10 +166,19 @@ private:
     wxBitmap m_offline_bitmap;
     // 缺省图（进设备页 / 暂停且尚无画面时显示）。加载失败则回退为黑底 m_offline_bitmap。
     wxBitmap m_placeholder_bitmap;
+    // Account logout must keep the inline camera area visible and paint the
+    // default image, even if a queued connection-exit callback arrives later.
+    std::atomic<bool> m_force_default_placeholder{false};
 
     // 显示暂停偏好：初始为 true —— 进设备页默认“暂停 + 缺省图”，后台照常拉流仅冻结显示。
     // 用户点播放置 false、点暂停置 true；StartStream（含切设备）沿用此偏好，实现状态保持。
     std::atomic<bool> m_display_paused_pref{true};
+
+    // 本视图会话内用户是否曾主动点过播放。用于区分“首次进页面的默认暂停”与“用户主动暂停”：
+    //   · 首次进页面（默认暂停、从未播放）：状态条不显示“视频已暂停”文字（仅缺省图 + 播放按钮）；
+    //   · 用户播放后再暂停：状态条显示“视频已暂停”。
+    // resumeStream() 置 true；setStartPausedPreference()（切设备/进设备页）复位为 false。
+    std::atomic<bool> m_ever_played{false};
     std::unordered_map<std::string, ScalableBitmap> m_playIconMap;
 
     // Com ID for this camera (from PrinterCameraPanel API)

@@ -1074,3 +1074,21 @@ msgstr "Das Feedback wurde erhalten."
 
 msgid "This will prevent data from being transmitted to cloud services. Users who only utilize local network functionality can safely enable this option."
 msgstr "Dies verhindert die Übertragung von Daten an Cloud-Dienste. Benutzer, die ausschließlich lokale Netzwerkfunktionen nutzen, können diese Option bedenkenlos aktivieren."
+
+msgid "Repairing polygon soup"
+msgstr "Polygon-Daten werden repariert"
+
+msgid "Orienting polygon soup"
+msgstr "Polygon-Daten werden ausgerichtet"
+
+msgid "Converting to mesh"
+msgstr "Wird in ein Netz umgewandelt"
+
+msgid "Repairing mesh boundaries"
+msgstr "Netzgrenzen werden repariert"
+
+msgid "Finalizing repaired mesh"
+msgstr "Repariertes Netz wird fertiggestellt"
+
+msgid "Remapping repaired mesh colors"
+msgstr "Farben des reparierten Netzes werden neu zugeordnet"

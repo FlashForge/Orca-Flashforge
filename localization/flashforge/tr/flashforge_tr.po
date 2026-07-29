@@ -1065,3 +1065,21 @@ msgstr "Geri bildirim alındı."
 
 msgid "This will prevent data from being transmitted to cloud services. Users who only utilize local network functionality can safely enable this option."
 msgstr "Bu, verilerin bulut hizmetlerine iletilmesini engelleyecektir. Yalnızca yerel ağ işlevlerini kullanan kullanıcılar bu seçeneği güvenle etkinleştirebilir."
+
+msgid "Repairing polygon soup"
+msgstr "Çokgen verileri onarılıyor"
+
+msgid "Orienting polygon soup"
+msgstr "Çokgen yönleri ayarlanıyor"
+
+msgid "Converting to mesh"
+msgstr "Ağ yapısına dönüştürülüyor"
+
+msgid "Repairing mesh boundaries"
+msgstr "Ağ sınırları onarılıyor"
+
+msgid "Finalizing repaired mesh"
+msgstr "Onarılan ağ sonlandırılıyor"
+
+msgid "Remapping repaired mesh colors"
+msgstr "Onarılan ağ renkleri yeniden eşleniyor"

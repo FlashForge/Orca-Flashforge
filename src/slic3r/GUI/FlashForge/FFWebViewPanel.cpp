@@ -756,13 +756,13 @@ void FFWebViewPanel::RunScript(const wxString &jsStr)
     WebView::RunScript(m_mainBrowser, jsStr);
 }
 
-void FFWebViewPanel::SendRecentList(int images)
+void FFWebViewPanel::SendRecentList()
 {
     if (m_mainBrowser == nullptr) {
         return;
     }
     boost::property_tree::wptree data;
-    wxGetApp().mainframe->get_recent_projects(data, images);
+    wxGetApp().mainframe->get_recent_projects(data);
 
     boost::property_tree::wptree req;
     req.put(L"sequence_id", "");

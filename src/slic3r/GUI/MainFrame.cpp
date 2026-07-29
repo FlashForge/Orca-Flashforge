@@ -3719,7 +3719,7 @@ void MainFrame::set_max_recent_count(int max)
         }
         wxGetApp().app_config->set_recent_projects(recent_projects);
         wxGetApp().app_config->save();
-        m_webview->SendRecentList(-1);
+        m_webview->SendRecentList();
     }
 }
 
@@ -4237,7 +4237,7 @@ void MainFrame::add_to_recent_projects(const wxString& filename)
             recent_projects.push_back(into_u8(m_recent_projects.GetHistoryFile(i)));
         }
         wxGetApp().app_config->set_recent_projects(recent_projects);
-        m_webview->SendRecentList(0);
+        m_webview->SendRecentList();
     }
 }
 
@@ -4295,7 +4295,7 @@ inline void MainFrame::FileHistory::SetMaxFiles(int max)
         RemoveFileFromHistory(--numFiles);
 }
 
-void MainFrame::get_recent_projects(boost::property_tree::wptree &tree, int images)
+void MainFrame::get_recent_projects(boost::property_tree::wptree &tree)
 {
     for (size_t i = 0; i < m_recent_projects.GetCount(); ++i) {
         boost::property_tree::wptree item;
@@ -4307,10 +4307,8 @@ void MainFrame::get_recent_projects(boost::property_tree::wptree &tree, int imag
         if (!ec) {
             std::wstring time = wxDateTime(t).FormatISOCombined(' ').ToStdWstring();
             item.put(L"time", time);
-            if (i <= images) {
-                auto thumbnail = m_recent_projects.GetThumbnailUrl(i);
-                if (!thumbnail.empty()) item.put(L"image", thumbnail);
-            }
+            auto thumbnail = m_recent_projects.GetThumbnailUrl(i);
+            if (!thumbnail.empty()) item.put(L"image", thumbnail);
         } else {
             item.put(L"time", _L("File is missing"));
         }
@@ -4342,7 +4340,7 @@ void MainFrame::open_recent_project(size_t file_id, wxString const & filename)
                 recent_projects.push_back(into_u8(m_recent_projects.GetHistoryFile(i)));
             }
             wxGetApp().app_config->set_recent_projects(recent_projects);
-            m_webview->SendRecentList(-1);
+            m_webview->SendRecentList();
         }
     }
 }
@@ -4365,7 +4363,7 @@ void MainFrame::remove_recent_project(size_t file_id, wxString const &filename)
         recent_projects.push_back(into_u8(m_recent_projects.GetHistoryFile(i)));
     }
     wxGetApp().app_config->set_recent_projects(recent_projects);
-    m_webview->SendRecentList(-1);
+    m_webview->SendRecentList();
 }
 
 void MainFrame::remove_recent_projects(const std::vector<wxString>& filenames)
@@ -4398,7 +4396,7 @@ void MainFrame::remove_recent_projects(const std::vector<wxString>& filenames)
         recent_projects.push_back(into_u8(m_recent_projects.GetHistoryFile(i)));
     }
     wxGetApp().app_config->set_recent_projects(recent_projects);
-    m_webview->SendRecentList(-1);
+    m_webview->SendRecentList();
 }
 
 void MainFrame::load_url(wxString url)

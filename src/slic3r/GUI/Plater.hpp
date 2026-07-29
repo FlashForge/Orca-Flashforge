@@ -192,7 +192,10 @@ public:
     void change_filament(size_t from_id, size_t to_id);  // 0 base
     void edit_filament();
     void add_custom_filament(wxColour new_col);
-    void apply_multicolor_import_filaments(const std::vector<MulticolorFilamentMapping>& mappings);
+    std::vector<int> apply_multicolor_import_filaments(const std::vector<MulticolorFilamentMapping>& mappings);
+    int  next_multicolor_import_filament_slot() const { return m_next_multicolor_import_filament_slot; }
+    int  remaining_multicolor_import_filament_slots() const;
+    void reset_multicolor_import_filament_slots() { m_next_multicolor_import_filament_slot = 0; }
     bool is_new_project_in_gcode3mf();
     // BBS
     void on_bed_type_change(BedType bed_type);
@@ -281,6 +284,7 @@ private:
     wxBoxSizer* m_scrolled_sizer = nullptr;
 	PrinterModelPanel* m_printer_model_panel = nullptr;
     bool            m_need_auto_sync_after_connect_printer{false};
+    int             m_next_multicolor_import_filament_slot{0};
 };
 
 class Plater: public wxPanel

@@ -22582,19 +22582,19 @@ msgstr ""
 "verwendet."
 
 msgid "Initializing camera..."
-msgstr ""
+msgstr "Kamera wird initialisiert..."
 
 msgid "Loading video..."
-msgstr ""
+msgstr "Video wird geladen..."
 
 msgid "Video is playing"
-msgstr ""
+msgstr "Video wird wiedergegeben"
 
 msgid "Video is paused"
-msgstr ""
+msgstr "Video pausiert"
 
 msgid "Printer disconnected"
-msgstr ""
+msgstr "Drucker getrennt"
 
 #~ msgid "每次只可添加一个全彩文件"
 #~ msgstr "Es kann jeweils nur eine Vollfarbdatei hinzugefügt werden"

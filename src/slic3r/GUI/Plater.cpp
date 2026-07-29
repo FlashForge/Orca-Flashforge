@@ -12,6 +12,7 @@
 #include <memory>
 #include <mutex>
 #include <algorithm>
+#include <map>
 #include <numeric>
 #include <set>
 #include <unordered_map>
@@ -80,6 +81,7 @@
 #include "libslic3r/PrintConfig.hpp"
 #include "libslic3r/SLAPrint.hpp"
 #include "libslic3r/KDTreeIndirect.hpp"
+#include "libslic3r/MeshRepair.hpp"
 #include "libslic3r/Utils.hpp"
 #include "libslic3r/Win10ModelRepair.hpp"
 #include "libslic3r/PresetBundle.hpp"
@@ -243,7 +245,8 @@ wxDEFINE_EVENT(EVT_NOTICE_FULL_SCREEN_CHANGED, IntEvent);
 #define PRINTER_PANEL_RADIUS (6) // ORCA
 #define BTN_SYNC_SIZE (wxSize(FromDIP(96), FromDIP(98)))
 
-static constexpr size_t PREPARE_PAGE_FILAMENT_LIMIT = 16;
+static constexpr size_t MULTICOLOR_IMPORT_FILAMENT_LIMIT = 16;
+static constexpr size_t MULTICOLOR_IMPORT_EXISTING_FILAMENT_LIMIT = 12;
 
 static string get_diameter_string(float diameter)
 {
@@ -3162,7 +3165,7 @@ void Sidebar::on_filaments_delete(size_t filament_id)
 }
 
 void Sidebar::add_filament() {
-    if (p->combos_filament.size() >= PREPARE_PAGE_FILAMENT_LIMIT) return;
+    if (p->combos_filament.size() >= MAXIMUM_EXTRUDER_NUMBER) return;
     wxColour    new_col        = Plater::get_next_color_for_filament();
     add_custom_filament(new_col);
 }
@@ -3214,7 +3217,7 @@ void Sidebar::edit_filament()
 
 void Sidebar::add_custom_filament(wxColour new_col) {
     if (is_new_project_in_gcode3mf()) { return; }
-    if (p->combos_filament.size() >= PREPARE_PAGE_FILAMENT_LIMIT) return;
+    if (p->combos_filament.size() >= MAXIMUM_EXTRUDER_NUMBER) return;
 
     int         filament_count = p->combos_filament.size() + 1;
     std::string new_color      = new_col.GetAsString(wxC2S_HTML_SYNTAX).ToStdString();
@@ -3226,38 +3229,57 @@ void Sidebar::add_custom_filament(wxColour new_col) {
     auto_calc_flushing_volumes(filament_count - 1);
 }
 
-void Sidebar::apply_multicolor_import_filaments(const std::vector<MulticolorFilamentMapping>& mappings)
+int Sidebar::remaining_multicolor_import_filament_slots() const
+{
+    return std::max(0, static_cast<int>(MULTICOLOR_IMPORT_FILAMENT_LIMIT) - m_next_multicolor_import_filament_slot);
+}
+
+std::vector<int> Sidebar::apply_multicolor_import_filaments(const std::vector<MulticolorFilamentMapping>& mappings)
 {
     if (mappings.empty() || is_new_project_in_gcode3mf()) {
-        return;
+        return {};
     }
 
     PresetBundle *preset_bundle = wxGetApp().preset_bundle;
     if (preset_bundle == nullptr) {
-        return;
+        return {};
     }
+
+    struct InsertedFilament
+    {
+        int         index{-1};
+        std::string color;
+        std::string preset_name;
+    };
 
     std::set<int> updated_filament_indices;
     const int preset_filament_count = static_cast<int>(preset_bundle->filament_presets.size());
     const int current_filament_count = static_cast<int>(combos_filament().size());
-    int target_filament_count = current_filament_count;
-    for (const MulticolorFilamentMapping& mapping : mappings) {
-        if (mapping.target_filament_index >= 0) {
-            target_filament_count = std::max(target_filament_count, mapping.target_filament_index + 1);
-        }
-    }
 
-    if (target_filament_count > static_cast<int>(PREPARE_PAGE_FILAMENT_LIMIT)) {
-        return;
+    // The import dialog and the preparation page maintain independent filament numbering.
+    // If the first logical new-filament slot is beyond the end of the current filament list,
+    // compact the new slots so they are appended without creating placeholder filaments.
+    std::vector<MulticolorFilamentMapping> effective_mappings = mappings;
+    std::set<int> logical_new_filament_indices;
+    for (const MulticolorFilamentMapping& mapping : effective_mappings) {
+        if (mapping.allocated_new_filament_index >= 0)
+            logical_new_filament_indices.insert(mapping.allocated_new_filament_index);
     }
+    if (!logical_new_filament_indices.empty() && preset_filament_count < *logical_new_filament_indices.begin()) {
+        std::map<int, int> compacted_new_filament_indices;
+        int actual_filament_index = preset_filament_count;
+        for (int logical_filament_index : logical_new_filament_indices)
+            compacted_new_filament_indices.emplace(logical_filament_index, actual_filament_index++);
 
-    const std::string fallback_color = Plater::get_next_color_for_filament().GetAsString(wxC2S_HTML_SYNTAX).ToStdString();
-    std::vector<std::string> new_colors(std::max(0, target_filament_count - preset_filament_count));
-    std::fill(new_colors.begin(), new_colors.end(), fallback_color);
-    for (const MulticolorFilamentMapping& mapping : mappings) {
-        if (mapping.target_filament_index >= preset_filament_count && mapping.target_filament_index < target_filament_count &&
-            !mapping.filament_color.empty()) {
-            new_colors[mapping.target_filament_index - preset_filament_count] = mapping.filament_color;
+        for (MulticolorFilamentMapping& mapping : effective_mappings) {
+            if (auto allocated_it = compacted_new_filament_indices.find(mapping.allocated_new_filament_index);
+                allocated_it != compacted_new_filament_indices.end()) {
+                mapping.allocated_new_filament_index = allocated_it->second;
+            }
+            if (auto target_it = compacted_new_filament_indices.find(mapping.target_filament_index);
+                target_it != compacted_new_filament_indices.end()) {
+                mapping.target_filament_index = target_it->second;
+            }
         }
     }
 
@@ -3274,32 +3296,163 @@ void Sidebar::apply_multicolor_import_filaments(const std::vector<MulticolorFila
         return preset_bundle->filament_presets.empty() ? std::string() : preset_bundle->filament_presets.back();
     };
 
-    if (target_filament_count > preset_filament_count) {
-        if (new_colors.empty())
-            wxGetApp().preset_bundle->set_num_filaments(target_filament_count, fallback_color);
-        else
-            wxGetApp().preset_bundle->set_num_filaments(target_filament_count, new_colors);
+    const std::string default_preset = find_default_filament_preset();
+    const std::string fallback_color = Plater::get_next_color_for_filament().GetAsString(wxC2S_HTML_SYNTAX).ToStdString();
+    std::vector<InsertedFilament> inserted_filaments;
+    std::set<int> inserted_indices;
+    for (const MulticolorFilamentMapping& mapping : effective_mappings) {
+        if (mapping.allocated_new_filament_index < 0)
+            continue;
+        if (!inserted_indices.insert(mapping.allocated_new_filament_index).second)
+            continue;
+        InsertedFilament inserted;
+        inserted.index = mapping.allocated_new_filament_index;
+        inserted.color = mapping.quantized_color.empty() ? fallback_color : mapping.quantized_color;
+        inserted.preset_name = default_preset.empty() ? mapping.filament_preset_name : default_preset;
+        if (inserted.preset_name.empty())
+            inserted.preset_name = preset_bundle->filament_presets.empty() ? std::string() : preset_bundle->filament_presets.back();
+        inserted_filaments.push_back(std::move(inserted));
+    }
+    std::sort(inserted_filaments.begin(), inserted_filaments.end(),
+        [](const InsertedFilament& lhs, const InsertedFilament& rhs) { return lhs.index < rhs.index; });
+
+    const int inserted_count = static_cast<int>(inserted_filaments.size());
+    const int insert_start = inserted_count > 0 ? inserted_filaments.front().index :
+        std::min(preset_filament_count, static_cast<int>(MULTICOLOR_IMPORT_EXISTING_FILAMENT_LIMIT));
+    const int target_filament_count = inserted_count > 0 ?
+        std::max(preset_filament_count + inserted_count, insert_start + inserted_count) : preset_filament_count;
+    std::vector<int> remapped_target_indices;
+    remapped_target_indices.reserve(effective_mappings.size());
+    for (const MulticolorFilamentMapping& mapping : effective_mappings) {
+        int target_index = mapping.target_filament_index;
+        if (inserted_count > 0 && !mapping.create_new && target_index >= insert_start)
+            target_index += inserted_count;
+        remapped_target_indices.push_back(target_index);
     }
 
-    if (ConfigOptionStrings *filament_color = preset_bundle->project_config.option<ConfigOptionStrings>("filament_colour")) {
+    const std::vector<std::string> old_presets = preset_bundle->filament_presets;
+    ConfigOptionStrings *filament_color = preset_bundle->project_config.option<ConfigOptionStrings>("filament_colour");
+    ConfigOptionStrings *filament_multi_color = preset_bundle->project_config.option<ConfigOptionStrings>("filament_multi_colour");
+    ConfigOptionStrings *filament_color_type = preset_bundle->project_config.option<ConfigOptionStrings>("filament_colour_type");
+    ConfigOptionInts *filament_map = preset_bundle->project_config.option<ConfigOptionInts>("filament_map");
+    const std::vector<std::string> old_colors = filament_color != nullptr ? filament_color->values : std::vector<std::string>();
+    const std::vector<std::string> old_multi_colors = filament_multi_color != nullptr ? filament_multi_color->values : std::vector<std::string>();
+    const std::vector<std::string> old_color_types = filament_color_type != nullptr ? filament_color_type->values : std::vector<std::string>();
+    const std::vector<int> old_filament_maps = filament_map != nullptr ? filament_map->values : std::vector<int>();
+    const std::vector<std::vector<std::string>> old_ams_multi_colors = preset_bundle->ams_multi_color_filment;
+
+    if (inserted_count > 0) {
+        for (size_t ordinal = 0; ordinal < inserted_filaments.size(); ++ordinal) {
+            const int expected_index = insert_start + static_cast<int>(ordinal);
+            if (inserted_filaments[ordinal].index != expected_index) {
+                inserted_filaments[ordinal].index = expected_index;
+            }
+        }
+
+        preset_bundle->set_num_filaments(target_filament_count, fallback_color);
+
+        filament_color = preset_bundle->project_config.option<ConfigOptionStrings>("filament_colour");
+        filament_multi_color = preset_bundle->project_config.option<ConfigOptionStrings>("filament_multi_colour");
+        filament_color_type = preset_bundle->project_config.option<ConfigOptionStrings>("filament_colour_type");
+        filament_map = preset_bundle->project_config.option<ConfigOptionInts>("filament_map");
+
+        auto old_string_at = [](const std::vector<std::string>& values, int index, const std::string& fallback) {
+            return index >= 0 && index < static_cast<int>(values.size()) ? values[index] : fallback;
+        };
+        auto old_int_at = [](const std::vector<int>& values, int index, int fallback) {
+            return index >= 0 && index < static_cast<int>(values.size()) ? values[index] : fallback;
+        };
+        auto old_string_vector_at = [](const std::vector<std::vector<std::string>>& values, int index) {
+            return index >= 0 && index < static_cast<int>(values.size()) ? values[index] : std::vector<std::string>();
+        };
+
+        for (int old_index = 0; old_index < preset_filament_count; ++old_index) {
+            const int new_index = old_index < insert_start ? old_index : old_index + inserted_count;
+            if (new_index < 0 || new_index >= target_filament_count)
+                continue;
+
+            preset_bundle->filament_presets[new_index] = old_string_at(old_presets, old_index, default_preset);
+            if (filament_color != nullptr)
+                filament_color->values[new_index] = old_string_at(old_colors, old_index, fallback_color);
+            if (filament_multi_color != nullptr)
+                filament_multi_color->values[new_index] = old_string_at(old_multi_colors, old_index,
+                    filament_color != nullptr ? filament_color->values[new_index] : fallback_color);
+            if (filament_color_type != nullptr)
+                filament_color_type->values[new_index] = old_string_at(old_color_types, old_index, "1");
+            if (filament_map != nullptr)
+                filament_map->values[new_index] = old_int_at(old_filament_maps, old_index, 1);
+            if (new_index < static_cast<int>(preset_bundle->ams_multi_color_filment.size()))
+                preset_bundle->ams_multi_color_filment[new_index] = old_string_vector_at(old_ams_multi_colors, old_index);
+        }
+
+        for (const InsertedFilament& inserted : inserted_filaments) {
+            if (inserted.index < 0 || inserted.index >= target_filament_count)
+                continue;
+
+            preset_bundle->filament_presets[inserted.index] = inserted.preset_name;
+            if (filament_color != nullptr)
+                filament_color->values[inserted.index] = inserted.color;
+            if (filament_multi_color != nullptr)
+                filament_multi_color->values[inserted.index] = inserted.color;
+            if (filament_color_type != nullptr)
+                filament_color_type->values[inserted.index] = "1";
+            if (filament_map != nullptr)
+                filament_map->values[inserted.index] = 1;
+            if (inserted.index < static_cast<int>(preset_bundle->ams_multi_color_filment.size()))
+                preset_bundle->ams_multi_color_filment[inserted.index].clear();
+            updated_filament_indices.insert(inserted.index);
+        }
+
+        auto shift_config_filament_index = [insert_start, inserted_count](auto& config, const char *key) {
+            if (!config.has(key))
+                return;
+            const int value = config.opt_int(key);
+            if (value > insert_start)
+                config.set_key_value(key, new ConfigOptionInt(value + inserted_count));
+        };
+
+        static const char *filament_index_keys[] = {"extruder", "support_filament", "support_interface_filament"};
+        for (ModelObject *object : wxGetApp().model().objects) {
+            for (const char *key : filament_index_keys)
+                shift_config_filament_index(object->config, key);
+            for (ModelVolume *volume : object->volumes) {
+                for (const char *key : filament_index_keys)
+                    shift_config_filament_index(volume->config, key);
+            }
+        }
+    }
+
+    if (filament_color != nullptr) {
         filament_color->values.resize(std::max<size_t>(filament_color->values.size(), target_filament_count), fallback_color);
-        for (const MulticolorFilamentMapping& mapping : mappings) {
-            if (mapping.target_filament_index >= 0 && mapping.target_filament_index < target_filament_count &&
+        for (const MulticolorFilamentMapping& mapping : effective_mappings) {
+            if (mapping.allocated_new_filament_index >= 0 && mapping.allocated_new_filament_index < target_filament_count &&
+                !mapping.quantized_color.empty()) {
+                filament_color->values[mapping.allocated_new_filament_index] = mapping.quantized_color;
+            }
+        }
+        for (const MulticolorFilamentMapping& mapping : effective_mappings) {
+            if (mapping.create_new && mapping.target_filament_index >= 0 && mapping.target_filament_index < target_filament_count &&
                 !mapping.filament_color.empty()) {
                 filament_color->values[mapping.target_filament_index] = mapping.filament_color;
             }
         }
     }
-    if (ConfigOptionStrings *filament_multi_color = preset_bundle->project_config.option<ConfigOptionStrings>("filament_multi_colour")) {
+    if (filament_multi_color != nullptr) {
         filament_multi_color->values.resize(std::max<size_t>(filament_multi_color->values.size(), target_filament_count), fallback_color);
-        for (const MulticolorFilamentMapping& mapping : mappings) {
-            if (mapping.target_filament_index >= 0 && mapping.target_filament_index < target_filament_count &&
+        for (const MulticolorFilamentMapping& mapping : effective_mappings) {
+            if (mapping.allocated_new_filament_index >= 0 && mapping.allocated_new_filament_index < target_filament_count &&
+                !mapping.quantized_color.empty()) {
+                filament_multi_color->values[mapping.allocated_new_filament_index] = mapping.quantized_color;
+            }
+        }
+        for (const MulticolorFilamentMapping& mapping : effective_mappings) {
+            if (mapping.create_new && mapping.target_filament_index >= 0 && mapping.target_filament_index < target_filament_count &&
                 !mapping.filament_color.empty()) {
                 filament_multi_color->values[mapping.target_filament_index] = mapping.filament_color;
             }
         }
     }
-    if (ConfigOptionStrings *filament_color_type = preset_bundle->project_config.option<ConfigOptionStrings>("filament_colour_type")) {
+    if (filament_color_type != nullptr) {
         filament_color_type->values.resize(std::max<size_t>(filament_color_type->values.size(), target_filament_count), "1");
         for (int i = current_filament_count; i < target_filament_count; ++i) {
             if (filament_color_type->values[i].empty())
@@ -3307,12 +3460,15 @@ void Sidebar::apply_multicolor_import_filaments(const std::vector<MulticolorFila
         }
     }
 
-    const std::string default_preset = find_default_filament_preset();
     if (!default_preset.empty()) {
-        for (int i = preset_filament_count; i < target_filament_count && i < static_cast<int>(preset_bundle->filament_presets.size()); ++i) {
-            preset_bundle->filament_presets[i] = default_preset;
+        for (const MulticolorFilamentMapping& mapping : effective_mappings) {
+            if (mapping.allocated_new_filament_index >= 0 &&
+                mapping.allocated_new_filament_index < static_cast<int>(preset_bundle->filament_presets.size())) {
+                preset_bundle->filament_presets[mapping.allocated_new_filament_index] = default_preset;
+                updated_filament_indices.insert(mapping.allocated_new_filament_index);
+            }
         }
-        for (const MulticolorFilamentMapping& mapping : mappings) {
+        for (const MulticolorFilamentMapping& mapping : effective_mappings) {
             if (mapping.create_new && mapping.target_filament_index >= 0 &&
                 mapping.target_filament_index < static_cast<int>(preset_bundle->filament_presets.size())) {
                 preset_bundle->filament_presets[mapping.target_filament_index] = default_preset;
@@ -3327,19 +3483,35 @@ void Sidebar::apply_multicolor_import_filaments(const std::vector<MulticolorFila
             wxGetApp().plater()->get_partplate_list().on_filament_added(filament_count);
         }
         wxGetApp().plater()->on_filament_count_change(target_filament_count);
-    } else {
-        for (int filament_idx : updated_filament_indices) {
-            if (filament_idx >= 0 && filament_idx < static_cast<int>(p->combos_filament.size()))
-                p->combos_filament[filament_idx]->update();
-        }
-        update_dynamic_filament_list();
     }
+    for (int filament_idx = 0; filament_idx < static_cast<int>(p->combos_filament.size()); ++filament_idx)
+        p->combos_filament[filament_idx]->update();
+    update_dynamic_filament_list();
     wxGetApp().get_tab(Preset::TYPE_PRINT)->update();
     wxGetApp().preset_bundle->export_selections(*wxGetApp().app_config);
+    for (const InsertedFilament& inserted : inserted_filaments) {
+        if (inserted.index >= 0)
+            auto_calc_flushing_volumes(inserted.index);
+    }
     for (int filament_idx = current_filament_count; filament_idx < target_filament_count; ++filament_idx) {
         auto_calc_flushing_volumes(filament_idx);
     }
     wxGetApp().plater()->update();
+    int next_multicolor_import_filament_slot = -1;
+    for (const MulticolorFilamentMapping& mapping : mappings) {
+        if (mapping.allocated_new_filament_index >= 0 &&
+            mapping.allocated_new_filament_index < static_cast<int>(MULTICOLOR_IMPORT_FILAMENT_LIMIT)) {
+            next_multicolor_import_filament_slot =
+                std::max(next_multicolor_import_filament_slot, mapping.allocated_new_filament_index + 1);
+        }
+    }
+    if (next_multicolor_import_filament_slot >= 0) {
+        // Commit the start used by the accepted dialog. This also rebases an exhausted logical
+        // sequence when the import was recovered from free preparation-page slots.
+        m_next_multicolor_import_filament_slot =
+            std::min(static_cast<int>(MULTICOLOR_IMPORT_FILAMENT_LIMIT), next_multicolor_import_filament_slot);
+    }
+    return remapped_target_indices;
 }
 
 bool Sidebar::is_new_project_in_gcode3mf()
@@ -4570,20 +4742,133 @@ static bool obj_vertex_line_has_color(const std::string &line)
     return tokens.size() >= 7;
 }
 
+static bool parse_mtl_rgb_line(const std::string &line, const char *prefix, std::array<float, 3> &rgb)
+{
+    if (!boost::starts_with(line, prefix))
+        return false;
+
+    std::vector<std::string> tokens;
+    boost::split(tokens, trim_copy(line), boost::is_any_of(" \t"), boost::token_compress_on);
+    if (tokens.size() < 4)
+        return false;
+
+    try {
+        for (size_t i = 0; i < 3; ++i)
+            rgb[i] = std::stof(tokens[i + 1]);
+    } catch (...) {
+        return false;
+    }
+    return true;
+}
+
+struct ObjMtlColor
+{
+    std::array<float, 3> ka{ 0.0f, 0.0f, 0.0f };
+    std::array<float, 3> kd{ 0.0f, 0.0f, 0.0f };
+    bool has_kd{ false };
+};
+
+static std::array<int, 3> obj_mtl_effective_color_key(const ObjMtlColor &color)
+{
+    bool merge_ka_kd = true;
+    for (size_t i = 0; i < 3; ++i) {
+        if (color.ka[i] + color.kd[i] > 1.0f) {
+            merge_ka_kd = false;
+            break;
+        }
+    }
+
+    std::array<int, 3> key;
+    for (size_t i = 0; i < 3; ++i) {
+        const float value = merge_ka_kd ? color.ka[i] + color.kd[i] : color.kd[i];
+        key[i] = static_cast<int>(std::lround(std::clamp(value, 0.0f, 1.0f) * 1000000.0f));
+    }
+    return key;
+}
+
+static bool obj_mtl_has_color_data(const fs::path &obj_path, std::vector<std::string> mtl_libs,
+    const std::set<std::string> &used_materials)
+{
+    if (used_materials.empty())
+        return false;
+
+    const fs::path obj_dir = obj_path.parent_path();
+    boost::system::error_code ec;
+    fs::path same_name_mtl = obj_path;
+    same_name_mtl.replace_extension(".mtl");
+    if (mtl_libs.empty() && fs::exists(same_name_mtl, ec))
+        mtl_libs.emplace_back(same_name_mtl.string());
+
+    std::set<std::array<int, 3>> diffuse_colors;
+    for (const std::string &mtl_name : mtl_libs) {
+        fs::path mtl_path;
+        if (!resolve_existing_resource_path(mtl_name, { obj_dir }, mtl_path))
+            continue;
+
+        boost::nowide::ifstream mtl_stream(mtl_path.string());
+        if (!mtl_stream.is_open())
+            continue;
+
+        std::map<std::string, ObjMtlColor> material_colors;
+        std::string current_material;
+        std::string line;
+        while (std::getline(mtl_stream, line)) {
+            std::string trimmed = trim_copy(line);
+            if (boost::starts_with(trimmed, "newmtl ")) {
+                current_material = trim_copy(trimmed.substr(7));
+                continue;
+            }
+            if (current_material.empty() || used_materials.count(current_material) == 0)
+                continue;
+
+            ObjMtlColor &color = material_colors[current_material];
+            std::array<float, 3> rgb;
+            if (parse_mtl_rgb_line(trimmed, "Ka ", rgb)) {
+                color.ka = rgb;
+            } else if (parse_mtl_rgb_line(trimmed, "Kd ", rgb)) {
+                color.kd = rgb;
+                color.has_kd = true;
+            }
+        }
+
+        for (const auto &material_color : material_colors) {
+            const ObjMtlColor &color = material_color.second;
+            if (!color.has_kd)
+                continue;
+            diffuse_colors.insert(obj_mtl_effective_color_key(color));
+            if (diffuse_colors.size() > 1)
+                return true;
+        }
+    }
+
+    return false;
+}
+
 static bool obj_looks_like_full_color_model(const fs::path &obj_path)
 {
     boost::nowide::ifstream obj_stream(obj_path.string());
     if (!obj_stream.is_open())
         return false;
 
+    std::vector<std::string> mtl_libs;
+    std::set<std::string> used_materials;
     std::string line;
     while (std::getline(obj_stream, line)) {
         std::string trimmed = trim_copy(line);
         if (boost::starts_with(trimmed, "v ") && obj_vertex_line_has_color(trimmed))
             return true;
+        if (boost::starts_with(trimmed, "usemtl ")) {
+            std::string material_name = trim_copy(trimmed.substr(7));
+            if (!material_name.empty())
+                used_materials.insert(material_name);
+        } else if (boost::starts_with(trimmed, "mtllib ")) {
+            std::string mtl_name = trim_copy(trimmed.substr(7));
+            if (!mtl_name.empty())
+                mtl_libs.emplace_back(std::move(mtl_name));
+        }
     }
 
-    return obj_has_loadable_texture(obj_path);
+    return obj_has_loadable_texture(obj_path) || obj_mtl_has_color_data(obj_path, std::move(mtl_libs), used_materials);
 }
 
 static bool model_size_has_dimension_less_than_one(const std::array<float, 3> &model_size)
@@ -4602,45 +4887,254 @@ static TriangleMeshStats imported_model_mesh_stats(const Model &model)
 
 static bool volume_has_mesh_issues(const ModelVolume *volume)
 {
-    return volume->mesh().stats().has_any_issue();
+    if (volume == nullptr)
+        return false;
+    return volume->mesh().stats().has_any_issue() || !Slic3r::is_mesh_halfedge_compatible(volume->mesh().its);
 }
 
-static bool repair_imported_model_meshes(Model &model, wxWindow *parent)
+static bool model_has_mesh_issues(const Model &model)
+{
+    for (const ModelObject *object : model.objects)
+        for (const ModelVolume *volume : object->volumes)
+            if (volume_has_mesh_issues(volume))
+                return true;
+    return false;
+}
+
+enum class MeshRepairRunResult
+{
+    Repaired,
+    Failed,
+    TimedOut
+};
+
+static bool repair_mesh_by_platform(const indexed_triangle_set &source,
+                                    indexed_triangle_set       &repaired,
+                                    Slic3r::MeshRepairProgressFn progress_callback,
+                                    Slic3r::MeshRepairCancelFn   cancel_callback,
+                                    std::string                *error_message)
 {
 #ifdef HAS_WIN10SDK
+    return Slic3r::fix_mesh_by_win10_sdk(source, repaired, std::move(progress_callback), std::move(cancel_callback), error_message);
+#else
+    return Slic3r::repair_mesh_by_cgal(source, repaired, std::move(progress_callback), std::move(cancel_callback), error_message);
+#endif
+}
+
+static const char *mesh_repair_backend_name()
+{
+#ifdef HAS_WIN10SDK
+    return "Windows 3D";
+#else
+    return "CGAL";
+#endif
+}
+
+static wxString mesh_repair_progress_message(const std::string &message)
+{
+    if (message.empty())
+        return "";
+    if (message == "Repairing polygon soup")
+        return _L("Repairing polygon soup");
+    if (message == "Orienting polygon soup")
+        return _L("Orienting polygon soup");
+    if (message == "Converting to mesh")
+        return _L("Converting to mesh");
+    if (message == "Repairing mesh boundaries")
+        return _L("Repairing mesh boundaries");
+    if (message == "Finalizing repaired mesh")
+        return _L("Finalizing repaired mesh");
+    if (message == "Remapping repaired mesh colors")
+        return _L("Remapping repaired mesh colors");
+    if (message == "Exporting objects")
+        return _L("Exporting objects");
+    if (message == "Repairing object by Windows service")
+        return _L("Repairing object by Windows service");
+    if (message == "Loading repaired objects")
+        return _L("Loading repaired objects");
+    if (message == "Repair finished")
+        return _L("Repair finished");
+    if (message == "Repair canceled")
+        return _L("Repair canceled");
+    if (message == "Done")
+        return _L("Done");
+    return from_u8(message);
+}
+
+static MeshRepairRunResult repair_indexed_triangle_set_by_platform_with_progress(const indexed_triangle_set &source,
+                                                                                 indexed_triangle_set       &repaired,
+                                                                                 wxWindow                   *parent,
+                                                                                 const wxString             &msg_header)
+{
+    static constexpr int repair_timeout_seconds = 60;
+    static constexpr int repair_cancel_grace_seconds = 2;
+
+    struct RepairProgress {
+        int progress = 0;
+        std::string message;
+        bool updated = false;
+    };
+    struct RepairState {
+        indexed_triangle_set source;
+        indexed_triangle_set repaired;
+        std::mutex mutex;
+        std::condition_variable condition;
+        RepairProgress progress;
+        std::atomic<bool> canceled{ false };
+        std::atomic<bool> finished{ false };
+        bool success = false;
+        std::string error_message;
+    };
+
+    auto repair_state = std::make_shared<RepairState>();
+    repair_state->source = source;
+    if (repair_state->source.empty())
+        return MeshRepairRunResult::Failed;
+
     ProgressDialog progress_dlg(_L("Repair"), "", 100, find_toplevel_parent(parent),
                                 wxPD_AUTO_HIDE | wxPD_APP_MODAL | wxPD_CAN_ABORT, true);
 
-    for (ModelObject *object : model.objects) {
-        bool needs_repair = false;
-        for (const ModelVolume *volume : object->volumes) {
-            if (volume_has_mesh_issues(volume)) {
-                needs_repair = true;
-                break;
-            }
+    auto on_progress = [repair_state](const char *message, unsigned prcnt) {
+        std::unique_lock<std::mutex> lock(repair_state->mutex);
+        repair_state->progress.progress = std::min<int>(99, static_cast<int>(prcnt));
+        repair_state->progress.message = message != nullptr ? message : "";
+        repair_state->progress.updated = true;
+        repair_state->condition.notify_all();
+    };
+
+    boost::thread worker_thread([repair_state, on_progress]() {
+        try {
+            repair_state->success = repair_mesh_by_platform(repair_state->source, repair_state->repaired, on_progress,
+                [repair_state]() { return repair_state->canceled.load(); }, &repair_state->error_message);
+        } catch (const std::exception &ex) {
+            repair_state->success = false;
+            repair_state->error_message = ex.what();
+        } catch (...) {
+            repair_state->success = false;
+            repair_state->error_message = "Unknown error while repairing model.";
         }
-        if (!needs_repair)
-            continue;
+        repair_state->finished = true;
+        repair_state->condition.notify_all();
+    });
 
-        std::string fix_result;
-        wxString msg = _L("Repairing model");
-        if (!object->name.empty())
-            msg += ": " + from_u8(object->name);
-        msg += "\n";
+    int current_progress = 0;
+    std::string current_message;
+    const auto start_time = std::chrono::steady_clock::now();
+    bool abandon_repair = false;
+    bool timed_out = false;
+    while (!repair_state->finished) {
+        std::unique_lock<std::mutex> lock(repair_state->mutex);
+        repair_state->condition.wait_for(lock, std::chrono::milliseconds(250),
+            [repair_state] { return repair_state->progress.updated || repair_state->finished.load(); });
+        if (repair_state->progress.updated) {
+            current_progress = repair_state->progress.progress;
+            current_message = repair_state->progress.message;
+            repair_state->progress.updated = false;
+        }
+        lock.unlock();
 
-        if (!fix_model_by_win10_sdk_gui(*object, -1, progress_dlg, msg, fix_result)) {
-            progress_dlg.Update(100, "");
-            GUI::show_error(parent, fix_result.empty() ? into_u8(_L("Model repair has been canceled or failed.")) : fix_result);
-            return false;
+        const int elapsed_seconds = static_cast<int>(
+            std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_time).count());
+        if (elapsed_seconds >= repair_timeout_seconds) {
+            repair_state->canceled = true;
+            BOOST_LOG_TRIVIAL(warning) << mesh_repair_backend_name() << " mesh repair timed out after " << repair_timeout_seconds
+                                       << " seconds; importing original model.";
+            progress_dlg.Update(current_progress, msg_header + wxString::Format(" (%ds / %ds)", repair_timeout_seconds, repair_timeout_seconds));
+            abandon_repair = true;
+            timed_out = true;
+            break;
+        }
+
+        wxString progress_msg = msg_header;
+        progress_msg += wxString::Format(" (%ds / %ds)", elapsed_seconds, repair_timeout_seconds);
+        if (!current_message.empty())
+            progress_msg += "\n" + mesh_repair_progress_message(current_message);
+        if (!progress_dlg.Update(current_progress, progress_msg)) {
+            repair_state->canceled = true;
+            abandon_repair = true;
+            break;
+        }
+        progress_dlg.Fit();
+    }
+
+    if (abandon_repair) {
+        const auto cancel_deadline = std::chrono::steady_clock::now() + std::chrono::seconds(repair_cancel_grace_seconds);
+        while (!repair_state->finished && std::chrono::steady_clock::now() < cancel_deadline) {
+            std::unique_lock<std::mutex> lock(repair_state->mutex);
+            repair_state->condition.wait_for(lock, std::chrono::milliseconds(100),
+                [repair_state] { return repair_state->finished.load(); });
+        }
+
+        if (repair_state->finished)
+            worker_thread.join();
+        else
+            worker_thread.detach();
+
+        return timed_out ? MeshRepairRunResult::TimedOut : MeshRepairRunResult::Failed;
+    }
+
+    worker_thread.join();
+    progress_dlg.Update(100, "");
+
+    if (repair_state->canceled)
+        return MeshRepairRunResult::Failed;
+    if (!repair_state->success) {
+        GUI::show_error(parent, repair_state->error_message.empty() ? into_u8(_L("Model repair has been canceled or failed.")) :
+            repair_state->error_message);
+        return MeshRepairRunResult::Failed;
+    }
+    if (repair_state->repaired.indices.size() > repair_state->source.indices.size() * 4 + 10000) {
+        GUI::show_error(parent, into_u8(_L("Model repair has been canceled or failed.")));
+        return MeshRepairRunResult::Failed;
+    }
+
+    repaired = std::move(repair_state->repaired);
+    return MeshRepairRunResult::Repaired;
+}
+
+static MeshRepairRunResult repair_imported_model_meshes(Model &model, wxWindow *parent)
+{
+    struct PendingVolumeRepair {
+        ModelObject *object = nullptr;
+        ModelVolume *volume = nullptr;
+        indexed_triangle_set repaired_its;
+    };
+    std::vector<PendingVolumeRepair> pending_repairs;
+
+    for (ModelObject *object : model.objects) {
+        for (ModelVolume *volume : object->volumes) {
+            if (volume == nullptr || !volume_has_mesh_issues(volume))
+                continue;
+
+            wxString msg = _L("Repairing model");
+            if (!object->name.empty())
+                msg += ": " + from_u8(object->name);
+
+            indexed_triangle_set repaired_its;
+            const MeshRepairRunResult repair_result =
+                repair_indexed_triangle_set_by_platform_with_progress(volume->mesh().its, repaired_its, parent, msg);
+            if (repair_result != MeshRepairRunResult::Repaired)
+                return repair_result;
+
+            pending_repairs.push_back(PendingVolumeRepair{ object, volume, std::move(repaired_its) });
         }
     }
 
-    progress_dlg.Update(100, "");
-    return true;
-#else
-    GUI::show_error(parent, into_u8(_L("Windows 3D repair service is not available in this build.")));
-    return false;
-#endif
+    std::set<ModelObject *> repaired_objects;
+    for (PendingVolumeRepair &repair : pending_repairs) {
+        repair.volume->set_mesh(std::move(repair.repaired_its));
+        repair.volume->calculate_convex_hull();
+        repair.volume->invalidate_convex_hull_2d();
+        repair.volume->set_new_unique_id();
+        repaired_objects.insert(repair.object);
+    }
+
+    for (ModelObject *object : repaired_objects) {
+        if (object != nullptr)
+            object->invalidate_bounding_box();
+    }
+
+    return MeshRepairRunResult::Repaired;
 }
 
 static wxString imported_model_issue_summary(const TriangleMeshStats &stats)
@@ -4740,28 +5234,15 @@ private:
 
 static ImportedMeshRepairChoice ask_imported_model_mesh_repair(wxWindow *parent, const TriangleMeshStats &stats)
 {
-    if (!stats.has_any_issue())
-        return ImportedMeshRepairChoice::ImportWithoutRepair;
-
-#ifdef HAS_WIN10SDK
+    (void) stats;
     MeshRepairImportDialog dlg(parent);
     return dlg.ShowModal() == wxID_YES ? ImportedMeshRepairChoice::RepairAndImport : ImportedMeshRepairChoice::Cancel;
-#else
-    MessageDialog dlg(parent,
-        _L("Please note that the mesh has non-manifold geometry or open boundaries.") +
-            imported_model_issue_summary(stats),
-        _L("Mesh issue"), wxOK | wxCANCEL | wxICON_WARNING | wxOK_DEFAULT);
-    dlg.SetButtonLabel(wxID_OK, _L("Continue"));
-    dlg.SetButtonLabel(wxID_CANCEL, _L("Cancel import"));
-
-    return dlg.ShowModal() == wxID_OK ? ImportedMeshRepairChoice::ImportWithoutRepair : ImportedMeshRepairChoice::Cancel;
-#endif
 }
 
 static bool check_and_repair_imported_model_meshes(Model &model, wxWindow *parent)
 {
     TriangleMeshStats stats = imported_model_mesh_stats(model);
-    if (!stats.has_any_issue())
+    if (!model_has_mesh_issues(model))
         return true;
 
     const ImportedMeshRepairChoice choice = ask_imported_model_mesh_repair(parent, stats);
@@ -4770,11 +5251,14 @@ static bool check_and_repair_imported_model_meshes(Model &model, wxWindow *paren
     if (choice != ImportedMeshRepairChoice::RepairAndImport)
         return false;
 
-    if (!repair_imported_model_meshes(model, parent))
+    const MeshRepairRunResult repair_result = repair_imported_model_meshes(model, parent);
+    if (repair_result == MeshRepairRunResult::TimedOut)
+        return true;
+    if (repair_result != MeshRepairRunResult::Repaired)
         return false;
 
     stats = imported_model_mesh_stats(model);
-    if (stats.has_any_issue()) {
+    if (model_has_mesh_issues(model)) {
         GUI::show_error(parent, into_u8(_L("The repaired model still has non-manifold geometry or open boundaries.") +
             imported_model_issue_summary(stats)));
         return false;
@@ -4835,6 +5319,7 @@ struct FullColorImportPreparedData
     std::array<float, 3> model_size{ 0.0f, 0.0f, 0.0f };
     MulticolorModelPrecomputedData preview_data;
     TriangleMeshStats mesh_stats;
+    bool has_mesh_issues{ false };
     bool initialized{ false };
 };
 
@@ -4950,6 +5435,14 @@ static indexed_triangle_set out_model_data_to_indexed_triangle_set(const out_mod
     return its;
 }
 
+static bool out_model_data_has_mesh_issues(const out_model_data_t &data, TriangleMeshStats *mesh_stats = nullptr)
+{
+    TriangleMeshStats stats = out_model_data_mesh_stats(data);
+    if (mesh_stats != nullptr)
+        *mesh_stats = stats;
+    return stats.has_any_issue() || !Slic3r::is_mesh_halfedge_compatible(out_model_data_to_indexed_triangle_set(data));
+}
+
 struct OutModelFaceCenterAccessor
 {
     const std::vector<std::array<float, 3>> *centers;
@@ -5008,15 +5501,17 @@ static out_model_data_t remap_out_model_data_to_repaired_mesh(const out_model_da
 
 static bool repair_out_model_data_mesh(out_model_data_t &model, wxWindow *parent)
 {
-#ifdef HAS_WIN10SDK
-    static constexpr int repair_timeout_seconds = 120;
+    static constexpr int repair_timeout_seconds = 60;
     static constexpr int repair_cancel_grace_seconds = 2;
 
     struct RepairProgress {
         int progress = 0;
+        std::string message;
         bool updated = false;
     };
     struct RepairState {
+        out_model_data_t source_model;
+        out_model_data_t repaired_model;
         indexed_triangle_set source;
         indexed_triangle_set repaired;
         std::mutex mutex;
@@ -5029,24 +5524,44 @@ static bool repair_out_model_data_mesh(out_model_data_t &model, wxWindow *parent
     };
 
     auto repair_state = std::make_shared<RepairState>();
+    repair_state->source_model = model;
     repair_state->source = out_model_data_to_indexed_triangle_set(model);
     if (repair_state->source.empty())
         return false;
 
-    ProgressDialog progress_dlg(_L("Repair"), "", repair_timeout_seconds, find_toplevel_parent(parent),
+    ProgressDialog progress_dlg(_L("Repair"), "", 100, find_toplevel_parent(parent),
                                 wxPD_AUTO_HIDE | wxPD_APP_MODAL | wxPD_CAN_ABORT, true);
 
-    auto on_progress = [repair_state](const char *, unsigned prcnt) {
+    auto on_progress = [repair_state](const char *message, unsigned prcnt) {
         std::unique_lock<std::mutex> lock(repair_state->mutex);
-        repair_state->progress.progress = std::min<int>(99, static_cast<int>(prcnt));
+        repair_state->progress.progress = std::min<int>(95, static_cast<int>(prcnt));
+        repair_state->progress.message = message != nullptr ? message : "";
         repair_state->progress.updated = true;
         repair_state->condition.notify_all();
     };
 
     boost::thread worker_thread([repair_state, on_progress]() {
         try {
-            repair_state->success = fix_mesh_by_win10_sdk(repair_state->source, repair_state->repaired, on_progress,
+            repair_state->success = repair_mesh_by_platform(repair_state->source, repair_state->repaired, on_progress,
                 [repair_state]() { return repair_state->canceled.load(); }, &repair_state->error_message);
+            if (repair_state->success) {
+                const size_t max_reasonable_faces = repair_state->source.indices.size() * 4 + 10000;
+                if (repair_state->repaired.indices.size() > max_reasonable_faces) {
+                    repair_state->success = false;
+                    repair_state->error_message = "Repaired mesh is unexpectedly complex.";
+                }
+            }
+            if (repair_state->success) {
+                {
+                    std::unique_lock<std::mutex> lock(repair_state->mutex);
+                    repair_state->progress.progress = 98;
+                    repair_state->progress.message = "Remapping repaired mesh colors";
+                    repair_state->progress.updated = true;
+                    repair_state->condition.notify_all();
+                }
+                repair_state->repaired_model =
+                    remap_out_model_data_to_repaired_mesh(repair_state->source_model, repair_state->repaired);
+            }
         } catch (const std::exception &ex) {
             repair_state->success = false;
             repair_state->error_message = ex.what();
@@ -5058,28 +5573,40 @@ static bool repair_out_model_data_mesh(out_model_data_t &model, wxWindow *parent
         repair_state->condition.notify_all();
     });
 
+    int current_progress = 0;
+    std::string current_message;
     const auto start_time = std::chrono::steady_clock::now();
     bool abandon_repair = false;
+    bool timed_out = false;
     while (!repair_state->finished) {
         std::unique_lock<std::mutex> lock(repair_state->mutex);
         repair_state->condition.wait_for(lock, std::chrono::milliseconds(250),
             [repair_state] { return repair_state->progress.updated || repair_state->finished.load(); });
-        repair_state->progress.updated = false;
+        if (repair_state->progress.updated) {
+            current_progress = repair_state->progress.progress;
+            current_message = repair_state->progress.message;
+            repair_state->progress.updated = false;
+        }
         lock.unlock();
 
         const int elapsed_seconds = static_cast<int>(
             std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_time).count());
-        const int display_seconds = std::min(repair_timeout_seconds, elapsed_seconds);
-        const wxString progress_msg = _L("Repairing model") + wxString::Format(" (%ds / %ds)", display_seconds, repair_timeout_seconds);
-
         if (elapsed_seconds >= repair_timeout_seconds) {
             repair_state->canceled = true;
-            progress_dlg.Update(repair_timeout_seconds, progress_msg);
+            BOOST_LOG_TRIVIAL(warning) << mesh_repair_backend_name() << " full-color mesh repair timed out after " << repair_timeout_seconds
+                                       << " seconds; importing original model.";
+            progress_dlg.Update(current_progress, _L("Repairing model") +
+                wxString::Format(" (%ds / %ds)", repair_timeout_seconds, repair_timeout_seconds));
             abandon_repair = true;
+            timed_out = true;
             break;
         }
 
-        if (!progress_dlg.Update(display_seconds, progress_msg)) {
+        wxString progress_msg = _L("Repairing model");
+        progress_msg += wxString::Format(" (%ds / %ds)", elapsed_seconds, repair_timeout_seconds);
+        if (!current_message.empty())
+            progress_msg += "\n" + mesh_repair_progress_message(current_message);
+        if (!progress_dlg.Update(current_progress, progress_msg)) {
             repair_state->canceled = true;
             abandon_repair = true;
             break;
@@ -5104,22 +5631,20 @@ static bool repair_out_model_data_mesh(out_model_data_t &model, wxWindow *parent
     }
 
     worker_thread.join();
-    progress_dlg.Update(repair_timeout_seconds, "");
+    progress_dlg.Update(100, "");
 
     if (repair_state->canceled)
         return false;
     if (!repair_state->success) {
-        GUI::show_error(parent, repair_state->error_message.empty() ? into_u8(_L("Model repair has been canceled or failed.")) :
-            repair_state->error_message);
+        if (!timed_out) {
+            GUI::show_error(parent, repair_state->error_message.empty() ? into_u8(_L("Model repair has been canceled or failed.")) :
+                repair_state->error_message);
+        }
         return false;
     }
 
-    model = remap_out_model_data_to_repaired_mesh(model, repair_state->repaired);
+    model = std::move(repair_state->repaired_model);
     return true;
-#else
-    GUI::show_error(parent, into_u8(_L("Windows 3D repair service is not available in this build.")));
-    return false;
-#endif
 }
 
 static std::string normalized_printer_text(const std::string &text)
@@ -5145,17 +5670,22 @@ static bool is_current_single_color_import_printer(const std::string &printer_te
 static std::string multicolor_printer_key(const std::string &printer_text)
 {
     const std::string normalized = normalized_printer_text(printer_text);
-    if (normalized == "ad5x" || normalized == "flashforgead5x")
+    if (boost::starts_with(normalized, "ad5x") || boost::starts_with(normalized, "flashforgead5x") ||
+        boost::starts_with(normalized, "ffad5x"))
         return "ad5x";
-    if (normalized == "c5" || normalized == "creator5" || normalized == "flashforgecreator5")
-        return "c5";
-    if (normalized == "c5p" || normalized == "creator5pro" || normalized == "flashforgecreator5pro")
+    if (boost::starts_with(normalized, "c5p") || boost::starts_with(normalized, "creator5pro") ||
+        boost::starts_with(normalized, "flashforgecreator5pro"))
         return "c5p";
-    if (normalized == "guider2s" || normalized == "flashforgeguider2s")
+    if (boost::starts_with(normalized, "c5") || boost::starts_with(normalized, "creator5") ||
+        boost::starts_with(normalized, "flashforgecreator5"))
+        return "c5";
+    if (boost::starts_with(normalized, "guider2s") || boost::starts_with(normalized, "flashforgeguider2s"))
         return "guider2s";
-    if (normalized == "guider3ultra" || normalized == "flashforgeguider3ultra")
+    if (boost::starts_with(normalized, "guider3ultra") || boost::starts_with(normalized, "flashforgeguider3ultra"))
         return "guider3ultra";
-    if (normalized == "guider4" || normalized == "flashforgeguider4")
+    if (boost::starts_with(normalized, "guider4pro") || boost::starts_with(normalized, "flashforgeguider4pro"))
+        return "guider4pro";
+    if (boost::starts_with(normalized, "guider4") || boost::starts_with(normalized, "flashforgeguider4"))
         return "guider4";
     return {};
 }
@@ -5172,6 +5702,8 @@ static std::string multicolor_printer_key_from_model_id(const std::string &model
         return "guider2s";
     if (model_id == FFUtils::getPrinterModelId(GUIDER_3_ULTRA))
         return "guider3ultra";
+    if (model_id == FFUtils::getPrinterModelId(GUIDER_4_PRO))
+        return "guider4pro";
     if (model_id == FFUtils::getPrinterModelId(GUIDER_4))
         return "guider4";
     return {};
@@ -5193,6 +5725,7 @@ static bool preset_matches_multicolor_key(const Preset &preset, const std::strin
 {
     return !key.empty() &&
            (multicolor_printer_key(printer_model_text(preset)) == key ||
+            multicolor_printer_key_from_model_id(printer_model_text(preset)) == key ||
             multicolor_printer_key(preset.name) == key);
 }
 
@@ -5207,14 +5740,14 @@ static bool printer_preset_is_added_in_app_config(const Preset &preset)
 }
 
 static std::string find_first_multicolor_printer_preset(PresetBundle *preset_bundle, const std::string &preferred_key = {},
-                                                        bool added_only = true)
+                                                        bool prepare_page_only = true)
 {
     if (preset_bundle == nullptr)
         return {};
 
     std::string first_match;
     for (const Preset &preset : preset_bundle->printers.get_presets()) {
-        if (added_only && !printer_preset_is_added_in_app_config(preset))
+        if (prepare_page_only && !printer_preset_is_added_in_app_config(preset))
             continue;
 
         const std::string key = !preferred_key.empty() ? preferred_key : multicolor_printer_key(printer_model_text(preset));
@@ -5300,102 +5833,6 @@ static cvt_color_t first_prepare_filament_color(PresetBundle *preset_bundle)
         static_cast<uint8_t>(color.Green()),
         static_cast<uint8_t>(color.Blue())
     };
-}
-
-static std::string machine_multicolor_printer_key(MachineObject *machine)
-{
-    if (machine == nullptr)
-        return {};
-
-    std::string key = multicolor_printer_key_from_model_id(machine->printer_type);
-    if (!key.empty())
-        return key;
-
-    key = multicolor_printer_key_from_model_id(machine->get_show_printer_type());
-    if (!key.empty())
-        return key;
-
-    key = multicolor_printer_key(machine->printer_type);
-    if (key.empty())
-        key = multicolor_printer_key(machine->get_show_printer_type());
-    if (key.empty())
-        key = multicolor_printer_key(into_u8(machine->get_printer_type_display_str()));
-    if (key.empty())
-        key = multicolor_printer_key(DevPrinterConfigUtil::get_printer_display_name(machine->printer_type));
-    return key;
-}
-
-static std::string bound_device_multicolor_printer_key(DeviceObject *device)
-{
-    if (device == nullptr)
-        return {};
-
-    const unsigned short pid = device->get_dev_pid();
-    std::string key = multicolor_printer_key_from_model_id(FFUtils::getPrinterModelId(pid));
-    if (!key.empty())
-        return key;
-
-    key = multicolor_printer_key(FFUtils::getPrinterName(pid));
-    if (!key.empty())
-        return key;
-
-    return multicolor_printer_key(device->get_dev_name());
-}
-
-static std::vector<std::pair<std::string, DeviceObject *>> sorted_bound_device_objects()
-{
-    std::vector<std::pair<std::string, DeviceObject *>> devices;
-    DeviceObjectOpr *device_opr = wxGetApp().getDeviceObjectOpr();
-    if (device_opr == nullptr)
-        return devices;
-
-    std::map<std::string, DeviceObject *> device_map;
-    device_opr->get_my_machine_list(device_map);
-    devices.assign(device_map.begin(), device_map.end());
-    std::sort(devices.begin(), devices.end(), [](const auto &a, const auto &b) {
-        DeviceObject *lhs = a.second;
-        DeviceObject *rhs = b.second;
-        const std::string lhs_name = lhs != nullptr ? lhs->get_dev_name() : std::string();
-        const std::string rhs_name = rhs != nullptr ? rhs->get_dev_name() : std::string();
-        if (lhs_name != rhs_name)
-            return lhs_name < rhs_name;
-        return a.first < b.first;
-    });
-    return devices;
-}
-
-static std::string find_first_bound_multicolor_printer_preset(PresetBundle *preset_bundle)
-{
-    for (const auto &device_item : sorted_bound_device_objects()) {
-        const std::string key = bound_device_multicolor_printer_key(device_item.second);
-        if (key.empty())
-            continue;
-
-        std::string preset_name = find_first_multicolor_printer_preset(preset_bundle, key, false);
-        if (!preset_name.empty())
-            return preset_name;
-    }
-
-    DeviceManager *dev = Slic3r::GUI::wxGetApp().getDeviceManager();
-    if (dev == nullptr)
-        return {};
-
-    const std::map<std::string, MachineObject *> machines = dev->get_my_machine_list();
-    for (const auto &machine_item : machines) {
-        MachineObject *machine = machine_item.second;
-        if (machine == nullptr)
-            continue;
-
-        const std::string key = machine_multicolor_printer_key(machine);
-        if (key.empty())
-            continue;
-
-        std::string preset_name = find_first_multicolor_printer_preset(preset_bundle, key, false);
-        if (!preset_name.empty())
-            return preset_name;
-    }
-
-    return {};
 }
 
 struct MulticolorPrinterAddOption
@@ -7723,7 +8160,7 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                         int size = extruderIds.size() == 0 ? 0 : *(extruderIds.rbegin());
 
                         int filament_size = sidebar->combos_filament().size();
-                        while (filament_size < static_cast<int>(PREPARE_PAGE_FILAMENT_LIMIT) && filament_size < size) {
+                        while (filament_size < MAXIMUM_EXTRUDER_NUMBER && filament_size < size) {
                             int         filament_count = filament_size + 1;
                             wxColour    new_col        = Plater::get_next_color_for_filament();
                             std::string new_color      = new_col.GetAsString(wxC2S_HTML_SYNTAX).ToStdString();
@@ -8377,15 +8814,15 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                     if (full_color_import_choice == FullColorImportChoice::Unknown &&
                         selected_printer_needs_full_color_import_prompt(wxGetApp().preset_bundle) &&
                         has_single_filament_in_prepare_page(wxGetApp().preset_bundle, sidebar, config)) {
-                        const std::string bound_multicolor_preset =
-                            find_first_bound_multicolor_printer_preset(wxGetApp().preset_bundle);
+                        const std::string prepare_page_multicolor_preset =
+                            find_first_multicolor_printer_preset(wxGetApp().preset_bundle);
 
-                        if (!bound_multicolor_preset.empty()) {
+                        if (!prepare_page_multicolor_preset.empty()) {
                             SwitchMulticolorPrinterDialog msg_dlg(q);
                             if (msg_dlg.ShowModal() == wxID_YES) {
-                                if (install_printer_preset_if_needed(wxGetApp().preset_bundle, bound_multicolor_preset)) {
+                                if (install_printer_preset_if_needed(wxGetApp().preset_bundle, prepare_page_multicolor_preset)) {
                                     full_color_import_choice = FullColorImportChoice::SwitchToMulticolorPrinter;
-                                    pending_multicolor_printer_preset = bound_multicolor_preset;
+                                    pending_multicolor_printer_preset = prepare_page_multicolor_preset;
                                 } else {
                                     full_color_import_choice = FullColorImportChoice::KeepCurrentPrinterAsMono;
                                 }
@@ -8404,7 +8841,7 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                                     full_color_import_choice = FullColorImportChoice::KeepCurrentPrinterAsMono;
                                 }
                             } else {
-                                full_color_import_choice = FullColorImportChoice::KeepCurrentPrinterAsMono;
+                                full_color_import_choice = FullColorImportChoice::ImportDirectlyAsMono;
                             }
                         }
                     }
@@ -8555,7 +8992,8 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
 
                                 set_stage(FullColorImportStage::CheckingMesh);
                                 if (prepared_data.preview_data.has_quantized_model)
-                                    prepared_data.mesh_stats = out_model_data_mesh_stats(default_quantized_model);
+                                    prepared_data.has_mesh_issues =
+                                        out_model_data_has_mesh_issues(default_quantized_model, &prepared_data.mesh_stats);
                                 return true;
                             });
                         if (!preview_prepared) {
@@ -8563,7 +9001,7 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                             continue;
                         }
 
-                        if (prepared_data.mesh_stats.has_any_issue())
+                        if (prepared_data.has_mesh_issues)
                             imported_mesh_repair_choice = ask_imported_model_mesh_repair(q, prepared_data.mesh_stats);
                         if (imported_mesh_repair_choice && *imported_mesh_repair_choice == ImportedMeshRepairChoice::Cancel) {
                             is_user_cancel = true;
@@ -8575,8 +9013,8 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                             if (!repair_out_model_data_mesh(default_quantized_model, q)) {
                                 imported_mesh_repair_choice = ImportedMeshRepairChoice::ImportWithoutRepair;
                             } else {
-                                const TriangleMeshStats stats = out_model_data_mesh_stats(default_quantized_model);
-                                if (stats.has_any_issue()) {
+                                TriangleMeshStats stats;
+                                if (out_model_data_has_mesh_issues(default_quantized_model, &stats)) {
                                     GUI::show_error(q, into_u8(_L("The repaired model still has non-manifold geometry or open boundaries.") +
                                         imported_model_issue_summary(stats)));
                                     imported_mesh_repair_choice = ImportedMeshRepairChoice::ImportWithoutRepair;
@@ -8597,7 +9035,27 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                                 }
                             }
                         }
-                        MulticolorModelDialog multicolor_dlg(q, cm, convert_model_data, color_count, &prepared_data.preview_data);
+                        const int remaining_multicolor_slots = wxGetApp().sidebar().remaining_multicolor_import_filament_slots();
+                        int new_filament_start_index = wxGetApp().sidebar().next_multicolor_import_filament_slot();
+                        const PresetBundle *preset_bundle = wxGetApp().preset_bundle;
+                        const int current_filament_count = preset_bundle != nullptr ?
+                            static_cast<int>(preset_bundle->filament_presets.size()) :
+                            static_cast<int>(MULTICOLOR_IMPORT_FILAMENT_LIMIT);
+                        const bool can_reuse_preparation_slots =
+                            current_filament_count + color_count <= static_cast<int>(MULTICOLOR_IMPORT_FILAMENT_LIMIT);
+                        if (color_count > remaining_multicolor_slots && can_reuse_preparation_slots) {
+                            // The logical import slots are exhausted, but the preparation page still has
+                            // enough actual slots. Reuse its free tail for this import without changing the
+                            // global logical counter until the user confirms.
+                            new_filament_start_index = current_filament_count;
+                        } else if (color_count > remaining_multicolor_slots) {
+                            GUI::show_error(q, _L("多色耗材颜色已满，无法新增，请重新开启项目"));
+                            is_user_cancel = true;
+                            continue;
+                        }
+
+                        MulticolorModelDialog multicolor_dlg(q, cm, convert_model_data, color_count,
+                            new_filament_start_index, &prepared_data.preview_data);
                         if (multicolor_dlg.ShowModal() != wxID_OK) {
                             is_user_cancel = true;
                             q->skip_thumbnail_invalid = false;
@@ -8610,10 +9068,15 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                             colors = cm.clusterColors(convert_model_data, color_count);
                         if (colors.empty())
                             throw Slic3r::RuntimeError(is_textured_obj ? "Loading of a textured OBJ model file failed." : "Loading of a GLB model file failed.");
-                        wxGetApp().sidebar().apply_multicolor_import_filaments(import_result.filament_mappings);
+                        const std::vector<int> remapped_filament_indices =
+                            wxGetApp().sidebar().apply_multicolor_import_filaments(import_result.filament_mappings);
                         glb_convert_filament_ids.clear();
-                        for (const MulticolorFilamentMapping& mapping : import_result.filament_mappings) {
-                            glb_convert_filament_ids.push_back(mapping.target_filament_index + 1);
+                        if (!remapped_filament_indices.empty()) {
+                            for (int filament_index : remapped_filament_indices)
+                                glb_convert_filament_ids.push_back(filament_index + 1);
+                        } else {
+                            for (const MulticolorFilamentMapping& mapping : import_result.filament_mappings)
+                                glb_convert_filament_ids.push_back(mapping.target_filament_index + 1);
                         }
                         glb_convert_colors = colors;
 
@@ -8655,8 +9118,8 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                             if (!repair_out_model_data_mesh(converted_model, q)) {
                                 mesh_repair_failed = true;
                             } else {
-                                const TriangleMeshStats stats = out_model_data_mesh_stats(converted_model);
-                                if (stats.has_any_issue()) {
+                                TriangleMeshStats stats;
+                                if (out_model_data_has_mesh_issues(converted_model, &stats)) {
                                     GUI::show_error(q, into_u8(_L("The repaired model still has non-manifold geometry or open boundaries.") +
                                         imported_model_issue_summary(stats)));
                                     mesh_repair_failed = true;
@@ -13982,6 +14445,7 @@ int Plater::new_project(bool skip_confirm, bool silent, const wxString& project_
     reset(transfer_preset_changes);
     reset_project_dirty_after_save();
     reset_project_dirty_initial_presets();
+    sidebar().reset_multicolor_import_filament_slots();
     wxGetApp().update_saved_preset_from_current_preset();
     update_project_dirty_from_presets();
 
@@ -14098,6 +14562,7 @@ void Plater::load_project(wxString const& filename2,
     std::vector<size_t> res = load_files(input_paths, strategy);
 
     reset_project_dirty_initial_presets();
+    sidebar().reset_multicolor_import_filament_slots();
     update_project_dirty_from_presets();
     wxGetApp().preset_bundle->export_selections(*wxGetApp().app_config);
 

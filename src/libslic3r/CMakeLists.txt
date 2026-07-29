@@ -505,6 +505,7 @@ cmake_policy(POP)
 add_library(libslic3r_cgal STATIC 
     CutSurface.hpp CutSurface.cpp
     IntersectionPoints.hpp IntersectionPoints.cpp
+    MeshRepair.hpp MeshRepair.cpp
     MeshBoolean.hpp MeshBoolean.cpp
     TryCatchSignal.hpp TryCatchSignal.cpp
     Triangulation.hpp Triangulation.cpp

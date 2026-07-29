@@ -10,7 +10,6 @@
 #include <wx/language.h>
 #include "OG_CustomCtrl.hpp"
 #include "wx/graphics.h"
-#include "FlashForge/FFWebViewPanel.hpp"
 #include <wx/listimpl.cpp>
 #include <wx/display.h>
 #include "NetworkTestDialog.hpp"
@@ -1327,15 +1326,6 @@ void PreferencesDialog::create_items()
     auto item_language         = create_item_language_combobox(_L("Language"), "");
     g_sizer->Add(item_language);
 	
-    web_veiw_user_config_data_t userConfigData;
-    m_model_personalized_rec_visible = wxGetApp().mainframe->m_webview->GetUserConfigData(userConfigData);
-    app_config->set("model_prersonalized_rec", std::to_string(userConfigData.modelPersonalizedRecEnabled));
-    wxSizer *item_model_personalized_rec = nullptr;
-    if (m_model_personalized_rec_visible) {
-        item_model_personalized_rec = create_item_checkbox(userConfigData.modelPersonalizedRecText, "", "model_prersonalized_rec");
-        g_sizer->Add(item_model_personalized_rec);
-    }
-
     std::vector<wxString>Units = {_L("Metric") + " (mm, g)", _L("Imperial") + " (in, oz)"};
     auto item_currency         = create_item_combobox(_L("Units"), "", "use_inches", Units);
     g_sizer->Add(item_currency);

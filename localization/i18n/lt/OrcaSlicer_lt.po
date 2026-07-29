@@ -24532,3 +24532,18 @@ msgstr "The filament model is unknown. A random filament preset will be used."
 #, c-format, boost-format
 #~ msgid "Support: propagate branches at layer %d"
 #~ msgstr "Atramos: skleisti šakas sluoksnyje %d"
+
+msgid "Initializing camera..."
+msgstr "Inicializuojama kamera..."
+
+msgid "Loading video..."
+msgstr "Įkeliamas vaizdo įrašas..."
+
+msgid "Video is playing"
+msgstr "Vaizdo įrašas leidžiamas"
+
+msgid "Video is paused"
+msgstr "Vaizdo įrašas pristabdytas"
+
+msgid "Printer disconnected"
+msgstr "Spausdintuvas atjungtas"

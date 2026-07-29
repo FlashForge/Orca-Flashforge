@@ -40,6 +40,11 @@ endif()
 
 project(OrcaSlicer-deps)
 
+# FFmpeg is required by the RTMP video control, but keeping it optional here
+# allows slicer-only builds to consume an FFmpeg installation supplied through
+# CMAKE_PREFIX_PATH instead of rebuilding it in the dependency bundle.
+option(DEP_BUILD_FFMPEG "Build FFmpeg as part of the dependency bundle" ON)
+
 # Backward compatibility for old CMake versions
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_VERSION VERSION_LESS "3.25")
     set(LINUX ON CACHE BOOL "" FORCE)
@@ -398,7 +403,11 @@ endif ()
 
 include(OCCT/OCCT.cmake)
 include(OpenCV/OpenCV.cmake)
-include(FFMPEG/FFMPEG.cmake)
+set(FFMPEG_PKG "")
+if (DEP_BUILD_FFMPEG)
+    include(FFMPEG/FFMPEG.cmake)
+    set(FFMPEG_PKG dep_FFMPEG)
+endif ()
 
 set(_dep_list
     dep_Boost
@@ -412,7 +421,7 @@ set(_dep_list
     dep_OpenVDB
     dep_OpenCSG
     dep_OpenCV
-    dep_FFMPEG
+    ${FFMPEG_PKG}
     dep_CGAL
     dep_GLFW
     dep_OCCT

@@ -19473,19 +19473,19 @@ msgid "The filament model is unknown. A random filament preset will be used."
 msgstr ""
 
 msgid "Initializing camera..."
-msgstr ""
+msgstr "Initializing camera..."
 
 msgid "Loading video..."
-msgstr ""
+msgstr "Loading video..."
 
 msgid "Video is playing"
-msgstr ""
+msgstr "Video is playing"
 
 msgid "Video is paused"
-msgstr ""
+msgstr "Video is paused"
 
 msgid "Printer disconnected"
-msgstr ""
+msgstr "Printer disconnected"
 
 #~ msgid "每次只可添加一个全彩文件"
 #~ msgstr "Only one full-color file can be added at a time"
@@ -20387,3 +20387,21 @@ msgstr "The feedback has been received."
 
 msgid "This will prevent data from being transmitted to cloud services. Users who only utilize local network functionality can safely enable this option."
 msgstr "This will prevent data from being transmitted to cloud services. Users who only utilize local network functionality can safely enable this option."
+
+msgid "Repairing polygon soup"
+msgstr "Repairing polygon soup"
+
+msgid "Orienting polygon soup"
+msgstr "Orienting polygon soup"
+
+msgid "Converting to mesh"
+msgstr "Converting to mesh"
+
+msgid "Repairing mesh boundaries"
+msgstr "Repairing mesh boundaries"
+
+msgid "Finalizing repaired mesh"
+msgstr "Finalizing repaired mesh"
+
+msgid "Remapping repaired mesh colors"
+msgstr "Remapping repaired mesh colors"

@@ -773,3 +773,21 @@ msgstr "The feedback has been received."
 
 msgid "This will prevent data from being transmitted to cloud services. Users who only utilize local network functionality can safely enable this option."
 msgstr "This will prevent data from being transmitted to cloud services. Users who only utilize local network functionality can safely enable this option."
+
+msgid "Repairing polygon soup"
+msgstr "Repairing polygon soup"
+
+msgid "Orienting polygon soup"
+msgstr "Orienting polygon soup"
+
+msgid "Converting to mesh"
+msgstr "Converting to mesh"
+
+msgid "Repairing mesh boundaries"
+msgstr "Repairing mesh boundaries"
+
+msgid "Finalizing repaired mesh"
+msgstr "Finalizing repaired mesh"
+
+msgid "Remapping repaired mesh colors"
+msgstr "Remapping repaired mesh colors"

@@ -308,6 +308,7 @@ public:
 
 private:
     wxString convertSecondsToHMS(int totalSeconds);
+    void     updateDeviceInfoPanel(const com_dev_data_t& data);
     void     fillValue(const com_dev_data_t& data, bool wanDev = false);
     void     fillCloudValue(const fnet_slice_state_t& data);
     void fillJobValue(const fnet_job_info_t& info);

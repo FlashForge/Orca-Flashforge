@@ -181,7 +181,7 @@ public:
     FFWebViewPanel(wxWindow *parent);
     
     void RunScript(const wxString &jsStr);
-    void SendRecentList(int images);
+    void SendRecentList();
     void ShowModelDetail(const std::string &data);
     bool ProcComBusGetRequest(const ComBusGetRequestEvent &evt);
     bool ProcComBusPostRequest(const ComBusPostRequestEvent &evt);
