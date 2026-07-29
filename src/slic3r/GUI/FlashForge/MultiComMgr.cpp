@@ -7,6 +7,7 @@
 #include <cctype>
 #include <chrono>
 #include <cstring>
+#include <iterator>
 #include <wx/dir.h>
 #include <wx/file.h>
 #include <wx/filename.h>
@@ -186,10 +187,9 @@ bool MultiComMgr::initalize(const std::string &dllPath, const std::string &dataD
     m_threadExitEvent.set(false);
     m_loopCheckTimer.Start(1000);
 
-    auto onWanConnUnauthorized = [this](wxCommandEvent &) { requestMqttConfigRefresh(); };
     ComWanConn::inst()->Bind(WAN_CONN_STATUS_EVENT, &MultiComMgr::onWanConnStatus, this);
     ComWanConn::inst()->Bind(WAN_CONN_READ_EVENT, &MultiComMgr::onWanConnRead, this);
-    ComWanConn::inst()->Bind(WAN_CONN_HTTP_UNAUTHORIZED, onWanConnUnauthorized);
+    ComWanConn::inst()->Bind(WAN_CONN_HTTP_UNAUTHORIZED, &MultiComMgr::onWanConnUnauthorized, this);
     Bind(COM_MQTT_CONFIG_REFRESH_EVENT, &MultiComMgr::onMqttConfigRefresh, this);
     WanDevTokenMgr::inst()->Bind(COM_REFRESH_TOKEN_EVENT, &MultiComMgr::onRefreshToken, this);
     return true;
@@ -212,6 +212,7 @@ void MultiComMgr::uninitalize()
     WanDevTokenMgr::inst()->Unbind(COM_REFRESH_TOKEN_EVENT, &MultiComMgr::onRefreshToken, this);
     ComWanConn::inst()->Unbind(WAN_CONN_STATUS_EVENT, &MultiComMgr::onWanConnStatus, this);
     ComWanConn::inst()->Unbind(WAN_CONN_READ_EVENT, &MultiComMgr::onWanConnRead, this);
+    ComWanConn::inst()->Unbind(WAN_CONN_HTTP_UNAUTHORIZED, &MultiComMgr::onWanConnUnauthorized, this);
     Unbind(COM_MQTT_CONFIG_REFRESH_EVENT, &MultiComMgr::onMqttConfigRefresh, this);
     m_threadPool.reset();
     m_sendGcodeThd->exit();
@@ -307,6 +308,10 @@ ComErrno MultiComMgr::addWanDev(const com_token_data_t &tokenData, bool isCheckV
     }
     m_login = true;
     ++m_mqttGeneration;
+    m_mqttReconnectAllowed = true;
+    m_mqttRecoveryInProgress = false;
+    m_mqttConfigRefreshRetryCount = 0;
+    m_nextMqttConfigRefreshTime = {};
     m_httpOnline = true;
     // createConnection() only starts the MQTT connection. Treat it as online after
     // FNET_CONN_STATUS_CONNECTED so commands and subscriptions cannot race the connection.
@@ -321,6 +326,8 @@ ComErrno MultiComMgr::addWanDev(const com_token_data_t &tokenData, bool isCheckV
     ret = ComWanConn::inst()->createConn(networkIntfc(), m_clientId.c_str());
     if (ret != COM_OK) {
         m_login = false;
+        m_mqttReconnectAllowed = false;
+        m_mqttRecoveryInProgress = false;
         m_httpOnline = false;
         m_connOnline = false;
         return ret;
@@ -343,6 +350,10 @@ void MultiComMgr::removeWanDev()
     }
     ++m_mqttGeneration;
     m_mqttConfigRefreshInFlight = false;
+    m_mqttReconnectAllowed = false;
+    m_mqttRecoveryInProgress = false;
+    m_mqttConfigRefreshRetryCount = 0;
+    m_nextMqttConfigRefreshTime = {};
     m_login = false;
     m_httpOnline = false;
     m_connOnline = false;
@@ -502,6 +513,13 @@ void MultiComMgr::onTimer(const wxTimerEvent &event)
 {
     if (event.GetId() != m_loopCheckTimer.GetId()) {
         return;
+    }
+    const auto now = std::chrono::steady_clock::now();
+    if (m_mqttReconnectAllowed && m_mqttRecoveryInProgress && !m_mqttConfigRefreshInFlight.load()
+        && m_nextMqttConfigRefreshTime != std::chrono::steady_clock::time_point {}
+        && now >= m_nextMqttConfigRefreshTime) {
+        m_nextMqttConfigRefreshTime = {};
+        requestMqttConfigRefresh();
     }
     if (!m_pendingWanDevDatas.empty()) {
         if (!m_connOnline) {
@@ -823,6 +841,14 @@ void MultiComMgr::onWanConnStatus(const WanConnStatusEvent &event)
     switch (event.status) {
     case FNET_CONN_STATUS_CONNECTED:
         m_connOnline = true;
+        // A connection may recover by itself while a fresh config is still
+        // being fetched. Finish that refresh before declaring recovery done.
+        if (!m_mqttRecoveryInProgress || !m_mqttConfigRefreshInFlight.load()
+            && m_nextMqttConfigRefreshTime == std::chrono::steady_clock::time_point {}) {
+            m_mqttRecoveryInProgress = false;
+            m_mqttConfigRefreshRetryCount = 0;
+            m_nextMqttConfigRefreshTime = {};
+        }
         QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, m_httpOnline, COM_OK, WanServiceState::Connected));
         // cleanSession subscriptions are not retained. Restore all topics and
         // resynchronize cached data after both the first connection and reconnects.
@@ -836,8 +862,17 @@ void MultiComMgr::onWanConnStatus(const WanConnStatusEvent &event)
         break;
     case FNET_CONN_STATUS_DISCONNECTED:
         m_connOnline = false;
-        // Losing the slicer's MQTT connection does not prove that any printer
-        // is offline. Keep the last device states while the SDK reconnects.
+        if (!m_mqttReconnectAllowed) {
+            break;
+        }
+        // A status disconnect has no rejection reason. Treat it as a transient
+        // network failure, fetch a fresh config, and rebuild the connection.
+        if (!m_mqttRecoveryInProgress) {
+            m_mqttRecoveryInProgress = true;
+            m_mqttConfigRefreshRetryCount = 0;
+            m_nextMqttConfigRefreshTime = {};
+            requestMqttConfigRefresh();
+        }
         QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, false, COM_ERROR, WanServiceState::Reconnecting));
         break;
     }
@@ -993,21 +1028,57 @@ void MultiComMgr::onWanConnRead(const WanConnReadEvent &event)
     }
 }
 
+void MultiComMgr::onWanConnUnauthorized(wxCommandEvent & /*event*/)
+{
+    if (!m_login) {
+        return;
+    }
+    clearRejectedMqttConnection(COM_UNAUTHORIZED);
+}
+
 void MultiComMgr::requestMqttConfigRefresh()
 {
-    if (!m_login || !m_threadPool || m_mqttConfigRefreshInFlight.exchange(true)) {
+    if (!m_login || !m_mqttReconnectAllowed || !m_threadPool
+        || m_mqttConfigRefreshInFlight.exchange(true)) {
         return;
     }
     const uint64_t generation = m_mqttGeneration.load();
-    m_threadPool->post([this, generation]() {
+    const std::string clientId = m_clientId;
+    m_threadPool->post([this, generation, clientId]() {
         com_mqtt_config_t config;
-        ComErrno ret = COM_ERROR;
-        if (m_login) {
-            ScopedWanDevToken token = WanDevTokenMgr::inst()->getScopedToken();
-            ret = MultiComUtils::getMqttConfig(m_clientId, token.accessToken(), config, ComTimeoutWanB);
-        }
+        ScopedWanDevToken token = WanDevTokenMgr::inst()->getScopedToken();
+        const ComErrno ret = MultiComUtils::getMqttConfig(
+            clientId, token.accessToken(), config, ComTimeoutWanB);
         QueueEvent(new ComMqttConfigRefreshEvent(COM_MQTT_CONFIG_REFRESH_EVENT, config, ret, generation));
     });
+}
+
+void MultiComMgr::scheduleMqttConfigRefreshRetry()
+{
+    static constexpr int retryDelaysSeconds[] = { 1, 3, 5, 10, 20, 30 };
+    const size_t delayIndex = std::min<size_t>(
+        m_mqttConfigRefreshRetryCount, std::size(retryDelaysSeconds) - 1);
+    const int delaySeconds = retryDelaysSeconds[delayIndex];
+    ++m_mqttConfigRefreshRetryCount;
+    m_nextMqttConfigRefreshTime =
+        std::chrono::steady_clock::now() + std::chrono::seconds(delaySeconds);
+    BOOST_LOG_TRIVIAL(warning) << "MQTT recovery retry scheduled in " << delaySeconds
+                               << " seconds, attempt=" << m_mqttConfigRefreshRetryCount;
+}
+
+void MultiComMgr::clearRejectedMqttConnection(ComErrno ret)
+{
+    ++m_mqttGeneration;
+    m_mqttConfigRefreshInFlight = false;
+    m_mqttReconnectAllowed = false;
+    m_mqttRecoveryInProgress = false;
+    m_mqttConfigRefreshRetryCount = 0;
+    m_nextMqttConfigRefreshTime = {};
+    m_connOnline = false;
+    m_mqttConfig = {};
+    ComWanConn::inst()->freeConn();
+    QueueEvent(new ComWanDevMaintainEvent(
+        COM_WAN_DEV_MAINTAIN_EVENT, true, false, ret, WanServiceState::ApiUnavailable));
 }
 
 void MultiComMgr::onMqttConfigRefresh(const ComMqttConfigRefreshEvent &event)
@@ -1016,17 +1087,29 @@ void MultiComMgr::onMqttConfigRefresh(const ComMqttConfigRefreshEvent &event)
         return;
     }
     m_mqttConfigRefreshInFlight = false;
-    if (!m_login || event.ret != COM_OK) {
+    if (!m_login) {
+        return;
+    }
+    if (event.ret == COM_UNAUTHORIZED) {
+        clearRejectedMqttConnection(event.ret);
+        return;
+    }
+    if (event.ret != COM_OK) {
         m_httpOnline = false;
+        scheduleMqttConfigRefreshRetry();
         return;
     }
     m_mqttConfig = event.config;
     m_httpOnline = true;
     m_connOnline = false;
     ++m_mqttGeneration;
+    m_nextMqttConfigRefreshTime = {};
     ComWanConn::inst()->freeConn();
-    if (m_login && ComWanConn::inst()->createConn(networkIntfc(), m_clientId.c_str()) != COM_OK) {
-        m_httpOnline = false;
+    const ComErrno createRet = ComWanConn::inst()->createConn(networkIntfc(), m_clientId.c_str());
+    if (createRet == COM_UNAUTHORIZED) {
+        clearRejectedMqttConnection(createRet);
+    } else if (createRet != COM_OK) {
+        scheduleMqttConfigRefreshRetry();
     }
 }
 void MultiComMgr::onRefreshToken(const ComRefreshTokenEvent &event)

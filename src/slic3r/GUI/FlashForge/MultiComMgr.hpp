@@ -105,11 +105,17 @@ private:
 
     void onWanConnRead(const WanConnReadEvent &event);
 
+    void onWanConnUnauthorized(wxCommandEvent &event);
+
     void onRefreshToken(const ComRefreshTokenEvent &event);
 
     void onMqttConfigRefresh(const ComMqttConfigRefreshEvent &event);
 
     void requestMqttConfigRefresh();
+
+    void scheduleMqttConfigRefreshRetry();
+
+    void clearRejectedMqttConnection(ComErrno ret);
 
     std::string generateClientId();
 
@@ -139,6 +145,10 @@ private:
     bool                                     m_connOnline;
     std::atomic<uint64_t>                    m_mqttGeneration { 0 };
     std::atomic_bool                         m_mqttConfigRefreshInFlight { false };
+    bool                                     m_mqttReconnectAllowed { false };
+    bool                                     m_mqttRecoveryInProgress { false };
+    unsigned int                             m_mqttConfigRefreshRetryCount { 0 };
+    std::chrono::steady_clock::time_point    m_nextMqttConfigRefreshTime {};
     std::string                              m_clientId;
     com_mqtt_config_t                        m_mqttConfig;
     std::list<com_ptr_t>                     m_comPtrs;
