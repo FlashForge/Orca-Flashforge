@@ -987,7 +987,7 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
             devObj->set_connection_type(CONNECTTYPE_CLOUD);
             devObj->set_connecting(false);
             devObj->set_connected_ready(true);
-            devObj->set_online_state(is_wan_device_online(data));
+            devObj->set_online_state(data.wanDevInfo.status != "offline");
             auto tmpIt = m_local_devices.find(macSN);
             if (tmpIt != m_local_devices.end()) {
                 devObj->set_device_type(DT_BOTH);
@@ -1056,7 +1056,7 @@ void DeviceObjectOpr::onConnectWanDevInfoUpdate(ComWanDevInfoUpdateEvent &event)
         if (it != m_user_devices.end()) {
             bool state = it->second->is_online();
             bool update = false;
-            it->second->set_online_state(is_wan_device_online(data));
+            it->second->set_online_state(data.wanDevInfo.status != "offline");
             if (it->second->get_dev_name() != data.wanDevInfo.name) {
                 it->second->set_dev_name(data.wanDevInfo.name);
                 BOOST_LOG_TRIVIAL(info) << it->second->get_dev_name() << "  update dev name";

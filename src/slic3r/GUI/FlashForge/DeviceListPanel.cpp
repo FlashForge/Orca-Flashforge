@@ -1528,7 +1528,7 @@ bool DeviceListPanel::getDeviceInfo(DeviceInfoItemPanel::DeviceInfo& info, int c
             info.name = data.wanDevInfo.name;        
             info.pid = data.devDetail->pid;
             info.placement = data.wanDevInfo.location;
-            info.status = wan_device_display_status(data);
+            info.status = data.wanDevInfo.status;
             if (data.devDetail) {
                 info.errorCode = data.devDetail->errorCode;
                 info.progress = data.devDetail->printProgress * 100;
@@ -1636,7 +1636,7 @@ void DeviceListPanel::onComWanDeviceInfoUpdate(ComWanDevInfoUpdateEvent& event)
         info.conn_id = conn_id;
         info.name = data.wanDevInfo.name;
         info.placement = data.wanDevInfo.location;
-        info.status = wan_device_display_status(data);
+        info.status = data.wanDevInfo.status;
         if (data.devDetail) {
             info.pid = data.devDetail->pid;
             info.errorCode = data.devDetail->errorCode;

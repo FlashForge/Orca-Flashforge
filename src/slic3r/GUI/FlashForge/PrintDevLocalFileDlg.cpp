@@ -348,7 +348,7 @@ void PrintDevLocalFileDlg::onWanDevInfoUpdate(ComWanDevInfoUpdateEvent &event)
     }
     bool valid;
     const com_dev_data_t &devData = MultiComMgr::inst()->devData(event.id, &valid);
-    if (valid && is_wan_device_offline(devData)) {
+    if (valid && devData.connectMode == COM_CONNECT_WAN && devData.wanDevInfo.status == "offline") {
         EndModal(wxID_CANCEL);
     }
 }

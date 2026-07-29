@@ -7,7 +7,6 @@
 #include <cctype>
 #include <chrono>
 #include <cstring>
-#include <iterator>
 #include <wx/dir.h>
 #include <wx/file.h>
 #include <wx/filename.h>
@@ -38,9 +37,6 @@ static void unbind_ts(const std::string &tag)
 }
 
 namespace {
-
-constexpr double WAN_DEVICE_STALE_TIMEOUT_SECONDS = 20.0;
-constexpr double WAN_DEVICE_REFRESH_RETRY_SECONDS = 20.0;
 
 std::string sanitized_client_id_part(std::string value)
 {
@@ -92,30 +88,6 @@ bool is_same_device_client_id(const std::string &lhs, const std::string &rhs)
     return !lhs_prefix.empty() && lhs_prefix == client_id_device_prefix(rhs);
 }
 
-const char *wan_device_status_source_name(WanDeviceStatusSource source)
-{
-    switch (source) {
-    case WanDeviceStatusSource::Initial:          return "initial";
-    case WanDeviceStatusSource::HttpDeviceList:   return "http_device_list";
-    case WanDeviceStatusSource::SyncOnline:       return "sync_online";
-    case WanDeviceStatusSource::SyncOffline:      return "sync_offline";
-    case WanDeviceStatusSource::DeviceDetail:     return "device_detail";
-    case WanDeviceStatusSource::KeepAlive:        return "keep_alive";
-    case WanDeviceStatusSource::MessageActivity:  return "message_activity";
-    }
-    return "unknown";
-}
-
-const char *wan_device_presence_name(WanDevicePresence presence)
-{
-    switch (presence) {
-    case WanDevicePresence::Unknown: return "unknown";
-    case WanDevicePresence::Online:  return "online";
-    case WanDevicePresence::Offline: return "offline";
-    }
-    return "unknown";
-}
-
 } // namespace
 
 MultiComMgr::MultiComMgr()
@@ -123,6 +95,7 @@ MultiComMgr::MultiComMgr()
     , m_login(false)
     , m_httpOnline(false)
     , m_connOnline(false)
+    , m_connFirstConnected(true)
     , m_loopCheckTimer(this)
 {
     com_dev_data_t devData;
@@ -187,10 +160,10 @@ bool MultiComMgr::initalize(const std::string &dllPath, const std::string &dataD
     m_threadExitEvent.set(false);
     m_loopCheckTimer.Start(1000);
 
+    auto onWanConnUnauthorized = [this](wxCommandEvent &) { maintianWanDev(COM_UNAUTHORIZED, false); };
     ComWanConn::inst()->Bind(WAN_CONN_STATUS_EVENT, &MultiComMgr::onWanConnStatus, this);
     ComWanConn::inst()->Bind(WAN_CONN_READ_EVENT, &MultiComMgr::onWanConnRead, this);
-    ComWanConn::inst()->Bind(WAN_CONN_HTTP_UNAUTHORIZED, &MultiComMgr::onWanConnUnauthorized, this);
-    Bind(COM_MQTT_CONFIG_REFRESH_EVENT, &MultiComMgr::onMqttConfigRefresh, this);
+    ComWanConn::inst()->Bind(WAN_CONN_HTTP_UNAUTHORIZED, onWanConnUnauthorized);
     WanDevTokenMgr::inst()->Bind(COM_REFRESH_TOKEN_EVENT, &MultiComMgr::onRefreshToken, this);
     return true;
 }
@@ -212,8 +185,6 @@ void MultiComMgr::uninitalize()
     WanDevTokenMgr::inst()->Unbind(COM_REFRESH_TOKEN_EVENT, &MultiComMgr::onRefreshToken, this);
     ComWanConn::inst()->Unbind(WAN_CONN_STATUS_EVENT, &MultiComMgr::onWanConnStatus, this);
     ComWanConn::inst()->Unbind(WAN_CONN_READ_EVENT, &MultiComMgr::onWanConnRead, this);
-    ComWanConn::inst()->Unbind(WAN_CONN_HTTP_UNAUTHORIZED, &MultiComMgr::onWanConnUnauthorized, this);
-    Unbind(COM_MQTT_CONFIG_REFRESH_EVENT, &MultiComMgr::onMqttConfigRefresh, this);
     m_threadPool.reset();
     m_sendGcodeThd->exit();
     m_sendGcodeThd.reset();
@@ -307,15 +278,9 @@ ComErrno MultiComMgr::addWanDev(const com_token_data_t &tokenData, bool isCheckV
         return ret;
     }
     m_login = true;
-    ++m_mqttGeneration;
-    m_mqttReconnectAllowed = true;
-    m_mqttRecoveryInProgress = false;
-    m_mqttConfigRefreshRetryCount = 0;
-    m_nextMqttConfigRefreshTime = {};
     m_httpOnline = true;
-    // createConnection() only starts the MQTT connection. Treat it as online after
-    // FNET_CONN_STATUS_CONNECTED so commands and subscriptions cannot race the connection.
-    m_connOnline = false;
+    m_connOnline = true;
+    m_connFirstConnected = true;
     m_blockCommandFailedUpdate = false;
     m_commandFailedUpdateTime = std_precise_clock::time_point::min();
     m_pendingSetUpdateWanDevTime = std_precise_clock::time_point::max();
@@ -326,13 +291,15 @@ ComErrno MultiComMgr::addWanDev(const com_token_data_t &tokenData, bool isCheckV
     ret = ComWanConn::inst()->createConn(networkIntfc(), m_clientId.c_str());
     if (ret != COM_OK) {
         m_login = false;
-        m_mqttReconnectAllowed = false;
-        m_mqttRecoveryInProgress = false;
         m_httpOnline = false;
         m_connOnline = false;
         return ret;
     }
+    ComWanConn::inst()->subscribe(std::vector<std::string>(1, m_mqttConfig.userTopic));
+    ComWanConn::inst()->subscribe(m_mqttConfig.commonTopics);
+    ComWanConn::inst()->syncLogin(m_mqttConfig.userTopic);
     WanDevTokenMgr::inst()->start();
+    m_wanDevMaintainThd->setUpdateWanDev();
     QueueEvent(new ComGetUserProfileEvent(COM_GET_USER_PROFILE_EVENT, addDevData.userProfile, ret));
     return ret;
 }
@@ -348,19 +315,13 @@ void MultiComMgr::removeWanDev()
             comPtr->disconnect(0);
         }
     }
-    ++m_mqttGeneration;
-    m_mqttConfigRefreshInFlight = false;
-    m_mqttReconnectAllowed = false;
-    m_mqttRecoveryInProgress = false;
-    m_mqttConfigRefreshRetryCount = 0;
-    m_nextMqttConfigRefreshTime = {};
     m_login = false;
     m_httpOnline = false;
     m_connOnline = false;
     m_wanDevMaintainThd->stop();
     WanDevTokenMgr::inst()->exit();
     ComWanConn::inst()->freeConn();
-    QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, false, false, COM_OK, WanServiceState::LoggedOut));
+    QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, false, false, COM_OK));
 }
 
 ComErrno MultiComMgr::bindWanDev(const std::string &ip, unsigned short port, const std::string &serialNumber,
@@ -514,17 +475,9 @@ void MultiComMgr::onTimer(const wxTimerEvent &event)
     if (event.GetId() != m_loopCheckTimer.GetId()) {
         return;
     }
-    const auto now = std::chrono::steady_clock::now();
-    if (m_mqttReconnectAllowed && m_mqttRecoveryInProgress && !m_mqttConfigRefreshInFlight.load()
-        && m_nextMqttConfigRefreshTime != std::chrono::steady_clock::time_point {}
-        && now >= m_nextMqttConfigRefreshTime) {
-        m_nextMqttConfigRefreshTime = {};
-        requestMqttConfigRefresh();
-    }
     if (!m_pendingWanDevDatas.empty()) {
-        if (!m_connOnline) {
-            // Keep pending device data during a temporary MQTT disconnect and
-            // recreate the device connections after MQTT recovers.
+        if (!m_httpOnline || !m_connOnline) {
+            m_pendingWanDevDatas.clear();
             return;
         }
         std::vector<std::string> devTopics;
@@ -547,30 +500,21 @@ void MultiComMgr::onTimer(const wxTimerEvent &event)
             ComWanConn::inst()->subscribe(devTopics);
         }
     }
-    if (m_connOnline) {
-        const auto now = std::chrono::steady_clock::now();
-        std::vector<std::string> staleDevTopics;
+    if (m_connOnline && m_httpOnline) {
         for (auto comId : m_readyIdSet) {
             com_dev_data_t &devData = m_datMap.at(comId);
             if (devData.connectMode == COM_CONNECT_WAN) {
-                if (!is_wan_device_online(devData) || devData.wanLastMessageTime == std::chrono::steady_clock::time_point {}
-                    || devData.wanDevInfo.devTopic.empty()) {
-                    continue;
-                }
-                const std::chrono::duration<double> aliveDuration = now - devData.wanLastMessageTime;
-                const bool refreshDue = devData.wanLastDetailRefreshTime == std::chrono::steady_clock::time_point {}
-                    || std::chrono::duration<double>(now - devData.wanLastDetailRefreshTime).count()
-                        > WAN_DEVICE_REFRESH_RETRY_SECONDS;
-                if (aliveDuration.count() > WAN_DEVICE_STALE_TIMEOUT_SECONDS && refreshDue) {
-                    staleDevTopics.push_back(devData.wanDevInfo.devTopic);
-                    devData.wanLastDetailRefreshTime = now;
-                    BOOST_LOG_TRIVIAL(warning) << devData.wanDevInfo.devId << ", " << devData.wanDevInfo.serialNumber
-                                               << ", stale device state, request detail refresh";
+                std::chrono::duration<double> duration = std_precise_clock::now() - m_devAliveTimeMap.at(comId);
+                if (duration.count() > 20 && devData.wanDevInfo.status != "offline") {
+                    devData.wanDevInfo.status = "offline";
+                    QueueEvent(new ComWanDevInfoUpdateEvent(COM_WAN_DEV_INFO_UPDATE_EVENT, comId));
+                    BOOST_LOG_TRIVIAL(warning) << devData.wanDevInfo.devId << ", "
+                        << devData.wanDevInfo.serialNumber << ", timeout offline";
+#ifdef _WIN32
+                    OutputDebugStringA("[CAMDBG] MultiComMgr: 20s no-heartbeat -> mark offline\n");
+#endif
                 }
             }
-        }
-        if (!staleDevTopics.empty()) {
-            ComWanConn::inst()->updateDetail(staleDevTopics);
         }
         if (m_pendingSetUpdateWanDevTime != std_precise_clock::time_point::max()) {
             std::chrono::duration<double> duration = std_precise_clock::now() - m_pendingSetUpdateWanDevTime;
@@ -604,7 +548,7 @@ void MultiComMgr::onReloginHttp(ReloginHttpEvent &event)
     updateWanDevEvent.devCnt = event.devCnt;
     onUpdateWanDev(updateWanDevEvent);
 
-    QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, m_connOnline, COM_OK, m_connOnline ? WanServiceState::Connected : WanServiceState::Reconnecting));
+    QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, m_connOnline, COM_OK));
     QueueEvent(new ComGetUserProfileEvent(COM_GET_USER_PROFILE_EVENT, event.userProfile, COM_OK));
 }
 
@@ -661,19 +605,8 @@ void MultiComMgr::onUpdateWanDev(const GetWanDevEvent &event)
             if (strlen(wanDevInfo.devTopic) != 0) {
                 addedDevTopics.push_back(wanDevInfo.devTopic);
             }
-        } else {
-            ComConnection *connection = m_ptrMap.left.at(it->second);
-            if (connection->isDisconnect()) {
-                m_pendingWanDevDatas.push_back(makeWanDevData(&wanDevInfo));
-            } else if (connection->devTopic() != wanDevInfo.devTopic) {
-                if (!connection->devTopic().empty()) {
-                    ComWanConn::inst()->unsubscribe(std::vector<std::string>(1, connection->devTopic()));
-                }
-                m_pendingWanDevDatas.push_back(makeWanDevData(&wanDevInfo));
-                connection->disconnect(0);
-            } else {
-                mergeWanDeviceInfo(it->second, wanDevInfo);
-            }
+        } else if (m_ptrMap.left.at(it->second)->isDisconnect()) {
+            m_pendingWanDevDatas.push_back(makeWanDevData(&wanDevInfo));
         }
     }
     if (!addedDevTopics.empty()) {
@@ -707,14 +640,7 @@ void MultiComMgr::onConnectionReady(const ComConnectionReadyEvent &event)
     }
     m_readyIdSet.insert(event.id);
     if (devData.connectMode == COM_CONNECT_WAN) {
-        devData.devDetailUpdated = devData.devDetail != nullptr;
-        if (devData.devDetail != nullptr && devData.devDetail->status != nullptr) {
-            const std::string workStatus = devData.devDetail->status;
-            const WanDevicePresence presence = workStatus == "offline" ? WanDevicePresence::Offline
-                                                                        : WanDevicePresence::Online;
-            updateWanDeviceState(
-                event.id, presence, WanDeviceStatusSource::DeviceDetail, &workStatus, false);
-        }
+        m_devAliveTimeMap[event.id] = std_precise_clock::now();
     }
     QueueEvent(event.Clone());
 
@@ -748,6 +674,7 @@ void MultiComMgr::onConnectionExit(const ComConnectionExitEvent &event)
     unbind_ts("M4. free dev data END");
     m_readyIdSet.erase(event.id);
     if (comConnection->connectMode() == COM_CONNECT_WAN) {
+        m_devAliveTimeMap.erase(event.id);
         m_devIdMap.erase(devData.wanDevInfo.devId);
     }
     m_datMap.erase(event.id);
@@ -771,18 +698,19 @@ void MultiComMgr::onDevDetailUpdate(const ComDevDetailUpdateEvent &event)
     if (m_readyIdSet.find(event.id) != m_readyIdSet.end()) {
         QueueEvent(event.Clone());
     }
-    if (devData.connectMode != COM_CONNECT_WAN) {
+    if (devData.connectMode != COM_CONNECT_WAN
+     || devData.wanDevInfo.name == devData.devDetail->name
+     && devData.wanDevInfo.status == devData.devDetail->status
+     && devData.wanDevInfo.location == devData.devDetail->location) {
         return;
     }
-
-    const std::string workStatus = devData.devDetail->status;
-    const bool metadataChanged = devData.wanDevInfo.name != devData.devDetail->name
-        || devData.wanDevInfo.location != devData.devDetail->location;
+    BOOST_LOG_TRIVIAL(info) << devData.devDetail->name << " status---" << devData.devDetail->status;
     devData.wanDevInfo.name = devData.devDetail->name;
+    devData.wanDevInfo.status = devData.devDetail->status;
     devData.wanDevInfo.location = devData.devDetail->location;
-    const WanDevicePresence presence = workStatus == "offline" ? WanDevicePresence::Offline : WanDevicePresence::Online;
-    updateWanDeviceState(
-        event.id, presence, WanDeviceStatusSource::DeviceDetail, &workStatus, true, metadataChanged);
+    if (m_readyIdSet.find(event.id) != m_readyIdSet.end()) {
+        QueueEvent(new ComWanDevInfoUpdateEvent(COM_WAN_DEV_INFO_UPDATE_EVENT, event.id));
+    }
 }
 
 void MultiComMgr::onGetDevGcodeList(const ComGetDevGcodeListEvent &event)
@@ -841,46 +769,37 @@ void MultiComMgr::onWanConnStatus(const WanConnStatusEvent &event)
     switch (event.status) {
     case FNET_CONN_STATUS_CONNECTED:
         m_connOnline = true;
-        // A connection may recover by itself while a fresh config is still
-        // being fetched. Finish that refresh before declaring recovery done.
-        if (!m_mqttRecoveryInProgress || !m_mqttConfigRefreshInFlight.load()
-            && m_nextMqttConfigRefreshTime == std::chrono::steady_clock::time_point {}) {
-            m_mqttRecoveryInProgress = false;
-            m_mqttConfigRefreshRetryCount = 0;
-            m_nextMqttConfigRefreshTime = {};
+        QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, m_httpOnline, COM_OK));
+        if (!m_connFirstConnected) {
+            m_wanDevMaintainThd->setUpdateUserProfile();
+            m_wanDevMaintainThd->setUpdateWanDev();
+            ComWanConn::inst()->subscribe(std::vector<std::string>(1, m_mqttConfig.userTopic));
+            ComWanConn::inst()->subscribe(m_mqttConfig.commonTopics);
+            subscribeWanDevTopic();
+            updateWanDevDetail();
         }
-        QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, m_httpOnline, COM_OK, WanServiceState::Connected));
-        // cleanSession subscriptions are not retained. Restore all topics and
-        // resynchronize cached data after both the first connection and reconnects.
-        ComWanConn::inst()->subscribe(std::vector<std::string>(1, m_mqttConfig.userTopic));
-        ComWanConn::inst()->subscribe(m_mqttConfig.commonTopics);
-        subscribeWanDevTopic();
-        ComWanConn::inst()->syncLogin(m_mqttConfig.userTopic);
-        m_wanDevMaintainThd->setUpdateUserProfile();
-        m_wanDevMaintainThd->setUpdateWanDev();
-        updateWanDevDetail();
+        m_connFirstConnected = false;
         break;
     case FNET_CONN_STATUS_DISCONNECTED:
         m_connOnline = false;
-        if (!m_mqttReconnectAllowed) {
-            break;
-        }
-        // A status disconnect has no rejection reason. Treat it as a transient
-        // network failure, fetch a fresh config, and rebuild the connection.
-        if (!m_mqttRecoveryInProgress) {
-            m_mqttRecoveryInProgress = true;
-            m_mqttConfigRefreshRetryCount = 0;
-            m_nextMqttConfigRefreshTime = {};
-            requestMqttConfigRefresh();
-        }
-        QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, false, COM_ERROR, WanServiceState::Reconnecting));
+        setWanDevOffline();
+        QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, false, COM_ERROR));
         break;
     }
 }
 
 void MultiComMgr::onWanConnRead(const WanConnReadEvent &event)
 {
-    if (!m_login || !m_connOnline) {
+    auto isSpecialType = [](fnet_conn_read_data_type_t type) {
+        return type == FNET_CONN_READ_SYS_NOTIFY
+            || type == FNET_CONN_READ_UPDATE_NOTIFY
+            || type == FNET_CONN_READ_SYNC_USER_PROFILE
+            || type == FNET_CONN_READ_SYNC_UNREGISTER_USER
+            || type == FNET_CONN_READ_SYNC_LOGIN
+            || type == FNET_CONN_READ_SYNC_BIND_DEVICE
+            || type == FNET_CONN_READ_SYNC_UNBIND_DEVICE;
+    };
+    if (!m_httpOnline && !isSpecialType(event.readData.type) || !m_connOnline) {
         freeConnReadData(event);
         return;
     }
@@ -901,51 +820,24 @@ void MultiComMgr::onWanConnRead(const WanConnReadEvent &event)
         }
     };
     auto procDevOffline = [this](const fnet_conn_read_data_t &readData) {
-        auto *onlineInfo = (fnet_sync_online_info_t *) readData.data;
-        if (onlineInfo == nullptr || onlineInfo->devId == nullptr) {
-            return;
-        }
-        BOOST_LOG_TRIVIAL(warning) << "receive device offline, " << onlineInfo->devId;
-        auto it = m_devIdMap.find(onlineInfo->devId);
+        BOOST_LOG_TRIVIAL(warning) << "receive device offline, " << ((fnet_sync_online_info_t *)readData.data)->devId;
+        auto it = m_devIdMap.find(((fnet_sync_online_info_t *)readData.data)->devId);
         if (it != m_devIdMap.end()) {
-            updateWanDeviceState(it->second, WanDevicePresence::Offline, WanDeviceStatusSource::SyncOffline);
-        }
-    };
-    auto procDevOnline = [this](const fnet_conn_read_data_t &readData) {
-        auto *onlineInfo = (fnet_sync_online_info_t *) readData.data;
-        if (onlineInfo == nullptr || onlineInfo->devId == nullptr) {
-            return;
-        }
-        BOOST_LOG_TRIVIAL(info) << "receive device online, " << onlineInfo->devId;
-        auto it = m_devIdMap.find(onlineInfo->devId);
-        if (it == m_devIdMap.end()) {
-            // The device may have been bound by another client. Refresh the list
-            // before resolving the device topic.
-            m_wanDevMaintainThd->setUpdateWanDev();
-            return;
-        }
-        const com_id_t comId = it->second;
-        updateWanDeviceState(comId, WanDevicePresence::Online, WanDeviceStatusSource::SyncOnline);
-        com_dev_data_t &devData = m_datMap.at(comId);
-        if (!devData.wanDevInfo.devTopic.empty()) {
-            // SYNC_ONLINE confirms presence but does not contain the operational
-            // state. Restore the last detail and immediately request fresh detail.
-            ComWanConn::inst()->updateDetail(std::vector<std::string>(1, devData.wanDevInfo.devTopic));
-            devData.wanLastDetailRefreshTime = std::chrono::steady_clock::now();
+            m_datMap.at(it->second).wanDevInfo.status = "offline";
+            if (m_readyIdSet.find(it->second) != m_readyIdSet.end()) {
+                QueueEvent(new ComWanDevInfoUpdateEvent(COM_WAN_DEV_INFO_UPDATE_EVENT, it->second));
+            }
         }
     };
     auto procDevDetailUpdate = [this](const fnet_conn_read_data_t &readData) {
-        auto *detail = (fnet_dev_detail_t *) readData.data;
-        if (detail == nullptr || detail->devId == nullptr) {
-            return;
-        }
-        auto it = m_devIdMap.find(detail->devId);
+        auto it = m_devIdMap.find(((fnet_dev_detail_t *)readData.data)->devId);
         if (it != m_devIdMap.end()) {
             ComDevDetailUpdateEvent devDetailUpdateEvent(COM_DEV_DETAIL_UPDATE_EVENT,
-                it->second, ComInvalidCommandId, detail);
+                it->second, ComInvalidCommandId, (fnet_dev_detail_t *)readData.data);
             onDevDetailUpdate(devDetailUpdateEvent);
+            m_devAliveTimeMap[it->second] = std_precise_clock::now(); // may receive a push before ready
         } else {
-            m_networkIntfc->freeDevDetail(detail);
+            m_networkIntfc->freeDevDetail((fnet_dev_detail_t *)readData.data);
         }
     };
     auto procCloudSliceUpdate = [this](const fnet_conn_read_data_t& readData) {
@@ -961,7 +853,6 @@ void MultiComMgr::onWanConnRead(const WanConnReadEvent &event)
     auto procJobInfoUpdate = [this](const fnet_conn_read_data_t& readData) {
         auto it = m_devIdMap.find(((fnet_job_info_t*) readData.data)->deviceId);
         if (it != m_devIdMap.end()) {
-            updateWanDeviceState(it->second, WanDevicePresence::Online, WanDeviceStatusSource::MessageActivity);
             auto evt = new ComJobInfoUpdateEvent(COM_CONN_JOB_INFO_EVENT, it->second, ComInvalidCommandId, (fnet_job_info_t*) readData.data);
             QueueEvent(evt);
         } else {
@@ -972,12 +863,13 @@ void MultiComMgr::onWanConnRead(const WanConnReadEvent &event)
         auto it = m_devIdMap.find((char *)readData.data);
         if (it != m_devIdMap.end()) {
             com_dev_data_t &devData = m_datMap.at(it->second);
-            if (devData.devDetail != nullptr && devData.devDetailUpdated && devData.devDetail->status != nullptr) {
-                const std::string workStatus = devData.devDetail->status;
-                updateWanDeviceState(it->second, WanDevicePresence::Online, WanDeviceStatusSource::KeepAlive, &workStatus);
-            } else {
-                updateWanDeviceState(it->second, WanDevicePresence::Online, WanDeviceStatusSource::KeepAlive);
+            if (devData.devDetail != nullptr && devData.devDetailUpdated) {
+                devData.wanDevInfo.status = devData.devDetail->status;
+                if (m_readyIdSet.find(it->second) != m_readyIdSet.end()) {
+                    QueueEvent(new ComWanDevInfoUpdateEvent(COM_WAN_DEV_INFO_UPDATE_EVENT, it->second));
+                }
             }
+            m_devAliveTimeMap[it->second] = std_precise_clock::now();
         }
     };
     switch (event.readData.type) {
@@ -1000,9 +892,6 @@ void MultiComMgr::onWanConnRead(const WanConnReadEvent &event)
     case FNET_CONN_READ_SYNC_UNBIND_DEVICE:
         m_wanDevMaintainThd->setUpdateWanDev();
         m_pendingSetUpdateWanDevTime = std_precise_clock::time_point::max();
-        break;
-    case FNET_CONN_READ_SYNC_ONLINE:
-        procDevOnline(event.readData);
         break;
     case FNET_CONN_READ_SYNC_OFFLINE:
         procDevOffline(event.readData);
@@ -1028,90 +917,6 @@ void MultiComMgr::onWanConnRead(const WanConnReadEvent &event)
     }
 }
 
-void MultiComMgr::onWanConnUnauthorized(wxCommandEvent & /*event*/)
-{
-    if (!m_login) {
-        return;
-    }
-    clearRejectedMqttConnection(COM_UNAUTHORIZED);
-}
-
-void MultiComMgr::requestMqttConfigRefresh()
-{
-    if (!m_login || !m_mqttReconnectAllowed || !m_threadPool
-        || m_mqttConfigRefreshInFlight.exchange(true)) {
-        return;
-    }
-    const uint64_t generation = m_mqttGeneration.load();
-    const std::string clientId = m_clientId;
-    m_threadPool->post([this, generation, clientId]() {
-        com_mqtt_config_t config;
-        ScopedWanDevToken token = WanDevTokenMgr::inst()->getScopedToken();
-        const ComErrno ret = MultiComUtils::getMqttConfig(
-            clientId, token.accessToken(), config, ComTimeoutWanB);
-        QueueEvent(new ComMqttConfigRefreshEvent(COM_MQTT_CONFIG_REFRESH_EVENT, config, ret, generation));
-    });
-}
-
-void MultiComMgr::scheduleMqttConfigRefreshRetry()
-{
-    static constexpr int retryDelaysSeconds[] = { 1, 3, 5, 10, 20, 30 };
-    const size_t delayIndex = std::min<size_t>(
-        m_mqttConfigRefreshRetryCount, std::size(retryDelaysSeconds) - 1);
-    const int delaySeconds = retryDelaysSeconds[delayIndex];
-    ++m_mqttConfigRefreshRetryCount;
-    m_nextMqttConfigRefreshTime =
-        std::chrono::steady_clock::now() + std::chrono::seconds(delaySeconds);
-    BOOST_LOG_TRIVIAL(warning) << "MQTT recovery retry scheduled in " << delaySeconds
-                               << " seconds, attempt=" << m_mqttConfigRefreshRetryCount;
-}
-
-void MultiComMgr::clearRejectedMqttConnection(ComErrno ret)
-{
-    ++m_mqttGeneration;
-    m_mqttConfigRefreshInFlight = false;
-    m_mqttReconnectAllowed = false;
-    m_mqttRecoveryInProgress = false;
-    m_mqttConfigRefreshRetryCount = 0;
-    m_nextMqttConfigRefreshTime = {};
-    m_connOnline = false;
-    m_mqttConfig = {};
-    ComWanConn::inst()->freeConn();
-    QueueEvent(new ComWanDevMaintainEvent(
-        COM_WAN_DEV_MAINTAIN_EVENT, true, false, ret, WanServiceState::ApiUnavailable));
-}
-
-void MultiComMgr::onMqttConfigRefresh(const ComMqttConfigRefreshEvent &event)
-{
-    if (event.generation != m_mqttGeneration.load()) {
-        return;
-    }
-    m_mqttConfigRefreshInFlight = false;
-    if (!m_login) {
-        return;
-    }
-    if (event.ret == COM_UNAUTHORIZED) {
-        clearRejectedMqttConnection(event.ret);
-        return;
-    }
-    if (event.ret != COM_OK) {
-        m_httpOnline = false;
-        scheduleMqttConfigRefreshRetry();
-        return;
-    }
-    m_mqttConfig = event.config;
-    m_httpOnline = true;
-    m_connOnline = false;
-    ++m_mqttGeneration;
-    m_nextMqttConfigRefreshTime = {};
-    ComWanConn::inst()->freeConn();
-    const ComErrno createRet = ComWanConn::inst()->createConn(networkIntfc(), m_clientId.c_str());
-    if (createRet == COM_UNAUTHORIZED) {
-        clearRejectedMqttConnection(createRet);
-    } else if (createRet != COM_OK) {
-        scheduleMqttConfigRefreshRetry();
-    }
-}
 void MultiComMgr::onRefreshToken(const ComRefreshTokenEvent &event)
 {
     if (!m_login || event.ret != COM_OK && event.ret != COM_UNAUTHORIZED) {
@@ -1147,96 +952,6 @@ std::string MultiComMgr::getDevTopic(const std::string &devId)
     return comIdIt->second.wanDevInfo.devTopic;
 }
 
-bool MultiComMgr::updateWanDeviceState(com_id_t id, WanDevicePresence presence, WanDeviceStatusSource source,
-    const std::string *workStatus, bool notify, bool forceNotify)
-{
-    auto dataIt = m_datMap.find(id);
-    if (dataIt == m_datMap.end() || dataIt->second.connectMode != COM_CONNECT_WAN) {
-        return false;
-    }
-
-    com_dev_data_t &devData = dataIt->second;
-    const WanDevicePresence oldPresence = devData.wanPresence;
-    const std::string oldWorkStatus = devData.wanDevInfo.status;
-    const auto now = std::chrono::steady_clock::now();
-
-    devData.wanPresence = presence;
-    devData.wanStatusSource = source;
-    if (workStatus != nullptr && !workStatus->empty() && *workStatus != "offline") {
-        devData.wanDevInfo.status = *workStatus;
-    }
-
-    switch (source) {
-    case WanDeviceStatusSource::SyncOnline:
-    case WanDeviceStatusSource::SyncOffline:
-    case WanDeviceStatusSource::DeviceDetail:
-    case WanDeviceStatusSource::KeepAlive:
-    case WanDeviceStatusSource::MessageActivity:
-        devData.wanLastMessageTime = now;
-        break;
-    case WanDeviceStatusSource::Initial:
-    case WanDeviceStatusSource::HttpDeviceList:
-        break;
-    }
-    if (source == WanDeviceStatusSource::DeviceDetail) {
-        devData.wanLastDetailTime = now;
-        devData.wanLastDetailRefreshTime = {};
-    }
-
-    const bool stateChanged = oldPresence != devData.wanPresence || oldWorkStatus != devData.wanDevInfo.status;
-    if (stateChanged) {
-        devData.wanLastStateChangeTime = now;
-        BOOST_LOG_TRIVIAL(info) << "wan device state changed, devId=" << devData.wanDevInfo.devId
-                                << ", presence=" << wan_device_presence_name(devData.wanPresence)
-                                << ", workStatus=" << devData.wanDevInfo.status
-                                << ", source=" << wan_device_status_source_name(source);
-    }
-    if (notify && (stateChanged || forceNotify) && m_readyIdSet.find(id) != m_readyIdSet.end()) {
-        QueueEvent(new ComWanDevInfoUpdateEvent(COM_WAN_DEV_INFO_UPDATE_EVENT, id));
-    }
-    return stateChanged || forceNotify;
-}
-
-bool MultiComMgr::mergeWanDeviceInfo(com_id_t id, const fnet_wan_dev_info_t &wanDevInfo)
-{
-    auto dataIt = m_datMap.find(id);
-    if (dataIt == m_datMap.end() || dataIt->second.connectMode != COM_CONNECT_WAN) {
-        return false;
-    }
-
-    com_dev_data_t &devData = dataIt->second;
-    com_wan_dev_info_t &current = devData.wanDevInfo;
-    const bool metadataChanged = current.name != wanDevInfo.name || current.model != wanDevInfo.model
-        || current.imageUrl != wanDevInfo.imageUrl || current.location != wanDevInfo.location
-        || current.serialNumber != wanDevInfo.serialNumber || current.devTopic != wanDevInfo.devTopic
-        || current.updateInfo.status != wanDevInfo.updateInfo.status || current.updateInfo.title != wanDevInfo.updateInfo.title
-        || current.updateInfo.content != wanDevInfo.updateInfo.content || current.updateInfo.tips != wanDevInfo.updateInfo.tips;
-
-    current.name = wanDevInfo.name;
-    current.model = wanDevInfo.model;
-    current.imageUrl = wanDevInfo.imageUrl;
-    current.location = wanDevInfo.location;
-    current.serialNumber = wanDevInfo.serialNumber;
-    current.devTopic = wanDevInfo.devTopic;
-    current.updateInfo.status = wanDevInfo.updateInfo.status;
-    current.updateInfo.title = wanDevInfo.updateInfo.title;
-    current.updateInfo.content = wanDevInfo.updateInfo.content;
-    current.updateInfo.tips = wanDevInfo.updateInfo.tips;
-
-    if (devData.wanPresence == WanDevicePresence::Unknown) {
-        const std::string httpStatus = wanDevInfo.status;
-        const WanDevicePresence presence = httpStatus.empty() ? WanDevicePresence::Unknown
-            : httpStatus == "offline" ? WanDevicePresence::Offline : WanDevicePresence::Online;
-        const std::string *workStatus = !httpStatus.empty() && httpStatus != "offline" ? &httpStatus : nullptr;
-        return updateWanDeviceState(id, presence, WanDeviceStatusSource::HttpDeviceList, workStatus, true, metadataChanged);
-    }
-
-    if (metadataChanged && m_readyIdSet.find(id) != m_readyIdSet.end()) {
-        QueueEvent(new ComWanDevInfoUpdateEvent(COM_WAN_DEV_INFO_UPDATE_EVENT, id));
-    }
-    return metadataChanged;
-}
-
 com_dev_data_t MultiComMgr::makeWanDevData(const fnet_wan_dev_info_t *wanDevInfo)
 {
     com_dev_data_t devData;
@@ -1245,6 +960,7 @@ com_dev_data_t MultiComMgr::makeWanDevData(const fnet_wan_dev_info_t *wanDevInfo
     devData.wanDevInfo.name = wanDevInfo->name;
     devData.wanDevInfo.model = wanDevInfo->model;
     devData.wanDevInfo.imageUrl = wanDevInfo->imageUrl;
+    devData.wanDevInfo.status = "offline";
     devData.wanDevInfo.location = wanDevInfo->location;
     devData.wanDevInfo.serialNumber = wanDevInfo->serialNumber;
     devData.wanDevInfo.devTopic = wanDevInfo->devTopic;
@@ -1261,19 +977,6 @@ com_dev_data_t MultiComMgr::makeWanDevData(const fnet_wan_dev_info_t *wanDevInfo
     devData.wanTimeLapseVideoList.videoCnt = 0;
     devData.wanTimeLapseVideoList.videoDatas = nullptr;
     devData.devDetailUpdated = false;
-    const std::string httpStatus = wanDevInfo->status;
-    if (httpStatus == "offline") {
-        devData.wanPresence = WanDevicePresence::Offline;
-    } else if (!httpStatus.empty()) {
-        devData.wanPresence = WanDevicePresence::Online;
-        devData.wanDevInfo.status = httpStatus;
-    } else {
-        devData.wanPresence = WanDevicePresence::Unknown;
-    }
-    devData.wanStatusSource = WanDeviceStatusSource::HttpDeviceList;
-    if (devData.wanPresence != WanDevicePresence::Unknown) {
-        devData.wanLastStateChangeTime = std::chrono::steady_clock::now();
-    }
     memset(&devData.lanDevInfo, 0, sizeof(devData.lanDevInfo));
     return devData;
 }
@@ -1286,15 +989,14 @@ void MultiComMgr::maintianWanDev(ComErrno ret, bool needLogout)
     BOOST_LOG_TRIVIAL(info) << "MultiComMgr::maintianWanDev " << (int)ret;
     if (needLogout) {
         removeWanDev();
-        QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, false, false, ret, WanServiceState::LoggedOut));
+        QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, false, false, ret));
         return;
     }
     if (ret != COM_OK && m_httpOnline) {
         m_httpOnline = false;
         m_wanDevMaintainThd->setReloginHttp();
-        // HTTP maintenance failure does not prove that any printer is offline.
-        // Keep the last device states while the HTTP session recovers.
-        QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, false, ret, WanServiceState::ApiUnavailable));
+        setWanDevOffline();
+        QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, false, ret));
     }
 }
 
@@ -1316,6 +1018,17 @@ void MultiComMgr::setMaintainThdReqHeader(bool isCheckVersionOnTestServer)
     }
 #endif
     m_wanDevMaintainThd->setReqHeaders(m_clientId, appId, platId);
+}
+
+void MultiComMgr::setWanDevOffline()
+{
+    for (auto &item : m_ptrMap.left) {
+        if (item.second->connectMode() == COM_CONNECT_WAN) {
+            com_dev_data_t &devData = m_datMap.at(item.first);
+            devData.wanDevInfo.status = "offline";
+            QueueEvent(new ComWanDevInfoUpdateEvent(COM_WAN_DEV_INFO_UPDATE_EVENT, item.first));
+        }
+    }
 }
 
 void MultiComMgr::subscribeWanDevTopic()

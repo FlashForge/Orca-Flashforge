@@ -3145,7 +3145,7 @@ void SingleDeviceState::onConnectWanDevInfoUpdate(ComWanDevInfoUpdateEvent &even
         //当前选中的设备，获取相应数据，更新界面显�?
         const com_dev_data_t &data = MultiComMgr::inst()->devData(event.id);
         // 离线判断
-        std::string status = wan_device_display_status(data);
+        std::string status = data.wanDevInfo.status;
         camdbg_log("onConnectWanDevInfoUpdate wanStatus=" + status);
         if (status.compare("offline") == 0) {
             setPageOffline();
@@ -3157,7 +3157,7 @@ void SingleDeviceState::onConnectWanDevInfoUpdate(ComWanDevInfoUpdateEvent &even
     
     if (-1 == m_cur_id) {
         const com_dev_data_t &data = MultiComMgr::inst()->devData(event.id);
-        if (data.wanDevInfo.serialNumber.compare(m_cur_serial_number) == 0 && is_wan_device_online(data)) {
+        if (data.wanDevInfo.serialNumber.compare(m_cur_serial_number) == 0 && data.wanDevInfo.status.compare("offline") != 0) {
             m_cur_id = event.id;
             setCurId(m_cur_id);
         }
@@ -3299,14 +3299,6 @@ void SingleDeviceState::onComWanDevMaintain(ComWanDevMaintainEvent &event)
 {
     event.Skip();
     if (m_camera_panel) m_camera_panel->logPanelState("onComWanDevMaintain enter");
-    if (event.serviceState == WanServiceState::Reconnecting) {
-        camdbg_log("WAN service reconnecting; keep device page and last device state");
-        return;
-    }
-    if (event.serviceState == WanServiceState::ApiUnavailable) {
-        camdbg_log("WAN API unavailable; keep device page and distinguish from printer offline");
-        return;
-    }
     // 账号登出（login=false）：�?WAN)设备全部被移除�?
     if (!event.login) {
         // 刷新并清空设备页到离线态：仅当当前页展示的正是云设备（或该设备已被移除）时才清页；
@@ -4046,7 +4038,7 @@ void SingleDeviceState::fillValue(const com_dev_data_t& data,bool wanDev)
     updateDeviceInfoPanel(data);
     std::string state = data.devDetail->status; // 状�?
     if (wanDev) {
-        state = wan_device_display_status(data);
+        state = data.wanDevInfo.status;
     }
     onDevStateChanged(state, data);
     if (state.compare("printing") == 0 && !m_isCloudState) {
@@ -4487,11 +4479,11 @@ void SingleDeviceState::refreshCameraStream()
 
     std::string stream_url = source_url;
 
-    if(data.connectMode == COM_CONNECT_WAN) {
-        stream_url = switch_camera_stream_url(source_url, g_camera_stream_protocol);
-    } else if(data.connectMode == COM_CONNECT_LAN) {
+    // if(data.connectMode == COM_CONNECT_WAN) {
+    //     stream_url = switch_camera_stream_url(source_url, g_camera_stream_protocol);
+    // } else if(data.connectMode == COM_CONNECT_LAN) {
 
-    }
+    // }
 
     if (!stream_url.empty() && m_camera_stream_url != stream_url) {
         m_camera_stream_url = stream_url;
