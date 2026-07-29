@@ -4484,11 +4484,11 @@ void SingleDeviceState::refreshCameraStream()
 
     std::string stream_url = source_url;
 
-    // if(data.connectMode == COM_CONNECT_WAN) {
-    //     stream_url = switch_camera_stream_url(source_url, g_camera_stream_protocol);
-    // } else if(data.connectMode == COM_CONNECT_LAN) {
+    if(data.connectMode == COM_CONNECT_WAN) {
+        stream_url = switch_camera_stream_url(source_url, g_camera_stream_protocol);
+    } else if(data.connectMode == COM_CONNECT_LAN) {
 
-    // }
+    }
 
     if (!stream_url.empty() && m_camera_stream_url != stream_url) {
         m_camera_stream_url = stream_url;
