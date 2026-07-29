@@ -129,6 +129,12 @@ void log_device_detail_layout(const std::string& message)
 #endif
 }
 
+wxString format_cumulative_filament(double cumulative_filament, ComConnectMode connect_mode)
+{
+    const double filament_cm = connect_mode == COM_CONNECT_WAN ? cumulative_filament * 100.0 : cumulative_filament / 10.0;
+    return wxString::Format("%.0fcm", filament_cm);
+}
+
 } // namespace
 
 wxDEFINE_EVENT(EVT_SWITCH_TO_FILETER, wxCommandEvent);
@@ -4024,8 +4030,7 @@ void SingleDeviceState::updateDeviceInfoPanel(const com_dev_data_t& data)
     std::ostringstream time_stream;
     time_stream << std::fixed << std::setprecision(2) << print_time;
     const std::string cumulative_print_time = time_stream.str() + " hours";
-    wxString cumulative_filament = wxString::Format("%.2f", data.devDetail->cumulativeFilament);
-    cumulative_filament.append("m");
+    const wxString cumulative_filament = format_cumulative_filament(data.devDetail->cumulativeFilament, data.connectMode);
 
     m_busy_device_info->SetDeviceInfo(machine_type, nozzle_model, measure, firmware_version, serial_number,
                                       cumulative_print_time, cumulative_filament, data.devDetail->ipAddr);
@@ -4215,9 +4220,7 @@ void SingleDeviceState::fillValue(const com_dev_data_t& data,bool wanDev)
         std::ostringstream oss;
         oss << std::fixed << std::setprecision(2) << time;
         std::string cumulativePrintTime   = oss.str() + " hours";
-        double      cumulativeFilament = data.devDetail->cumulativeFilament; // 丝料统计
-        wxString    strCumulativeFilament = wxString::Format("%.2f", cumulativeFilament);
-        strCumulativeFilament.append("m");
+        wxString strCumulativeFilament = format_cumulative_filament(data.devDetail->cumulativeFilament, data.connectMode);
         std::string ipAddr = data.devDetail->ipAddr; // ip地址
         m_idle_tempMixDevice->modifyDeviceInfo(machineType, nozzleModel, measure, firmwareVersion, serialNubmer, cumulativePrintTime,
                                                strCumulativeFilament, ipAddr);
