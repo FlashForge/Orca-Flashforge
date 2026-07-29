@@ -442,6 +442,8 @@ void DeviceDetail::create_panel(wxWindow* parent)
     auto confirm_push_btn = new FFPushButton(this, wxID_ANY, "push_button_confirm_normal", 
         "push_button_confirm_hover", "push_button_confirm_press", "push_button_confirm_normal");
     confirm_push_btn->SetBackgroundColour(wxColour(255, 255, 255));
+    confirm_push_btn->SetMinSize(wxSize(FromDIP(20), FromDIP(20)));
+    confirm_push_btn->SetMaxSize(wxSize(FromDIP(20), FromDIP(20)));
     confirm_push_btn->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &event) {
         event.Skip();
         double speed;
@@ -475,7 +477,7 @@ void DeviceDetail::create_panel(wxWindow* parent)
         }
     });
     sizer->AddSpacer(FromDIP(15));
-    bSizer_confirm_row->AddStretchSpacer();
+    bSizer_confirm_row->AddStretchSpacer(1);
     bSizer_confirm_row->Add(confirm_push_btn, 0, wxRIGHT, FromDIP(20));
     sizer->Add(bSizer_confirm_row, 0, wxEXPAND, 0);
 //
@@ -515,13 +517,9 @@ void DeviceDetail::create_panel(wxWindow* parent)
 
     m_panel_rows->SetSizer(m_grid_sizer);
     updateGridSizer(AD5X);
-
     sizer->Add(m_panel_rows, 0, wxLEFT | wxRIGHT | wxALIGN_CENTER | wxEXPAND, FromDIP(36));
-#ifdef __WIN32__
-    sizer->AddSpacer(FromDIP(34));
-#else if __APPLE__
+
     sizer->AddSpacer(FromDIP(36));
-#endif
     parent->SetSizer(sizer);
     parent->Layout();
 }
@@ -625,7 +623,7 @@ void DeviceDetail::updateGridSizer(int pid)
     auto addGrid = [=](wxWindow* window, bool show = true) { 
         if (show) {
             window->Show();
-            m_grid_sizer->Add(window, 1, wxALL | wxEXPAND, 0);
+            m_grid_sizer->Add(window, 1, wxALL, 0);
         } else {
             window->Hide();
         }
@@ -2195,8 +2193,8 @@ void SingleDeviceState::setupLayoutBusyInfoPage(wxBoxSizer* busySizer, wxPanel* 
     wxBoxSizer* bSizer_control_print  = new wxBoxSizer(wxHORIZONTAL);
     m_panel_control_print = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(69)), wxTAB_TRAVERSAL);
     m_panel_control_print->SetBackgroundColour(wxColour(255, 255, 255));
-    m_panel_control_print->SetMinSize(wxSize(FromDIP(680), FromDIP(69)));
-    m_panel_control_print->SetMaxSize(wxSize(FromDIP(680), FromDIP(69)));
+    m_panel_control_print->SetMinSize(wxSize(-1, FromDIP(69)));
+    m_panel_control_print->SetMaxSize(wxSize(-1, FromDIP(69)));
 
     // 显示继续打印按钮
     m_print_button = new Button(m_panel_control_print, _L("pause print"), "device_pause_print", 0, 16);

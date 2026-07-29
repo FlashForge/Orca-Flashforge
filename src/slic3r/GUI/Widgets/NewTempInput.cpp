@@ -1976,7 +1976,7 @@ void NewTempInputPanel::ReInitTempature(int curId)
         auto u1_panel_up_sizer = createNozzlesSizer(m_main_panel, 4, 0, 320);
         auto bottom_temp = new NewTempInput(m_main_panel, wxString("device_bottom_temperature"));
         bottom_temp->SetMinTemp(0);
-        bottom_temp->SetMaxTemp(65);
+        bottom_temp->SetMaxTemp(120);
         m_tempInputs["bottom"] = bottom_temp;
 
         m_main_panel_sizer->AddSpacer(FromDIP(16));
@@ -1990,7 +1990,7 @@ void NewTempInputPanel::ReInitTempature(int curId)
         auto u1_panel_up_sizer = createNozzlesSizer(m_main_panel, 4, 0, 320);
         auto bottom_temp      = new NewTempInput(m_main_panel, wxString("device_bottom_temperature"));
         bottom_temp->SetMinTemp(0);
-        bottom_temp->SetMaxTemp(65);
+        bottom_temp->SetMaxTemp(120);
         m_tempInputs["bottom"] = bottom_temp;
         auto mid_temp       = new NewTempInput(m_main_panel, wxString("device_mid_temperature"));
         mid_temp->SetMinTemp(0);
@@ -2408,7 +2408,7 @@ void MachineComboBox::OnPaint(wxPaintEvent& evt)
 
     auto& arrowBmp = m_isDropped ? m_arrowUp : m_arrowDown;
     if (arrowBmp.bmp().IsOk()) {
-        gdc.DrawBitmap(arrowBmp.bmp(), arrowBmp.GetBmpWidth(), arrowBmp.GetBmpHeight(), true);
+        gdc.DrawBitmap(arrowBmp.bmp(), rect.width - arrowBmp.GetBmpWidth() - FromDIP(10), (rect.y - arrowBmp.GetBmpHeight()) / 2, true);
     } else {
         gdc.SetPen(wxPen(text_color, 2));
         wxPoint arrowPoints[3];
@@ -2516,8 +2516,8 @@ MachineIconCombo::MachineIconCombo(
     sizer->Add(m_combobox, 0, wxALIGN_CENTER_VERTICAL | wxALL | wxEXPAND, 0);
 
     m_panel_page->SetSizer(sizer);
-    m_panel_page->Layout();
     sizer->Fit(m_panel_page);
+    m_panel_page->Layout();
 }
 
 MachineComboBox* MachineIconCombo::combobox() { return m_combobox; }
