@@ -258,6 +258,8 @@ bool CMLoadGlb::addSolidColorMaterial(const tinygltf::Model &model, int material
         glbData.textureDatas.back().wraps[0] = TEX_WRAP_REPEAT;
         glbData.textureDatas.back().wraps[1] = TEX_WRAP_REPEAT;
         glbData.textureDatas.back().flipY = false;
+        glbData.textureDatas.back().isSolidColor = true;
+        glbData.textureDatas.back().solidColor = { color[0], color[1], color[2], 255 };
     }
     int textureDataIdx = pair.first->second;
     if (!glbData.materialDatas.empty()

@@ -73,6 +73,8 @@ set(lisbslic3r_sources
     ArcFitter.hpp
     Arrange.cpp
     Arrange.hpp
+    BambuTexturePainting.cpp
+    BambuTexturePainting.hpp
     BlacklistedLibraryCheck.cpp
     BlacklistedLibraryCheck.hpp
     BoundingBox.cpp
@@ -97,6 +99,14 @@ set(lisbslic3r_sources
     ClipperZUtils.hpp
     Color.cpp
     Color.hpp
+    TextureToColor/Callbacks.hpp
+    TextureToColor/CgalUtils.hpp
+    TextureToColor/ColorUtils.cpp
+    TextureToColor/ColorUtils.hpp
+    TextureToColor/Repair.hpp
+    TextureToColor/TextureToColor.cpp
+    TextureToColor/TextureToColor.hpp
+    TextureToColor/TriMesh.hpp
     CommonDefs.hpp
     Config.cpp
     Config.hpp
@@ -602,6 +612,7 @@ target_link_libraries(libslic3r
         TBB::tbbmalloc
         ZLIB::ZLIB
         OpenSSL::Crypto
+        ${_cgal_tgt}
     )
 
 if(NOT WIN32)

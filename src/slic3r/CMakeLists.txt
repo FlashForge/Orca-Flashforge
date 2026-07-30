@@ -255,6 +255,10 @@ set(SLIC3R_GUI_SOURCES
     GUI/MulticolorModelDialog.hpp
     GUI/Gizmos/GizmoObjectManipulation.cpp
     GUI/Gizmos/GizmoObjectManipulation.hpp
+    GUI/ConvertModel/BambuFullColorPipeline.cpp
+    GUI/ConvertModel/BambuFullColorPipeline.hpp
+    GUI/ConvertModel/ClassicFullColorPipeline.cpp
+    GUI/ConvertModel/ClassicFullColorPipeline.hpp
     GUI/ConvertModel/CMLoadGlb.cpp
     GUI/ConvertModel/CMLoadGlb.hpp
     GUI/ConvertModel/CMLoadObj.cpp
@@ -268,6 +272,13 @@ set(SLIC3R_GUI_SOURCES
     GUI/ConvertModel/ConvertModelProc.hpp
     GUI/ConvertModel/ConvertModelUtils.cpp
     GUI/ConvertModel/ConvertModelUtils.hpp
+    GUI/ConvertModel/FullColorModelSource.cpp
+    GUI/ConvertModel/FullColorModelSource.hpp
+    GUI/ConvertModel/FullColorOriginalPreview.cpp
+    GUI/ConvertModel/FullColorOriginalPreview.hpp
+    GUI/ConvertModel/FullColorQuantization.hpp
+    GUI/ConvertModel/FullColorQuantizationCache.cpp
+    GUI/ConvertModel/FullColorQuantizationCache.hpp
     GUI/ConvertModel/KMeansCluster.cpp
     GUI/ConvertModel/KMeansCluster.hpp
     GUI/ConvertModel/MakeOutData.cpp

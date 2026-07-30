@@ -7,6 +7,8 @@
 #include "CMLoadObj.hpp"
 #include "ConvertModelDef.hpp"
 #include "ConvertModelProc.hpp"
+#include "FullColorModelSource.hpp"
+#include "FullColorOriginalPreview.hpp"
 
 namespace Slic3r { namespace GUI {
 
@@ -14,6 +16,8 @@ struct convert_model_data_t {
     obj_extra_data_t objExtraData;
     glb_data_t glbData;
     std::unique_ptr<ConvertModelProc> convertProc;
+    std::shared_ptr<const FullColorModelSource> modelSource;
+    in_cvt_params_t conversionParams;
 };
 
 class ConvertModel
@@ -34,6 +38,9 @@ public:
 
     bool makeMappedPreviewModel(const convert_model_data_t &convertModelData, out_model_data_t &outData,
         const cvt_colors_t &sourceColors, const cvt_colors_t &targetColors) const;
+
+    bool makeOriginalTexturePreview(const convert_model_data_t &convertModelData,
+        FullColorOriginalPreview &preview, std::string *error_message = nullptr) const;
 
     void setScaleModelSize(convert_model_data_t &convertModelData, bool scaleModelSize);
 

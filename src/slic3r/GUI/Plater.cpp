@@ -165,6 +165,8 @@
 #include "WipeTowerDialog.hpp"
 #include "ObjColorDialog.hpp"
 #include "MulticolorModelDialog.hpp"
+#include "ConvertModel/BambuFullColorPipeline.hpp"
+#include "ConvertModel/ClassicFullColorPipeline.hpp"
 
 #include "libslic3r/CustomGCode.hpp"
 #include "libslic3r/Platform.hpp"
@@ -5270,6 +5272,80 @@ private:
     }
 };
 
+class FullColorFormatDialog : public DPIDialog
+{
+public:
+    explicit FullColorFormatDialog(wxWindow *parent)
+        : DPIDialog(parent, wxID_ANY,
+                    wxString::FromUTF8(u8"\u9009\u62E9\u8272\u5F69\u683C\u5F0F"),
+                    wxDefaultPosition, wxDefaultSize, wxCAPTION | wxCLOSE_BOX)
+    {
+        SetFont(wxGetApp().normal_font());
+        const std::string icon_path = (boost::format("%1%/images/Orca-FlashforgeTitle.ico") % resources_dir()).str();
+        SetIcon(wxIcon(encode_path(icon_path.c_str()), wxBITMAP_TYPE_ICO));
+        SetBackgroundColour(*wxWHITE);
+
+        wxBoxSizer *main_sizer = new wxBoxSizer(wxVERTICAL);
+        main_sizer->SetMinSize(wxSize(FromDIP(684), FromDIP(178)));
+        main_sizer->AddSpacer(FromDIP(30));
+
+        wxBoxSizer *content_sizer = new wxBoxSizer(wxVERTICAL);
+        wxBoxSizer *message_row_sizer = new wxBoxSizer(wxHORIZONTAL);
+        const wxBitmap warning_bitmap = wxArtProvider::GetBitmap(
+            wxART_WARNING, wxART_MESSAGE_BOX, wxSize(FromDIP(64), FromDIP(64)));
+        wxStaticBitmap *warning_icon = new wxStaticBitmap(this, wxID_ANY, warning_bitmap);
+        message_row_sizer->Add(warning_icon, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(48));
+
+        wxStaticText *message = new wxStaticText(
+            this, wxID_ANY, wxString::FromUTF8(u8"\u8BF7\u9009\u62E9\u60A8\u5E0C\u671B\u751F\u6210\u7684\u8272\u5F69\u683C\u5F0F\uFF1A"));
+        wxFont message_font = message->GetFont();
+        message_font.SetPointSize(message_font.GetPointSize() + 1);
+        message->SetFont(message_font);
+        message->SetForegroundColour(wxColour(35, 35, 35));
+        message->SetMinSize(wxSize(FromDIP(480), message->GetBestSize().GetHeight()));
+        message_row_sizer->Add(message, 0, wxALIGN_CENTER_VERTICAL);
+        content_sizer->Add(message_row_sizer, 0, wxEXPAND);
+
+        wxBoxSizer *button_sizer = new wxBoxSizer(wxHORIZONTAL);
+        Button *soft_button = new Button(this, wxString::FromUTF8(u8"\u67D4\u548C\u8272\u5F69"));
+        Button *vivid_button = new Button(this, wxString::FromUTF8(u8"\u9C9C\u660E\u8272\u5F69"));
+        soft_button->SetStyle(ButtonStyle::Confirm, ButtonType::Choice);
+        vivid_button->SetStyle(ButtonStyle::Regular, ButtonType::Choice);
+        soft_button->SetMinSize(wxSize(FromDIP(128), FromDIP(36)));
+        vivid_button->SetMinSize(wxSize(FromDIP(128), FromDIP(36)));
+        soft_button->Bind(wxEVT_BUTTON, [this](wxCommandEvent &) {
+            m_backend = FullColorQuantizationBackend::Classic;
+            EndModal(wxID_OK);
+        });
+        vivid_button->Bind(wxEVT_BUTTON, [this](wxCommandEvent &) {
+            m_backend = FullColorQuantizationBackend::Bambu;
+            EndModal(wxID_OK);
+        });
+        button_sizer->AddStretchSpacer();
+        button_sizer->Add(soft_button, 0, wxRIGHT, FromDIP(16));
+        button_sizer->Add(vivid_button, 0);
+        content_sizer->Add(button_sizer, 0, wxEXPAND | wxTOP, FromDIP(24));
+
+        main_sizer->Add(content_sizer, 1, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(48));
+        main_sizer->AddSpacer(FromDIP(12));
+
+        SetSizerAndFit(main_sizer);
+        CenterOnParent();
+    }
+
+    FullColorQuantizationBackend selected_backend() const noexcept { return m_backend; }
+
+private:
+    void on_dpi_changed(const wxRect &suggested_rect) override
+    {
+        Fit();
+        Refresh();
+    }
+
+private:
+    FullColorQuantizationBackend m_backend{ FullColorQuantizationBackend::Classic };
+};
+
 class SwitchMulticolorPrinterDialog : public DPIDialog
 {
 public:
@@ -8266,29 +8342,56 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                                 cm.setScaleModelSize(convert_model_data, false);
                         }
 
+                        FullColorFormatDialog color_format_dlg(q);
+                        if (color_format_dlg.ShowModal() != wxID_OK) {
+                            is_user_cancel = true;
+                            continue;
+                        }
+
+                        std::unique_ptr<IFullColorQuantizationPipeline> quantization_pipeline;
+                        if (color_format_dlg.selected_backend() == FullColorQuantizationBackend::Bambu)
+                            quantization_pipeline = std::make_unique<BambuFullColorPipeline>();
+                        else
+                            quantization_pipeline = std::make_unique<ClassicFullColorPipeline>();
+
                         const int color_count =
                             full_color_import_choice == FullColorImportChoice::KeepCurrentPrinterAsMono ? 1 : 4;
                         const bool preview_prepared = run_full_color_import_task(dlg, FullColorImportStage::PreparingColors,
                             [&](const std::atomic<bool> &canceled, const std::function<void(FullColorImportStage)> &set_stage) {
                                 set_stage(FullColorImportStage::GeneratingPreview);
-                                prepared_data.preview_data.has_original_model =
-                                    cm.makePreviewModel(convert_model_data, prepared_data.preview_data.original_model);
+                                auto original_texture_preview = std::make_shared<FullColorOriginalPreview>();
+                                prepared_data.preview_data.has_original_texture_preview = cm.makeOriginalTexturePreview(
+                                    convert_model_data, *original_texture_preview);
+                                if (prepared_data.preview_data.has_original_texture_preview) {
+                                    prepared_data.preview_data.original_texture_preview = std::move(original_texture_preview);
+                                } else {
+                                    prepared_data.preview_data.has_original_model =
+                                        cm.makePreviewModel(convert_model_data, prepared_data.preview_data.original_model);
+                                }
                                 if (canceled.load())
                                     return false;
 
                                 set_stage(FullColorImportStage::PreparingColors);
-                                prepared_data.preview_data.selected_color_count = color_count;
-                                prepared_data.preview_data.quantized_source_colors = cm.clusterColors(convert_model_data, color_count);
-                                prepared_data.preview_data.selected_colors = prepared_data.preview_data.quantized_source_colors;
-                                if (prepared_data.preview_data.quantized_source_colors.empty())
-                                    return true;
+                                QuantizationSettings quantization_settings;
+                                quantization_settings.color_count = color_count;
+                                quantization_settings.conversion = convert_model_data.conversionParams;
+                                QuantizationResult quantization = quantization_pipeline->quantize(
+                                    convert_model_data.modelSource, quantization_settings);
+                                if (!quantization.valid()) {
+                                    const std::string message = quantization.error_message.empty() ?
+                                        "Full-color quantization failed." : quantization.error_message;
+                                    throw Slic3r::RuntimeError(message);
+                                }
                                 if (canceled.load())
                                     return false;
 
-                                set_stage(FullColorImportStage::GeneratingPreview);
-                                prepared_data.preview_data.has_quantized_model = cm.makePreviewModel(
-                                    convert_model_data, prepared_data.preview_data.quantized_model,
-                                    prepared_data.preview_data.quantized_source_colors);
+                                auto quantization_result = std::make_shared<QuantizationResult>(std::move(quantization));
+                                prepared_data.preview_data.quantization_result = quantization_result;
+                                prepared_data.preview_data.selected_color_count = color_count;
+                                prepared_data.preview_data.quantized_source_colors = quantization_result->source_palette;
+                                prepared_data.preview_data.selected_colors = quantization_result->source_palette;
+                                prepared_data.preview_data.quantized_model = quantization_result->quantized_preview;
+                                prepared_data.preview_data.has_quantized_model = true;
                                 return !canceled.load();
                             });
                         if (!preview_prepared) {
@@ -8325,7 +8428,8 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                             continue;
                         }
 
-                        MulticolorModelDialog multicolor_dlg(q, cm, convert_model_data, color_count,
+                        MulticolorModelDialog multicolor_dlg(
+                            q, cm, convert_model_data, quantization_pipeline->backend(), color_count,
                             new_filament_start_index, &prepared_data.preview_data);
                         if (multicolor_dlg.ShowModal() != wxID_OK) {
                             is_user_cancel = true;
@@ -8334,9 +8438,17 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                         }
 
                         const MulticolorImportResult& import_result = multicolor_dlg.import_result();
+                        if (import_result.quantization_result == nullptr)
+                            throw Slic3r::RuntimeError("Full-color quantization result is missing.");
+                        if (quantization_pipeline->backend() != import_result.quantization_result->backend) {
+                            if (import_result.quantization_result->backend == FullColorQuantizationBackend::Bambu)
+                                quantization_pipeline = std::make_unique<BambuFullColorPipeline>();
+                            else
+                                quantization_pipeline = std::make_unique<ClassicFullColorPipeline>();
+                        }
                         cvt_colors_t colors = import_result.selected_colors;
-                        if (colors.empty())
-                            colors = cm.clusterColors(convert_model_data, color_count);
+                        if (colors.empty() && import_result.quantization_result != nullptr)
+                            colors = import_result.quantization_result->source_palette;
                         if (colors.empty())
                             throw Slic3r::RuntimeError(is_textured_obj ? "Loading of a textured OBJ model file failed." : "Loading of a GLB model file failed.");
                         const std::vector<int> remapped_filament_indices =
@@ -8362,9 +8474,17 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                                 set_stage(FullColorImportStage::GeneratingModel);
                                 if (canceled.load())
                                     return false;
-                                if (!cm.doConvertMapped(convert_model_data, import_result.quantized_source_colors, colors, converted_model))
-                                    throw Slic3r::RuntimeError(is_textured_obj ? "Loading of a textured OBJ model file failed." :
-                                        "Loading of a GLB model file failed.");
+                                if (import_result.quantization_result == nullptr)
+                                    throw Slic3r::RuntimeError("Full-color quantization result is missing.");
+
+                                std::string finalization_error;
+                                if (!quantization_pipeline->finalize(
+                                        *import_result.quantization_result, colors, converted_model, &finalization_error)) {
+                                    throw Slic3r::RuntimeError(finalization_error.empty() ?
+                                        (is_textured_obj ? "Loading of a textured OBJ model file failed." :
+                                            "Loading of a GLB model file failed.") : finalization_error);
+                                }
+                                convert_model_data.convertProc.reset();
                                 return !canceled.load();
                             });
                         if (!converted) {
