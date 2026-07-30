@@ -4446,24 +4446,25 @@ void SingleDeviceState::refreshCameraStream()
         return;
     }
 
-    // Match the device-capability rule introduced by 2f0e39dcb3f: only the
-    // explicit camera field determines whether this printer has a camera.
-    // cameraStreamUrl may be populated for models without camera hardware and
-    // must never be treated as capability evidence.
-    const bool camera_available = data.devDetail->camera == 1;
-    BOOST_LOG_TRIVIAL(error) << "camera_available: " << data.devDetail->camera;
-    // const bool camera_available = data.devDetail->cameraStreamUrl != nullptr
-    //   && data.devDetail->cameraStreamUrl[0] != '\0';
     const char *camera_stream_url = data.devDetail->cameraStreamUrl;
+    const bool stream_url_present = camera_stream_url != nullptr && camera_stream_url[0] != '\0';
+    const bool uses_stream_url_capability =
+        data.connectMode == COM_CONNECT_LAN
+        && (data.devDetail->pid == ADVENTURER_5M || data.devDetail->pid == ADVENTURER_5M_PRO);
+    // Adventurer 5M series uses the presence of a stream URL as the availability
+    // signal in LAN mode. All other cases use the explicit camera field.
+    const bool camera_available = uses_stream_url_capability ? stream_url_present : data.devDetail->camera == 1;
+
+    BOOST_LOG_TRIVIAL(error) << "camera_available: " << camera_available;
     camera_capability_log(
         "refresh: cameraComId=" + std::to_string(m_camera_cur_id)
         + " currentComId=" + std::to_string(m_cur_id)
         + " connectMode=" + std::to_string(static_cast<int>(data.connectMode))
         + " detailUpdated=" + std::string(data.devDetailUpdated ? "true" : "false")
+        + " usesStreamUrlCapability=" + std::string(uses_stream_url_capability ? "true" : "false")
         + " cameraRaw=" + std::to_string(data.devDetail->camera)
         + " cameraAvailable=" + std::string(camera_available ? "true" : "false")
-        + " streamUrlPresent=" + std::string(
-            camera_stream_url != nullptr && camera_stream_url[0] != '\0' ? "true" : "false")
+        + " streamUrlPresent=" + std::string(stream_url_present ? "true" : "false")
         + " streamUrl=" + (camera_stream_url != nullptr ? camera_stream_url : "<null>"));
     
     m_camera_panel->setCameraAvailable(camera_available);
@@ -4471,19 +4472,22 @@ void SingleDeviceState::refreshCameraStream()
         m_camera_stream_url.clear();
         return;
     }
+    if (!stream_url_present) {
+        return;
+    }
 
-    const std::string source_url = data.devDetail->cameraStreamUrl;
+    const std::string source_url = camera_stream_url;
     // The LAN detail response already contains the address expected by the
     // printer's local camera service. Keep it unchanged; protocol conversion
     // is only applicable to remote/WAN stream addresses.
 
     std::string stream_url = source_url;
 
-    // if(data.connectMode == COM_CONNECT_WAN) {
-    //     stream_url = switch_camera_stream_url(source_url, g_camera_stream_protocol);
-    // } else if(data.connectMode == COM_CONNECT_LAN) {
+    if(data.connectMode == COM_CONNECT_WAN) {
+        stream_url = switch_camera_stream_url(source_url, g_camera_stream_protocol);
+    } else if(data.connectMode == COM_CONNECT_LAN) {
 
-    // }
+    }
 
     if (!stream_url.empty() && m_camera_stream_url != stream_url) {
         m_camera_stream_url = stream_url;

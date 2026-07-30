@@ -156,8 +156,8 @@ private:
     std::atomic<uint64_t>          m_painted_frame_count{0};
     std::atomic<int>               m_pending_frame_callbacks{0};
     std::atomic<int64_t>           m_last_frame_diag_summary_ms{0};
-    // WAN stream health: after 20 seconds without a decoded frame, return to
-    // the initial device-page state instead of leaving a disconnected player.
+    // Stream health: after 20 seconds without a decoded frame, return both WAN
+    // and LAN playback to the initial device-page state.
     std::atomic<bool>              m_is_wan_stream{false};
     std::atomic<int64_t>           m_stream_started_at_ms{0};
     // 阻塞 I/O 硬超时截止点（steady_clock 毫秒，0 表示无截止）。设备/服务器失联时，

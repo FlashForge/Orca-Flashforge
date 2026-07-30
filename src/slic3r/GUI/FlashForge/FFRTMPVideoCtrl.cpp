@@ -512,14 +512,14 @@ void FFRTMPVideoCtrl::DecoderThreadFunc()
     ffrtmp_log("Decode thread started");
 
     auto reset_if_no_frames = [this]() -> bool {
-        if (!m_running.load() || !m_is_wan_stream.load()) return false;
+        if (!m_running.load()) return false;
 
         const int64_t now_ms        = ffrtmp_frame_now_ms();
         const int64_t last_frame_ms = m_last_frame_time_ms.load();
         const int64_t reference_ms  = last_frame_ms > 0 ? last_frame_ms : m_stream_started_at_ms.load();
         if (reference_ms <= 0 || now_ms - reference_ms < 20000) return false;
 
-        ffrtmp_log("WAN stream produced no frame for 20s; resetting player to initial state");
+        ffrtmp_log("Stream produced no frame for 20s; resetting player to initial state");
         m_running = false;
         m_paused = false;
         m_display_paused_pref = true;
