@@ -3348,6 +3348,13 @@ wxString SingleDeviceState::convertSecondsToHMS(int totalSeconds)
 
 void SingleDeviceState::fillValue(const com_dev_data_t& data,bool wanDev)
 {
+    // devDetail is filled in by ComGetDevProductDetail, which can legitimately
+    // fail or not have run yet. Every read below goes through it, so bail out
+    // instead of dereferencing null.
+    if (data.devDetail == nullptr) {
+        BOOST_LOG_TRIVIAL(debug) << "fillValue: devDetail not available yet";
+        return;
+    }
     std::string state = data.devDetail->status; // 状态
     if (wanDev) {
         state = data.wanDevInfo.status;
@@ -3361,14 +3368,24 @@ void SingleDeviceState::fillValue(const com_dev_data_t& data,bool wanDev)
     m_busy_lamp_bar->SetCameraState(false);
     m_idle_lamp_bar->SetCameraState(false);
     std::string stram_url = data.devDetail->cameraStreamUrl;
-    if (!stram_url.empty() && m_camera_stream_url != data.devDetail->cameraStreamUrl) {
+    if (stram_url.empty() && data.connectMode == COM_CONNECT_LAN &&
+        data.lanDevInfo.ip[0] != '\0') {
+        // Some firmware reports camera support without also reporting a stream
+        // URL on a LAN connection. The camera serves the usual MJPEG endpoint
+        // regardless, so fall back to the local address rather than leaving the
+        // panel with nothing to load.
+        constexpr unsigned short cameraStreamPort = 8080;
+        stram_url = std::string("http://") + data.lanDevInfo.ip + ":" +
+                    std::to_string(cameraStreamPort) + "/?action=stream";
+    }
+    if (!stram_url.empty() && m_camera_stream_url != stram_url) {
        if (0 == data.connectMode) {
             // 通知设备开流
             ComCameraStreamCtrl *cameraStreamCtrl = new ComCameraStreamCtrl(OPEN);
             Slic3r::GUI::MultiComMgr::inst()->putCommand(m_cur_id, cameraStreamCtrl);
         }
 
-        m_camera_stream_url = data.devDetail->cameraStreamUrl;
+        m_camera_stream_url = stram_url;
         m_camera_panel->setStreamUrl(m_camera_stream_url);
     } else if (stram_url.empty()) {
         m_camera_panel->setOffline();

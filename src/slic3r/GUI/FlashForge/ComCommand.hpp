@@ -116,7 +116,26 @@ public:
     {
         int ret;
         if (data.connectMode == COM_CONNECT_LAN) {
-            return COM_UNSUPPORTED;
+            // The network library exposes LAN equivalents of the WAN
+            // product/detail call, and they are already used individually by
+            // ComGetDevProduct and ComGetDevDetail above. Fetch both here
+            // rather than reporting the whole command unsupported: while this
+            // returned COM_UNSUPPORTED, devProduct and devDetail stayed null on
+            // every LAN connection, so each capability the device page reads
+            // from them (camera, lightCtrlState, internalFanCtrlState, ...) was
+            // silently absent.
+            ret = data.networkIntfc->getLanDevProduct(data.ip, data.port, data.serialNumber,
+                data.checkCode, &m_devProduct, ComTimeoutLanA);
+            if (ret != FNET_OK) {
+                return MultiComUtils::fnetRet2ComErrno(ret);
+            }
+            ret = data.networkIntfc->getLanDevDetail(data.ip, data.port, data.serialNumber,
+                data.checkCode, &m_devDetail, ComTimeoutLanA);
+            if (ret != FNET_OK) {
+                // Don't leak the product that was just fetched.
+                data.networkIntfc->freeDevProduct(m_devProduct);
+                m_devProduct = nullptr;
+            }
         } else {
             ret = data.networkIntfc->getWanDevProductDetail(data.clientId, data.accessToken,
                 data.devId, &m_devProduct, &m_devDetail, ComTimeoutWanB);
@@ -762,13 +781,28 @@ public:
     ComErrno exec(const com_command_exec_data_t &data)
     {
         if (data.connectMode == COM_CONNECT_LAN) {
-            return COM_UNSUPPORTED;
+            // The network library has no LAN camera entry point (there is no
+            // ctrlLanDev* counterpart to fnet_camera_stream_ctrl_t), so this
+            // previously returned COM_UNSUPPORTED. SingleDeviceState issues the
+            // "open" command precisely on a LAN connection, which meant the
+            // stream was never started and the device page showed no video on
+            // any locally connected printer.
+            //
+            // Post the command over the printer's local HTTP control endpoint
+            // instead. This is the same request the library performs for
+            // lightControl_cmd via fnet_ctrlLanDevLight, using the same
+            // ip/port/serialNumber/checkCode already carried in exec data.
+            return sendLanCameraStreamCtrl(data, m_action);
         } else {
             return ComWanConn::inst()->sendCameraStreamCtrl(data.devTopic, m_cameraStreamCtrl);
         }
     }
 
 private:
+    // Implemented in ComCommand.cpp to keep the HTTP client out of this header.
+    static ComErrno sendLanCameraStreamCtrl(const com_command_exec_data_t &data,
+                                            const std::string &action);
+
     std::string m_action;
     fnet_camera_stream_ctrl_t m_cameraStreamCtrl;
 };
