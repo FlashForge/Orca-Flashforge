@@ -6660,6 +6660,15 @@ msgstr "Originalmodell"
 msgid "Number of Colors"
 msgstr "Anzahl der Farben"
 
+msgid "Color Mode"
+msgstr "Farbmodus"
+
+msgid "Soft"
+msgstr "Sanft"
+
+msgid "Vivid"
+msgstr "Leuchtend"
+
 msgid "Parameters have changed, please click Apply to take effect"
 msgstr "Parameter wurden geändert, klicken Sie auf Anwenden, damit sie wirksam werden"
 
@@ -7817,7 +7826,9 @@ msgstr "Es kann jeweils nur eine Vollfarbdatei hinzugefügt werden"
 msgid ""
 "Only one OBJ or GLB file can be imported at a time. Please select the file "
 "you want to use this time."
-msgstr "Es kann jeweils nur eine OBJ- oder GLB-Datei importiert werden. Bitte wählen Sie die Datei aus, die Sie diesmal verwenden möchten."
+msgstr ""
+"Es kann jeweils nur eine OBJ- oder GLB-Datei importiert werden. Bitte wählen "
+"Sie die Datei aus, die Sie diesmal verwenden möchten."
 
 msgid "Please import model files with the same file extension each time"
 msgstr ""
@@ -22596,6 +22607,9 @@ msgstr "Video pausiert"
 msgid "Printer disconnected"
 msgstr "Drucker getrennt"
 
+msgid "No camera detected"
+msgstr "Keine Kamera erkannt"
+
 #~ msgid "每次只可添加一个全彩文件"
 #~ msgstr "Es kann jeweils nur eine Vollfarbdatei hinzugefügt werden"
 
@@ -24489,9 +24503,6 @@ msgstr "Platte"
 msgctxt "Flashforge"
 msgid "Original"
 msgstr "Original"
-
-msgid "No camera detected"
-msgstr "Keine Kamera erkannt"
 
 #: resources/data/hints.ini: [hint:Chamber temperature]
 msgid ""

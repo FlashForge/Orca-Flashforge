@@ -6090,6 +6090,15 @@ msgstr ""
 msgid "Number of Colors"
 msgstr ""
 
+msgid "Color Mode"
+msgstr ""
+
+msgid "Soft"
+msgstr ""
+
+msgid "Vivid"
+msgstr ""
+
 msgid "Parameters have changed, please click Apply to take effect"
 msgstr ""
 

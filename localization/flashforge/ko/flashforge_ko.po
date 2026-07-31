@@ -984,9 +984,6 @@ msgctxt "Flashforge"
 msgid "Original"
 msgstr "원본"
 
-msgid "No camera detected"
-msgstr "카메라가 감지되지 않았습니다"
-
 #: resources/data/hints.ini: [hint:Chamber temperature]
 msgid ""
 "Chamber temperature\n"

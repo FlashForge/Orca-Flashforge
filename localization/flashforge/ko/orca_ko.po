@@ -609,3 +609,6 @@ msgstr "현재 필라멘트 목록"
 
 msgid "New filament"
 msgstr "새 필라멘트"
+
+msgid "No camera detected"
+msgstr "카메라가 감지되지 않았습니다"

@@ -6643,6 +6643,15 @@ msgstr "Исходная модель"
 msgid "Number of Colors"
 msgstr "Количество цветов"
 
+msgid "Color Mode"
+msgstr "Цветовой режим"
+
+msgid "Soft"
+msgstr "Мягкий"
+
+msgid "Vivid"
+msgstr "Яркий"
+
 msgid "Parameters have changed, please click Apply to take effect"
 msgstr "Параметры изменены. Нажмите «Применить», чтобы они вступили в силу"
 
@@ -7791,7 +7800,9 @@ msgstr "За один раз можно добавить только один �
 msgid ""
 "Only one OBJ or GLB file can be imported at a time. Please select the file "
 "you want to use this time."
-msgstr "За один раз можно импортировать только один файл OBJ или GLB. Выберите файл, который хотите использовать в этот раз."
+msgstr ""
+"За один раз можно импортировать только один файл OBJ или GLB. Выберите файл, "
+"который хотите использовать в этот раз."
 
 msgid "Please import model files with the same file extension each time"
 msgstr "За один раз импортируйте файлы моделей только с одинаковым расширением"
@@ -22636,6 +22647,9 @@ msgstr "Видео на паузе"
 
 msgid "Printer disconnected"
 msgstr "Принтер отключён"
+
+msgid "No camera detected"
+msgstr "Камера не обнаружена"
 
 #~ msgid "每次只可添加一个全彩文件"
 #~ msgstr "За один раз можно добавить только один полноцветный файл"

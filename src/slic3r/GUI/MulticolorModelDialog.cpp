@@ -777,8 +777,7 @@ void MulticolorModelDialog::build_ui()
     settings_panel->SetMinSize(wxSize(FromDIP(520), -1));
     auto *settings_sizer = new wxBoxSizer(wxVERTICAL);
 
-    auto *color_style_title = new wxStaticText(settings_panel, wxID_ANY,
-        wxString::FromUTF8(u8"\u8272\u5F69\u683C\u5F0F"));
+    auto *color_style_title = new wxStaticText(settings_panel, wxID_ANY, _L("Color Mode"));
     wxFont color_style_title_font = color_style_title->GetFont();
     color_style_title_font.SetPointSize(color_style_title_font.GetPointSize() + 2);
     color_style_title_font.SetWeight(wxFONTWEIGHT_BOLD);
@@ -787,10 +786,8 @@ void MulticolorModelDialog::build_ui()
     settings_sizer->Add(color_style_title, 0, wxEXPAND | wxBOTTOM, FromDIP(14));
 
     auto *backend_buttons_sizer = new wxBoxSizer(wxHORIZONTAL);
-    m_soft_color_btn = new FFButton(settings_panel, wxID_ANY,
-        wxString::FromUTF8(u8"\u67D4\u548C\u8272\u5F69"), FromDIP(14), true);
-    m_vivid_color_btn = new FFButton(settings_panel, wxID_ANY,
-        wxString::FromUTF8(u8"\u9C9C\u660E\u8272\u5F69"), FromDIP(14), true);
+    m_soft_color_btn = new FFButton(settings_panel, wxID_ANY, _L("Soft"), FromDIP(14), true);
+    m_vivid_color_btn = new FFButton(settings_panel, wxID_ANY, _L("Vivid"), FromDIP(14), true);
     for (FFButton *button : {m_soft_color_btn, m_vivid_color_btn}) {
         button->SetSize(wxSize(FromDIP(140), FromDIP(38)));
         button->SetMinSize(wxSize(FromDIP(140), FromDIP(38)));

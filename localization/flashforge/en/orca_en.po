@@ -433,3 +433,6 @@ msgstr "Current filament list"
 
 msgid "New filament"
 msgstr "New filament"
+
+msgid "No camera detected"
+msgstr "No camera detected"

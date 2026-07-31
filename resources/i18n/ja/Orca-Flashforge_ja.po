@@ -6430,6 +6430,15 @@ msgstr "オリジナルモデル"
 msgid "Number of Colors"
 msgstr "色数"
 
+msgid "Color Mode"
+msgstr "カラーモード"
+
+msgid "Soft"
+msgstr "ソフト"
+
+msgid "Vivid"
+msgstr "ビビッド"
+
 msgid "Parameters have changed, please click Apply to take effect"
 msgstr "パラメータが変更されました。有効にするには「適用」をクリックしてください"
 
@@ -7539,7 +7548,9 @@ msgstr "一度に追加できるフルカラーファイルは1つだけです"
 msgid ""
 "Only one OBJ or GLB file can be imported at a time. Please select the file "
 "you want to use this time."
-msgstr "一度にインポートできるOBJまたはGLBファイルは1つだけです。今回使用するファイルを選択してください。"
+msgstr ""
+"一度にインポートできるOBJまたはGLBファイルは1つだけです。今回使用するファイル"
+"を選択してください。"
 
 msgid "Please import model files with the same file extension each time"
 msgstr "一度にインポートするモデルファイルは同じ拡張子にしてください"
@@ -20176,6 +20187,9 @@ msgstr "一時停止中"
 msgid "Printer disconnected"
 msgstr "プリンターが切断されました"
 
+msgid "No camera detected"
+msgstr "カメラが検出されませんでした"
+
 #~ msgid "每次只可添加一个全彩文件"
 #~ msgstr "一度に追加できるフルカラーファイルは1つだけです"
 
@@ -21798,9 +21812,6 @@ msgstr "プレート"
 msgctxt "Flashforge"
 msgid "Original"
 msgstr "オリジナル"
-
-msgid "No camera detected"
-msgstr "カメラが検出されませんでした"
 
 #: resources/data/hints.ini: [hint:Chamber temperature]
 msgid ""

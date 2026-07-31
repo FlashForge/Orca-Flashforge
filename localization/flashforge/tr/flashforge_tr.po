@@ -1001,9 +1001,6 @@ msgctxt "Flashforge"
 msgid "Original"
 msgstr "Orijinal"
 
-msgid "No camera detected"
-msgstr "Kamera algılanmadı"
-
 #: resources/data/hints.ini: [hint:Chamber temperature]
 msgid ""
 "Chamber temperature\n"

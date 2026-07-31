@@ -6251,6 +6251,15 @@ msgstr "原模型"
 msgid "Number of Colors"
 msgstr "颜色数目"
 
+msgid "Color Mode"
+msgstr "色彩模式"
+
+msgid "Soft"
+msgstr "柔和"
+
+msgid "Vivid"
+msgstr "鲜明"
+
 msgid "Parameters have changed, please click Apply to take effect"
 msgstr "参数已更改，请点击应用生效"
 
@@ -20347,6 +20356,9 @@ msgstr "视频已暂停"
 
 msgid "Printer disconnected"
 msgstr "打印机断开连接"
+
+msgid "No camera detected"
+msgstr "未检测到摄像头"
 
 #~ msgid "每次只可添加一个全彩文件"
 #~ msgstr "每次只可添加一个全彩文件"
