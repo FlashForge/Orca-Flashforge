@@ -1656,10 +1656,6 @@ void FFWebViewPanel::OnMainScriptMessageReceived(wxWebViewEvent& evt)
             // This command is scoped to the home-page browser. Always consume
             // matching messages here so checkout credentials never reach the
             // generic parser or its error logging.
-#ifndef _WIN32
-            BOOST_LOG_TRIVIAL(warning) << "homepage_open_in_app_view is not supported on this platform";
-            return;
-#else
             if (evt.GetEventObject() != m_mainBrowser || !json.contains("data") || !json.at("data").is_object()) {
                 BOOST_LOG_TRIVIAL(warning) << "homepage_open_in_app_view missing data or invalid source";
                 return;
@@ -1693,7 +1689,6 @@ void FFWebViewPanel::OnMainScriptMessageReceived(wxWebViewEvent& evt)
                 OpenEmbeddedPage(embeddedUrl, embeddedTitle);
             });
             return;
-#endif
         }
     } catch (const std::exception&) {
         // Not our control message; fall through to the normal web-request handling.
