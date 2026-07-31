@@ -1083,3 +1083,11 @@ msgstr "Onarılan ağ sonlandırılıyor"
 
 msgid "Remapping repaired mesh colors"
 msgstr "Onarılan ağ renkleri yeniden eşleniyor"
+
+#, c-format
+msgid "%lld minutes"
+msgstr "%lld dakika"
+
+#, c-format
+msgid "%lld hours %lld minutes"
+msgstr "%lld saat %lld dakika"

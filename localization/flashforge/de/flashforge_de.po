@@ -1092,3 +1092,11 @@ msgstr "Repariertes Netz wird fertiggestellt"
 
 msgid "Remapping repaired mesh colors"
 msgstr "Farben des reparierten Netzes werden neu zugeordnet"
+
+#, c-format
+msgid "%lld minutes"
+msgstr "%lld Minuten"
+
+#, c-format
+msgid "%lld hours %lld minutes"
+msgstr "%lld Stunden %lld Minuten"

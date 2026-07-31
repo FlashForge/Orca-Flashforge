@@ -17,7 +17,6 @@
 #include <wx/dcgraph.h>
 #include <chrono>
 #include <functional>
-#include <iomanip>
 #include <sstream>
 using namespace std::literals;
 using json   = nlohmann::json;
@@ -133,6 +132,24 @@ wxString format_cumulative_filament(double cumulative_filament, ComConnectMode c
 {
     const double filament_cm = connect_mode == COM_CONNECT_WAN ? cumulative_filament * 100.0 : cumulative_filament / 10.0;
     return wxString::Format("%.0fcm", filament_cm);
+}
+
+wxString format_cumulative_print_time(const fnet_dev_detail_t &detail, ComConnectMode connect_mode)
+{
+    if (detail.hasCumulativePrintTimeSecond != 0) {
+        const double cumulative_seconds = detail.cumulativePrintTimeSecond > 0.0 ? detail.cumulativePrintTimeSecond : 0.0;
+        const long long total_minutes   = static_cast<long long>(cumulative_seconds / 60.0);
+        if (total_minutes < 60) {
+            return wxString::Format(_L("%lld minutes"), total_minutes);
+        }
+
+        const long long hours   = total_minutes / 60;
+        const long long minutes = total_minutes % 60;
+        return wxString::Format(_L("%lld hours %lld minutes"), hours, minutes);
+    }
+
+    const double old_hours = connect_mode == COM_CONNECT_LAN ? detail.cumulativePrintTime / 60.0 : detail.cumulativePrintTime;
+    return wxString::Format("%.2f hours", old_hours);
 }
 
 } // namespace
@@ -4015,13 +4032,7 @@ void SingleDeviceState::updateDeviceInfoPanel(const com_dev_data_t& data)
     const std::string serial_number = data.connectMode == COM_CONNECT_LAN
                                           ? data.lanDevInfo.serialNumber
                                           : data.wanDevInfo.serialNumber;
-    const double print_time = data.connectMode == COM_CONNECT_LAN
-                                  ? data.devDetail->cumulativePrintTime / 60.0
-                                  : data.devDetail->cumulativePrintTime;
-
-    std::ostringstream time_stream;
-    time_stream << std::fixed << std::setprecision(2) << print_time;
-    const std::string cumulative_print_time = time_stream.str() + " hours";
+    const wxString cumulative_print_time = format_cumulative_print_time(*data.devDetail, data.connectMode);
     const wxString cumulative_filament = format_cumulative_filament(data.devDetail->cumulativeFilament, data.connectMode);
 
     m_busy_device_info->SetDeviceInfo(machine_type, nozzle_model, measure, firmware_version, serial_number,
@@ -4203,15 +4214,7 @@ void SingleDeviceState::fillValue(const com_dev_data_t& data,bool wanDev)
         measure.append("mm");
         std::string firmwareVersion    = data.devDetail->firmwareVersion; // 固件版本
         std::string serialNubmer       = data.connectMode == 0 ? data.lanDevInfo.serialNumber : data.wanDevInfo.serialNumber; // 序列�?
-        double      time               = 0;
-        if (data.connectMode == 0) {//内网数据以分钟为单位
-            time = data.devDetail->cumulativePrintTime / 60;
-        } else if (data.connectMode == 1) {//外网小时为单�?
-            time = data.devDetail->cumulativePrintTime;
-        }    
-        std::ostringstream oss;
-        oss << std::fixed << std::setprecision(2) << time;
-        std::string cumulativePrintTime   = oss.str() + " hours";
+        wxString cumulativePrintTime = format_cumulative_print_time(*data.devDetail, data.connectMode);
         wxString strCumulativeFilament = format_cumulative_filament(data.devDetail->cumulativeFilament, data.connectMode);
         std::string ipAddr = data.devDetail->ipAddr; // ip地址
         m_idle_tempMixDevice->modifyDeviceInfo(machineType, nozzleModel, measure, firmwareVersion, serialNubmer, cumulativePrintTime,

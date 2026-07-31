@@ -24503,3 +24503,11 @@ msgstr "Finalizando la malla reparada"
 
 msgid "Remapping repaired mesh colors"
 msgstr "Reasignando colores de la malla reparada"
+
+#, c-format
+msgid "%lld minutes"
+msgstr "%lld minutos"
+
+#, c-format
+msgid "%lld hours %lld minutes"
+msgstr "%lld horas %lld minutos"

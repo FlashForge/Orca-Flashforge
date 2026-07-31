@@ -1102,3 +1102,11 @@ msgstr "Finalisation du maillage réparé"
 
 msgid "Remapping repaired mesh colors"
 msgstr "Réassociation des couleurs du maillage réparé"
+
+#, c-format
+msgid "%lld minutes"
+msgstr "%lld minutes"
+
+#, c-format
+msgid "%lld hours %lld minutes"
+msgstr "%lld heures %lld minutes"

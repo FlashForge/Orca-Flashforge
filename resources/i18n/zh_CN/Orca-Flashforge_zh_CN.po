@@ -22496,3 +22496,10 @@ msgstr "正在完成网格修复"
 msgid "Remapping repaired mesh colors"
 msgstr "正在重新映射修复后的网格颜色"
 
+#, c-format
+msgid "%lld minutes"
+msgstr "%lld分钟"
+
+#, c-format
+msgid "%lld hours %lld minutes"
+msgstr "%lld小时%lld分钟"

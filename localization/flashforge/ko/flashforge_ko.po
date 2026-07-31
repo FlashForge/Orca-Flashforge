@@ -1076,3 +1076,11 @@ msgstr "복구된 메시를 마무리하는 중"
 
 msgid "Remapping repaired mesh colors"
 msgstr "복구된 메시 색상을 다시 매핑하는 중"
+
+#, c-format
+msgid "%lld minutes"
+msgstr "%lld분"
+
+#, c-format
+msgid "%lld hours %lld minutes"
+msgstr "%lld시간 %lld분"

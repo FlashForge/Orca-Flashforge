@@ -1104,3 +1104,11 @@ msgstr "Завершение исправленной сетки"
 
 msgid "Remapping repaired mesh colors"
 msgstr "Переназначение цветов исправленной сетки"
+
+#, c-format
+msgid "%lld minutes"
+msgstr "%lld мин"
+
+#, c-format
+msgid "%lld hours %lld minutes"
+msgstr "%lld ч %lld мин"

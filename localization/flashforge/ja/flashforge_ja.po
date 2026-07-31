@@ -1070,3 +1070,11 @@ msgstr "修復したメッシュを仕上げ中"
 
 msgid "Remapping repaired mesh colors"
 msgstr "修復したメッシュの色を再割り当て中"
+
+#, c-format
+msgid "%lld minutes"
+msgstr "%lld分"
+
+#, c-format
+msgid "%lld hours %lld minutes"
+msgstr "%lld時間%lld分"
