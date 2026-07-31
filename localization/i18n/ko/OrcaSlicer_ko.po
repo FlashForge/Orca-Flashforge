@@ -20815,19 +20815,19 @@ msgid "The filament model is unknown. A random filament preset will be used."
 msgstr ""
 
 msgid "Initializing camera..."
-msgstr ""
+msgstr "카메라 초기화 중..."
 
 msgid "Loading video..."
-msgstr ""
+msgstr "동영상 로딩 중..."
 
 msgid "Video is playing"
-msgstr ""
+msgstr "재생 중"
 
 msgid "Video is paused"
-msgstr ""
+msgstr "일시정지됨"
 
 msgid "Printer disconnected"
-msgstr ""
+msgstr "프린터 연결 끊김"
 
 #~ msgid "每次只可添加一个全彩文件"
 #~ msgstr "한 번에 하나의 풀컬러 파일만 추가할 수 있습니다"

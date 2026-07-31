@@ -983,21 +983,37 @@ elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
         ${AVCODEC_LIB} ${AVFORMAT_LIB} ${AVUTIL_LIB} ${SWSCALE_LIB} ${SWRESAMPLE_LIB} ${AVFILTER_LIB}
     )
 elseif (APPLE)
-    # FFmpeg for RTMP video control
-    find_library(AVCODEC_LIB avcodec PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
-    find_library(AVFORMAT_LIB avformat PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
-    find_library(AVUTIL_LIB avutil PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
-    find_library(SWSCALE_LIB swscale PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
-    find_library(SWRESAMPLE_LIB swresample PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
-    find_library(AVFILTER_LIB avfilter PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
+    # FFmpeg for RTMP video control. Require the archives explicitly: an old
+    # dependency prefix may still contain dylibs from a previous shared build,
+    # and find_library() prefers those on macOS. New variable names also avoid
+    # reusing cached AV*_LIB paths from an older CMake configuration.
+    find_file(AVCODEC_STATIC_LIB NAMES libavcodec.a PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
+    find_file(AVFORMAT_STATIC_LIB NAMES libavformat.a PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
+    find_file(AVUTIL_STATIC_LIB NAMES libavutil.a PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
+    find_file(SWSCALE_STATIC_LIB NAMES libswscale.a PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
+    find_file(SWRESAMPLE_STATIC_LIB NAMES libswresample.a PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
+    find_file(AVFILTER_STATIC_LIB NAMES libavfilter.a PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
     target_compile_definitions(libslic3r_gui PRIVATE FFRTMP_USE_FFMPEG)
 
+    # FFmpeg is built as static archives on macOS so the application bundle
+    # remains self-contained. Keep dependent archives before the libraries
+    # they consume; static linking is order-sensitive.
+    set(FFMPEG_MACOS_LIBS
+        ${AVFILTER_STATIC_LIB}
+        ${AVFORMAT_STATIC_LIB}
+        ${AVCODEC_STATIC_LIB}
+        ${SWSCALE_STATIC_LIB}
+        ${SWRESAMPLE_STATIC_LIB}
+        ${AVUTIL_STATIC_LIB}
+        "-framework CoreFoundation"
+        "-framework Security"
+    )
+
     if(CMAKE_VERSION VERSION_GREATER_EQUAL "4.0")
-        target_link_libraries(libslic3r_gui ${DISKARBITRATION_LIBRARY} "-framework Security" "-framework OpenGL"
-            ${AVCODEC_LIB} ${AVFORMAT_LIB} ${AVUTIL_LIB} ${SWSCALE_LIB} ${SWRESAMPLE_LIB} ${AVFILTER_LIB})
+        target_link_libraries(libslic3r_gui ${DISKARBITRATION_LIBRARY} "-framework OpenGL"
+            ${FFMPEG_MACOS_LIBS})
     else()
-        target_link_libraries(libslic3r_gui ${DISKARBITRATION_LIBRARY} "-framework Security"
-            ${AVCODEC_LIB} ${AVFORMAT_LIB} ${AVUTIL_LIB} ${SWSCALE_LIB} ${SWRESAMPLE_LIB} ${AVFILTER_LIB})
+        target_link_libraries(libslic3r_gui ${DISKARBITRATION_LIBRARY} ${FFMPEG_MACOS_LIBS})
     endif()
 endif()
 

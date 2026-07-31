@@ -22045,6 +22045,9 @@ msgctxt "Flashforge"
 msgid "Original"
 msgstr "原模型"
 
+msgid "No camera detected"
+msgstr "未检测到摄像头"
+
 #: resources/data/hints.ini: [hint:Chamber temperature]
 msgid ""
 "Chamber temperature\n"
@@ -22475,3 +22478,28 @@ msgstr "反馈已收到。"
 msgid "This will prevent data from being transmitted to cloud services. Users who only utilize local network functionality can safely enable this option."
 msgstr "这将阻止数据向云服务传输。仅使用局域网功能的用户可以安全地启用此选项。"
 
+msgid "Repairing polygon soup"
+msgstr "正在修复多边形数据"
+
+msgid "Orienting polygon soup"
+msgstr "正在调整多边形方向"
+
+msgid "Converting to mesh"
+msgstr "正在转换为网格"
+
+msgid "Repairing mesh boundaries"
+msgstr "正在修复网格边界"
+
+msgid "Finalizing repaired mesh"
+msgstr "正在完成网格修复"
+
+msgid "Remapping repaired mesh colors"
+msgstr "正在重新映射修复后的网格颜色"
+
+#, c-format
+msgid "%lld minutes"
+msgstr "%lld分钟"
+
+#, c-format
+msgid "%lld hours %lld minutes"
+msgstr "%lld小时%lld分钟"

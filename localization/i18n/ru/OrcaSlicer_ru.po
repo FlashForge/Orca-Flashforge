@@ -22623,19 +22623,19 @@ msgstr ""
 "филамента."
 
 msgid "Initializing camera..."
-msgstr ""
+msgstr "Инициализация камеры..."
 
 msgid "Loading video..."
-msgstr ""
+msgstr "Загрузка видео..."
 
 msgid "Video is playing"
-msgstr ""
+msgstr "Видео воспроизводится"
 
 msgid "Video is paused"
-msgstr ""
+msgstr "Видео на паузе"
 
 msgid "Printer disconnected"
-msgstr ""
+msgstr "Принтер отключён"
 
 #~ msgid "每次只可添加一个全彩文件"
 #~ msgstr "За один раз можно добавить только один полноцветный файл"

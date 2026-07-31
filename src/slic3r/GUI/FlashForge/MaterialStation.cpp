@@ -3613,8 +3613,8 @@ FFNozzles* FFNozzles::get_inst() { return s_self; }
 FFNozzles::FFNozzles(wxWindow* parent) : 
     wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize)
 { 
-    SetMinSize(wxSize(FromDIP(621), FromDIP(255)));
-    SetSize(wxSize(FromDIP(621), FromDIP(255))); 
+    SetMinSize(wxSize(-1, FromDIP(255)));
+    SetSize(wxSize(-1, FromDIP(255))); 
     SetBackgroundColour(*wxWHITE);
     auto sizer = new wxBoxSizer(wxVERTICAL);
     auto title_panel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(49)));

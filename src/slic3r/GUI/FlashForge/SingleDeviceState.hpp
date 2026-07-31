@@ -130,6 +130,8 @@ public:
     void switchPage();
 
 private:
+    void logLayoutState(const char* reason) const;
+
     IconText       *m_device_material{nullptr};
     IconText       *m_device_initial_speed{nullptr};
     IconText       *m_device_layer{nullptr};
@@ -138,11 +140,13 @@ private:
     IconBottonText *m_device_z_axis{nullptr};
     IconBottonText *m_device_nozzle_fan{nullptr};
     IconBottonText *m_device_cooling_fan{nullptr};
-    wxGridSizer*    m_grid_sizer{nullptr};
+    wxFlexGridSizer* m_grid_sizer{nullptr};
     wxPanel*        m_panel_rows{nullptr};
     MachineIconCombo* m_device_speed_u1{nullptr};
 
     int m_cur_id = -1;
+    int m_layout_pid = OTHER;
+    wxSize m_last_logged_size{wxDefaultSize};
 
 };
 class G3UDetail : public wxPanel
@@ -308,6 +312,7 @@ public:
 
 private:
     wxString convertSecondsToHMS(int totalSeconds);
+    void     updateDeviceInfoPanel(const com_dev_data_t& data);
     void     fillValue(const com_dev_data_t& data, bool wanDev = false);
     void     fillCloudValue(const fnet_slice_state_t& data);
     void fillJobValue(const fnet_job_info_t& info);

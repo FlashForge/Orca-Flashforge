@@ -640,12 +640,24 @@ void IconText::create_panel(wxWindow* parent,wxString icon,int iconSize,wxString
 
     m_panel_page->SetSizer(sizer);
     m_panel_page->Layout();
-    sizer->Fit(m_panel_page); 
+    sizer->Fit(m_panel_page);
+
+    // The outer panel (this) must own a sizer, otherwise m_panel_page is never
+    // repositioned/resized when a parent sizer changes our size: the content
+    // would float at its construction-time geometry (clipped or offset).
+    auto* outer_sizer = new wxBoxSizer(wxVERTICAL);
+    outer_sizer->Add(m_panel_page, 1, wxEXPAND);
+    parent->SetSizer(outer_sizer);
+    parent->Layout();
 }
 
 void IconText::setText(wxString text)
 {
     m_text_ctrl->SetLabel(text);
+    if (wxWindow* page = m_text_ctrl->GetParent()) {
+        page->Layout();
+    }
+    Layout();
     Refresh();
 }
 
@@ -1014,6 +1026,7 @@ void TempMixDevice::setState(int state, bool lampState)
         } else {
             m_idle_filter_button->SetIcon("device_filter");
         }
+        m_idle_device_info_button->Unbind(wxEVT_LEFT_DOWN, &TempMixDevice::onDevInfoBtnClicked, this);
         m_idle_device_info_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onDevInfoBtnClicked, this);
         //m_idle_lamp_control_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onLampBtnClicked, this);
         m_idle_filter_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onFilterBtnClicked, this);
@@ -1028,6 +1041,7 @@ void TempMixDevice::setState(int state, bool lampState)
         } else {
             m_idle_filter_button->SetIcon("device_filter");
         }
+        m_idle_device_info_button->Unbind(wxEVT_LEFT_DOWN, &TempMixDevice::onDevInfoBtnClicked, this);
         m_idle_device_info_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onDevInfoBtnClicked, this);
         //m_idle_lamp_control_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onLampBtnClicked, this);
         m_idle_filter_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onFilterBtnClicked, this);
@@ -1181,7 +1195,10 @@ void TempMixDevice::changeMachineType(unsigned short pid)
         m_panel_idle_device_title->Show();
         m_panel_u_device->Show();
     } else {
-        m_panel_idle_device_info->Hide();
+        // Device information is already populated by the periodic detail
+        // update. Show it immediately when entering the page; the filter
+        // button may still switch to the filter panel when requested.
+        m_panel_idle_device_info->Show();
         m_panel_idle_device_state->Show();
         m_panel_idle_device_title->Hide();
         m_panel_u_device->Hide();
@@ -1747,8 +1764,8 @@ void PosCtrlButton::SetCurId(int curId)
 NewTempInputPanel::NewTempInputPanel(wxWindow* parent) : 
     wxPanel(parent, wxID_ANY)  
 { 
-    SetSize(wxSize(FromDIP(491), FromDIP(350)));
-    SetMinSize(wxSize(FromDIP(491), FromDIP(350)));
+    SetSize(wxSize(FromDIP(491), -1));
+    SetMinSize(wxSize(FromDIP(491), -1));
     SetBackgroundColour(*wxWHITE);
     wxBoxSizer* rootSizer = new wxBoxSizer(wxVERTICAL);
     m_main_panel = new wxPanel(this);
@@ -1790,29 +1807,29 @@ void NewTempInputPanel::UpdateTempatrue(const com_dev_data_t& data)
 
     auto pid = FFUtils::getPid(m_cur_id);
     if (pid == C5) {
-        std::vector<double> nozzlesTemp;
-        std::vector<double> nozzlesTagTemp;
-        for (int i = 0; i < data.devDetail->nozzleCnt; i++) {
-            nozzlesTemp.push_back(data.devDetail->nozzleTemps[i]);
-            nozzlesTagTemp.push_back(data.devDetail->nozzleTargetTemps[i]);
-        }
         for (int i = 1; i <= m_count; i++) {
-            m_tempInputs["t" + std::to_string(i)]->SetCurrTemp(nozzlesTemp[m_count - 1], true);
-            m_tempInputs["t" + std::to_string(i)]->SetTagTemp(nozzlesTagTemp[m_count - 1], true);
+            NewTempInput* input = m_tempInputs["t" + std::to_string(i)];
+            if (i <= data.devDetail->nozzleCnt && data.devDetail->nozzleTemps
+                && data.devDetail->nozzleTargetTemps) {
+                input->SetCurrTemp(data.devDetail->nozzleTemps[i - 1], true);
+                input->SetTagTemp(data.devDetail->nozzleTargetTemps[i - 1], true);
+            } else {
+                input->SetCurrTemp(NO_TEMP);
+            }
         }
         m_tempInputs["bottom"]->SetCurrTemp(data.devDetail->platTemp, true);
         m_tempInputs["bottom"]->SetTagTemp(data.devDetail->platTargetTemp, true);
     } 
     else if (pid == C5P) {
-        std::vector<double> nozzlesTemp;
-        std::vector<double> nozzlesTagTemp;
-        for (int i = 0; i < data.devDetail->nozzleCnt; i++) {
-            nozzlesTemp.push_back(data.devDetail->nozzleTemps[i]);
-            nozzlesTagTemp.push_back(data.devDetail->nozzleTargetTemps[i]);
-        }
         for (int i = 1; i <= m_count; i++) {
-            m_tempInputs["t" + std::to_string(i)]->SetCurrTemp(nozzlesTemp[m_count - 1], true);
-            m_tempInputs["t" + std::to_string(i)]->SetTagTemp(nozzlesTagTemp[m_count - 1], true);
+            NewTempInput* input = m_tempInputs["t" + std::to_string(i)];
+            if (i <= data.devDetail->nozzleCnt && data.devDetail->nozzleTemps
+                && data.devDetail->nozzleTargetTemps) {
+                input->SetCurrTemp(data.devDetail->nozzleTemps[i - 1], true);
+                input->SetTagTemp(data.devDetail->nozzleTargetTemps[i - 1], true);
+            } else {
+                input->SetCurrTemp(NO_TEMP);
+            }
         }
         m_tempInputs["bottom"]->SetCurrTemp(data.devDetail->platTemp, true);
         m_tempInputs["bottom"]->SetTagTemp(data.devDetail->platTargetTemp, true);
@@ -2408,7 +2425,9 @@ void MachineComboBox::OnPaint(wxPaintEvent& evt)
 
     auto& arrowBmp = m_isDropped ? m_arrowUp : m_arrowDown;
     if (arrowBmp.bmp().IsOk()) {
-        gdc.DrawBitmap(arrowBmp.bmp(), arrowBmp.GetBmpWidth(), arrowBmp.GetBmpHeight(), true);
+        int bmpX = rect.width - arrowBmp.GetBmpWidth() - 12;
+        int bmpY = (rect.height - arrowBmp.GetBmpHeight()) / 2;
+        gdc.DrawBitmap(arrowBmp.bmp(), bmpX, bmpY, true);
     } else {
         gdc.SetPen(wxPen(text_color, 2));
         wxPoint arrowPoints[3];
@@ -2518,6 +2537,14 @@ MachineIconCombo::MachineIconCombo(
     m_panel_page->SetSizer(sizer);
     m_panel_page->Layout();
     sizer->Fit(m_panel_page);
+
+    // The outer panel (this) must own a sizer so m_panel_page (which holds the
+    // icon and the native combobox) follows our size when the grid lays us out;
+    // otherwise the combobox floats at its construction-time position.
+    auto* outer_sizer = new wxBoxSizer(wxVERTICAL);
+    outer_sizer->Add(m_panel_page, 1, wxEXPAND);
+    SetSizer(outer_sizer);
+    Layout();
 }
 
 MachineComboBox* MachineIconCombo::combobox() { return m_combobox; }

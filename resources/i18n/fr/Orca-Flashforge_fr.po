@@ -22776,19 +22776,19 @@ msgstr ""
 "utilisé."
 
 msgid "Initializing camera..."
-msgstr ""
+msgstr "Initialisation de la caméra..."
 
 msgid "Loading video..."
-msgstr ""
+msgstr "Chargement de la vidéo..."
 
 msgid "Video is playing"
-msgstr ""
+msgstr "Lecture de la vidéo en cours"
 
 msgid "Video is paused"
-msgstr ""
+msgstr "Vidéo en pause"
 
 msgid "Printer disconnected"
-msgstr ""
+msgstr "Imprimante déconnectée"
 
 #~ msgid "每次只可添加一个全彩文件"
 #~ msgstr "Un seul fichier en couleur peut être ajouté à la fois"
@@ -24638,6 +24638,9 @@ msgctxt "Flashforge"
 msgid "Original"
 msgstr "Original"
 
+msgid "No camera detected"
+msgstr "Aucune caméra détectée"
+
 #: resources/data/hints.ini: [hint:Chamber temperature]
 msgid ""
 "Chamber temperature\n"
@@ -24713,3 +24716,29 @@ msgstr "Le feedback a été reçu."
 
 msgid "This will prevent data from being transmitted to cloud services. Users who only utilize local network functionality can safely enable this option."
 msgstr "Cela empêchera la transmission des données vers les services cloud. Les utilisateurs qui n'utilisent que les fonctionnalités du réseau local peuvent activer cette option en toute sécurité."
+
+msgid "Repairing polygon soup"
+msgstr "Réparation des données polygonales"
+
+msgid "Orienting polygon soup"
+msgstr "Orientation des données polygonales"
+
+msgid "Converting to mesh"
+msgstr "Conversion en maillage"
+
+msgid "Repairing mesh boundaries"
+msgstr "Réparation des limites du maillage"
+
+msgid "Finalizing repaired mesh"
+msgstr "Finalisation du maillage réparé"
+
+msgid "Remapping repaired mesh colors"
+msgstr "Réassociation des couleurs du maillage réparé"
+
+#, c-format
+msgid "%lld minutes"
+msgstr "%lld minutes"
+
+#, c-format
+msgid "%lld hours %lld minutes"
+msgstr "%lld heures %lld minutes"

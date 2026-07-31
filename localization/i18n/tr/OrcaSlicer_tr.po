@@ -22132,19 +22132,19 @@ msgstr ""
 "Filament modeli bilinmiyor. Rastgele bir filaman ön ayarı kullanılacaktır."
 
 msgid "Initializing camera..."
-msgstr ""
+msgstr "Kamera başlatılıyor..."
 
 msgid "Loading video..."
-msgstr ""
+msgstr "Video yükleniyor..."
 
 msgid "Video is playing"
-msgstr ""
+msgstr "Video oynatılıyor"
 
 msgid "Video is paused"
-msgstr ""
+msgstr "Video duraklatıldı"
 
 msgid "Printer disconnected"
-msgstr ""
+msgstr "Yazıcı bağlantısı kesildi"
 
 #~ msgid "每次只可添加一个全彩文件"
 #~ msgstr "Tek seferde yalnızca bir tam renkli dosya eklenebilir"

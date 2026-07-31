@@ -24,16 +24,33 @@ if (MSVC)
     )
 
 else ()
-    set(_extra_cmd "--pkg-config-flags=\"--static\"")
-    string(APPEND _extra_cmd "--extra-cflags=\"-I ${DESTDIR}/usr/local/include\"")
-    string(APPEND _extra_cmd "--extra-ldflags=\"-I ${DESTDIR}/usr/local/lib\"")
-    string(APPEND _extra_cmd "--extra-libs=\"-lpthread -lm\"")
-    string(APPEND _extra_cmd "--ld=\"g++\"")
-    string(APPEND _extra_cmd "--bindir=\"${DESTDIR}/usr/local/bin\"")
-    string(APPEND _extra_cmd "--enable-gpl")
-    string(APPEND _extra_cmd "--enable-nonfree")
+    # DESTDIR already points at the final prefix (normally .../usr/local).
+    # Keep these as a CMake list so every configure option is actually passed;
+    # the previous concatenated _extra_cmd string was never used.
+    set(_extra_cmd
+        "--pkg-config-flags=--static"
+        "--extra-cflags=-I${DESTDIR}/include"
+        "--extra-ldflags=-L${DESTDIR}/lib"
+        "--extra-libs=-lpthread -lm"
+        "--bindir=${DESTDIR}/bin"
+        --enable-gpl
+        --enable-nonfree
+    )
 
     if (APPLE)
+        # Keep the macOS application bundle self-contained without a separate
+        # dylib collection/install-name pass. This matches the rest of the
+        # dependency bundle and the upstream macOS packaging flow.
+        list(APPEND _extra_cmd
+            --enable-securetransport
+            --disable-openssl
+            --disable-videotoolbox
+            --disable-audiotoolbox
+            --disable-bzlib
+            --disable-lzma
+            --disable-iconv
+        )
+        set(_linkage_cmd --disable-shared --enable-static)
         set(_minos_cmd 
             "CFLAGS=-mmacosx-version-min=${DEP_OSX_TARGET}"
             "LDFLAGS=-mmacosx-version-min=${DEP_OSX_TARGET}"
@@ -49,6 +66,8 @@ else ()
                 set(_cc_cmd "--cc=clang -arch x86_64")
             endif()
         endif()
+    else()
+        set(_linkage_cmd --enable-shared)
     endif()
 
     set(_build_j -j)
@@ -60,30 +79,34 @@ else ()
         URL https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n8.0.1.tar.gz
         # URL_HASH SHA256=5EB46D18D664A0CCADF7B0ADEE03BD3B7FA72893D667F36C69E202A807E6D533
         DOWNLOAD_DIR ${DEP_DOWNLOAD_DIR}/FFMPEG
-        CONFIGURE_COMMAND ${_conf_cmd}
+        CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env ${_minos_cmd} ${_conf_cmd}
+            ${_extra_cmd}
             ${_cross_cmd}
             ${_pic_cmd}
             ${_arch_cmd}
             ${_cc_cmd}
             --prefix="${DESTDIR}"
-            --enable-shared
+            ${_linkage_cmd}
             --disable-doc
             --enable-small
             --disable-outdevs
             --disable-filters
             --enable-filter=*null*,afade,*fifo,*format,*resample,aeval,allrgb,allyuv,atempo,pan,*bars,color,*key,crop,draw*,eq*,framerate,*_qsv,*_vaapi,*v4l2*,hw*,scale,volume,test*
             --disable-protocols
-            # tcp → 基础网络; rtmp → RTMP 推拉流; http/https → HLS/HLS 播放
-            --enable-protocol=file,fd,pipe,rtp,udp,tcp,rtmp,http,https
+            # tcp → 基础网络; rtmp → RTMP 推拉流; http/https → HLS/HLS 播放; 补充 tls, httpproxy
+            --enable-protocol=file,fd,pipe,rtp,udp,tcp,rtmp,http,https,tls,httpproxy
             --disable-muxers
             # flv → RTMP 推流; hls → HLS 输出
             --enable-muxer=rtp,flv
             --disable-encoders
             --disable-decoders
-            --enable-decoder=*aac*,h264*,mp3*,mjpeg,rv*
+            # 补充 hevc* 解码器
+            --enable-decoder=*aac*,h264*,hevc*,mp3*,mjpeg,rv*
             --disable-demuxers
-            # flv → RTMP 拉流; hls + mpegts → HLS (.m3u8) 播放
-            --enable-demuxer=h264,mp3,mov,flv,hls,mpegts
+            # flv → RTMP 拉流; hls + mpegts → HLS (.m3u8) 播放;
+            # mpjpeg → LAN 摄像头的 multipart/x-mixed-replace MJPEG 流
+            # 补充 hevc, rtp, rtsp, sdp 解复用器
+            --enable-demuxer=h264,hevc,mp3,mov,flv,hls,mpegts,mpjpeg,rtp,rtsp,sdp
             --disable-zlib
             --disable-avdevice
         BUILD_IN_SOURCE ON

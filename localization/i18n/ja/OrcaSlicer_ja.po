@@ -20162,19 +20162,19 @@ msgstr ""
 "す。"
 
 msgid "Initializing camera..."
-msgstr ""
+msgstr "カメラを初期化しています..."
 
 msgid "Loading video..."
-msgstr ""
+msgstr "動画を読み込んでいます..."
 
 msgid "Video is playing"
-msgstr ""
+msgstr "再生中"
 
 msgid "Video is paused"
-msgstr ""
+msgstr "一時停止中"
 
 msgid "Printer disconnected"
-msgstr ""
+msgstr "プリンターが切断されました"
 
 #~ msgid "每次只可添加一个全彩文件"
 #~ msgstr "一度に追加できるフルカラーファイルは1つだけです"

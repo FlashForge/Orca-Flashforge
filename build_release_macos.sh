@@ -247,10 +247,9 @@ function build_slicer() {
             rm -rf "./$OUT_APP_BUNDLE"
             # fully copy newly built app
             cp -pR "../src$BUILD_DIR_CONFIG_SUBDIR/$SRC_APP_BUNDLE" "./$OUT_APP_BUNDLE"
-            # fix resources
-            resources_path=$(readlink "./$OUT_APP_BUNDLE/Contents/Resources")
-            rm "./$OUT_APP_BUNDLE/Contents/Resources"
-            cp -R "$resources_path" "./$OUT_APP_BUNDLE/Contents/Resources"
+            # Replace the development symlink with a self-contained resource directory.
+            rm -rf "./$OUT_APP_BUNDLE/Contents/Resources"
+            cp -R "$PROJECT_DIR/resources" "./$OUT_APP_BUNDLE/Contents/Resources"
             # delete .DS_Store file
             find "./$OUT_APP_BUNDLE/" -name '.DS_Store' -delete
 

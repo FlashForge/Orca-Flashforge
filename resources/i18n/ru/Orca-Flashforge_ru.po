@@ -22623,19 +22623,19 @@ msgstr ""
 "филамента."
 
 msgid "Initializing camera..."
-msgstr ""
+msgstr "Инициализация камеры..."
 
 msgid "Loading video..."
-msgstr ""
+msgstr "Загрузка видео..."
 
 msgid "Video is playing"
-msgstr ""
+msgstr "Видео воспроизводится"
 
 msgid "Video is paused"
-msgstr ""
+msgstr "Видео на паузе"
 
 msgid "Printer disconnected"
-msgstr ""
+msgstr "Принтер отключён"
 
 #~ msgid "每次只可添加一个全彩文件"
 #~ msgstr "За один раз можно добавить только один полноцветный файл"
@@ -30132,3 +30132,32 @@ msgstr "Загрузка прошла успешно"
 
 msgid "Upload failed"
 msgstr "Ошибка загрузки"
+
+msgid "No camera detected"
+msgstr "Камера не обнаружена"
+
+msgid "Repairing polygon soup"
+msgstr "Исправление полигональных данных"
+
+msgid "Orienting polygon soup"
+msgstr "Ориентация полигональных данных"
+
+msgid "Converting to mesh"
+msgstr "Преобразование в сетку"
+
+msgid "Repairing mesh boundaries"
+msgstr "Исправление границ сетки"
+
+msgid "Finalizing repaired mesh"
+msgstr "Завершение исправленной сетки"
+
+msgid "Remapping repaired mesh colors"
+msgstr "Переназначение цветов исправленной сетки"
+
+#, c-format
+msgid "%lld minutes"
+msgstr "%lld мин"
+
+#, c-format
+msgid "%lld hours %lld minutes"
+msgstr "%lld ч %lld мин"

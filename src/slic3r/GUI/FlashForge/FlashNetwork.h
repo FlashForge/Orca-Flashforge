@@ -492,6 +492,8 @@ typedef struct fnet_dev_detail {
     char *polarRegisterCode;
     char *flashRegisterCode;
     char *errorCode;
+    double cumulativePrintTimeSecond; // second
+    int hasCumulativePrintTimeSecond; // 1 if reported, 0 if unavailable
 } fnet_dev_detail_t;
 
 typedef struct fnet_slice_state {

@@ -22568,19 +22568,19 @@ msgstr ""
 "genérico. Se utilizará una configuración de filamento aleatorio."
 
 msgid "Initializing camera..."
-msgstr ""
+msgstr "Inicializando cámara..."
 
 msgid "Loading video..."
-msgstr ""
+msgstr "Cargando vídeo..."
 
 msgid "Video is playing"
-msgstr ""
+msgstr "Reproduciendo vídeo"
 
 msgid "Video is paused"
-msgstr ""
+msgstr "Vídeo en pausa"
 
 msgid "Printer disconnected"
-msgstr ""
+msgstr "Impresora desconectada"
 
 #~ msgid "每次只可添加一个全彩文件"
 #~ msgstr "Solo se puede añadir un archivo a todo color a la vez"
