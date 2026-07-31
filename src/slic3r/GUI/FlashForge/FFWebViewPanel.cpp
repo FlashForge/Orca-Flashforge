@@ -14,6 +14,7 @@
 #include <wx/filefn.h>
 #include <wx/object.h>
 #include <wx/sizer.h>
+#include <wx/uri.h>
 #include <wx/url.h>
 #include "libslic3r/Utils.hpp"
 #include "slic3r/GUI/FFUtils.hpp"
@@ -774,30 +775,30 @@ void FFWebViewPanel::SendRecentList(int images)
     RunScript(wxString::Format("window.postMessage(%s)", oss.str()));
 }
 
-void FFWebViewPanel::ShowModelDetail(const std::string &data)
+void FFWebViewPanel::ShowModelDetail(const std::string& data)
 {
     try {
-        auto getStringIf = [](const nlohmann::json &obj, const char *key) {
+        auto getStringIf = [](const nlohmann::json& obj, const char* key) {
             if (obj.contains(key) && obj.at(key).is_string()) {
-                return (std::string)obj.at(key);
+                return (std::string) obj.at(key);
             }
             return std::string();
         };
-        nlohmann::json json = nlohmann::json::parse(data);
-        nlohmann::json &modelDetail = json.at("model_detail");
-        m_did = getStringIf(json, "did");
-        m_sid = getStringIf(json, "sid");
-        m_modelId = modelDetail.at("modelId");
-        m_printListAdded = modelDetail.at("printAdded");
+        nlohmann::json  json        = nlohmann::json::parse(data);
+        nlohmann::json& modelDetail = json.at("model_detail");
+        m_did                       = getStringIf(json, "did");
+        m_sid                       = getStringIf(json, "sid");
+        m_modelId                   = modelDetail.at("modelId");
+        m_printListAdded            = modelDetail.at("printAdded");
         m_modelLike                 = modelDetail.at("liked");
         m_modelLikeCount            = modelDetail.at("likeCount");
-        m_modelReqId = getStringIf(modelDetail, "requestId");
-        m_modelExpIds = getStringIf(modelDetail, "expIds");
-        m_modelSearchKeyword = getStringIf(json, "searchKeyword");
-        m_modelDownloadJsId = getStringIf(modelDetail, "downloadJsId");
-        m_modelDownloadType = getStringIf(modelDetail, "downloadType");
-        m_modelLoadingUrl           = wxString::FromUTF8(modelDetail.at("modelUrl"));
-        m_modelBackUrls = { std::make_pair(m_modelLoadingUrl, GetModelUrlId(m_modelLoadingUrl)) };
+        m_modelReqId                = getStringIf(modelDetail, "requestId");
+        m_modelExpIds               = getStringIf(modelDetail, "expIds");
+        m_modelSearchKeyword        = getStringIf(json, "searchKeyword");
+        m_modelDownloadJsId         = getStringIf(modelDetail, "downloadJsId");
+        m_modelDownloadType         = getStringIf(modelDetail, "downloadType");
+        m_modelLoadingUrl           = wxString::FromUTF8(getStringIf(modelDetail, "modelUrl"));
+        m_modelBackUrls             = {std::make_pair(m_modelLoadingUrl, GetModelUrlId(m_modelLoadingUrl))};
 
 #ifdef __APPLE__
         if (m_modelDownloadType == "disable") {
@@ -805,6 +806,9 @@ void FFWebViewPanel::ShowModelDetail(const std::string &data)
             return;
         }
 #endif
+        m_secondaryPageMode = SecondaryPageMode::ModelDetail;
+        m_embeddedPageTitle.clear();
+        m_embeddedPageOpenPending = false;
         CheckGetSystemI18nConfig();
         CheckGetOnlineConfig();
         CheckGetDownloadScript();
@@ -812,11 +816,12 @@ void FFWebViewPanel::ShowModelDetail(const std::string &data)
         SetupPrintListButton(m_printListAdded);
         SetupBackButton();
         SetupLikeButton();
+        SetupSecondaryNavigation();
         m_mainBrowser->Hide();
         m_modelPnl->Show();
         m_modelBrowser->LoadURL(m_modelLoadingUrl);
         Layout();
-    } catch (const std::exception &e) {
+    } catch (const std::exception& e) {
         BOOST_LOG_TRIVIAL(error) << "FFWebViewPanel::ShowModelDeatil error, " << e.what() << ", " << data;
     }
 }
@@ -898,15 +903,16 @@ void FFWebViewPanel::Rescale()
     delete m_modelNavPnl;
     delete m_viewNowWindow;
     delete m_spacerLinePnl;
-    m_modelNavPnl = nullptr;
+    m_modelNavPnl   = nullptr;
     m_viewNowWindow = nullptr;
     m_spacerLinePnl = nullptr;
     InitModelNav();
     SetMainLayout();
-    SetupBackButton();
-    SetupLikeButton();
-    SetupPrintListButton(m_printListAdded);
-    SetupSystemI18n();
+    if (m_secondaryPageMode == SecondaryPageMode::ModelDetail) {
+        SetupLikeButton();
+        SetupPrintListButton(m_printListAdded);
+    }
+    SetupSecondaryNavigation();
 }
 
 bool FFWebViewPanel::InitBrowser()
@@ -1040,6 +1046,92 @@ void FFWebViewPanel::SetMainLayout()
     sizer->Add(m_mainBrowser, 1, wxEXPAND);
     sizer->Add(m_modelPnl, 1, wxEXPAND);
     SetSizer(sizer);
+    Layout();
+}
+
+bool FFWebViewPanel::OpenEmbeddedPage(const wxString& url, const wxString& title)
+{
+    if (m_mainBrowser == nullptr || m_modelBrowser == nullptr || m_modelPnl == nullptr) {
+        return false;
+    }
+    if (!IsAllowedEmbeddedPageUrl(url)) {
+        BOOST_LOG_TRIVIAL(warning) << "Rejected homepage_open_in_app_view URL";
+        return false;
+    }
+
+    m_secondaryPageMode = SecondaryPageMode::EmbeddedPage;
+    m_embeddedPageTitle = title.Left(64);
+    m_embeddedPageTitle.Replace("\r", " ");
+    m_embeddedPageTitle.Replace("\n", " ");
+    m_embeddedPageTitle.Replace("\t", " ");
+    m_embeddedPageTitle.Trim(true).Trim(false);
+    if (m_embeddedPageTitle.empty()) {
+        m_embeddedPageTitle = _L("Checkout");
+    }
+
+    // Multipass URLs contain single-use credentials. Do not duplicate the
+    // complete URL in the application-managed back stack.
+    m_modelBackUrls.clear();
+    m_modelLoadingUrl = url;
+
+    if (m_viewNowWindow->IsShownOnScreen()) {
+        m_viewNowWindow->Hide();
+    }
+
+    SetupSecondaryNavigation();
+    m_mainBrowser->Hide();
+    m_modelPnl->Show();
+    m_modelBrowser->LoadURL(url);
+    Layout();
+    return true;
+}
+
+bool FFWebViewPanel::IsAllowedEmbeddedPageUrl(const wxString& url) const
+{
+    if (!IsSafeEmbeddedNavigationUrl(url)) {
+        return false;
+    }
+
+    const wxURI    uri(url);
+    const wxString port = uri.GetPort();
+    if (!port.empty() && port != "443") {
+        return false;
+    }
+
+    return uri.GetServer().CmpNoCase("1-app.myshopify.com") == 0;
+}
+
+bool FFWebViewPanel::IsSafeEmbeddedNavigationUrl(const wxString& url) const
+{
+    if (url == "about:blank") {
+        return true;
+    }
+
+    const wxURI uri(url);
+    return uri.GetScheme().CmpNoCase("https") == 0 && !uri.GetServer().empty();
+}
+
+void FFWebViewPanel::SetupSecondaryNavigation()
+{
+    const bool isModel    = m_secondaryPageMode == SecondaryPageMode::ModelDetail;
+    const bool isEmbedded = m_secondaryPageMode == SecondaryPageMode::EmbeddedPage;
+
+    if (isModel) {
+        m_navDetailLbl->SetLabelText(m_navDetailText);
+    } else if (isEmbedded) {
+        m_navDetailLbl->SetLabelText(m_embeddedPageTitle);
+    } else {
+        m_navDetailLbl->SetLabelText(wxEmptyString);
+    }
+
+    m_navDetailLbl->Show(isModel || isEmbedded);
+    m_navBackBtn->Show(isModel && m_modelBackUrls.size() > 1);
+    m_navMoreBtn->Show(isModel);
+    m_navLikeBtn->Show(isModel);
+    m_navPrintListBtn->Show(isModel);
+    m_navHideBtn->Show(isModel || isEmbedded);
+
+    m_modelNavPnl->Layout();
     Layout();
 }
 
@@ -1263,7 +1355,7 @@ void FFWebViewPanel::SetupLikeButton()
 
 void FFWebViewPanel::SetupBackButton()
 {
-    m_navBackBtn->Show(m_modelBackUrls.size() > 1);
+    m_navBackBtn->Show(m_secondaryPageMode == SecondaryPageMode::ModelDetail && m_modelBackUrls.size() > 1);
     Layout();
 }
 
@@ -1299,15 +1391,11 @@ void FFWebViewPanel::SetupPrintListButton(bool printListAdded)
 void FFWebViewPanel::SetupSystemI18n()
 {
     m_navDetailLbl->SetLabelText(m_navDetailText);
-    const wxString &printListBtnText = !m_printListAdded ? m_addPrintListText : m_removePrintListText;
+    const wxString& printListBtnText = !m_printListAdded ? m_addPrintListText : m_removePrintListText;
     m_navPrintListBtn->SetLabel(printListBtnText, FromDIP(96), FromDIP(20), FromDIP(36), FromDIP(6));
     ScalableBitmap bmp(this, "model_nav_print_list", 16);
     m_navPrintListBtn->SetUniformIcon(!m_printListAdded ? bmp : ScalableBitmap());
-    m_navDetailLbl->Show();
-    m_navBackBtn->Show(m_modelBackUrls.size() > 1);
-    m_navMoreBtn->Show();
-    m_navPrintListBtn->Show();
-    Layout();
+    SetupSecondaryNavigation();
 }
 
 void FFWebViewPanel::SetupDownloadScript()
@@ -1405,14 +1493,20 @@ void FFWebViewPanel::TryPushBackUrl(const wxString &url)
     }
 }
 
-void FFWebViewPanel::OnHideButton(wxCommandEvent &evt)
+void FFWebViewPanel::OnHideButton(wxCommandEvent& evt)
 {
+    m_secondaryPageMode = SecondaryPageMode::None;
+    m_embeddedPageTitle.clear();
+    m_embeddedPageOpenPending = false;
+    m_modelBackUrls.clear();
+    m_modelLoadingUrl.clear();
     m_modelPnl->Hide();
     m_mainBrowser->Show();
-    m_modelBrowser->LoadURL("about:blank");
     if (m_viewNowWindow->IsShownOnScreen()) {
         m_viewNowWindow->Hide();
     }
+    SetupSecondaryNavigation();
+    m_modelBrowser->LoadURL("about:blank");
     Layout();
 }
 
@@ -1539,7 +1633,7 @@ void FFWebViewPanel::OnMainNewWindow(wxWebViewEvent &evt)
     }
 }
 
-void FFWebViewPanel::OnMainScriptMessageReceived(wxWebViewEvent &evt)
+void FFWebViewPanel::OnMainScriptMessageReceived(wxWebViewEvent& evt)
 {
     if (m_mainBrowser == nullptr) {
         return;
@@ -1555,8 +1649,53 @@ void FFWebViewPanel::OnMainScriptMessageReceived(wxWebViewEvent &evt)
             }
             return;
         }
-        nlohmann::json json = nlohmann::json::parse(message);
-    } catch (const std::exception &) {
+        const nlohmann::json json    = nlohmann::json::parse(message);
+        const std::string    command = json.contains("command") && json.at("command").is_string() ? (std::string) json.at("command") :
+                                                                                                    std::string();
+        if (command == "homepage_open_in_app_view") {
+            // This command is scoped to the home-page browser. Always consume
+            // matching messages here so checkout credentials never reach the
+            // generic parser or its error logging.
+#ifndef _WIN32
+            BOOST_LOG_TRIVIAL(warning) << "homepage_open_in_app_view is not supported on this platform";
+            return;
+#else
+            if (evt.GetEventObject() != m_mainBrowser || !json.contains("data") || !json.at("data").is_object()) {
+                BOOST_LOG_TRIVIAL(warning) << "homepage_open_in_app_view missing data or invalid source";
+                return;
+            }
+
+            const nlohmann::json& data     = json.at("data");
+            const std::string     pageType = data.contains("page_type") && data.at("page_type").is_string() ?
+                                                 (std::string) data.at("page_type") :
+                                                 std::string();
+            const std::string rawUrl   = data.contains("url") && data.at("url").is_string() ? (std::string) data.at("url") : std::string();
+            const std::string rawTitle = data.contains("title") && data.at("title").is_string() ? (std::string) data.at("title") :
+                                                                                                  std::string();
+            const wxString    embeddedUrl = wxString::FromUTF8(rawUrl);
+
+            if (pageType != "checkout" || rawUrl.empty() || !IsAllowedEmbeddedPageUrl(embeddedUrl)) {
+                BOOST_LOG_TRIVIAL(warning) << "homepage_open_in_app_view invalid payload";
+                return;
+            }
+            if (m_secondaryPageMode != SecondaryPageMode::None || m_embeddedPageOpenPending) {
+                BOOST_LOG_TRIVIAL(warning) << "homepage_open_in_app_view ignored while a secondary page is active";
+                return;
+            }
+
+            const wxString embeddedTitle = wxString::FromUTF8(rawTitle);
+            m_embeddedPageOpenPending    = true;
+            CallAfter([this, embeddedUrl, embeddedTitle]() {
+                if (!m_embeddedPageOpenPending) {
+                    return;
+                }
+                m_embeddedPageOpenPending = false;
+                OpenEmbeddedPage(embeddedUrl, embeddedTitle);
+            });
+            return;
+#endif
+        }
+    } catch (const std::exception&) {
         // Not our control message; fall through to the normal web-request handling.
     }
     std::string response = wxGetApp().handle_web_request(message);
@@ -1567,9 +1706,18 @@ void FFWebViewPanel::OnMainScriptMessageReceived(wxWebViewEvent &evt)
     RunScript(wxString::Format("window.postMessage('%s')", response));
 }
 
-void FFWebViewPanel::OnModelNavigating(wxWebViewEvent &evt)
+void FFWebViewPanel::OnModelNavigating(wxWebViewEvent& evt)
 {
     if (m_modelBrowser == nullptr) {
+        return;
+    }
+    if (m_secondaryPageMode == SecondaryPageMode::EmbeddedPage) {
+        if (!IsSafeEmbeddedNavigationUrl(evt.GetURL())) {
+            BOOST_LOG_TRIVIAL(warning) << "Blocked unsafe embedded-page navigation";
+            evt.Veto();
+            return;
+        }
+        m_modelLoadingUrl = evt.GetURL();
         return;
     }
 #ifndef __APPLE__
@@ -1577,7 +1725,7 @@ void FFWebViewPanel::OnModelNavigating(wxWebViewEvent &evt)
         m_modelLoadingUrl = evt.GetURL();
         return;
     }
-    fs::path path(into_path(evt.GetURL()));
+    fs::path         path(into_path(evt.GetURL()));
     const std::regex pattern(R"(^https?:\/\/.*\.(stp|step|stl|oltp|obj|amf|3mf|svg|zip|gcode|g)$)", std::regex::icase);
     if (std::regex_match(path.string(), pattern)) {
         wxGetApp().start_download("orcaflashforge://open/?file=" + path.string());
@@ -1633,21 +1781,34 @@ void FFWebViewPanel::OnModelError(wxWebViewEvent &evt)
     }
 }
 
-void FFWebViewPanel::OnModelNewWindow(wxWebViewEvent &evt)
+void FFWebViewPanel::OnModelNewWindow(wxWebViewEvent& evt)
 {
     if (m_modelBrowser == nullptr) {
+        return;
+    }
+    if (m_secondaryPageMode == SecondaryPageMode::EmbeddedPage && !IsSafeEmbeddedNavigationUrl(evt.GetURL())) {
+        BOOST_LOG_TRIVIAL(warning) << "Blocked unsafe embedded-page new-window request";
         return;
     }
     m_modelLoadingUrl = evt.GetURL();
     m_modelBrowser->LoadURL(m_modelLoadingUrl);
 }
 
-void FFWebViewPanel::OnModelScriptMessageReceived(wxWebViewEvent &evt)
+void FFWebViewPanel::OnModelScriptMessageReceived(wxWebViewEvent& evt)
 {
     wxString open_url;
     if (WebView::TryGetOpenNewWindowUrl(evt, &open_url)) {
+        if (m_secondaryPageMode == SecondaryPageMode::EmbeddedPage && !IsSafeEmbeddedNavigationUrl(open_url)) {
+            BOOST_LOG_TRIVIAL(warning) << "Blocked unsafe embedded-page script window request";
+            return;
+        }
         m_modelLoadingUrl = open_url;
         m_modelBrowser->LoadURL(m_modelLoadingUrl);
+        return;
+    }
+    if (m_secondaryPageMode == SecondaryPageMode::EmbeddedPage) {
+        // Checkout pages are not model pages. Ignore their other script
+        // messages so payment data can never enter model-message error logs.
         return;
     }
 
@@ -1655,22 +1816,21 @@ void FFWebViewPanel::OnModelScriptMessageReceived(wxWebViewEvent &evt)
     if (msg.size() < 64 * 1024) {
         try {
             nlohmann::json json = nlohmann::json::parse(msg);
-            if ((std::string)json["command"] != "download_captured") {
+            if ((std::string) json["command"] != "download_captured") {
                 BOOST_LOG_TRIVIAL(error) << "download json invalid command";
                 return;
             }
-            const nlohmann::json &data = json.at("data");
-            std::string downloadType = data["download_type"];
-            std::string fileName = data["file_name"];
+            const nlohmann::json& data         = json.at("data");
+            std::string           downloadType = data["download_type"];
+            std::string           fileName     = data["file_name"];
             if (downloadType == "base64_data") {
                 m_openBase64Model->open(msg);
             } else if (downloadType == "url") {
                 std::string url = data["file_url"];
                 wxGetApp().start_download("orcaflashforge://open/?file=" + url, fileName, true);
             }
-        } catch (const std::exception &e) {
-            BOOST_LOG_TRIVIAL(error) << "FFWebViewPanel::OnModelScriptMessageReceived error, "
-                << e.what() << ", " << msg;
+        } catch (const std::exception& e) {
+            BOOST_LOG_TRIVIAL(error) << "FFWebViewPanel::OnModelScriptMessageReceived error, " << e.what() << ", " << msg;
         }
     } else {
         m_openBase64Model->open(msg);

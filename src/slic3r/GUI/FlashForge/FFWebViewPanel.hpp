@@ -191,9 +191,20 @@ public:
     void Rescale();
 
 private:
+    enum class SecondaryPageMode
+    {
+        None,
+        ModelDetail,
+        EmbeddedPage
+    };
+
     bool InitBrowser();
     void InitModelNav();
     void SetMainLayout();
+    bool OpenEmbeddedPage(const wxString &url, const wxString &title);
+    bool IsAllowedEmbeddedPageUrl(const wxString &url) const;
+    bool IsSafeEmbeddedNavigationUrl(const wxString &url) const;
+    void SetupSecondaryNavigation();
     void CheckGetSystemI18nConfig();
     void PostGetSystemI18nConfig();
     void ProcessGetSystemI18nConfig(const ComBusGetRequestEvent &evt);
@@ -301,6 +312,9 @@ private:
     std::shared_ptr<CheckDownloadUrl>  m_checkDownloadUrl;
     std::shared_ptr<OpenBase64Model>   m_openBase64Model;
     std::vector<std::pair<wxString, wxString>> m_modelBackUrls;
+    SecondaryPageMode m_secondaryPageMode{SecondaryPageMode::None};
+    wxString          m_embeddedPageTitle;
+    bool              m_embeddedPageOpenPending{false};
 };
 
 }} // namespace Slic3r::GUI
