@@ -6395,8 +6395,8 @@ msgstr "원본 모델"
 msgid "Number of Colors"
 msgstr "색상 수"
 
-msgid "Color Mode"
-msgstr "색상 모드"
+msgid "Color Style"
+msgstr "색상 스타일"
 
 msgid "Soft"
 msgstr "부드럽게"

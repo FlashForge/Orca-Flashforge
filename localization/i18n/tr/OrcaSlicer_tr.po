@@ -6524,8 +6524,8 @@ msgstr "Orijinal Model"
 msgid "Number of Colors"
 msgstr "Renk sayısı"
 
-msgid "Color Mode"
-msgstr "Renk Modu"
+msgid "Color Style"
+msgstr "Renk Stili"
 
 msgid "Soft"
 msgstr "Yumuşak"

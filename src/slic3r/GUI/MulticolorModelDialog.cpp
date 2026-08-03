@@ -777,7 +777,7 @@ void MulticolorModelDialog::build_ui()
     settings_panel->SetMinSize(wxSize(FromDIP(520), -1));
     auto *settings_sizer = new wxBoxSizer(wxVERTICAL);
 
-    auto *color_style_title = new wxStaticText(settings_panel, wxID_ANY, _L("Color Mode"));
+    auto *color_style_title = new wxStaticText(settings_panel, wxID_ANY, _L("Color Style"));
     wxFont color_style_title_font = color_style_title->GetFont();
     color_style_title_font.SetPointSize(color_style_title_font.GetPointSize() + 2);
     color_style_title_font.SetWeight(wxFONTWEIGHT_BOLD);

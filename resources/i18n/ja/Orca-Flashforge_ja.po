@@ -6430,8 +6430,8 @@ msgstr "オリジナルモデル"
 msgid "Number of Colors"
 msgstr "色数"
 
-msgid "Color Mode"
-msgstr "カラーモード"
+msgid "Color Style"
+msgstr "カラースタイル"
 
 msgid "Soft"
 msgstr "ソフト"

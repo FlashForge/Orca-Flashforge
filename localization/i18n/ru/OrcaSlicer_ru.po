@@ -6643,8 +6643,8 @@ msgstr "Исходная модель"
 msgid "Number of Colors"
 msgstr "Количество цветов"
 
-msgid "Color Mode"
-msgstr "Цветовой режим"
+msgid "Color Style"
+msgstr "Цветовой стиль"
 
 msgid "Soft"
 msgstr "Мягкий"

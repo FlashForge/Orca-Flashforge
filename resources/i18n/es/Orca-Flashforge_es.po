@@ -6642,8 +6642,8 @@ msgstr "Modelo original"
 msgid "Number of Colors"
 msgstr "Número de colores"
 
-msgid "Color Mode"
-msgstr "Modo de color"
+msgid "Color Style"
+msgstr "Estilo de color"
 
 msgid "Soft"
 msgstr "Suave"

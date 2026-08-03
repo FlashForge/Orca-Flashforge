@@ -6090,7 +6090,7 @@ msgstr ""
 msgid "Number of Colors"
 msgstr ""
 
-msgid "Color Mode"
+msgid "Color Style"
 msgstr ""
 
 msgid "Soft"

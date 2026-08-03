@@ -6660,8 +6660,8 @@ msgstr "Originalmodell"
 msgid "Number of Colors"
 msgstr "Anzahl der Farben"
 
-msgid "Color Mode"
-msgstr "Farbmodus"
+msgid "Color Style"
+msgstr "Farbstil"
 
 msgid "Soft"
 msgstr "Sanft"

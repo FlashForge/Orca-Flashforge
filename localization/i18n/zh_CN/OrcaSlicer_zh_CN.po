@@ -6251,8 +6251,8 @@ msgstr "原模型"
 msgid "Number of Colors"
 msgstr "颜色数目"
 
-msgid "Color Mode"
-msgstr "色彩模式"
+msgid "Color Style"
+msgstr "色彩风格"
 
 msgid "Soft"
 msgstr "柔和"

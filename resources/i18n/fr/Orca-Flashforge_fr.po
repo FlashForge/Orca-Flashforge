@@ -6662,8 +6662,8 @@ msgstr "Modèle original"
 msgid "Number of Colors"
 msgstr "Nombre de couleurs"
 
-msgid "Color Mode"
-msgstr "Mode de couleur"
+msgid "Color Style"
+msgstr "Style de couleur"
 
 msgid "Soft"
 msgstr "Doux"
