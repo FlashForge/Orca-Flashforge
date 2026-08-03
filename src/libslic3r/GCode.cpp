@@ -1642,6 +1642,12 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
         assert(m_layer_idx >= 0);
         if (m_layer_idx >= (int) m_tool_changes.size())
             return gcode;
+        // WipeTower keeps an empty entry for layers whose planned depth is too
+        // small to print, so its result stays aligned with the model layers.
+        // There is no tower G-code to consume on such a layer; process_layer()
+        // will still perform a direct tool change when one is required.
+        if (m_tool_changes[m_layer_idx].empty())
+            return gcode;
         if (gcodegen.wipe_tower_type() == WipeTowerType::Type2) {
             if (gcodegen.writer().need_toolchange(extruder_id) || finish_layer) {
                 if (m_layer_idx < (int) m_tool_changes.size()) {
@@ -1706,6 +1712,8 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
     {
         assert(m_layer_idx >= 0);
         if (m_layer_idx >= (int) m_tool_changes.size())
+            return true;
+        if (m_tool_changes[m_layer_idx].empty())
             return true;
 
         bool   ignore_sparse = false;
