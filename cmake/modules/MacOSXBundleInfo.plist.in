@@ -32,11 +32,10 @@
     <array>
       <dict>
         <key>CFBundleURLName</key>
-        <string>OrcaSlicer Downloads</string>
+        <string>Orca-Flashforge Downloads</string>
         <key>CFBundleURLSchemes</key>
         <array>
-          <string>orcaslicer</string>
-		  <string>orcaflashforge</string>
+          <string>orcaflashforge</string>
         </array>
       </dict>
 		<dict>

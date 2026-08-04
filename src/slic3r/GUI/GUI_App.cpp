@@ -3248,7 +3248,9 @@ bool GUI_App::on_init_inner()
             associate_files(L"step");
             associate_files(L"stp");
         }
-        associate_url(L"orcaslicer");
+        // Do not claim OrcaSlicer's URL scheme. Remove a legacy association only
+        // when it currently points to this executable.
+        disassociate_url(L"orcaslicer");
         associate_url(L"orcaflashforge");
 
         if (app_config->get("associate_gcode") == "true")
@@ -8614,8 +8616,7 @@ void GUI_App::open_preferences(size_t open_on_tab, const std::string& highlight_
                     associate_files(L"step");
                     associate_files(L"stp");
                 }
-                associate_url(L"orcaslicer");
-            	associate_url(L"orcaflashforge");
+                associate_url(L"orcaflashforge");
             }
             else {
                 if (app_config->get("associate_gcode") == "true")
@@ -9926,11 +9927,14 @@ void GUI_App::associate_url(std::wstring url_prefix)
 void GUI_App::disassociate_url(std::wstring url_prefix)
 {
 #ifdef WIN32
-    wxRegKey key_full(wxRegKey::HKCU, "Software\\Classes\\" + url_prefix + "\\shell\\open\\command");
-    if (!key_full.Exists()) {
+    std::wstring registered_bin;
+    if (!check_url_association(url_prefix, registered_bin)) {
         return;
     }
-    key_full = "";
+
+    const std::wstring key_path = L"Software\\Classes\\" + url_prefix;
+    if (::RegDeleteTreeW(HKEY_CURRENT_USER, key_path.c_str()) == ERROR_SUCCESS)
+        ::SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nullptr, nullptr);
 #endif // WIN32
 }
 

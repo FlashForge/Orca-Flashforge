@@ -28,11 +28,9 @@
   <array>
     <dict>
       <key>CFBundleURLName</key>
-      <string>orcasliceropen url</string>
+      <string>orcaflashforge url</string>
       <key>CFBundleURLSchemes</key>
       <array>
-        <string>orcasliceropen</string>
-        <string>orcaslicer</string>
         <string>bambustudioopen</string>
         <string>orcaflashforgeopen</string>
         <string>orcaflashforge</string>
