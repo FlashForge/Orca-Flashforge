@@ -75,7 +75,8 @@ typedef enum fnet_conn_read_data_type {
     FNET_CONN_READ_DEVICE_KEEP_ALIVE,   // data, char *devId
     FNET_CONN_READ_SLICE_STATE,         // data, fnet_slice_state_t
     FNET_CONN_READ_JOB_DOWNLOAD,        // data, fnet_job_info_t
-    FNET_CONN_READ_JOB_UNZIP,           // data, fnet_job_info_t           
+    FNET_CONN_READ_JOB_UNZIP,           // data, fnet_job_info_t
+    FNET_CONN_READ_UPLOAD_LOG,          // data, fnet_upload_log_info_t
 } fnet_conn_read_data_type_t;
 
 struct fnet_conn_read_data;
@@ -176,6 +177,11 @@ typedef struct fnet_upload_file_data {
     fnet_progress_callback_t callback;
     void *callbackData;
 } fnet_upload_file_data_t;
+
+typedef struct fnet_upload_log_info {
+    char *feedbackId;
+    char *clientType;
+} fnet_upload_log_info_t;
 
 typedef struct fnet_start_ai_model_job_data {
     int supplier;
@@ -875,6 +881,10 @@ FNET_API int fnet_uploadAiImageClound(const char *clientId, const char *accessTo
 
 FNET_API int fnet_uploadLogFileCloud(const char* clientId, const char* accessToken, const fnet_upload_file_data_t* uploadFileData, const char* connectEmail, int msTimeout);
 
+FNET_API int fnet_uploadLogFileCloudEx(const char *clientId, const char *accessToken,
+    const fnet_upload_file_data_t *uploadFileData, const char *connectEmail,
+    const char *feedbackId, int msTimeout);
+
 FNET_API void fnet_freeCloundFileData(fnet_clound_file_data_t *cloundFileData);
 
 FNET_API int fnet_getUserAiPointsInfo(const char *clientId, const char *accessToken,
@@ -1000,6 +1010,8 @@ FNET_API void fnet_freeSyncLoginInfo(const fnet_sync_login_info_t *loginInfo);
 FNET_API void fnet_freeSyncBindInfo(const fnet_sync_bind_info_t *bindInfo);
 
 FNET_API void fnet_freeSyncOnlineInfo(const fnet_sync_online_info_t *onlineInfo);
+
+FNET_API void fnet_freeUploadLogInfo(const fnet_upload_log_info_t *uploadLogInfo);
 
 FNET_API char *fnet_allocString(const char *str, int len);
 

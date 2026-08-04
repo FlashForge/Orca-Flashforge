@@ -3,9 +3,12 @@
 
 #include <atomic>
 #include <chrono>
+#include <cstdint>
+#include <deque>
 #include <list>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <set>
 #include <string>
 #include <boost/bimap.hpp>
@@ -125,33 +128,44 @@ private:
 
     void updateWanDevDetail();
 
-    void freeConnReadData(const WanConnReadEvent &event);
+    void freeConnReadData(const WanConnReadEvent& event);
+
+    void startFeedbackLogSession();
+
+    void stopFeedbackLogSession();
 
 private:
-    int                                      m_idNum;
-    bool                                     m_login;
-    bool                                     m_httpOnline;
-    bool                                     m_connOnline;
-    bool                                     m_connFirstConnected;
-    std::string                              m_clientId;
-    com_mqtt_config_t                        m_mqttConfig;
-    std::list<com_ptr_t>                     m_comPtrs;
-    com_ptr_map_t                            m_ptrMap;
-    std::map<com_id_t, com_dev_data_t>       m_datMap;
-    std::set<com_id_t>                       m_readyIdSet;
+    int                                                       m_idNum;
+    bool                                                      m_login;
+    bool                                                      m_httpOnline;
+    bool                                                      m_connOnline;
+    bool                                                      m_connFirstConnected;
+    std::string                                               m_clientId;
+    com_mqtt_config_t                                         m_mqttConfig;
+    std::list<com_ptr_t>                                      m_comPtrs;
+    com_ptr_map_t                                             m_ptrMap;
+    std::map<com_id_t, com_dev_data_t>                        m_datMap;
+    std::set<com_id_t>                                        m_readyIdSet;
     std::unordered_map<std::string, std::vector<std::string>> m_unUpdateDevList;
-    std::map<std::string, com_id_t>          m_devIdMap;
-    dev_alive_time_map_t                     m_devAliveTimeMap;
-    std::list<com_dev_data_t>                m_pendingWanDevDatas;
-    wxTimer                                  m_loopCheckTimer;
-    std::atomic_bool                         m_blockCommandFailedUpdate;
-    std_precise_clock::time_point            m_commandFailedUpdateTime;
-    std_precise_clock::time_point            m_pendingSetUpdateWanDevTime;
-    std::unique_ptr<WanDevMaintainThd>       m_wanDevMaintainThd;
-    std::unique_ptr<WanDevSendGcodeThd>      m_sendGcodeThd;
-    std::unique_ptr<fnet::FlashNetworkIntfc> m_networkIntfc;
-    std::unique_ptr<ComThreadPool>           m_threadPool;
-    WaitEvent                                m_threadExitEvent;
+    std::map<std::string, com_id_t>                           m_devIdMap;
+    std::set<std::string>                                     m_activeFeedbackLogIds;
+    std::set<std::string>                                     m_completedFeedbackLogIds;
+    std::deque<std::string>                                   m_feedbackLogHistory;
+    std::mutex                                                m_feedbackLogMutex;
+    std::shared_ptr<WaitEvent>                                m_feedbackLogCancelEvent;
+    std::uint64_t                                             m_feedbackLogSessionGeneration{0};
+    dev_alive_time_map_t                                      m_devAliveTimeMap;
+    std::list<com_dev_data_t>                                 m_pendingWanDevDatas;
+    wxTimer                                                   m_loopCheckTimer;
+    std::atomic_bool                                          m_blockCommandFailedUpdate;
+    std_precise_clock::time_point                             m_commandFailedUpdateTime;
+    std_precise_clock::time_point                             m_pendingSetUpdateWanDevTime;
+    std::unique_ptr<WanDevMaintainThd>                        m_wanDevMaintainThd;
+    std::unique_ptr<WanDevSendGcodeThd>                       m_sendGcodeThd;
+    std::unique_ptr<fnet::FlashNetworkIntfc>                  m_networkIntfc;
+    std::unique_ptr<ComThreadPool>                            m_threadPool;
+    std::unique_ptr<ComThreadPool>                            m_logUploadThreadPool;
+    WaitEvent                                                 m_threadExitEvent;
 };
 
 }} // namespace Slic3r::GUI

@@ -24593,3 +24593,57 @@ msgstr "%lld Minuten"
 #, c-format
 msgid "%lld hours %lld minutes"
 msgstr "%lld Stunden %lld Minuten"
+
+msgid "To help us identify and resolve your issue more quickly, we recommend uploading your device and app logs. The logs are used solely for troubleshooting and will not collect any of your personal information."
+msgstr "Damit wir Ihr Problem schneller eingrenzen und beheben können, empfehlen wir Ihnen, die Protokolle Ihres Geräts und der App hochzuladen. Die Protokolle werden ausschließlich zur Analyse des Problems verwendet; es werden keine personenbezogenen Daten erfasst."
+
+msgid "orca software Logs"
+msgstr "Slicing-Protokoll"
+
+msgid "orca software Operation Logs"
+msgstr "Protokoll der Slicing-Software"
+
+msgid "App Logs"
+msgstr "App-Protokoll"
+
+msgid "App Operation Logs"
+msgstr "Protokoll der App"
+
+msgid "Device Logs"
+msgstr "Geräteprotokoll"
+
+msgid "Device Operation Logs"
+msgstr "Protokoll des Geräts"
+
+msgid "Select a Device"
+msgstr "Gerät auswählen"
+
+msgid "{device} device is currently offline, so we are unable to retrieve the device logs at this time. You can still submit feedback. Once the device is back online, you can submit feedback again or go to Settings > Upload Firmware Log to upload the device logs."
+msgstr "{device} Das Gerät ist derzeit offline, sodass die Gerätelogdateien vorübergehend nicht abgerufen werden können. Sie können dennoch Feedback übermitteln. Sobald das Gerät wieder online ist, können Sie erneut Feedback übermitteln oder unter „Einstellungen“ > „Firmware-Protokolle hochladen“ die Gerätelogdateien hochladen."
+
+msgid "Slice Log"
+msgstr "Slicing-Protokoll"
+
+msgid "App Log"
+msgstr "App-Protokoll"
+
+msgid "Device Log"
+msgstr "Geräteprotokoll"
+
+msgid "The current device is offline, so we are unable to retrieve the device logs at this time. You can still submit feedback. Once the device is back online, you can submit feedback again or go to Settings > Upload Firmware Log to upload the device logs."
+msgstr "Das Gerät ist derzeit offline, sodass die Gerätelogdateien vorübergehend nicht abgerufen werden können. Sie können dennoch Feedback übermitteln. Sobald das Gerät wieder online ist, können Sie erneut Feedback übermitteln oder unter „Einstellungen“ > „Firmware-Protokolle hochladen“ die Gerätelogdateien hochladen."
+
+msgid "Slicing software operation log"
+msgstr "Protokoll der Slicing-Software"
+
+msgid "App operation log"
+msgstr "Protokoll der App"
+
+msgid "Device operation log"
+msgstr "Protokoll des Geräts"
+
+msgid "Add Device"
+msgstr "Gerät hinzufügen"
+
+msgid "Select Device"
+msgstr "Gerät auswählen"

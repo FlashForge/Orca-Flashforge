@@ -22503,3 +22503,57 @@ msgstr "%lld分钟"
 #, c-format
 msgid "%lld hours %lld minutes"
 msgstr "%lld小时%lld分钟"
+
+msgid "To help us identify and resolve your issue more quickly, we recommend uploading your device and app logs. The logs are used solely for troubleshooting and will not collect any of your personal information."
+msgstr "为帮助我们更快定位并解决您的问题，建议上传设备及应用日志。日志仅用于问题分析，不会收集您的个人隐私信息。"
+
+msgid "orca software Logs"
+msgstr "切片日志"
+
+msgid "orca software Operation Logs"
+msgstr "切片软件操作日志"
+
+msgid "App Logs"
+msgstr "App日志"
+
+msgid "App Operation Logs"
+msgstr "App操作日志"
+
+msgid "Device Logs"
+msgstr "设备日志"
+
+msgid "Device Operation Logs"
+msgstr "设备操作日志"
+
+msgid "Select a Device"
+msgstr "选择设备"
+
+msgid "{device} device is currently offline, so we are unable to retrieve the device logs at this time. You can still submit feedback. Once the device is back online, you can submit feedback again or go to Settings > Upload Firmware Log to upload the device logs."
+msgstr "{device}设备处于离线状态，暂时无法获取设备日志。您仍可提交反馈，设备恢复在线后，可再次提交反馈或前往设置>上传固件日志。"
+
+msgid "Slice Log"
+msgstr "切片日志"
+
+msgid "App Log"
+msgstr "App日志"
+
+msgid "Device Log"
+msgstr "设备日志"
+
+msgid "The current device is offline, so we are unable to retrieve the device logs at this time. You can still submit feedback. Once the device is back online, you can submit feedback again or go to Settings > Upload Firmware Log to upload the device logs."
+msgstr "当前设备处于离线状态，暂时无法获取设备日志。您仍可提交反馈，设备恢复在线后，可再次提交反馈或前往Settings > Upload Firmware Log上传设备日志。"
+
+msgid "Slicing software operation log"
+msgstr "切片软件操作日志"
+
+msgid "App operation log"
+msgstr "App操作日志"
+
+msgid "Device operation log"
+msgstr "设备操作日志"
+
+msgid "Add Device"
+msgstr "添加设备"
+
+msgid "Select Device"
+msgstr "选择设备"

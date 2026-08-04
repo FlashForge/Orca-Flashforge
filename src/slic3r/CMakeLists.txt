@@ -319,8 +319,11 @@ set(SLIC3R_GUI_SOURCES
     GUI/FlashForge/FFTitleLessDialog.hpp
     GUI/FlashForge/FFTransientWindow.cpp
     GUI/FlashForge/FFTransientWindow.hpp
-	GUI/FlashForge/FFWebViewPanel.cpp
-	GUI/FlashForge/FFWebViewPanel.hpp
+    GUI/FlashForge/FFWebViewPanel.cpp
+    GUI/FlashForge/FFWebViewPanel.hpp
+    GUI/FlashForge/FeedbackDeviceSelection.hpp
+    GUI/FlashForge/FeedbackLogDialog.cpp
+    GUI/FlashForge/FeedbackLogDialog.hpp
     GUI/FlashForge/LoginDialog.cpp
     GUI/FlashForge/LoginDialog.hpp
     GUI/FlashForge/GuideWebPanel.cpp

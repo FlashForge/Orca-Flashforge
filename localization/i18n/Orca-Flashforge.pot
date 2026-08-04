@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-15 14:36+0800\n"
+"POT-Creation-Date: 2026-08-04 17:11+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2356,28 +2356,21 @@ msgstr[0] ""
 msgstr[1] ""
 
 #, possible-c-format
-msgid "Error: %1$d non-manifold edges, %2$d non-manifold vertices"
+msgid "Error: %1$d non-manifold edge."
+msgid_plural "Error: %1$d non-manifold edges."
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Remaining errors"
 msgstr ""
 
 #, possible-c-format
-msgid "Error: %1$d non-manifold edge"
-msgid_plural "Error: %1$d non-manifold edges"
+msgid "%1$d non-manifold edge"
+msgid_plural "%1$d non-manifold edges"
 msgstr[0] ""
 msgstr[1] ""
 
-#, possible-c-format
-msgid "Error: %1$d non-manifold vertex"
-msgid_plural "Error: %1$d non-manifold vertices"
-msgstr[0] ""
-msgstr[1] ""
-
-#, possible-c-format
-msgid "Info: %1$d open edge"
-msgid_plural "Info: %1$d open edges"
-msgstr[0] ""
-msgstr[1] ""
-
-msgid "Right click the icon to fix model object"
+msgid "Click the icon to repair model object"
 msgstr ""
 
 msgid "Right button click the icon to drop the object settings"
@@ -5331,9 +5324,6 @@ msgstr ""
 msgid "One-click export log"
 msgstr ""
 
-msgid "Unload log"
-msgstr ""
-
 msgid "Software log"
 msgstr ""
 
@@ -6078,6 +6068,12 @@ msgstr ""
 msgid "Invert Roll axis"
 msgstr ""
 
+msgid "Current filament list"
+msgstr ""
+
+msgid "New filament"
+msgstr ""
+
 msgid "Import Model"
 msgstr ""
 
@@ -6103,12 +6099,6 @@ msgid "Skip matching"
 msgstr ""
 
 msgid "Generating preview..."
-msgstr ""
-
-msgid "Current filament list"
-msgstr ""
-
-msgid "New filament"
 msgstr ""
 
 msgid "(LAN)"
@@ -7025,70 +7015,10 @@ msgid ""
 "information is not included."
 msgstr ""
 
-msgid "Repair"
-msgstr ""
-
-msgid "Repairing model"
-msgstr ""
-
-msgid "Model repair has been canceled or failed."
-msgstr ""
-
-msgid "Windows 3D repair service is not available in this build."
-msgstr ""
-
-#, possible-c-format
-msgid "%1$d non-manifold edge"
-msgid_plural "%1$d non-manifold edges"
-msgstr[0] ""
-msgstr[1] ""
-
-#, possible-c-format
-msgid "%1$d non-manifold vertex"
-msgid_plural "%1$d non-manifold vertices"
-msgstr[0] ""
-msgstr[1] ""
-
-#, possible-c-format
-msgid "%1$d open edge"
-msgid_plural "%1$d open edges"
-msgstr[0] ""
-msgstr[1] ""
-
-msgid "Mesh issue detected"
-msgstr ""
-
-msgid "Non-manifold geometry or open boundaries were detected in the mesh."
-msgstr ""
-
-msgid "This may cause display issues or print failures."
-msgstr ""
-
-msgid "One-click repair"
-msgstr ""
-
-msgid "Cancel import"
-msgstr ""
-
-msgid "Please note that the mesh has non-manifold geometry or open boundaries."
-msgstr ""
-
-msgid "Mesh issue"
-msgstr ""
-
-msgid "Continue"
-msgstr ""
-
-msgid "The repaired model still has non-manifold geometry or open boundaries."
-msgstr ""
-
 msgid "Reading model..."
 msgstr ""
 
 msgid "Preparing colors..."
-msgstr ""
-
-msgid "Checking mesh..."
 msgstr ""
 
 msgid "Generating import data..."
@@ -7283,6 +7213,9 @@ msgid "The name may show garbage characters!"
 msgstr ""
 
 msgid "Remember my choice."
+msgstr ""
+
+msgid "多色耗材颜色已满，无法新增，请重新开启项目"
 msgstr ""
 
 msgid "Failed loading file \"%1%\". An invalid configuration was found."
@@ -10558,9 +10491,6 @@ msgid "Repaired 3MF file does not contain any volume"
 msgstr ""
 
 msgid "Repaired 3MF file contains more than one volume"
-msgstr ""
-
-msgid "Repaired 3MF file contains more than one instance"
 msgstr ""
 
 msgid "Repair finished"
@@ -18857,6 +18787,9 @@ msgstr ""
 msgid "Skipping objects."
 msgstr ""
 
+msgid "Continue"
+msgstr ""
+
 msgid "Select Filament"
 msgstr ""
 
@@ -19009,4 +18942,192 @@ msgid "Printer disconnected"
 msgstr ""
 
 msgid "No camera detected"
+msgstr ""
+
+msgid "Select Device"
+msgstr ""
+
+msgid "Device offline"
+msgstr ""
+
+msgid ""
+"The current device is offline, so we are unable to retrieve the device logs "
+"at this time. You can still submit feedback. Once the device is back online, "
+"you can submit feedback again or go to Settings > Upload Firmware Log to "
+"upload the device logs."
+msgstr ""
+
+msgid ""
+"To help us identify and resolve your issue more quickly, we recommend "
+"uploading your device and app logs. The logs are used solely for "
+"troubleshooting and will not collect any of your personal information."
+msgstr ""
+
+msgid "Slice Log"
+msgstr ""
+
+msgid "Slicing software operation log"
+msgstr ""
+
+msgid "App Log"
+msgstr ""
+
+msgid "App operation log"
+msgstr ""
+
+msgid "Device Log"
+msgstr ""
+
+msgid "Device operation log"
+msgstr ""
+
+msgid "Add Device"
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Precise wall]
+msgid "Precise wall\nDid you know that turning on precise wall can improve precision and layer consistency?"
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Sandwich mode]
+msgid "Sandwich mode\nDid you know that you can use sandwich mode (inner-outer-inner) to improve precision and layer consistency if your model doesn't have very steep overhangs?"
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Chamber temperature]
+msgid "Chamber temperature\nDid you know that Orca-Flashforge supports chamber temperature?"
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Calibration]
+msgid "Calibration\nDid you know that calibrating your printer can do wonders? Check out our beloved calibration solution in Orca-Flashforge."
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Auxiliary fan]
+msgid "Auxiliary fan\nDid you know that Orca-Flashforge supports Auxiliary part cooling fan?"
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Air filtration]
+msgid "Air filtration/Exhaust Fan\nDid you know that OrcaSlicer can support Air filtration/Exhaust Fan?"
+msgstr ""
+
+#: resources/data/hints.ini: [hint:G-code window]
+msgid "G-code window\nYou can turn on/off the G-code window by pressing the <b>C</b> key."
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Switch workspaces]
+msgid "Switch workspaces\nYou can switch between <b>Prepare</b> and <b>Preview</b> workspaces by pressing the <b>Tab</b> key."
+msgstr ""
+
+#: resources/data/hints.ini: [hint:How to use keyboard shortcuts]
+msgid "How to use keyboard shortcuts\nDid you know that Orca-Flashforge offers a wide range of keyboard shortcuts and 3D scene operations."
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Reverse on odd]
+msgid "Reverse on odd\nDid you know that <b>Reverse on odd</b> feature can significantly improve the surface quality of your overhangs?"
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Cut Tool]
+msgid "Cut Tool\nDid you know that you can cut a model at any angle and position with the cutting tool?"
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Fix Model]
+msgid "Fix Model\nDid you know that you can fix a corrupted 3D model to avoid a lot of slicing problems on the Windows system?"
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Timelapse]
+msgid "Timelapse\nDid you know that you can generate a timelapse video during each print?"
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Auto-Arrange]
+msgid "Auto-Arrange\nDid you know that you can auto-arrange all the objects in your project?"
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Auto-Orient]
+msgid "Auto-Orient\nDid you know that you can rotate objects to an optimal orientation for printing with a simple click?"
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Lay on Face]
+msgid "Lay on Face\nDid you know that you can quickly orient a model so that one of its faces sits on the print bed? Select the \"Place on face\" function or press the <b>F</b> key."
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Object List]
+msgid "Object List\nDid you know that you can view all objects/parts in a list and change settings for each object/part?"
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Search Functionality]
+msgid "Search Functionality\nDid you know that you use the Search tool to quickly find a specific Orca Slicer setting?"
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Simplify Model]
+msgid "Simplify Model\nDid you know that you can reduce the number of triangles in a mesh using the Simplify mesh feature? Right-click the model and select Simplify model."
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Slicing Parameter Table]
+msgid "Slicing Parameter Table\nDid you know that you can view all objects/parts on a table and change settings for each object/part?"
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Split to Objects/Parts]
+msgid "Split to Objects/Parts\nDid you know that you can split a big object into small ones for easy colorizing or printing?"
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Subtract a Part]
+msgid "Subtract a Part\nDid you know that you can subtract one mesh from another using the Negative part modifier? That way you can, for example, create easily resizable holes directly in Orca Slicer."
+msgstr ""
+
+#: resources/data/hints.ini: [hint:STEP]
+msgid "STEP\nDid you know that you can improve your print quality by slicing a STEP file instead of an STL?\nOrca Slicer supports slicing STEP files, providing smoother results than a lower resolution STL. Give it a try!"
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Z seam location]
+msgid "Z seam location\nDid you know that you can customize the location of the Z seam, and even paint it on your print, to have it in a less visible location? This improves the overall look of your model. Check it out!"
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Fine-tuning for flow rate]
+msgid "Fine-tuning for flow rate\nDid you know that flow rate can be fine-tuned for even better-looking prints? Depending on the material, you can improve the overall finish of the printed model by doing some fine-tuning."
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Split your prints into plates]
+msgid "Split your prints into plates\nDid you know that you can split a model that has a lot of parts into individual plates ready to print? This will simplify the process of keeping track of all the parts."
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Speed up your print with Adaptive Layer Height]
+msgid "Speed up your print with Adaptive Layer Height\nDid you know that you can print a model even faster, by using the Adaptive Layer Height option? Check it out!"
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Support painting]
+msgid "Support painting\nDid you know that you can paint the location of your supports? This feature makes it easy to place the support material only on the sections of the model that actually need it."
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Different types of supports]
+msgid "Different types of supports\nDid you know that you can choose from multiple types of supports? Tree supports work great for organic models, while saving filament and improving print speed. Check them out!"
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Printing Silk Filament]
+msgid "Printing Silk Filament\nDid you know that Silk filament needs special consideration to print it successfully? Higher temperature and lower speed are always recommended for the best results."
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Brim for better adhesion]
+msgid "Brim for better adhesion\nDid you know that when printed models have a small contact interface with the printing surface, it's recommended to use a brim?"
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Set parameters for multiple objects]
+msgid "Set parameters for multiple objects\nDid you know that you can set slicing parameters for all selected objects at once?"
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Stack objects]
+msgid "Stack objects\nDid you know that you can stack objects as a whole one?"
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Flush into support/objects/infill]
+msgid "Flush into support/objects/infill\nDid you know that you can save wasted filament by flushing it into support/objects/infill during filament change?"
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Improve strength]
+msgid "Improve strength\nDid you know that you can use more wall loops and higher sparse infill density to improve the strength of the model?"
+msgstr ""
+
+#: resources/data/hints.ini: [hint:When do you need to print with the printer door opened]
+msgid "When do you need to print with the printer door opened?\nDid you know that opening the printer door can reduce the probability of extruder/hotend clogging when printing lower temperature filament with a higher enclosure temperature? More info about this in the Wiki."
+msgstr ""
+
+#: resources/data/hints.ini: [hint:Avoid warping]
+msgid "Avoid warping\nDid you know that when printing materials that are prone to warping such as ABS, appropriately increasing the heatbed temperature can reduce the probability of warping?"
 msgstr ""

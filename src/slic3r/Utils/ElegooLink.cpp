@@ -453,7 +453,7 @@ namespace Slic3r {
                             error_fn(wxString::FromUTF8(error_message));
                         }
                     } catch (...) {
-                        BOOST_LOG_TRIVIAL(error) << boost::format("%1%: Error parsing response: %2%") % name % body;
+                        BOOST_LOG_TRIVIAL(error) << boost::format("%1%: Error parsing response, bodyBytes=%2%") % name % body.size();
                         error_fn(wxString::FromUTF8("Error parsing response"));
                     }
                 } else {
@@ -461,8 +461,8 @@ namespace Slic3r {
                 }
             })
             .on_error([&](std::string body, std::string error, unsigned status) {
-                BOOST_LOG_TRIVIAL(error) << boost::format("%1%: Error uploading file: %2%, HTTP %3%, body: `%4%`") % name % error % status %
-                                                body;
+                BOOST_LOG_TRIVIAL(error) << boost::format("%1%: Error uploading file: %2%, HTTP %3%, bodyBytes=%4%") % name % error % status %
+                                                body.size();
                 error_fn(format_error(body, error, status));
             })
             .on_progress([&](Http::Progress progress, bool& cancel) {
@@ -690,14 +690,14 @@ namespace Slic3r {
                                         }
                                     })";
                     std::cout << "send: " << jsonString << std::endl;
-                    BOOST_LOG_TRIVIAL(info) << "start print, param: " << jsonString;
+                    BOOST_LOG_TRIVIAL(info) << "start print request, payloadBytes=" << jsonString.size();
                     client.send(jsonString);
                     // wait 30s
                     auto start_time = std::chrono::steady_clock::now();
                     do{
                         std::string response = client.receive();
                         std::cout << "Received: " << response << std::endl;
-                        BOOST_LOG_TRIVIAL(info) << "Received: " << response;
+                        BOOST_LOG_TRIVIAL(info) << "Received start print response, bytes=" << response.size();
 
                         //sample response
                         // {"Id":"979d4C788A4a78bC777A870F1A02867A","Data":{"Cmd":128,"Data":{"Ack":1},"RequestID":"5223de52cc7642ae8d7924f9dd46f6ad","MainboardID":"1c7319d30105041800009c0000000000","TimeStamp":1735032553},"Topic":"sdcp/response/1c7319d30105041800009c0000000000"}  
@@ -812,7 +812,7 @@ namespace Slic3r {
                                         }
                                     })";
             std::cout << "send: " << jsonString << std::endl;
-            BOOST_LOG_TRIVIAL(info) << "start print, param: " << jsonString;
+            BOOST_LOG_TRIVIAL(info) << "start print request, payloadBytes=" << jsonString.size();
             bool needWrite = true;
             // wait 60s
             auto start_time = std::chrono::steady_clock::now();
@@ -823,7 +823,7 @@ namespace Slic3r {
                 }
                 std::string response = client.receive();
                 std::cout << "Received: " << response << std::endl;
-                BOOST_LOG_TRIVIAL(info) << "Received: " << response;
+                BOOST_LOG_TRIVIAL(info) << "Received printer status response, bytes=" << response.size();
                 pt::ptree          root;
                 std::istringstream is(response);
                 pt::read_json(is, root);

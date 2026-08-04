@@ -6108,7 +6108,7 @@ void GUI_App::connect_sys_notify(ComConnSysNotifyEvent& event)
         m_notify_dlg->ShowModal();
     } 
     catch (...) {
-        BOOST_LOG_TRIVIAL(error) << "connect sys notify error: " << event.payload;
+        BOOST_LOG_TRIVIAL(error) << "connect sys notify error";
     }
 }
 
@@ -6151,7 +6151,7 @@ void GUI_App::connect_update_notify(ComConnSysNotifyEvent& event)
         m_notify_dlg->ShowModal();
 
     } catch (...) {
-        BOOST_LOG_TRIVIAL(error) << "connect update notify error: " << event.payload;
+        BOOST_LOG_TRIVIAL(error) << "connect update notify error";
     }
 }      
 

@@ -68,6 +68,15 @@ public:
                                 void*                    callbackData,
                                 int                      msTimeout);
 
+    ComErrno uploadFeedbackLogFileCloud(const std::string& clientId,
+                                        const std::string& accessToken,
+                                        const std::string& filePath,
+                                        const std::string& saveName,
+                                        const std::string& feedbackId,
+                                        fnet_progress_callback_t callback,
+                                        void*                    callbackData,
+                                        int                msTimeout);
+
     ComErrno createAiJobPipeline(const std::string &entryType,
         com_ai_job_pipeline_info_t &pipelineInfo, int msTimeout); // entryType: text2text/img2img
 

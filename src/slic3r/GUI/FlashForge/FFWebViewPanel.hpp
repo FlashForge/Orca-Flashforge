@@ -233,6 +233,10 @@ private:
     void OnMoreMenu(wxCommandEvent &evt);
     void OnReportButton(wxCommandEvent &evt);
     void OnViewNow(wxCommandEvent &evt);
+    bool HandleFeedbackLogMessage(const nlohmann::json &request, wxWebViewEvent &evt);
+    bool IsAllowedFeedbackBridgeSource(const wxWebViewEvent &evt) const;
+    void SendFeedbackBridgeResponse(nlohmann::json response);
+    void SendFeedbackBridgeErrorResponse(const nlohmann::json &request, const std::string &command);
     void OnMainNavigated(wxWebViewEvent &evt);
     void OnMainNewWindow(wxWebViewEvent &evt);
     void OnMainScriptMessageReceived(wxWebViewEvent &evt);
@@ -315,6 +319,7 @@ private:
     SecondaryPageMode m_secondaryPageMode{SecondaryPageMode::None};
     wxString          m_embeddedPageTitle;
     bool              m_embeddedPageOpenPending{false};
+    bool              m_feedbackDialogActive{false};
 };
 
 }} // namespace Slic3r::GUI

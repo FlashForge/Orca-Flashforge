@@ -24,6 +24,7 @@
 #include "slic3r/GUI/MsgDialog.hpp"
 #include "slic3r/GUI/Widgets/Label.hpp"
 #include "slic3r/GUI/Plater.hpp"
+#include "slic3r/GUI/FlashForge/FeedbackLogDialog.hpp"
 #include "slic3r/GUI/FlashForge/MultiComHelper.hpp"
 #include "slic3r/GUI/FlashForge/MultiComMgr.hpp"
 
@@ -35,6 +36,103 @@ wxDEFINE_EVENT(REPORT_BUTTON_EVENT, wxCommandEvent);
 wxDEFINE_EVENT(VIEW_NOW_BUTTON_EVENT, wxCommandEvent);
 wxDEFINE_EVENT(FIND_DOWNLOAD_URL_EVENT, FindDownloadUrlEvent);
 wxDEFINE_EVENT(OPEN_BASE64_MODEL_EVENT, wxCommandEvent);
+
+namespace {
+
+bool is_feedback_log_command(const std::string& command)
+{
+    return command == "feedback_log_options_get" || command == "feedback_device_select" || command == "feedback_submission_prepare";
+}
+
+const char* feedback_response_command(const std::string& command)
+{
+    if (command == "feedback_log_options_get") {
+        return "feedback_log_options";
+    }
+    if (command == "feedback_device_select") {
+        return "feedback_device_selected";
+    }
+    return "feedback_submission_prepared";
+}
+
+nlohmann::json make_feedback_bridge_response(const nlohmann::json& request, const std::string& command)
+{
+    nlohmann::json response{{"command", feedback_response_command(command)}};
+    if (request.contains("sequence_id") && (request.at("sequence_id").is_string() || request.at("sequence_id").is_number_integer() ||
+                                            request.at("sequence_id").is_number_unsigned())) {
+        response["sequence_id"] = request.at("sequence_id");
+    }
+    return response;
+}
+
+class FeedbackDialogActivityGuard
+{
+public:
+    explicit FeedbackDialogActivityGuard(bool& active) : m_active(active) { m_active = true; }
+    ~FeedbackDialogActivityGuard() { m_active = false; }
+
+    FeedbackDialogActivityGuard(const FeedbackDialogActivityGuard&)            = delete;
+    FeedbackDialogActivityGuard& operator=(const FeedbackDialogActivityGuard&) = delete;
+
+private:
+    bool& m_active;
+};
+
+const char* feedback_device_state_name(FeedbackDeviceState state)
+{
+    switch (state) {
+    case FeedbackDeviceState::NoDevice: return "no_device";
+    case FeedbackDeviceState::AutoSelected: return "auto_selected";
+    case FeedbackDeviceState::SelectionRequired: return "selection_required";
+    case FeedbackDeviceState::Selected: return "selected";
+    case FeedbackDeviceState::Offline: return "device_offline";
+    }
+    return "no_device";
+}
+
+nlohmann::json feedback_device_json(const FeedbackDeviceInfo& device)
+{
+    return {{"name", device.name}, {"sn", device.serialNumber}, {"online", device.online}};
+}
+
+std::string get_feedback_selected_serial_number(const nlohmann::json& data)
+{
+    for (const char* key : {"selectedDeviceSn", "serialNumber"}) {
+        if (data.contains(key) && data.at(key).is_string()) {
+            return data.at(key).get<std::string>();
+        }
+    }
+    if (!data.contains("sn")) {
+        return {};
+    }
+    const nlohmann::json& sn = data.at("sn");
+    if (sn.is_string()) {
+        return sn.get<std::string>();
+    }
+    if (sn.is_array() && !sn.empty() && sn.front().is_string()) {
+        return sn.front().get<std::string>();
+    }
+    return {};
+}
+
+nlohmann::json make_feedback_log_item(const char*     key,
+                                      const wxString& title,
+                                      const wxString& description,
+                                      const char*     requestField,
+                                      bool            checked,
+                                      bool            required,
+                                      bool            editable)
+{
+    return {{"key", key},
+            {"title", title.utf8_string()},
+            {"description", description.utf8_string()},
+            {"requestField", requestField},
+            {"checked", checked},
+            {"required", required},
+            {"editable", editable}};
+}
+
+} // namespace
 
 NavMoreMenu::NavMoreMenu(wxWindow *parent)
     : FFTransientWindow(parent)
@@ -238,9 +336,8 @@ ReportWindow::ReportWindow(wxWindow *parent, const nlohmann::json &data)
     try {
         Initialize(data);
         m_isOk = true;
-    } catch (const std::exception &e) {
-        BOOST_LOG_TRIVIAL(error) << "ReportWindow parse json Error, "
-            << e.what() << ", " << nlohmann::to_string(data);
+    } catch (const std::exception&) {
+        BOOST_LOG_TRIVIAL(error) << "ReportWindow parse json error";
         m_isOk = false;
     }
 }
@@ -822,7 +919,7 @@ void FFWebViewPanel::ShowModelDetail(const std::string& data)
         m_modelBrowser->LoadURL(m_modelLoadingUrl);
         Layout();
     } catch (const std::exception& e) {
-        BOOST_LOG_TRIVIAL(error) << "FFWebViewPanel::ShowModelDeatil error, " << e.what() << ", " << data;
+        BOOST_LOG_TRIVIAL(error) << "FFWebViewPanel::ShowModelDeatil error, " << e.what();
     }
 }
 
@@ -1167,7 +1264,7 @@ void FFWebViewPanel::ProcessGetSystemI18nConfig(const ComBusGetRequestEvent &evt
         } else {
             m_getSystemI18nConfigReqId = MultiComHelper::InvalidRequestId;
         }
-        BOOST_LOG_TRIVIAL(error) << "FFWebViewPanel::ProcessGetSystemI18nConfig error, " << evt.ret << ", " << evt.responseData;
+        BOOST_LOG_TRIVIAL(error) << "FFWebViewPanel::ProcessGetSystemI18nConfig error, " << evt.ret;
         return;
     }
     try {
@@ -1222,7 +1319,7 @@ void FFWebViewPanel::ProcessGetSystemI18nConfig(const ComBusGetRequestEvent &evt
         SetupSystemI18n();
         m_systemI18nConfig = json;
     } catch (const std::exception &e) {
-        BOOST_LOG_TRIVIAL(error) << "FFWebViewPanel::ProcessGetSystemI18nConfig error, " << e.what() << ", " << evt.responseData;
+        BOOST_LOG_TRIVIAL(error) << "FFWebViewPanel::ProcessGetSystemI18nConfig error, " << e.what();
     }
     m_getSystemI18nConfigReqId = MultiComHelper::InvalidRequestId;
 }
@@ -1255,8 +1352,7 @@ void FFWebViewPanel::ProcessGetOnlineConfig(const ComBusGetRequestEvent &evt)
         } else {
             m_getOnlineConfigReqId = MultiComHelper::InvalidRequestId;
         }
-        BOOST_LOG_TRIVIAL(error) << "FFWebViewPanel::ProcessGetOnlineConfig error, "
-            << evt.ret << ", " << evt.responseData;
+        BOOST_LOG_TRIVIAL(error) << "FFWebViewPanel::ProcessGetOnlineConfig error, " << evt.ret;
         return;
     }
     try {
@@ -1276,8 +1372,7 @@ void FFWebViewPanel::ProcessGetOnlineConfig(const ComBusGetRequestEvent &evt)
         m_userConfig = user;
         SyncUserConfig();
     } catch (const std::exception &e) {
-        BOOST_LOG_TRIVIAL(error) << "FFWebViewPanel::ProcessGetOnlineConfig error, "
-            << e.what() << ", " << evt.responseData;
+        BOOST_LOG_TRIVIAL(error) << "FFWebViewPanel::ProcessGetOnlineConfig error, " << e.what();
     }
     m_getOnlineConfigReqId = MultiComHelper::InvalidRequestId;
 }
@@ -1312,8 +1407,7 @@ void FFWebViewPanel::ProcessGetDownloadScript(const ComBusGetRequestEvent &evt)
         } else {
             m_getDownloadScriptReqId = MultiComHelper::InvalidRequestId;
         }
-        BOOST_LOG_TRIVIAL(error) << "FFWebViewPanel::ProcessGetDownloadScript error, "
-            << evt.ret << ", " << evt.responseData;
+        BOOST_LOG_TRIVIAL(error) << "FFWebViewPanel::ProcessGetDownloadScript error, " << evt.ret;
         return;
     }
     try {
@@ -1327,8 +1421,7 @@ void FFWebViewPanel::ProcessGetDownloadScript(const ComBusGetRequestEvent &evt)
         m_downloadJsConfig = json;
         SetupDownloadScript();
     } catch (const std::exception &e) {
-        BOOST_LOG_TRIVIAL(error) << "FFWebViewPanel::ProcessGetDownloadScript error, "
-            << e.what() << ", " << evt.responseData;
+        BOOST_LOG_TRIVIAL(error) << "FFWebViewPanel::ProcessGetDownloadScript error, " << e.what();
     }
     m_getDownloadScriptReqId = MultiComHelper::InvalidRequestId;
 }
@@ -1604,6 +1697,186 @@ void FFWebViewPanel::OnViewNow(wxCommandEvent &evt)
     Layout();
 }
 
+bool FFWebViewPanel::IsAllowedFeedbackBridgeSource(const wxWebViewEvent& evt) const
+{
+    if (m_mainBrowser == nullptr || evt.GetEventObject() != m_mainBrowser) {
+        return false;
+    }
+
+    const wxURI currentUri(m_mainBrowser->GetCurrentURL());
+    const wxURI homeUri(m_homePageUrl);
+    return !currentUri.GetServer().empty() && currentUri.GetScheme().CmpNoCase(homeUri.GetScheme()) == 0 &&
+           currentUri.GetServer().CmpNoCase(homeUri.GetServer()) == 0 && currentUri.GetPort() == homeUri.GetPort();
+}
+
+void FFWebViewPanel::SendFeedbackBridgeResponse(nlohmann::json response)
+{
+    if (m_mainBrowser == nullptr) {
+        return;
+    }
+    const std::string json = response.dump(-1, ' ', false, nlohmann::json::error_handler_t::replace);
+    // Existing embedded pages replace window.postMessage with HandleStudio,
+    // while newer pages may keep the browser-native implementation. The
+    // second argument is ignored by a custom handler and required by the
+    // native implementation, so this works with both conventions.
+    RunScript(wxString::Format("window.postMessage(%s, window.location.origin)", wxString::FromUTF8(json)));
+}
+
+void FFWebViewPanel::SendFeedbackBridgeErrorResponse(const nlohmann::json& request, const std::string& command)
+{
+    nlohmann::json response    = make_feedback_bridge_response(request, command);
+    response["data"]["reason"] = "internal_error";
+    if (command == "feedback_device_select") {
+        response["data"]["selected"] = false;
+    } else if (command == "feedback_submission_prepare") {
+        response["data"]["canSubmit"] = false;
+    }
+    SendFeedbackBridgeResponse(std::move(response));
+}
+
+bool FFWebViewPanel::HandleFeedbackLogMessage(const nlohmann::json& request, wxWebViewEvent& evt)
+{
+    if (!request.contains("command") || !request.at("command").is_string()) {
+        return false;
+    }
+    const std::string command = request.at("command").get<std::string>();
+    if (!is_feedback_log_command(command)) {
+        return false;
+    }
+
+    // Consume known commands even when rejected. Falling through would pass a
+    // device-selection request into the generic bridge and could log its body.
+    if (!IsAllowedFeedbackBridgeSource(evt)) {
+        BOOST_LOG_TRIVIAL(warning) << "Rejected feedback log command from an untrusted web source";
+        return true;
+    }
+
+    nlohmann::json response = make_feedback_bridge_response(request, command);
+
+    const nlohmann::json  emptyData = nlohmann::json::object();
+    const nlohmann::json& data      = request.contains("data") && request.at("data").is_object() ? request.at("data") : emptyData;
+
+    if (command == "feedback_log_options_get") {
+        const std::vector<FeedbackDeviceInfo> devices    = get_feedback_device_snapshot();
+        const FeedbackDeviceResolution        resolution = resolve_feedback_device(devices);
+        const FeedbackLogLabels               labels     = get_feedback_log_labels();
+
+        response["data"]["authorization"] = {{"required", true}, {"checked", false}, {"text", labels.authorization.utf8_string()}};
+        response["data"]["logs"]          = nlohmann::json::array(
+            {make_feedback_log_item("slice", labels.sliceTitle, labels.sliceDescription, "uploadSliceLog", true, true, false),
+                      make_feedback_log_item("app", labels.appTitle, labels.appDescription, "uploadAppLog", true, true, false),
+                      make_feedback_log_item("device", labels.deviceTitle, labels.deviceDescription, "uploadFirmwareLog",
+                                             resolution.state != FeedbackDeviceState::NoDevice, false, true)});
+        response["data"]["addDeviceLabel"]    = labels.addDevice.utf8_string();
+        response["data"]["selectDeviceLabel"] = labels.selectDevice.utf8_string();
+        response["data"]["deviceState"]       = feedback_device_state_name(resolution.state);
+        response["data"]["boundDeviceCount"]  = resolution.boundDeviceCount;
+        response["data"]["onlineDeviceCount"] = resolution.onlineDeviceCount;
+        if (resolution.device.has_value()) {
+            response["data"]["selectedDevice"] = feedback_device_json(*resolution.device);
+        }
+        SendFeedbackBridgeResponse(std::move(response));
+        return true;
+    }
+
+    if (m_feedbackDialogActive) {
+        response["data"]["reason"] = "busy";
+        if (command == "feedback_device_select") {
+            response["data"]["selected"] = false;
+        } else {
+            response["data"]["canSubmit"] = false;
+        }
+        SendFeedbackBridgeResponse(std::move(response));
+        return true;
+    }
+
+    if (command == "feedback_device_select") {
+        FeedbackDialogActivityGuard             guard(m_feedbackDialogActive);
+        const std::vector<FeedbackDeviceInfo>   devices              = get_feedback_device_snapshot();
+        const std::string                       selectedSerialNumber = get_feedback_selected_serial_number(data);
+        const std::optional<FeedbackDeviceInfo> selected             = show_feedback_device_selector(this, devices, selectedSerialNumber);
+
+        response["data"]["selected"] = selected.has_value();
+        if (selected.has_value()) {
+            response["data"]["device"]      = feedback_device_json(*selected);
+            response["data"]["deviceState"] = selected->online ? "selected" : "device_offline";
+        } else {
+            response["data"]["reason"] = devices.empty() ? "no_device" : "cancelled";
+        }
+        SendFeedbackBridgeResponse(std::move(response));
+        return true;
+    }
+
+    response["data"]["payload"] = {{"uploadSliceLog", true},
+                                   {"uploadAppLog", true},
+                                   {"uploadFirmwareLog", false},
+                                   {"sn", nlohmann::json::array()}};
+
+    const bool authorized = data.contains("authorized") && data.at("authorized").is_boolean() && data.at("authorized").get<bool>();
+    if (!authorized) {
+        response["data"]["canSubmit"] = false;
+        response["data"]["reason"]    = "authorization_required";
+        SendFeedbackBridgeResponse(std::move(response));
+        return true;
+    }
+
+    const bool deviceLogChecked = !data.contains("deviceLogChecked") || !data.at("deviceLogChecked").is_boolean() ||
+                                  data.at("deviceLogChecked").get<bool>();
+    if (!deviceLogChecked) {
+        response["data"]["canSubmit"]       = true;
+        response["data"]["deviceLogStatus"] = "Not Requested";
+        SendFeedbackBridgeResponse(std::move(response));
+        return true;
+    }
+
+    // Take a fresh snapshot here instead of trusting the state returned when
+    // the form opened. A selected device may have gone offline in the meantime.
+    const std::vector<FeedbackDeviceInfo> devices    = get_feedback_device_snapshot();
+    const FeedbackDeviceResolution        resolution = resolve_feedback_device(devices, get_feedback_selected_serial_number(data));
+    response["data"]["deviceState"]                  = feedback_device_state_name(resolution.state);
+
+    if ((resolution.state == FeedbackDeviceState::AutoSelected || resolution.state == FeedbackDeviceState::Selected) &&
+        resolution.device.has_value()) {
+        response["data"]["canSubmit"]                    = true;
+        response["data"]["deviceLogStatus"]              = "Ready";
+        response["data"]["selectedDevice"]               = feedback_device_json(*resolution.device);
+        response["data"]["payload"]["uploadFirmwareLog"] = true;
+        response["data"]["payload"]["sn"]                = nlohmann::json::array({resolution.device->serialNumber});
+        SendFeedbackBridgeResponse(std::move(response));
+        return true;
+    }
+
+    if (resolution.state == FeedbackDeviceState::SelectionRequired) {
+        response["data"]["canSubmit"] = false;
+        response["data"]["reason"]    = "device_selection_required";
+        SendFeedbackBridgeResponse(std::move(response));
+        return true;
+    }
+
+    if (resolution.state == FeedbackDeviceState::NoDevice) {
+        response["data"]["canSubmit"]       = true;
+        response["data"]["deviceLogStatus"] = "No Device";
+        SendFeedbackBridgeResponse(std::move(response));
+        return true;
+    }
+
+    FeedbackDialogActivityGuard guard(m_feedbackDialogActive);
+    if (!confirm_feedback_without_device_log(this)) {
+        response["data"]["canSubmit"] = false;
+        response["data"]["reason"]    = "offline_submission_cancelled";
+        SendFeedbackBridgeResponse(std::move(response));
+        return true;
+    }
+
+    response["data"]["canSubmit"]       = true;
+    response["data"]["deviceLogStatus"] = "Device Offline";
+    if (resolution.device.has_value()) {
+        response["data"]["selectedDevice"] = feedback_device_json(*resolution.device);
+    }
+    SendFeedbackBridgeResponse(std::move(response));
+    return true;
+}
+
 void FFWebViewPanel::OnMainNavigated(wxWebViewEvent &evt) 
 {
     wxString currentURL = m_mainBrowser->GetCurrentURL();
@@ -1652,6 +1925,22 @@ void FFWebViewPanel::OnMainScriptMessageReceived(wxWebViewEvent& evt)
         const nlohmann::json json    = nlohmann::json::parse(message);
         const std::string    command = json.contains("command") && json.at("command").is_string() ? (std::string) json.at("command") :
                                                                                                     std::string();
+        if (is_feedback_log_command(command)) {
+            try {
+                HandleFeedbackLogMessage(json, evt);
+            } catch (const std::exception& e) {
+                BOOST_LOG_TRIVIAL(error) << "Feedback log WebView command failed: " << e.what();
+                if (IsAllowedFeedbackBridgeSource(evt)) {
+                    SendFeedbackBridgeErrorResponse(json, command);
+                }
+            } catch (...) {
+                BOOST_LOG_TRIVIAL(error) << "Feedback log WebView command failed";
+                if (IsAllowedFeedbackBridgeSource(evt)) {
+                    SendFeedbackBridgeErrorResponse(json, command);
+                }
+            }
+            return;
+        }
         if (command == "homepage_open_in_app_view") {
             // This command is scoped to the home-page browser. Always consume
             // matching messages here so checkout credentials never reach the
@@ -1825,7 +2114,7 @@ void FFWebViewPanel::OnModelScriptMessageReceived(wxWebViewEvent& evt)
                 wxGetApp().start_download("orcaflashforge://open/?file=" + url, fileName, true);
             }
         } catch (const std::exception& e) {
-            BOOST_LOG_TRIVIAL(error) << "FFWebViewPanel::OnModelScriptMessageReceived error, " << e.what() << ", " << msg;
+            BOOST_LOG_TRIVIAL(error) << "FFWebViewPanel::OnModelScriptMessageReceived error, " << e.what();
         }
     } else {
         m_openBase64Model->open(msg);
