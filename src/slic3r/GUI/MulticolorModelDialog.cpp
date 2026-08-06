@@ -681,13 +681,6 @@ void MulticolorModelPreviewCanvas::render()
     glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
     glShadeModel(GL_SMOOTH);
 
-    const GLfloat light_pos[] = {0.2f, -0.4f, 1.0f, 0.0f};
-    const GLfloat light_ambient[] = {0.42f, 0.42f, 0.42f, 1.0f};
-    const GLfloat light_diffuse[] = {0.85f, 0.85f, 0.85f, 1.0f};
-    glLightfv(GL_LIGHT0, GL_POSITION, light_pos);
-    glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
-    glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
-
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     const float aspect = h > 0 ? static_cast<float>(w) / static_cast<float>(h) : 1.0f;
@@ -699,6 +692,19 @@ void MulticolorModelPreviewCanvas::render()
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
+
+    // OpenGL transforms a light position by the current model-view matrix when
+    // glLightfv() is called. Set the light with an identity matrix so the first
+    // and subsequent paints use the same camera-relative lighting.
+    const GLfloat light_model_ambient[] = {0.12f, 0.12f, 0.12f, 1.0f};
+    const GLfloat light_pos[] = {0.2f, -0.4f, 1.0f, 0.0f};
+    const GLfloat light_ambient[] = {0.22f, 0.22f, 0.22f, 1.0f};
+    const GLfloat light_diffuse[] = {0.65f, 0.65f, 0.65f, 1.0f};
+    glLightModelfv(GL_LIGHT_MODEL_AMBIENT, light_model_ambient);
+    glLightfv(GL_LIGHT0, GL_POSITION, light_pos);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
+
     glRotatef(m_rot_x, 1.0f, 0.0f, 0.0f);
     glRotatef(m_rot_y, 0.0f, 1.0f, 0.0f);
     glTranslatef(-m_center[0], -m_center[1], -m_center[2]);
