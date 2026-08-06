@@ -18,6 +18,7 @@
 #include "slic3r/GUI/GUI_App.hpp"
 #include "slic3r/GUI/MainFrame.hpp"
 #include "ExportLogs.hpp"
+#include "FeedbackLogUploadClaim.hpp"
 #include "FreeInDestructor.h"
 #include "MultiComHelper.hpp"
 #include "WanDevTokenMgr.hpp"
@@ -123,12 +124,13 @@ bool MultiComMgr::initalize(const std::string &dllPath, const std::string &dataD
     }
     wxFileName appFileName(wxStandardPaths::Get().GetExecutablePath());
     wxString appPathWithSep = appFileName.GetPathWithSep();
+    m_dataDir = dataDir;
     std::string logFileDir = dataDir + "/FlashNetwork";
     bool debug = wxFileName::FileExists(appPathWithSep + "FLASHNETWORK_DEBUG");
 
     fnet_log_settings_t logSettings;
     logSettings.fileDir = logFileDir.c_str();
-    logSettings.expireHours = 72;
+    logSettings.expireHours = 7 * 24;
     logSettings.level = debug ? FNET_LOG_LEVEL_DEBUG : FNET_LOG_LEVEL_INFO;
 
 #ifdef __APPLE__
@@ -938,9 +940,8 @@ void MultiComMgr::onWanConnRead(const WanConnReadEvent& event)
         std::uint64_t              sessionGeneration = 0;
         {
             std::lock_guard<std::mutex> lock(m_feedbackLogMutex);
-            constexpr size_t            maxPendingFeedbackLogUploads = 4;
-            cancelEvent                                              = m_feedbackLogCancelEvent;
-            sessionGeneration                                        = m_feedbackLogSessionGeneration;
+            cancelEvent       = m_feedbackLogCancelEvent;
+            sessionGeneration = m_feedbackLogSessionGeneration;
             if (cancelEvent == nullptr || cancelEvent->get()) {
                 BOOST_LOG_TRIVIAL(warning) << "Ignore feedback log upload command outside an active login session";
                 return;
@@ -950,15 +951,41 @@ void MultiComMgr::onWanConnRead(const WanConnReadEvent& event)
                 BOOST_LOG_TRIVIAL(info) << "Ignore duplicate feedback log upload command";
                 return;
             }
-            if (m_activeFeedbackLogIds.size() >= maxPendingFeedbackLogUploads) {
-                BOOST_LOG_TRIVIAL(warning) << "Ignore feedback log upload command because the queue is full";
-                return;
-            }
             m_activeFeedbackLogIds.insert(feedbackId);
         }
         try {
-            m_logUploadThreadPool->post([this, clientId, accessToken, feedbackId, cancelEvent, sessionGeneration]() {
-                const bool                  succeeded = ExportLogs::uploadFeedback(clientId, accessToken, feedbackId, cancelEvent.get());
+            const std::string dataDir      = m_dataDir;
+            const std::string accountScope = m_mqttConfig.userTopic;
+            m_logUploadThreadPool->post([this, clientId, accessToken, feedbackId, dataDir, accountScope, cancelEvent,
+                                         sessionGeneration]() {
+                FeedbackLogUploadClaim claim(dataDir, accountScope, feedbackId);
+                const auto             claimStatus = claim.tryAcquire();
+                if (claimStatus == FeedbackLogUploadClaim::Status::Busy) {
+                    BOOST_LOG_TRIVIAL(info) << "Feedback log upload is already active in another local client";
+                    std::lock_guard<std::mutex> lock(m_feedbackLogMutex);
+                    if (sessionGeneration == m_feedbackLogSessionGeneration) {
+                        m_activeFeedbackLogIds.erase(feedbackId);
+                    }
+                    return;
+                }
+                if (claimStatus == FeedbackLogUploadClaim::Status::Error) {
+                    BOOST_LOG_TRIVIAL(error) << "Cannot coordinate feedback log upload between local clients";
+                    std::lock_guard<std::mutex> lock(m_feedbackLogMutex);
+                    if (sessionGeneration == m_feedbackLogSessionGeneration) {
+                        m_activeFeedbackLogIds.erase(feedbackId);
+                    }
+                    return;
+                }
+
+                bool succeeded = claimStatus == FeedbackLogUploadClaim::Status::Completed;
+                if (succeeded) {
+                    BOOST_LOG_TRIVIAL(info) << "Feedback log upload was already completed by another local client";
+                } else {
+                    succeeded = ExportLogs::uploadFeedback(clientId, accessToken, feedbackId, cancelEvent.get());
+                    if (succeeded && !claim.markCompleted()) {
+                        BOOST_LOG_TRIVIAL(error) << "Failed to persist feedback log upload completion state";
+                    }
+                }
                 std::lock_guard<std::mutex> lock(m_feedbackLogMutex);
                 if (sessionGeneration != m_feedbackLogSessionGeneration || cancelEvent != m_feedbackLogCancelEvent) {
                     return;

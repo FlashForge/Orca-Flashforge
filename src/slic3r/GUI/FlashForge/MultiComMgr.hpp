@@ -25,10 +25,6 @@
 #include "WanDevMaintainThd.hpp"
 #include "WanDevSendGcodeThd.hpp"
 
-namespace boost { namespace interprocess {
-    class file_lock;
-}}
-
 namespace Slic3r { namespace GUI {
 
 class MultiComMgr : public wxEvtHandler, public Singleton<MultiComMgr>
@@ -141,6 +137,7 @@ private:
     bool                                                      m_connOnline;
     bool                                                      m_connFirstConnected;
     std::string                                               m_clientId;
+    std::string                                               m_dataDir;
     com_mqtt_config_t                                         m_mqttConfig;
     std::list<com_ptr_t>                                      m_comPtrs;
     com_ptr_map_t                                             m_ptrMap;

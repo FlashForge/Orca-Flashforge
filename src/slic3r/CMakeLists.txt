@@ -305,6 +305,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/FlashForge/DeviceFilterPopup.cpp
 	GUI/FlashForge/ExportLogs.cpp
 	GUI/FlashForge/ExportLogs.hpp
+    GUI/FlashForge/FeedbackLogUploadClaim.cpp
+    GUI/FlashForge/FeedbackLogUploadClaim.hpp
     GUI/FlashForge/FlashNetwork.h
     GUI/FlashForge/FlashNetworkIntfc.cpp
     GUI/FlashForge/FlashNetworkIntfc.h

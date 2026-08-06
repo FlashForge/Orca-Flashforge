@@ -445,8 +445,8 @@ void ExportLogs::uploadLocal()
     auto dlg = wxGetApp().mainframe->createLogProgress();
     dlg->Update(10, _L("Save tmp zip file"));
     dlg->Fit();
-    auto fileInfos = getRootLatestFiles(rootPath, wxDateTime::Now(), nullptr, 16);
-    bool succeed   = saveZip(outputPath, rootPath, fileInfos, true);
+    auto fileInfos = getRootLatestFiles(rootPath, wxDateTime::Now());
+    bool succeed   = saveZip(outputPath, rootPath, fileInfos, false);
     if (!succeed) {
         dlg->Hide();
         ErrorDialog failed_dlg(wxGetApp().mainframe, _L("Upload failed"), _L("Upload log"));
@@ -509,11 +509,11 @@ bool ExportLogs::uploadFeedback(const std::string& clientId,
         TemporaryFileGuard tempFile(outputPath);
 
         const wxString rootPath  = wxString::FromUTF8(data_dir());
-        const auto     fileInfos = getRootLatestFiles(rootPath, wxDateTime::Now(), cancelEvent, 16);
+        const auto     fileInfos = getRootLatestFiles(rootPath, wxDateTime::Now(), cancelEvent);
         if (is_cancelled(cancelEvent)) {
             return false;
         }
-        if (!saveZip(outputPath, rootPath, fileInfos, true, cancelEvent)) {
+        if (!saveZip(outputPath, rootPath, fileInfos, false, cancelEvent)) {
             if (!is_cancelled(cancelEvent)) {
                 BOOST_LOG_TRIVIAL(error) << "Failed to package feedback logs";
             }
