@@ -40,7 +40,7 @@ namespace {
 
 constexpr const char *DefaultFilamentPresetName = "Flashforge PLA Basic";
 constexpr float AutoMatchDeltaEThreshold = 5.0f;
-// Keep imported full-color OBJ/GLB filament ids inside the 16 states supported by mmu segmentation.
+// Keep imported full-color model filament ids inside the 16 states supported by mmu segmentation.
 constexpr int ImportExistingMatchLimit = 12;
 constexpr int ImportFilamentLimit = 16;
 constexpr intptr_t ExistingFilamentChoiceBase = 1;

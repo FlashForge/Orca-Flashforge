@@ -261,6 +261,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/ConvertModel/ClassicFullColorPipeline.hpp
     GUI/ConvertModel/CMLoadGlb.cpp
     GUI/ConvertModel/CMLoadGlb.hpp
+    GUI/ConvertModel/CMLoadFbx.cpp
+    GUI/ConvertModel/CMLoadFbx.hpp
     GUI/ConvertModel/CMLoadObj.cpp
     GUI/ConvertModel/CMLoadObj.hpp
     GUI/ConvertModel/CMSaveObj.cpp

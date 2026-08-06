@@ -193,6 +193,9 @@ set(lisbslic3r_sources
     Format/3mf.hpp
     Format/AMF.cpp
     Format/AMF.hpp
+    Format/AssimpImport.cpp
+    Format/AssimpImport.hpp
+    Format/ResourcePathUtils.hpp
     Format/DRC.cpp
     Format/DRC.hpp
     Format/bbs_3mf.cpp
@@ -507,6 +510,7 @@ cmake_policy(PUSH)
 cmake_policy(SET CMP0011 NEW)
 find_package(CGAL REQUIRED)
 find_package(OpenCV REQUIRED core)
+find_package(assimp REQUIRED)
 cmake_policy(POP)
 
 add_library(libslic3r_cgal STATIC 
@@ -591,6 +595,7 @@ target_link_libraries(libslic3r
         miniz
         opencv_world
     PRIVATE
+        assimp::assimp
         ${CMAKE_DL_LIBS}
         ${EXPAT_LIBRARIES}
         ${OCCT_LIBS}
