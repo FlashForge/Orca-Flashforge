@@ -818,6 +818,8 @@ set(SLIC3R_GUI_SOURCES
     Utils/MoonrakerPrinterAgent.hpp
     Utils/BBLCloudServiceAgent.cpp
     Utils/BBLCloudServiceAgent.hpp
+    Utils/FlashCloudServiceAgent.cpp
+    Utils/FlashCloudServiceAgent.hpp
     Utils/BBLPrinterAgent.cpp
     Utils/BBLPrinterAgent.hpp
     Utils/BBLNetworkPlugin.cpp
