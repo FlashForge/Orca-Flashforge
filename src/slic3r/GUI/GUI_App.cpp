@@ -1766,6 +1766,20 @@ void GUI_App::restart_networking()
 
 // Network plugin hot reload timeout constants (in milliseconds)
 namespace {
+    constexpr bool FLASH_PRESET_SYNC_LOG_ENABLED = true;
+
+    void log_flash_preset_sync(const std::string &message)
+    {
+        if (!FLASH_PRESET_SYNC_LOG_ENABLED)
+            return;
+
+        const std::string line = "[FlashPresetSync] " + message;
+        BOOST_LOG_TRIVIAL(info) << line;
+#ifdef __WXMSW__
+        ::OutputDebugStringA((line + "\r\n").c_str());
+#endif
+    }
+
     constexpr int CALLBACK_DRAIN_TIMEOUT_MS   = 200;  // Time to drain pending CallAfter callbacks
     constexpr int NETWORK_IDLE_TIMEOUT_MS     = 500;  // Max wait for network operations to complete
     constexpr int FINAL_DRAIN_TIMEOUT_MS      = 100;  // Final event processing before destruction
@@ -5810,6 +5824,8 @@ void GUI_App::on_connect_event()
 void GUI_App::get_usr_profile(ComGetUserProfileEvent &event) 
 {
     event.Skip();
+    log_flash_preset_sync("LOGIN_PROFILE result=" + std::to_string(static_cast<int>(event.ret))
+                          + " user_id=" + event.userProfile.uid);
     if (event.ret == ComErrno::COM_OK) {
         std::string access_token;
         bool show_user_points = false;
@@ -5969,6 +5985,8 @@ void GUI_App::on_user_login(wxCommandEvent &evt)
 void GUI_App::wan_dev_maintain(ComWanDevMaintainEvent& event)
 {
     event.Skip();
+    log_flash_preset_sync("ACCOUNT_STATE login=" + std::string(event.login ? "true" : "false")
+                          + " gui_login_success=" + (m_login_success ? "true" : "false"));
     if (!event.login && m_login_success) {
 #ifdef __WXGTK__
         const bool restore_gl_after_logout_tip = mainframe && mainframe->IsIconized() && mainframe->m_tabpanel &&
@@ -7124,13 +7142,19 @@ void  GUI_App::push_notification(const MachineObject* obj, wxString msg, wxStrin
 
 void GUI_App::reload_settings()
 {
+    log_flash_preset_sync("CACHE_READ_BEGIN");
     if (preset_bundle && m_agent) {
         std::map<std::string, std::map<std::string, std::string>> user_presets;
-        m_agent->get_user_presets(&user_presets);
+        const int result = m_agent->get_user_presets(&user_presets);
+        log_flash_preset_sync("CACHE_READ_END result=" + std::to_string(result)
+                              + " preset_count=" + std::to_string(user_presets.size()));
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << __LINE__ << " cloud user preset number is: " << user_presets.size();
         preset_bundle->load_user_presets(*app_config, user_presets, ForwardCompatibilitySubstitutionRule::Enable);
         preset_bundle->save_user_presets(*app_config, get_delete_cache_presets());
         mainframe->update_side_preset_ui();
+        log_flash_preset_sync("REMOTE_APPLY_END status=success");
+    } else {
+        log_flash_preset_sync("CACHE_READ_END status=skipped reason=missing_preset_bundle_or_agent");
     }
 }
 
@@ -7161,12 +7185,23 @@ void GUI_App::sync_preset(Preset* preset)
 
     auto setting_id = preset->setting_id;
     std::map<std::string, std::string> values_map;
+    log_flash_preset_sync("PRESET_BEGIN name=" + preset->name
+                          + " type=" + std::to_string(static_cast<int>(preset->type))
+                          + " setting_id=" + setting_id + " sync_info=" + preset->sync_info
+                          + " updated_time=" + std::to_string(preset->updated_time));
     if (setting_id.empty() && preset->sync_info.empty()) {
         if (m_create_preset_blocked[preset->type])
             return;
         int ret = preset_bundle->get_differed_values_to_update(*preset, values_map);
+        log_flash_preset_sync("DIFF_PREPARE name=" + preset->name + " result=" + std::to_string(ret));
         if (!ret) {
+            log_flash_preset_sync("CREATE_REQUEST name=" + preset->name);
             std::string new_setting_id = m_agent->request_setting_id(preset->name, &values_map, &http_code);
+            log_flash_preset_sync("CREATE_RESPONSE name=" + preset->name
+                                  + " http_code=" + std::to_string(http_code)
+                                  + " setting_id=" + new_setting_id
+                                  + " business_code="
+                                  + (values_map.count("code") ? values_map.at("code") : std::string()));
             if (!new_setting_id.empty()) {
                 setting_id = new_setting_id;
                 result = 0;
@@ -7196,8 +7231,15 @@ void GUI_App::sync_preset(Preset* preset)
         if (m_create_preset_blocked[preset->type])
             return;
         int ret = preset_bundle->get_differed_values_to_update(*preset, values_map);
+        log_flash_preset_sync("DIFF_PREPARE name=" + preset->name + " result=" + std::to_string(ret));
         if (!ret) {
+            log_flash_preset_sync("CREATE_REQUEST name=" + preset->name);
             std::string new_setting_id = m_agent->request_setting_id(preset->name, &values_map, &http_code);
+            log_flash_preset_sync("CREATE_RESPONSE name=" + preset->name
+                                  + " http_code=" + std::to_string(http_code)
+                                  + " setting_id=" + new_setting_id
+                                  + " business_code="
+                                  + (values_map.count("code") ? values_map.at("code") : std::string()));
             if (!new_setting_id.empty()) {
                 setting_id = new_setting_id;
                 result = 0;
@@ -7220,7 +7262,9 @@ void GUI_App::sync_preset(Preset* preset)
         }
     } else if (preset->sync_info.compare("update") == 0) {
         if (!setting_id.empty()) {
+            log_flash_preset_sync("UPDATE_PREPARE name=" + preset->name + " setting_id=" + setting_id);
             int ret = preset_bundle->get_differed_values_to_update(*preset, values_map);
+            log_flash_preset_sync("DIFF_PREPARE name=" + preset->name + " result=" + std::to_string(ret));
             if (!ret) {
                 if (auto iter = values_map.find(BBL_JSON_KEY_BASE_ID); iter != values_map.end() && iter->second == setting_id) {
                     //clear the setting_id in this case ???
@@ -7228,7 +7272,13 @@ void GUI_App::sync_preset(Preset* preset)
                     result = 0;
                 }
                 else {
-                result = m_agent->put_setting(setting_id, preset->name, &values_map, &http_code);
+                    log_flash_preset_sync("UPDATE_REQUEST name=" + preset->name + " setting_id=" + setting_id);
+                    result = m_agent->put_setting(setting_id, preset->name, &values_map, &http_code);
+                    log_flash_preset_sync("UPDATE_RESPONSE name=" + preset->name
+                                      + " result=" + std::to_string(result)
+                                      + " http_code=" + std::to_string(http_code)
+                                      + " business_code="
+                                      + (values_map.count("code") ? values_map.at("code") : std::string()));
                 if (http_code >= 400) {
                     result = 0;
                     updated_info = "hold";
@@ -7284,25 +7334,51 @@ void GUI_App::sync_preset(Preset* preset)
             collection = &preset_bundle->printers;
 
         if (collection != nullptr) {
-            if (preserve_cloud_metadata)
+            if (preserve_cloud_metadata) {
+                log_flash_preset_sync("LOCAL_STATUS_WRITE name=" + preset->name + " sync_info=" + updated_info
+                                      + " preserve_setting_id=true preserve_updated_time=true");
                 collection->set_sync_status_and_save(preset->name, updated_info);
-            else
+            } else {
+                log_flash_preset_sync("LOCAL_INFO_WRITE name=" + preset->name + " setting_id=" + setting_id
+                                      + " sync_info=" + updated_info
+                                      + " updated_time=" + std::to_string(update_time));
                 collection->set_sync_info_and_save(preset->name, setting_id, updated_info, update_time);
+            }
         }
+        log_flash_preset_sync("PRESET_END name=" + preset->name + " status=local_state_updated"
+                              + " http_code=" + std::to_string(http_code));
+    } else {
+        log_flash_preset_sync("PRESET_END name=" + preset->name + " status=failed result="
+                              + std::to_string(result) + " http_code=" + std::to_string(http_code));
     }
 }
 
 void GUI_App::start_sync_user_preset(bool with_progress_dlg)
 {
-    if (app_config->get_stealth_mode())
+    log_flash_preset_sync("SYNC_START_REQUEST progress_dialog=" + std::string(with_progress_dlg ? "true" : "false"));
+    if (app_config->get_stealth_mode()) {
+        log_flash_preset_sync("SYNC_START_SKIP reason=stealth_mode");
         return;
+    }
 
-    if (!m_agent || !m_agent->is_user_login()) return;
-    if(!m_agent->get_cloud_agent())
+    if (!m_agent) {
+        log_flash_preset_sync("SYNC_START_SKIP reason=missing_agent");
         return;
+    }
+    if (!m_agent->get_cloud_agent()) {
+        log_flash_preset_sync("SYNC_START_SKIP reason=missing_cloud_agent");
+        return;
+    }
+    if (!m_agent->is_user_login()) {
+        log_flash_preset_sync("SYNC_START_SKIP reason=flash_user_not_logged_in");
+        return;
+    }
 
     // has already start sync
-    if (m_user_sync_token) return;
+    if (m_user_sync_token) {
+        log_flash_preset_sync("SYNC_START_SKIP reason=already_running");
+        return;
+    }
 
     ProgressFn progressFn;
     WasCancelledFn cancelFn;
@@ -7342,12 +7418,16 @@ void GUI_App::start_sync_user_preset(bool with_progress_dlg)
 
     m_sync_update_thread = Slic3r::create_thread(
         [this, progressFn, cancelFn, finishFn, t = std::weak_ptr<int>(m_user_sync_token)] {
+            log_flash_preset_sync("SYNC_THREAD_BEGIN");
             // Recover cloud deletions left behind while the application was offline.
+            log_flash_preset_sync("DELETE_SCAN_BEGIN");
             scan_orphaned_info_files();
             process_delete_presets();
+            log_flash_preset_sync("DELETE_SCAN_END");
             // get setting list, update setting list
             std::string version = preset_bundle->get_vendor_profile_version(PresetBundle::ORCA_DEFAULT_BUNDLE).to_string();
             if(!m_agent) return;
+            log_flash_preset_sync("REMOTE_PULL_BEGIN bundle_version=" + version);
             int ret = m_agent->get_setting_list2(version, [this](auto info) {
                 auto type = info[BBL_JSON_KEY_TYPE];
                 auto name = info[BBL_JSON_KEY_NAME];
@@ -7366,6 +7446,7 @@ void GUI_App::start_sync_user_preset(bool with_progress_dlg)
                     return true;
                 }
             }, progressFn, cancelFn);
+            log_flash_preset_sync("REMOTE_PULL_END result=" + std::to_string(ret));
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << __LINE__ << " get_setting_list2 ret = " << ret << " m_is_closing = " << m_is_closing;
             finishFn(ret == 0);
 
@@ -7383,6 +7464,7 @@ void GUI_App::start_sync_user_preset(bool with_progress_dlg)
 
                         int total_count = 0;
                         sync_count = preset_bundle->prints.get_user_presets(preset_bundle, presets_to_sync);
+                        log_flash_preset_sync("PUSH_SCAN type=print count=" + std::to_string(sync_count));
                         if (sync_count > 0) {
                             for (Preset& preset : presets_to_sync) {
                                 sync_preset(&preset);
@@ -7392,6 +7474,7 @@ void GUI_App::start_sync_user_preset(bool with_progress_dlg)
                         total_count += sync_count;
 
                         sync_count = preset_bundle->filaments.get_user_presets(preset_bundle, presets_to_sync);
+                        log_flash_preset_sync("PUSH_SCAN type=filament count=" + std::to_string(sync_count));
                         if (sync_count > 0) {
                             for (Preset& preset : presets_to_sync) {
                                 sync_preset(&preset);
@@ -7401,6 +7484,7 @@ void GUI_App::start_sync_user_preset(bool with_progress_dlg)
                         total_count += sync_count;
 
                         sync_count = preset_bundle->printers.get_user_presets(preset_bundle, presets_to_sync);
+                        log_flash_preset_sync("PUSH_SCAN type=printer count=" + std::to_string(sync_count));
                         if (sync_count > 0) {
                             for (Preset& preset : presets_to_sync) {
                                 sync_preset(&preset);
@@ -7424,14 +7508,18 @@ void GUI_App::start_sync_user_preset(bool with_progress_dlg)
                     boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
                 }
             }
+            log_flash_preset_sync("SYNC_THREAD_END status=stopped");
         });
 }
 
 void GUI_App::stop_sync_user_preset()
 {
-    if (!m_user_sync_token)
+    if (!m_user_sync_token) {
+        log_flash_preset_sync("SYNC_STOP_SKIP reason=not_running");
         return;
+    }
 
+    log_flash_preset_sync("SYNC_STOP_REQUEST");
     m_user_sync_token.reset();
     if (m_sync_update_thread.joinable()) {
         if (is_closing())
@@ -8480,11 +8568,14 @@ void GUI_App::process_delete_presets()
         return;
 
     std::map<std::string, std::string> delete_cache_presets = get_delete_cache_presets_lock();
+    log_flash_preset_sync("DELETE_QUEUE_BEGIN count=" + std::to_string(delete_cache_presets.size()));
     for (const auto &entry : delete_cache_presets) {
         const std::string &setting_id = entry.first;
         if (setting_id.empty())
             continue;
+        log_flash_preset_sync("DELETE_REQUEST setting_id=" + setting_id);
         int result = m_agent->delete_setting(setting_id);
+        log_flash_preset_sync("DELETE_RESPONSE setting_id=" + setting_id + " result=" + std::to_string(result));
         if (result == 0) {
             preset_deleted_from_cloud(setting_id);
             m_create_preset_blocked = {false, false, false, false, false, false};
@@ -8493,6 +8584,7 @@ void GUI_App::process_delete_presets()
             BOOST_LOG_TRIVIAL(info) << "delete setting = " << setting_id << " failed";
         }
     }
+    log_flash_preset_sync("DELETE_QUEUE_END");
 }
 
 void GUI_App::delete_preset_from_cloud(std::string setting_id, std::string preset_file_path)
@@ -8504,6 +8596,7 @@ void GUI_App::delete_preset_from_cloud(std::string setting_id, std::string prese
     info_path.replace_extension(".info");
     std::scoped_lock l(mutex_delete_cache_presets);
     need_delete_presets[setting_id] = info_path.string();
+    log_flash_preset_sync("DELETE_ENQUEUE setting_id=" + setting_id + " info_path=" + info_path.string());
 }
 
 void GUI_App::preset_deleted_from_cloud(std::string setting_id)
@@ -8573,6 +8666,7 @@ void GUI_App::scan_orphaned_info_files()
             if (!setting_id.empty()) {
                 delete_preset_from_cloud(setting_id, info_file.string());
                 BOOST_LOG_TRIVIAL(info) << "Found orphaned preset metadata: " << info_file.string();
+                log_flash_preset_sync("DELETE_RECOVER setting_id=" + setting_id + " info_path=" + info_file.string());
             }
         }
     }
