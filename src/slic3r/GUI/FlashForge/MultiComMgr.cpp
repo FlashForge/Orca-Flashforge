@@ -277,6 +277,7 @@ ComErrno MultiComMgr::addWanDev(const com_token_data_t &tokenData, bool isCheckV
     if (ret != COM_OK) {
         return ret;
     }
+    m_userId = addDevData.userProfile.uid;
     m_login = true;
     m_httpOnline = true;
     m_connOnline = true;
@@ -290,6 +291,7 @@ ComErrno MultiComMgr::addWanDev(const com_token_data_t &tokenData, bool isCheckV
     //
     ret = ComWanConn::inst()->createConn(networkIntfc(), m_clientId.c_str());
     if (ret != COM_OK) {
+        m_userId.clear();
         m_login = false;
         m_httpOnline = false;
         m_connOnline = false;
@@ -315,6 +317,7 @@ void MultiComMgr::removeWanDev()
             comPtr->disconnect(0);
         }
     }
+    m_userId.clear();
     m_login = false;
     m_httpOnline = false;
     m_connOnline = false;

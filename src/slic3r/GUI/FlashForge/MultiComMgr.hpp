@@ -39,6 +39,10 @@ public:
 
     fnet::FlashNetworkIntfc *networkIntfc();
 
+    const std::string &clientId() const { return m_clientId; }
+    bool isLoggedIn() const { return m_login; }
+    const std::string &userId() const { return m_userId; }
+
     std::string homePageUrl();
     
     com_id_t addLanDev(const fnet_lan_dev_info_t &devInfo, const std::string &checkCode);
@@ -134,6 +138,7 @@ private:
     bool                                     m_connOnline;
     bool                                     m_connFirstConnected;
     std::string                              m_clientId;
+    std::string                              m_userId;
     com_mqtt_config_t                        m_mqttConfig;
     std::list<com_ptr_t>                     m_comPtrs;
     com_ptr_map_t                            m_ptrMap;
