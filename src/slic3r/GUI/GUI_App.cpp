@@ -5824,6 +5824,19 @@ void GUI_App::get_usr_profile(ComGetUserProfileEvent &event)
         }
         LoginDialog::SetUsrInfo(event.userProfile);
         handle_login_result(access_token, com_add_wan_dev_data_t{ event.userProfile, show_user_points }, 0);
+
+        // FlashForge login owns the preset-sync lifecycle in the current single-agent architecture.
+        if (m_agent && preset_bundle && mainframe && m_agent->is_user_login()) {
+            const std::string user_id = m_agent->get_user_id();
+            if (!user_id.empty() && app_config->get("preset_folder") != user_id) {
+                remove_user_presets();
+                enable_user_preset_folder(true);
+                preset_bundle->load_user_presets(user_id, ForwardCompatibilitySubstitutionRule::Enable);
+                mainframe->update_side_preset_ui();
+            }
+            if (app_config->get("sync_user_preset") == "true")
+                start_sync_user_preset();
+        }
         wxImage image;
         if (image.LoadFile(Slic3r::GUI::from_u8(Slic3r::var("login_default_usr_pic.png")), wxBITMAP_TYPE_PNG)) {
             m_usr_pic_image = image;
@@ -5962,6 +5975,8 @@ void GUI_App::wan_dev_maintain(ComWanDevMaintainEvent& event)
                                                  (mainframe->m_tabpanel->GetSelection() == MainFrame::tp3DEditor ||
                                                   mainframe->m_tabpanel->GetSelection() == MainFrame::tpPreview);
 #endif
+        // Stop cloud work before FlashForge clears the token and account state.
+        stop_sync_user_preset();
         // login out
         handle_login_out();
         if (app_config) {

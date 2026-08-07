@@ -6,6 +6,7 @@
 #include "NetworkAgent.hpp"
 #include "OrcaCloudServiceAgent.hpp"
 #include "BBLCloudServiceAgent.hpp"
+#include "FlashCloudServiceAgent.hpp"
 #include "BBLNetworkPlugin.hpp"
 #include "libslic3r/AppConfig.hpp"
 #include <memory>
@@ -20,8 +21,9 @@ namespace Slic3r {
  *
  * - Orca: Native Orca cloud implementations (OrcaCloudServiceAgent)
  * - BBL: BBL DLL wrapper implementations (BBLCloudServiceAgent)
+ * - FlashForge: FlashForge account-backed preset service (FlashCloudServiceAgent)
  */
-enum class CloudAgentProvider { Orca, BBL };
+enum class CloudAgentProvider { Orca, BBL, FlashForge };
 
 static constexpr char ORCA_PRINTER_AGENT_ID[] = "orca";
 static constexpr char BBL_PRINTER_AGENT_ID[] = "bbl";
@@ -141,6 +143,7 @@ public:
     {
         switch (provider) {
         case CloudAgentProvider::Orca: return std::make_shared<OrcaCloudServiceAgent>(log_dir);
+        case CloudAgentProvider::FlashForge: return std::make_shared<FlashCloudServiceAgent>();
         case CloudAgentProvider::BBL: {
             auto& plugin = BBLNetworkPlugin::instance();
             if (!plugin.is_loaded()) {
