@@ -315,7 +315,7 @@ private:
     Slic3r::UserManager* m_user_manager { nullptr };
     Slic3r::TaskManager* m_task_manager { nullptr };
     NetworkAgent* m_agent { nullptr };
-    std::vector<std::string> need_delete_presets;   // store setting ids of preset
+    std::map<std::string, std::string> need_delete_presets; // setting_id -> retained .info path
     std::vector<bool> m_create_preset_blocked { false, false, false, false, false, false }; // excceed limit
     bool m_networking_compatible { false };
     bool m_networking_need_update { false };
@@ -638,10 +638,13 @@ private:
     bool            checked_tab(Tab* tab);
     //BBS: add preset combox re-active logic
     void            load_current_presets(bool active_preset_combox = false, bool check_printer_presets = true);
-    std::vector<std::string> &get_delete_cache_presets();
-    std::vector<std::string> get_delete_cache_presets_lock();
-    void            delete_preset_from_cloud(std::string setting_id);
+    std::map<std::string, std::string> &get_delete_cache_presets();
+    std::map<std::string, std::string> get_delete_cache_presets_lock();
+    void            process_delete_presets();
+    void            delete_preset_from_cloud(std::string setting_id, std::string preset_file_path);
     void            preset_deleted_from_cloud(std::string setting_id);
+    void            scan_orphaned_info_files();
+    static std::string extract_setting_id_from_info(const std::string &info_file_path);
 
     wxString        filter_string(wxString str);
 	wxString        current_language_code() const { return m_active_language_code.empty() && m_wxLocale ? m_wxLocale->GetCanonicalName() : m_active_language_code; }

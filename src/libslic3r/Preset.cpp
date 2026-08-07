@@ -550,7 +550,7 @@ void Preset::save_info(std::string file)
     c.close();
 }
 
-void Preset::remove_files()
+void Preset::remove_files(bool cloud_already_deleted)
 {
     //BBS: add project embedded preset logic
     if (this->is_project_embedded)
@@ -559,8 +559,15 @@ void Preset::remove_files()
     boost::nowide::remove(this->file.c_str());
     fs::path idx_path(this->file);
     idx_path.replace_extension(".info");
-    if (fs::exists(idx_path))
-        boost::nowide::remove(idx_path.string().c_str());
+    if (fs::exists(idx_path)) {
+        if (!this->setting_id.empty() && !cloud_already_deleted) {
+            // Keep the metadata as a durable deletion marker until the cloud confirms deletion.
+            this->sync_info = "delete";
+            this->save_info(idx_path.string());
+        } else {
+            boost::nowide::remove(idx_path.string().c_str());
+        }
+    }
 }
 
 //BBS: add logic for only difference save
@@ -1684,6 +1691,21 @@ void PresetCollection::set_sync_info_and_save(std::string name, std::string sett
     unlock();
 }
 
+void PresetCollection::set_sync_status_and_save(std::string name, std::string syncinfo)
+{
+    lock();
+    for (Preset &preset : m_presets) {
+        if (preset.name != name)
+            continue;
+        if (syncinfo.empty())
+            preset.sync_info.clear();
+        else
+            preset.sync_info = syncinfo;
+        preset.save_info();
+        break;
+    }
+    unlock();
+}
 bool PresetCollection::need_sync(std::string name, std::string setting_id, long long update_time)
 {
     lock();
@@ -1727,7 +1749,7 @@ void PresetCollection::update_user_presets_directory(const std::string& dir_path
 }
 
 //BBS: save user presets to local
-void PresetCollection::save_user_presets(const std::string& dir_path, const std::string& type, std::vector<std::string>& need_to_delete_list)
+void PresetCollection::save_user_presets(const std::string& dir_path, const std::string& type, std::map<std::string, std::string>& need_to_delete_list)
 {
     boost::filesystem::path dir = boost::filesystem::absolute(boost::filesystem::path(dir_path) / type).make_preferred();
 

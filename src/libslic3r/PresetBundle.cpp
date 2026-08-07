@@ -1213,7 +1213,7 @@ bool PresetBundle::import_json_presets(PresetsConfigSubstitutions &            s
 }
 
 //BBS save user preset to user_id preset folder
-void PresetBundle::save_user_presets(AppConfig& config, std::vector<std::string>& need_to_delete_list)
+void PresetBundle::save_user_presets(AppConfig& config, std::map<std::string, std::string>& need_to_delete_list)
 {
     std::string user_sub_folder = DEFAULT_USER_FOLDER_NAME;
     if (!config.get("preset_folder").empty())
