@@ -347,13 +347,48 @@ void BBLCloudServiceAgent::enable_multi_machine(bool enable)
 
 int BBLCloudServiceAgent::get_user_presets(std::map<std::string, std::map<std::string, std::string>>* user_presets)
 {
+    if (!user_presets)
+        return BAMBU_NETWORK_ERR_INVALID_HANDLE;
+
     auto& plugin = BBLNetworkPlugin::instance();
     auto agent = plugin.get_agent();
     auto func = plugin.get_get_user_presets();
-    if (func && agent) {
-        return func(agent, user_presets);
+    if (!func || !agent)
+        return -1;
+
+    std::map<std::string, std::map<std::string, std::string>> raw_presets;
+    const int result = func(agent, &raw_presets);
+    if (result != BAMBU_NETWORK_SUCCESS)
+        return result;
+
+    std::map<std::string, std::map<std::string, std::string>> normalized_presets;
+    for (auto& [legacy_key, values] : raw_presets) {
+        const auto setting_id_it = values.find(IOT_JSON_KEY_SETTING_ID);
+        if (setting_id_it == values.end() || setting_id_it->second.empty()) {
+            BOOST_LOG_TRIVIAL(error) << "BBLCloudServiceAgent: cloud preset is missing setting_id";
+            return BAMBU_NETWORK_ERR_GET_SETTING_LIST_FAILED;
+        }
+
+        const std::string setting_id = setting_id_it->second;
+        auto name_it = values.find(IOT_JSON_KEY_NAME);
+        if (name_it == values.end() || name_it->second.empty()) {
+            if (legacy_key.empty() || legacy_key == setting_id) {
+                BOOST_LOG_TRIVIAL(error) << "BBLCloudServiceAgent: cloud preset " << setting_id << " is missing name";
+                return BAMBU_NETWORK_ERR_GET_SETTING_LIST_FAILED;
+            }
+            values[IOT_JSON_KEY_NAME] = legacy_key;
+        }
+        values[IOT_JSON_KEY_SETTING_ID] = setting_id;
+
+        const auto [unused, inserted] = normalized_presets.emplace(setting_id, std::move(values));
+        if (!inserted) {
+            BOOST_LOG_TRIVIAL(error) << "BBLCloudServiceAgent: duplicate setting_id " << setting_id;
+            return BAMBU_NETWORK_ERR_GET_SETTING_LIST_FAILED;
+        }
     }
-    return -1;
+
+    *user_presets = std::move(normalized_presets);
+    return BAMBU_NETWORK_SUCCESS;
 }
 
 std::string BBLCloudServiceAgent::request_setting_id(std::string name, std::map<std::string, std::string>* values_map, unsigned int* http_code)

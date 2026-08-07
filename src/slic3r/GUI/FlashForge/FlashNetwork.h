@@ -1008,7 +1008,7 @@ FNET_API int fnet_getSettingList(const char *clientId, const char *accessToken,
     void *cancelCallbackData, int msTimeout);
 
 // Returns the cache populated by fnet_getSettingList/fnet_getSettingList2 as a
-// JSON object keyed by preset name. Release with fnet_freeString.
+// JSON object keyed by setting_id. Release with fnet_freeString.
 FNET_API int fnet_getUserPresets(const char *clientId, const char *accessToken,
     char **userPresetsJson);
 

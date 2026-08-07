@@ -945,13 +945,32 @@ PresetsConfigSubstitutions PresetBundle::load_user_presets(AppConfig &          
     std::map<std::string, std::map<std::string, std::string>>::iterator it;
     for (int pass = 0; pass < 2; ++pass)
     for (it = my_presets.begin(); it != my_presets.end(); it++) {
-        std::string name = it->first;
+        const std::string setting_id = it->first;
         std::map<std::string, std::string>& value_map = it->second;
+        if (setting_id.empty()) {
+            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << " can not load a cloud preset with an empty setting_id";
+            continue;
+        }
+
+        const auto name_iter = value_map.find(BBL_JSON_KEY_NAME);
+        if (name_iter == value_map.end() || name_iter->second.empty()) {
+            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(" can not find name for setting_id %1%") % setting_id;
+            continue;
+        }
+        const std::string& name = name_iter->second;
+
+        const auto value_setting_id = value_map.find(BBL_JSON_KEY_SETTING_ID);
+        if (value_setting_id != value_map.end() && !value_setting_id->second.empty() && value_setting_id->second != setting_id) {
+            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__
+                                       << boost::format(" setting_id mismatch for preset %1%, map key %2%, value %3%; using map key")
+                                              % name % setting_id % value_setting_id->second;
+        }
+        value_map[BBL_JSON_KEY_SETTING_ID] = setting_id;
         // Load user root presets at first pass
         std::map<std::string, std::string>::iterator inherits_iter = value_map.find(BBL_JSON_KEY_INHERITS);
         if ((pass == 1) == (inherits_iter == value_map.end() || inherits_iter->second.empty()))
             continue;
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " start load from cloud: " << name;
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " start load from cloud: " << name << ", setting_id: " << setting_id;
         //get the type first
         std::map<std::string, std::string>::iterator type_iter = value_map.find(BBL_JSON_KEY_TYPE);
         if (type_iter == value_map.end()) {
@@ -1385,9 +1404,9 @@ int PresetBundle::validate_presets(const std::string &file_name, DynamicPrintCon
 
 void PresetBundle::remove_users_preset(AppConfig &config, std::map<std::string, std::map<std::string, std::string>> *my_presets)
 {
-    auto check_removed = [my_presets, this](Preset &preset) -> bool {
+    auto check_removed = [my_presets](Preset &preset) -> bool {
         if (my_presets == nullptr) return true;
-        if (my_presets->find(preset.name) != my_presets->end()) return false;
+        if (!preset.setting_id.empty() && my_presets->find(preset.setting_id) != my_presets->end()) return false;
         if (!preset.sync_info.empty()) return false; // syncing, not remove
         if (preset.setting_id.empty()) return false; // no id, not remove
         // Saved preset is removed by another session

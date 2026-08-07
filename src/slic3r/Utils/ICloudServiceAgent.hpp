@@ -223,7 +223,7 @@ public:
     // ========================================================================
     /**
      * Fetch all presets owned by the logged-in user.
-     * @param user_presets Map populated with [type][setting_id] = json
+     * @param user_presets Map keyed by setting_id; each value map contains name, type, setting_id, and preset values.
      */
     virtual int get_user_presets(std::map<std::string, std::map<std::string, std::string>>* user_presets) = 0;
 
