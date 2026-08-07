@@ -1453,6 +1453,11 @@ bool GLVolumeCollection::check_outside_state(const BuildVolume &build_volume, Mo
 
                     for (int filament: filaments_set)
                     {
+                        if (filament <= 0 || static_cast<size_t>(filament) > filament_maps.size()) {
+                            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": invalid filament index " << filament
+                                                       << ", filament_map size=" << filament_maps.size();
+                            continue;
+                        }
                         if (filament_maps[filament - 1] == extruder_id)
                         {
                             object_filament_info.manual_filaments.emplace(filament, extruder_id);

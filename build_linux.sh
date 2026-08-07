@@ -8,7 +8,7 @@ SCRIPT_PATH=$(dirname "$(readlink -f "${0}")")
 pushd "${SCRIPT_PATH}" > /dev/null
 
 function usage() {
-    echo "Usage: ./${SCRIPT_NAME} [-1][-b][-c][-d][-D][-e][-F][-g][-h][-i][-j N][-p][-r][-s][-t][-u][-l][-L]"
+    echo "Usage: ./${SCRIPT_NAME} [-1][-b][-c][-d][-D][-e][-F][-g][-h][-i][-j N][-N FILE][-p][-r][-s][-t][-u][-l][-L]"
     echo "   -1: limit builds to one core (where possible)"
     echo "   -j N: limit builds to N cores (where possible)"
     echo "   -b: build in Debug mode"
@@ -21,6 +21,7 @@ function usage() {
     echo "   -g: run the requested build steps inside a Docker/Podman Ubuntu 24.04 container similar to the GitHub Actions Linux runner"
     echo "   -h: prints this help text"
     echo "   -i: build the Orca Slicer AppImage (optional)"
+    echo "   -N FILE: copy the specified FlashNetwork library into the AppImage next to the executable"
     echo "   -p: boost ccache hit rate by disabling precompiled headers (default: ON)"
     echo "   -r: skip RAM and disk checks (low RAM compiling)"
     echo "   -s: build the Orca Slicer (optional)"
@@ -41,7 +42,7 @@ unset name
 BUILD_DIR=build
 BUILD_CONFIG=Release
 FORWARDED_ARGS=()
-while getopts ":1j:bcCdDeFghiprstulL" opt ; do
+while getopts ":1j:bcCdDeFghiN:prstulL" opt ; do
   case ${opt} in
     1 )
         export CMAKE_BUILD_PARALLEL_LEVEL=1
@@ -50,6 +51,9 @@ while getopts ":1j:bcCdDeFghiprstulL" opt ; do
     j )
         export CMAKE_BUILD_PARALLEL_LEVEL=$OPTARG
         FORWARDED_ARGS+=("-j" "$OPTARG")
+        ;;
+    N )
+        NETWORK_LIBRARY_PATH=$OPTARG
         ;;
     b )
         BUILD_DIR=build-dbg
@@ -133,6 +137,14 @@ fi
 if [[ -n "${CLEAN_DOCKER_IMAGE}" ]] && [[ -z "${USE_DOCKER}" ]] ; then
     echo "Error: -F requires -g."
     exit 1
+fi
+
+if [[ -n "${NETWORK_LIBRARY_PATH}" ]] ; then
+    if [[ ! -f "${NETWORK_LIBRARY_PATH}" ]] ; then
+        echo "Error: network library not found: ${NETWORK_LIBRARY_PATH}"
+        exit 1
+    fi
+    NETWORK_LIBRARY_PATH=$(readlink -f "${NETWORK_LIBRARY_PATH}")
 fi
 
 function check_available_memory_and_disk() {
@@ -318,11 +330,13 @@ function run_in_docker() {
     local container_cli
     local runner_image
     local container_workspace
+    local container_network_library
     local host_uid
     local host_gid
     local host_user
     local -a build_args
     local -a container_env
+    local -a container_mounts
 
     container_cli=$(resolve_container_cli)
     runner_image=$(get_docker_runner_image)
@@ -331,6 +345,7 @@ function run_in_docker() {
     host_user="${USER:-orca}"
     container_workspace="/__w/OrcaSlicer/OrcaSlicer"
     build_args=()
+    container_mounts=(-v "${SCRIPT_PATH}:${container_workspace}")
     for item in "${FORWARDED_ARGS[@]}" ; do
         if [[ "${item}" == "-u" ]] || [[ "${item}" == "-D" ]] ; then
             continue
@@ -338,6 +353,12 @@ function run_in_docker() {
 
         build_args+=("${item}")
     done
+
+    if [[ -n "${NETWORK_LIBRARY_PATH}" ]] ; then
+        container_network_library="/__network/$(basename "${NETWORK_LIBRARY_PATH}")"
+        container_mounts+=(-v "${NETWORK_LIBRARY_PATH}:${container_network_library}:ro")
+        build_args+=("-N" "${container_network_library}")
+    fi
 
     container_env=(
         -e "CI=true"
@@ -359,7 +380,7 @@ function run_in_docker() {
     ensure_docker_runner_image "${container_cli}" "${runner_image}"
 
     printf '%q ' "${container_cli}" run --rm -i \
-        -v "${SCRIPT_PATH}:${container_workspace}" \
+        "${container_mounts[@]}" \
         -w "${container_workspace}" \
         "${container_env[@]}" \
         "${runner_image}" \
@@ -370,7 +391,7 @@ function run_in_docker() {
     fi
 
     "${container_cli}" run --rm -i \
-        -v "${SCRIPT_PATH}:${container_workspace}" \
+        "${container_mounts[@]}" \
         -w "${container_workspace}" \
         "${container_env[@]}" \
         "${runner_image}" \
@@ -407,7 +428,7 @@ function create_builder_user() {
 }
 
 create_builder_user
-mkdir -p "${GITHUB_WORKSPACE}/deps/build/destdir"
+mkdir -p "${GITHUB_WORKSPACE}/deps/build"
 chown -R "${HOST_UID}:${HOST_GID}" "${GITHUB_WORKSPACE}/deps/build"
 if [[ -d "${GITHUB_WORKSPACE}/build" ]] ; then
     chown -R "${HOST_UID}:${HOST_GID}" "${GITHUB_WORKSPACE}/build"
@@ -573,7 +594,11 @@ if [[ -n "${BUILD_IMAGE}" || -n "${BUILD_ORCA}" ]] ; then
         if [[ -n "${BUILD_IMAGE}" ]] ; then
             extra_script_args="-i"
         fi
-        print_and_run ${build_linux_image} ${extra_script_args} -R "${BUILD_CONFIG}"
+        if [[ -n "${NETWORK_LIBRARY_PATH}" ]] ; then
+            print_and_run ${build_linux_image} ${extra_script_args} -R "${BUILD_CONFIG}" -N "${NETWORK_LIBRARY_PATH}"
+        else
+            print_and_run ${build_linux_image} ${extra_script_args} -R "${BUILD_CONFIG}"
+        fi
 
         echo "done"
     fi

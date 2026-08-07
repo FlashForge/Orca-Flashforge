@@ -26,6 +26,7 @@
 #endif
 
 #include <boost/algorithm/string.hpp>
+#include <boost/log/trivial.hpp>
 #include <boost/nowide/convert.hpp>
 #include <boost/nowide/cstdlib.hpp>
 
@@ -2414,10 +2415,33 @@ namespace client
 
 static const client::macro_processor g_macro_processor_instance;
 
+static std::string placeholder_log_preview(std::string text)
+{
+    boost::replace_all(text, "\r", "\\r");
+    boost::replace_all(text, "\n", "\\n");
+    if (text.size() > 500)
+        text = text.substr(0, 500) + "...";
+    return text;
+}
+
 static std::string process_macro(const std::string &templ, client::MyContext &context)
 {
+    BOOST_LOG_TRIVIAL(error) << "FF_CRASH_TRACE PlaceholderParser::process_macro begin"
+                             << ", ctx=" << &context
+                             << ", len=" << templ.size()
+                             << ", just_boolean=" << context.just_boolean_expression
+                             << ", external_config=" << context.external_config
+                             << ", config=" << context.config
+                             << ", config_override=" << context.config_override
+                             << ", config_outputs=" << context.config_outputs
+                             << ", current_extruder_id=" << context.current_extruder_id
+                             << ", preview=\"" << placeholder_log_preview(templ) << "\"";
     std::string output;
     phrase_parse(templ.begin(), templ.end(), g_macro_processor_instance(&context), client::skipper{}, output);
+    BOOST_LOG_TRIVIAL(error) << "FF_CRASH_TRACE PlaceholderParser::process_macro end"
+                             << ", ctx=" << &context
+                             << ", output_len=" << output.size()
+                             << ", error_len=" << context.error_message.size();
 	if (! context.error_message.empty()) {
         if (context.error_message.back() != '\n' && context.error_message.back() != '\r')
             context.error_message += '\n';

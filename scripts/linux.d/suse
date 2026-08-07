@@ -22,6 +22,7 @@ REQUIRED_DEV_PACKAGES=(
     libtool
     m4
     glu-devel
+    nasm
     ninja-build
     openssl-devel
     perl-FindBin-Real

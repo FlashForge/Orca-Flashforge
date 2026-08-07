@@ -88,6 +88,7 @@ WebViewPanel::WebViewPanel(wxWindow *parent)
         wxLogError("Could not init m_browser");
         return;
     }
+    WebView::AddOpenNewWindowScript(m_browser);
     m_browser->Hide();
     SetSizer(topsizer);
 
@@ -428,11 +429,11 @@ void WebViewPanel::SetLoginPanelVisibility(bool bshow)
     wxString strJS = wxString::Format("SetLoginPanelVisibility(%s)", bshow ? "true" : "false");
     RunScript(strJS);
 }
-void WebViewPanel::SendRecentList(int images)
+void WebViewPanel::SendRecentList()
 {
     boost::property_tree::wptree req;
     boost::property_tree::wptree data;
-    wxGetApp().mainframe->get_recent_projects(data, images);
+    wxGetApp().mainframe->get_recent_projects(data);
     req.put(L"sequence_id", "");
     req.put(L"command", L"get_recent_projects");
     req.put_child(L"response", data);
@@ -675,6 +676,16 @@ void WebViewPanel::OnNewWindow(wxWebViewEvent& evt)
 
 void WebViewPanel::OnScriptMessage(wxWebViewEvent& evt)
 {
+    wxString url;
+    if (WebView::TryGetOpenNewWindowUrl(evt, &url)) {
+        if (m_tools_handle_new_window != nullptr && m_tools_handle_new_window->IsChecked()) {
+            m_browser->LoadURL(url);
+        } else {
+            wxLaunchDefaultBrowser(url, wxBROWSER_NEW_WINDOW);
+        }
+        return;
+    }
+
     BOOST_LOG_TRIVIAL(trace) << __FUNCTION__ << ": " << evt.GetString().ToUTF8().data();
     // update login status
     if (m_LoginUpdateTimer == nullptr) {

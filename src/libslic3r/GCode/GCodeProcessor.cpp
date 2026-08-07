@@ -5442,10 +5442,22 @@ void GCodeProcessor::init_filament_maps_and_nozzle_type_when_import_only_gcode()
 
 void GCodeProcessor::process_filament_change(int id)
 {
-    assert(id < m_result.filaments_count);
+    if (id < 0 || id >= m_result.filaments_count || static_cast<size_t>(id) >= m_filament_maps.size()) {
+        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": invalid filament id " << id
+                                   << ", filaments_count=" << m_result.filaments_count
+                                   << ", filament_map size=" << m_filament_maps.size();
+        return;
+    }
     int prev_extruder_id = get_extruder_id(false);
     int prev_filament_id = get_filament_id(false);
     int next_extruder_id = m_filament_maps[id];
+    if (next_extruder_id < 0 || static_cast<size_t>(next_extruder_id) >= m_filament_id.size() ||
+        static_cast<size_t>(next_extruder_id) >= m_last_filament_id.size()) {
+        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": invalid mapped extruder " << next_extruder_id
+                                   << " for filament " << id
+                                   << ", extruder count=" << m_filament_id.size();
+        return;
+    }
     int next_filament_id = id;
     float extra_time = 0;
     unsigned int filament_changes_delta = 0;
@@ -6010,7 +6022,17 @@ void GCodeProcessor::update_slice_warnings()
         if (used_filaments[idx] < m_result.required_nozzle_HRC.size())
             filament_hrc = m_result.required_nozzle_HRC[used_filaments[idx]];
 
+        if (used_filaments[idx] >= m_filament_maps.size()) {
+            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": invalid filament id " << used_filaments[idx]
+                                       << ", filament_map size=" << m_filament_maps.size();
+            continue;
+        }
         int filament_extruder_id = m_filament_maps[used_filaments[idx]];
+        if (filament_extruder_id < 0 || static_cast<size_t>(filament_extruder_id) >= nozzle_hrc_lists.size()) {
+            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": invalid extruder id " << filament_extruder_id
+                                       << ", nozzle_hrc size=" << nozzle_hrc_lists.size();
+            continue;
+        }
         int extruder_hrc = nozzle_hrc_lists[filament_extruder_id];
 
         BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(": Check HRC: filament:%1%, hrc=%2%, extruder:%3%, hrc:%4%") % used_filaments[idx] % filament_hrc % filament_extruder_id % extruder_hrc;

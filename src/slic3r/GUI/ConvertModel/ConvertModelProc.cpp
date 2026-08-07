@@ -1,6 +1,7 @@
 #include "ConvertModelProc.hpp"
 #include <algorithm>
 #include <array>
+#include <iterator>
 #include <boost/functional/hash.hpp>
 #include "ConvertModelUtils.hpp"
 #include "KMeansCluster.hpp"
@@ -11,6 +12,40 @@
 #include "Vertex2FaceColor.hpp"
 
 namespace Slic3r { namespace GUI {
+namespace {
+
+bool has_valid_color_mapping(const cvt_colors_t &sourceColors, const cvt_colors_t &targetColors)
+{
+    return !sourceColors.empty() && sourceColors.size() == targetColors.size();
+}
+
+cvt_color_t nearest_palette_color(const cvt_colors_t &colors, const cvt_color_t &color)
+{
+    int minIdx = 0;
+    ConvertModelUtils::getColorMinDist2(colors, color, minIdx);
+    return colors[minIdx];
+}
+
+cvt_color_t mapped_palette_color(const cvt_colors_t &sourceColors, const cvt_colors_t &targetColors, const cvt_color_t &color)
+{
+    int minIdx = 0;
+    ConvertModelUtils::getColorMinDist2(sourceColors, color, minIdx);
+    return targetColors[minIdx];
+}
+
+void update_root_point_colors(cvt_root_points_t &rootPoints, const cvt_colors_t &colors)
+{
+    for (auto &rootPoint : rootPoints)
+        rootPoint.color = nearest_palette_color(colors, rootPoint.color);
+}
+
+void map_root_point_colors(cvt_root_points_t &rootPoints, const cvt_colors_t &sourceColors, const cvt_colors_t &targetColors)
+{
+    for (auto &rootPoint : rootPoints)
+        rootPoint.color = mapped_palette_color(sourceColors, targetColors, rootPoint.color);
+}
+
+} // namespace
 
 size_t ConvertModelProc::RootPointHash::operator()(const cvt_root_point_t &p) const
 {
@@ -67,6 +102,16 @@ cvt_colors_t ConvertModelProc::clusterColors(int colorNum)
     return kmeansCluster.clusterColors(colorNum);
 }
 
+std::array<float, 3> ConvertModelProc::modelSize() const
+{
+    return { m_modelSize[0], m_modelSize[1], m_modelSize[2] };
+}
+
+void ConvertModelProc::setScaleModelSize(bool scaleModelSize)
+{
+    m_params.scaleModelSize = scaleModelSize;
+}
+
 void ConvertModelProc::doConvert(const cvt_colors_t &dstColors, out_model_data_t &outData)
 {
     if (m_faces.empty()) {
@@ -86,6 +131,168 @@ void ConvertModelProc::doConvert(const cvt_colors_t &dstColors, out_model_data_t
     cvt_faces_t().swap(m_faces);
     cvt_root_half_edges_t().swap(m_rootEdges);
     cvt_root_points_t().swap(m_rootPoints);
+
+    RemoveSmallPatches removeSmallPatches;
+    removeSmallPatches.mergeSmallPatchesColor(outData, m_modelSize, m_params.colorMinAreaRatio);
+    transformModel(outData);
+}
+
+void ConvertModelProc::doConvertMapped(const cvt_colors_t &sourceColors, const cvt_colors_t &targetColors, out_model_data_t &outData)
+{
+    if (!has_valid_color_mapping(sourceColors, targetColors)) {
+        const cvt_colors_t &fallbackColors = targetColors.empty() ? sourceColors : targetColors;
+        if (!fallbackColors.empty())
+            doConvert(fallbackColors, outData);
+        return;
+    }
+
+    if (m_faces.empty()) {
+        return;
+    }
+    cvt_color_datas_t().swap(m_colorDatas);
+    updateRootPointColors(sourceColors);
+
+    MeshSubdivide meshSubdivide(m_faces, m_rootEdges, m_rootPoints, sourceColors, m_textureSamples);
+    meshSubdivide.subdivideRootFaces(m_srcFaceCnt, m_subdivideMaxEdgeLen);
+
+    Vertex2FaceColor vertex2FaceColor(m_faces, m_rootEdges, m_rootPoints);
+    vertex2FaceColor.subdivideMixedColorFaces(m_srcFaceCnt);
+
+    map_root_point_colors(m_rootPoints, sourceColors, targetColors);
+
+    MakeOutData makeOutData(m_faces, m_rootEdges, m_rootPoints);
+    makeOutData.makeData(m_srcFaceCnt, outData);
+    cvt_faces_t().swap(m_faces);
+    cvt_root_half_edges_t().swap(m_rootEdges);
+    cvt_root_points_t().swap(m_rootPoints);
+
+    RemoveSmallPatches removeSmallPatches;
+    removeSmallPatches.mergeSmallPatchesColor(outData, m_modelSize, m_params.colorMinAreaRatio);
+    transformModel(outData);
+}
+
+void ConvertModelProc::makePreviewModel(out_model_data_t &outData, const cvt_colors_t &dstColors /* = {} */) const
+{
+    outData.vertices.clear();
+    outData.colors.clear();
+    outData.triangles.clear();
+    if (m_faces.empty() || m_rootPoints.empty()) {
+        return;
+    }
+
+    auto nearest_color = [&dstColors](const cvt_color_t &color) {
+        if (dstColors.empty()) {
+            return color;
+        }
+        int min_idx = 0;
+        ConvertModelUtils::getColorMinDist2(dstColors, color, min_idx);
+        return dstColors[min_idx];
+    };
+
+    if (!dstColors.empty()) {
+        cvt_faces_t           faces     = m_faces;
+        cvt_root_half_edges_t rootEdges = m_rootEdges;
+        cvt_root_points_t     rootPoints = m_rootPoints;
+
+        for (auto &rootPoint : rootPoints) {
+            rootPoint.color = nearest_color(rootPoint.color);
+        }
+
+        MeshSubdivide meshSubdivide(faces, rootEdges, rootPoints, dstColors, m_textureSamples);
+        meshSubdivide.subdivideRootFaces(m_srcFaceCnt, m_subdivideMaxEdgeLen);
+
+        Vertex2FaceColor vertex2FaceColor(faces, rootEdges, rootPoints);
+        vertex2FaceColor.subdivideMixedColorFaces(m_srcFaceCnt);
+
+        MakeOutData makeOutData(faces, rootEdges, rootPoints);
+        makeOutData.makeData(m_srcFaceCnt, outData);
+
+        RemoveSmallPatches removeSmallPatches;
+        removeSmallPatches.mergeSmallPatchesColor(outData, m_modelSize, m_params.colorMinAreaRatio);
+        transformModel(outData);
+        return;
+    }
+
+    auto add_color = [&outData](const cvt_color_t &color) {
+        auto it = std::find(outData.colors.begin(), outData.colors.end(), color);
+        if (it != outData.colors.end()) {
+            return static_cast<int32_t>(std::distance(outData.colors.begin(), it));
+        }
+        outData.colors.emplace_back(color);
+        return static_cast<int32_t>(outData.colors.size() - 1);
+    };
+
+    const int face_count = std::min<int>(m_srcFaceCnt, static_cast<int>(m_faces.size()));
+    outData.vertices.reserve(static_cast<size_t>(face_count) * 3);
+    outData.triangles.reserve(face_count);
+
+    for (int i = 0; i < face_count; ++i) {
+        const cvt_face_t &face = m_faces[i];
+        cvt_color_t point_colors[3];
+        out_triangle_data_t triangle{};
+        const size_t vertex_start = outData.vertices.size();
+        bool valid = true;
+
+        for (int j = 0; j < 3; ++j) {
+            const cvt_root_half_edge_t &root_edge = m_rootEdges[face.edges[j].rootEdge];
+            auto point_it = ConvertModelUtils::findPoint(root_edge, face.edges[j].pointsPos[0]);
+            if (point_it == root_edge.points.end() || point_it->rootPoint < 0 || point_it->rootPoint >= static_cast<int>(m_rootPoints.size())) {
+                valid = false;
+                break;
+            }
+
+            const cvt_root_point_t &root_point = m_rootPoints[point_it->rootPoint];
+            triangle.vertexIndices[j] = static_cast<int32_t>(outData.vertices.size());
+            outData.vertices.push_back({ root_point.coord[0], root_point.coord[1], root_point.coord[2] });
+            point_colors[j] = nearest_color(root_point.color);
+        }
+
+        if (!valid) {
+            outData.vertices.resize(vertex_start);
+            continue;
+        }
+
+        cvt_color_t face_color = {
+            static_cast<uint8_t>((static_cast<int>(point_colors[0][0]) + point_colors[1][0] + point_colors[2][0]) / 3),
+            static_cast<uint8_t>((static_cast<int>(point_colors[0][1]) + point_colors[1][1] + point_colors[2][1]) / 3),
+            static_cast<uint8_t>((static_cast<int>(point_colors[0][2]) + point_colors[1][2] + point_colors[2][2]) / 3)
+        };
+        triangle.colorIndex = add_color(face_color);
+        outData.triangles.push_back(triangle);
+    }
+
+    transformModel(outData);
+}
+
+void ConvertModelProc::makeMappedPreviewModel(out_model_data_t &outData, const cvt_colors_t &sourceColors, const cvt_colors_t &targetColors) const
+{
+    outData.vertices.clear();
+    outData.colors.clear();
+    outData.triangles.clear();
+    if (!has_valid_color_mapping(sourceColors, targetColors)) {
+        makePreviewModel(outData, targetColors.empty() ? sourceColors : targetColors);
+        return;
+    }
+    if (m_faces.empty() || m_rootPoints.empty()) {
+        return;
+    }
+
+    cvt_faces_t           faces      = m_faces;
+    cvt_root_half_edges_t rootEdges  = m_rootEdges;
+    cvt_root_points_t     rootPoints = m_rootPoints;
+
+    update_root_point_colors(rootPoints, sourceColors);
+
+    MeshSubdivide meshSubdivide(faces, rootEdges, rootPoints, sourceColors, m_textureSamples);
+    meshSubdivide.subdivideRootFaces(m_srcFaceCnt, m_subdivideMaxEdgeLen);
+
+    Vertex2FaceColor vertex2FaceColor(faces, rootEdges, rootPoints);
+    vertex2FaceColor.subdivideMixedColorFaces(m_srcFaceCnt);
+
+    map_root_point_colors(rootPoints, sourceColors, targetColors);
+
+    MakeOutData makeOutData(faces, rootEdges, rootPoints);
+    makeOutData.makeData(m_srcFaceCnt, outData);
 
     RemoveSmallPatches removeSmallPatches;
     removeSmallPatches.mergeSmallPatchesColor(outData, m_modelSize, m_params.colorMinAreaRatio);
@@ -165,7 +372,7 @@ void ConvertModelProc::updateRootPointColors(const cvt_colors_t &dstColors)
     }
 }
 
-void ConvertModelProc::transformModel(out_model_data_t &outData)
+void ConvertModelProc::transformModel(out_model_data_t &outData) const
 {
     if (m_params.transCoordSys) {
         for (auto &vertex : outData.vertices) {
@@ -173,6 +380,9 @@ void ConvertModelProc::transformModel(out_model_data_t &outData)
             vertex[1] = -vertex[2];
             vertex[2] = y;
         }
+    }
+    if (!m_params.scaleModelSize) {
+        return;
     }
     auto scaleModel = [&](float scale) {
         for (auto &vertex : outData.vertices) {

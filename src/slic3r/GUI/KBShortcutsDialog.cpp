@@ -9,6 +9,8 @@
 #include "GUI_App.hpp"
 #include "wxExtensions.hpp"
 #include "MainFrame.hpp"
+#include <algorithm>
+#include <memory>
 #include <wx/notebook.h>
 
 namespace Slic3r {
@@ -178,7 +180,7 @@ void KBShortcutsDialog::fill_shortcuts()
             { ctrl + "S", L("Save Project") },
             { ctrl + shift + "S", L("Save Project as")},
             // File>Import
-            { ctrl + "I", L("Import geometry data from STL/STEP/3MF/OBJ/AMF files") },
+            { ctrl + "I", L("Import geometry data from STL/STEP/3MF/OBJ/GLB/AMF files") },
             // File>Export
             { ctrl + "G", L("Export plate sliced file")},
             // Slice plate
@@ -335,28 +337,60 @@ wxPanel* KBShortcutsDialog::create_page(wxWindow* parent, const ShortcutsItem& s
     int items_count = (int) shortcuts.second.size();
     wxScrolledWindow *scrollable_panel = new wxScrolledWindow(main_page);
     wxGetApp().UpdateDarkUI(scrollable_panel);
-    scrollable_panel->SetScrollbars(20, 20, 50, 50);
+    scrollable_panel->SetScrollRate(FromDIP(20), FromDIP(20));
     scrollable_panel->SetInitialSize(wxSize(FromDIP(850), FromDIP(450)));
 
     wxBoxSizer *     scrollable_panel_sizer = new wxBoxSizer(wxVERTICAL);
     wxFlexGridSizer *grid_sizer             = new wxFlexGridSizer(items_count, 2, FromDIP(10), FromDIP(20));
+    grid_sizer->AddGrowableCol(1, 1);
+
+    const int content_padding = FromDIP(20);
+    const int col_gap         = FromDIP(20);
+    const int key_col_width   = FromDIP(180);
+    const int min_desc_width  = FromDIP(100);
+    const int initial_width   = FromDIP(850);
+    auto desc_labels        = std::make_shared<std::vector<wxStaticText *>>();
+    auto last_wrap_width    = std::make_shared<int>(0);
+
+    auto update_desc_wrap = [scrollable_panel, desc_labels, last_wrap_width, content_padding, col_gap, key_col_width, min_desc_width, initial_width]() {
+        const int client_width = scrollable_panel->GetClientSize().GetWidth() > 0 ? scrollable_panel->GetClientSize().GetWidth() : initial_width;
+        const int desc_width   = std::max(min_desc_width, client_width - content_padding * 2 - col_gap - key_col_width);
+        if (*last_wrap_width == desc_width)
+            return;
+
+        *last_wrap_width = desc_width;
+        for (wxStaticText *desc : *desc_labels) {
+            desc->Wrap(desc_width);
+            desc->SetMinSize(wxSize(desc_width, -1));
+            desc->InvalidateBestSize();
+        }
+    };
 
     for (int i = 0; i < items_count; ++i) {
         const auto &[shortcut, description] = shortcuts.second[i];
         auto key                            = new wxStaticText(scrollable_panel, wxID_ANY, _(shortcut));
         key->SetForegroundColour(wxColour(50, 58, 61));
         key->SetFont(bold_font);
-        grid_sizer->Add(key, 0, wxALIGN_CENTRE_VERTICAL);
+        key->SetMinSize(wxSize(key_col_width, -1));
+        grid_sizer->Add(key, 0, wxALIGN_CENTRE_VERTICAL | wxEXPAND);
 
         auto desc = new wxStaticText(scrollable_panel, wxID_ANY, _(description));
         desc->SetFont(font);
         desc->SetForegroundColour(wxColour(50, 58, 61));
-        desc->Wrap(FromDIP(600));
-        grid_sizer->Add(desc, 0, wxALIGN_CENTRE_VERTICAL);
+        desc_labels->push_back(desc);
+        grid_sizer->Add(desc, 0, wxALIGN_CENTRE_VERTICAL | wxEXPAND);
     }
 
     scrollable_panel_sizer->Add(grid_sizer, 1, wxEXPAND | wxALL, FromDIP(20));
     scrollable_panel->SetSizer(scrollable_panel_sizer);
+    update_desc_wrap();
+    scrollable_panel->FitInside();
+    scrollable_panel->Bind(wxEVT_SIZE, [scrollable_panel, update_desc_wrap](wxSizeEvent &event) {
+        update_desc_wrap();
+        scrollable_panel->Layout();
+        scrollable_panel->FitInside();
+        event.Skip();
+    });
 
     main_sizer->Add(scrollable_panel, 1, wxEXPAND);
     main_page->SetSizer(main_sizer);

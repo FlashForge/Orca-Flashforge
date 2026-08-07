@@ -6,6 +6,7 @@
 #include "slic3r/GUI/Widgets/FFButton.hpp"
 #include "libslic3r/AppConfig.hpp"
 #include "FlashForge/DeviceData.hpp"
+#include "FlashForge/MultiComMgr.hpp"
 #include "DeviceCore/DevManager.h"
 
 namespace Slic3r { namespace GUI {
@@ -235,10 +236,16 @@ ConnectPrinterDialog::ConnectPrinterDialog(bool err_hint /*= false*/)
     Bind(wxEVT_SHOW, &ConnectPrinterDialog::on_show, this);
     m_textCtrl_code->Bind(wxEVT_TEXT, &ConnectPrinterDialog::on_input_enter, this);
     m_button_confirm->Bind(wxEVT_LEFT_DOWN, &ConnectPrinterDialog::on_button_confirm, this);
+    MultiComMgr::inst()->Bind(COM_CONNECTION_READY_EVENT, &ConnectPrinterDialog::on_connect_ready, this);
+    MultiComMgr::inst()->Bind(COM_CONNECTION_EXIT_EVENT, &ConnectPrinterDialog::on_connect_exit, this);
     wxGetApp().UpdateDlgDarkUI(this);
 }
 
-ConnectPrinterDialog::~ConnectPrinterDialog() {}
+ConnectPrinterDialog::~ConnectPrinterDialog()
+{
+    MultiComMgr::inst()->Unbind(COM_CONNECTION_READY_EVENT, &ConnectPrinterDialog::on_connect_ready, this);
+    MultiComMgr::inst()->Unbind(COM_CONNECTION_EXIT_EVENT, &ConnectPrinterDialog::on_connect_exit, this);
+}
 
 void ConnectPrinterDialog::on_show(wxShowEvent &event) 
 { 
@@ -258,6 +265,38 @@ void ConnectPrinterDialog::set_machine_object(MachineObject* obj)
 void ConnectPrinterDialog::set_device_object(DeviceObject* devObj)
 {
     m_devObj = devObj;
+    if (m_devObj != nullptr) {
+        m_dev_id = m_devObj->get_dev_id();
+    }
+}
+
+void ConnectPrinterDialog::set_connecting_state(bool connecting)
+{
+    m_connecting = connecting;
+    if (m_textCtrl_code != nullptr) {
+        m_textCtrl_code->Enable(!connecting);
+    }
+    if (m_button_confirm != nullptr) {
+        m_button_confirm->Enable(!connecting);
+    }
+}
+
+void ConnectPrinterDialog::show_status(const wxString& text, bool error)
+{
+    if (m_label_error_info == nullptr || m_error_panel == nullptr) {
+        return;
+    }
+
+    const wxColour bg = error ? wxColour(250, 207, 202) : wxColour(230, 242, 255);
+    const wxColour fg = error ? wxColour(234, 53, 34) : wxColour(50, 58, 61);
+    m_error_panel->SetBackgroundColour(bg);
+    m_label_error_info->SetBackgroundColour(bg);
+    m_label_error_info->SetForegroundColour(fg);
+    m_label_error_info->SetLabel(text);
+    m_label_error_info->Wrap(FromDIP(330));
+    m_error_panel->Show(true);
+    Layout();
+    Fit();
 }
 
 void ConnectPrinterDialog::on_input_enter(wxCommandEvent& evt)
@@ -268,22 +307,82 @@ void ConnectPrinterDialog::on_input_enter(wxCommandEvent& evt)
 
 void ConnectPrinterDialog::on_button_confirm(wxMouseEvent &event)
 {
+    if (m_connecting) {
+        return;
+    }
+
     wxString code = m_textCtrl_code->GetTextCtrl()->GetValue();
+    if (code.empty()) {
+        show_status(_L("Please input the printer access code."), true);
+        return;
+    }
     for (char c : code) {
         if (!('0' <= c && c <= '9' || 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z')) {
-            show_error(this, _L("Invalid input."));
+            show_status(_L("Invalid input."), true);
             return;
         }
     }
-    if (m_devObj) {
-        m_devObj->set_user_access_code(code.ToStdString(), false);
-        if (m_need_connect) {
-            //wxGetApp().getDeviceManager()->set_selected_machine(m_obj->dev_id);
-            wxGetApp().getDeviceObjectOpr()->set_selected_machine(m_devObj->get_dev_id());
-        }
+
+    DeviceObjectOpr* dev_opr = wxGetApp().getDeviceObjectOpr();
+    if (m_dev_id.empty() && m_devObj != nullptr) {
+        m_dev_id = m_devObj->get_dev_id();
     }
-    EndModal(wxID_OK);
+    if (m_dev_id.empty() || dev_opr == nullptr || !dev_opr->set_device_access_code(m_dev_id, code.ToStdString(), false)) {
+        show_status(_L("Failed to connect to printer."), true);
+        return;
+    }
+
+    if (m_need_connect) {
+        show_status(_L("Connecting, please wait..."), false);
+        set_connecting_state(true);
+        m_pending_conn_id = ComInvalidId;
+        dev_opr->set_selected_machine(m_dev_id);
+        m_pending_conn_id = dev_opr->get_connection_id(m_dev_id);
+        if (m_pending_conn_id == ComInvalidId) {
+            set_connecting_state(false);
+            show_status(_L("Failed to connect to printer."), true);
+            return;
+        }
+    } else {
+        EndModal(wxID_OK);
+    }
     event.Skip();
+}
+
+void ConnectPrinterDialog::on_connect_ready(ComConnectionReadyEvent& event)
+{
+    event.Skip();
+    if (event.id != m_pending_conn_id) {
+        return;
+    }
+
+    m_pending_conn_id = ComInvalidId;
+    set_connecting_state(false);
+    EndModal(wxID_OK);
+}
+
+void ConnectPrinterDialog::on_connect_exit(ComConnectionExitEvent& event)
+{
+    event.Skip();
+    if (event.id != m_pending_conn_id) {
+        return;
+    }
+
+    m_pending_conn_id = ComInvalidId;
+    set_connecting_state(false);
+
+    switch (event.ret) {
+    case COM_VERIFY_LAN_DEV_FAILED:
+        show_status(_L("The access code is wrong, please input again."), true);
+        break;
+    case COM_CONN_SEND_ERROR:
+    case COM_ERROR:
+        show_status(_L("Failed to connect to printer. Please check the printer and network, then try again."), true);
+        break;
+    default:
+        show_status(_L("Failed to connect to printer. Please try again."), true);
+        break;
+    }
 }
 
 

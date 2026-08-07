@@ -573,6 +573,36 @@ DeviceObject *DeviceObjectOpr::get_selected_machine()
     return nullptr;
 }
 
+bool DeviceObjectOpr::set_device_access_code(const std::string& dev_id, const std::string& code, bool only_refresh /*= false*/)
+{
+    bool found = false;
+    auto set_code = [&code, only_refresh, &found](auto& devices, const std::string& id) {
+        auto it = devices.find(id);
+        if (it != devices.end() && it->second != nullptr) {
+            it->second->set_user_access_code(code, only_refresh);
+            found = true;
+        }
+    };
+
+    set_code(m_scan_devices, dev_id);
+    set_code(m_local_devices, dev_id);
+    set_code(m_user_devices, dev_id);
+    return found;
+}
+
+com_id_t DeviceObjectOpr::get_connection_id(const std::string& dev_id) const
+{
+    auto lan_it = m_lan_dev_connect_map.find(dev_id);
+    if (lan_it != m_lan_dev_connect_map.end()) {
+        return lan_it->second.id;
+    }
+    auto wan_it = m_wan_dev_connect_map.find(dev_id);
+    if (wan_it != m_wan_dev_connect_map.end()) {
+        return wan_it->second.id;
+    }
+    return ComInvalidId;
+}
+
 void DeviceObjectOpr::unbind_lan_machine(DeviceObject *obj)
 {
     if (obj == nullptr) {
@@ -887,7 +917,7 @@ void DeviceObjectOpr::onConnectExit(ComConnectionExitEvent &event)
             if (it != m_scan_devices.end()) {
                 devObj = it->second;
                 devObj->set_connecting(false);
-                if (devObj->get_user_access_code().empty()) {
+                if (devObj->get_user_access_code(true).empty()) {
                     // first bind
                     if (event.ret == COM_VERIFY_LAN_DEV_FAILED) {
                         // popop input access code dialog again.
@@ -990,7 +1020,7 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
             userObj->set_user_access_code(devObj->get_user_access_code(true));
             id_connect_mode mode;
             mode.id   = connectId;
-            mode.mode = COM_CONNECT_WAN;
+            mode.mode = COM_CONNECT_LAN;
             m_lan_dev_connect_map.emplace(make_pair(serialNum, mode));
             m_local_devices.emplace(make_pair(serialNum, userObj));
 

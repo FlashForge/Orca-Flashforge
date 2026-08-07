@@ -5,6 +5,7 @@
 #include "libslic3r/LocalZOrderOptimizer.hpp"
 #include "libslic3r/MixedFilament.hpp"
 #include "libslic3r/Model.hpp"
+#include "libslic3r/ParameterUtils.hpp"
 #include "libslic3r/PresetBundle.hpp"
 #include "libslic3r/Print.hpp"
 #include "libslic3r/TriangleSelector.hpp"
@@ -104,6 +105,54 @@ TEST_CASE("Mixed filament remap follows stable row ids when same-pair rows reord
     REQUIRE(new_second_custom_virtual_id != 0);
     CHECK(remap[3] == new_first_custom_virtual_id);
     CHECK(remap[4] == new_second_custom_virtual_id);
+}
+
+TEST_CASE("Appending physical filaments moves mixed virtual IDs by stable identity",
+          "[MixedFilament][FilamentCount][Remap]")
+{
+    PresetBundle bundle;
+    bundle.filament_presets = {"Default Filament", "Default Filament"};
+    auto &colors = bundle.project_config.option<ConfigOptionStrings>("filament_colour")->values;
+    colors = {"#FF0000", "#0000FF"};
+    bundle.update_multi_material_filament_presets();
+
+    bundle.mixed_filaments.add_custom_filament(1, 2, 50, colors);
+    REQUIRE(bundle.mixed_filaments.mixed_filaments().size() == 1);
+    const uint64_t stable_id = bundle.mixed_filaments.mixed_filaments().front().stable_id;
+    bundle.sync_mixed_filaments_to_config();
+
+    bundle.set_num_filaments(6, std::vector<std::string>{
+        "#00FF00", "#FFFF00", "#00FFFF", "#FF00FF"
+    });
+
+    const std::vector<unsigned int> remap = bundle.consume_last_filament_id_remap();
+    REQUIRE(remap.size() == 4);
+    CHECK(remap[1] == 1);
+    CHECK(remap[2] == 2);
+    CHECK(remap[3] == 7);
+    REQUIRE(bundle.mixed_filaments.mixed_filaments().size() == 1);
+    CHECK(bundle.mixed_filaments.mixed_filaments().front().stable_id == stable_id);
+    CHECK(bundle.mixed_filaments.mixed_filaments().front().component_a == 1);
+    CHECK(bundle.mixed_filaments.mixed_filaments().front().component_b == 2);
+}
+
+TEST_CASE("Filament print sequences are stably remapped and completed",
+          "[MixedFilament][FilamentCount][PrintSequence]")
+{
+    std::vector<int> sequence{4, 2, 3, 1};
+    const std::vector<unsigned int> append_remap{0, 1, 2, 4, 5};
+    CHECK(remap_and_normalize_filament_sequence(sequence, 5, append_remap));
+    CHECK(sequence == std::vector<int>{5, 2, 4, 1, 3});
+    CHECK_FALSE(remap_and_normalize_filament_sequence(sequence, 5));
+
+    std::vector<int> malformed{5, 2, 2, 0, 4, 99};
+    const std::vector<unsigned int> delete_remap{0, 1, 0, 3, 2, 0};
+    CHECK(remap_and_normalize_filament_sequence(malformed, 3, delete_remap));
+    CHECK(malformed == std::vector<int>{2, 1, 3});
+
+    std::vector<int> incomplete{3, 1};
+    CHECK(remap_and_normalize_filament_sequence(incomplete, 4));
+    CHECK(incomplete == std::vector<int>{3, 1, 2, 4});
 }
 
 TEST_CASE("TriangleSelector round-trips paint states above 16", "[MixedFilament][TriangleSelector]")

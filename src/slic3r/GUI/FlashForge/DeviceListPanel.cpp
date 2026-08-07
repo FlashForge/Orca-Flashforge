@@ -2,6 +2,7 @@
 #include <boost/log/trivial.hpp>
 #include <wx/graphics.h>
 #include <wx/event.h>
+#include <wx/dcclient.h>
 #include "slic3r/GUI/I18N.hpp"
 #include "slic3r/GUI/FFUtils.hpp"
 #include "slic3r/GUI/GUI_App.hpp"
@@ -710,12 +711,19 @@ void DeviceListPanel::build()
     m_webBanner                     = WebView::CreateWebView(this, homePageUrl + "/sliceBanner");
     std::string homePageEnableDebug = wxGetApp().app_config->get("home_page_enable_debug");
     m_webBanner->EnableAccessToDevTools(homePageEnableDebug == "true" || homePageEnableDebug == "1");
+    WebView::AddOpenNewWindowScript(m_webBanner);
     m_webBanner->SetMinSize(wxSize(-1, FromDIP(128)));
     m_webBanner->Hide();
     m_webBanner->Bind(wxEVT_WEBVIEW_NEWWINDOW, [](wxWebViewEvent& evt) { 
         wxLaunchDefaultBrowser(evt.GetURL(), wxBROWSER_NEW_WINDOW);
     });
     m_webBanner->Bind(wxEVT_WEBVIEW_SCRIPT_MESSAGE_RECEIVED, [=](wxWebViewEvent& evt) { 
+        wxString url;
+        if (WebView::TryGetOpenNewWindowUrl(evt, &url)) {
+            CallAfter([url]() { wxLaunchDefaultBrowser(url, wxBROWSER_NEW_WINDOW); });
+            return;
+        }
+
         std::string response = wxGetApp().handle_web_request(evt.GetString().ToUTF8().data(), {"judge_banner_exist", "banner_get_token"});
         wxString    resp     = response;
         if (resp.StartsWith("banner")) {
@@ -747,14 +755,17 @@ void DeviceListPanel::build()
     m_no_device_bitmap = new wxStaticBitmap(m_no_device_panel, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxDefaultSize, 0);
     m_no_device_bitmap->SetBitmap(create_scaled_bitmap("monitor_device_empty", nullptr, 250));
     m_no_device_staticText = new wxStaticText(m_no_device_panel, wxID_ANY, wxT("No Device"));
-    m_no_device_staticText->Wrap(-1);
+    wxClientDC no_device_dc(m_no_device_staticText);
+    no_device_dc.SetFont(m_no_device_staticText->GetFont());
+    wxSize no_device_text_size = no_device_dc.GetTextExtent(m_no_device_staticText->GetLabel());
+    m_no_device_staticText->SetMinSize(wxSize(no_device_text_size.x + FromDIP(4), no_device_text_size.y));
     m_no_device_staticText->SetForegroundColour("#909090");
     apply_light_mode_text(m_no_device_staticText, wxColour(FF_DEVICE_LIST_MUTED_TEXT));
     m_no_device_sizer = new wxBoxSizer(wxVERTICAL);
     m_no_device_sizer->AddStretchSpacer();
     m_no_device_sizer->Add(m_no_device_bitmap, 0, wxALIGN_CENTER_HORIZONTAL);
     m_no_device_sizer->AddSpacer(20);
-    m_no_device_sizer->Add(m_no_device_staticText, 1, wxALL | wxALIGN_CENTER_HORIZONTAL);
+    m_no_device_sizer->Add(m_no_device_staticText, 0, wxALL | wxALIGN_CENTER_HORIZONTAL);
     m_no_device_sizer->AddStretchSpacer();
     m_no_device_panel->SetSizer(m_no_device_sizer);
     m_no_device_panel->Layout();

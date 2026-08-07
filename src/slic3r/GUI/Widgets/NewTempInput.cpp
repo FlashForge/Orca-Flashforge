@@ -18,6 +18,14 @@ wxDEFINE_EVENT(EVT_HIDE_PANEL, wxCommandEvent);
 const std::string CLOSE = "close";
 const std::string OPEN  = "open";
 
+void clearSizerContent(wxSizer* sizer)
+{
+    sizer->Clear(true);
+    if (sizer) {
+        sizer->RecalcSizes(); // 强制重新计算尺寸
+    }
+}
+
 CancelPrint::CancelPrint(const wxString &info, const wxString &leftBtnTxt, const wxString &rightBtnTxt, const wxString &title)
     : TitleDialog(static_cast<wxWindow *>(Slic3r::GUI::wxGetApp().GetMainTopWindow()), title, 6)
 {
@@ -157,6 +165,7 @@ void NewTempInput::Create(wxWindow* parent, wxString text, wxString label, wxStr
     text_ctrl->SetMinSize(text_size);
     text_ctrl->SetMargins(0, 0);
     text_ctrl->SetForegroundColour(wxColor("#969696"));
+    EnableTargetTemp(false);
     state_handler.attach_child(text_ctrl);
     text_ctrl->Bind(wxEVT_SET_FOCUS, [this](auto& e) {
         ProcessEventLocally(e);
@@ -230,18 +239,14 @@ void NewTempInput::SetFinish()
 
 void NewTempInput::SetTagTemp(int temp, bool notifyModify)
 {
+    if (curr_temp == NO_TEMP) {
+        return;
+    }
     if (target_temp == temp || m_read_only) {
         return;
     }
 
     target_temp = temp;
-    if (target_temp == INT_MAX) {
-        curr_temp = INT_MAX;
-        text_ctrl->SetValue("--");
-        SetLabel("--");
-        return;
-    }
-
     target_temp = std::min(target_temp, max_temp);
     target_temp = std::max(target_temp, min_temp);
 
@@ -266,11 +271,13 @@ void NewTempInput::SetCurrTemp(int temp, bool notifyModify)
         return;
     }
     curr_temp = temp;
-    if (curr_temp == INT_MAX) {
-        target_temp = INT_MAX;
-        text_ctrl->SetValue("--");
+    if (curr_temp == NO_TEMP) {
+        target_temp = NO_TEMP;
         SetLabel("--");
+        EnableTargetTemp(false);
         return;
+    } else {
+        EnableTargetTemp(true);
     }
     
     if (notifyModify) {
@@ -366,6 +373,7 @@ void NewTempInput::EnableTargetTemp(bool visible)
     }
     else {
         m_target_temp_enable = false;
+        text_ctrl->SetValue("--");
         text_ctrl->Hide();
     }
     Refresh();
@@ -632,12 +640,24 @@ void IconText::create_panel(wxWindow* parent,wxString icon,int iconSize,wxString
 
     m_panel_page->SetSizer(sizer);
     m_panel_page->Layout();
-    sizer->Fit(m_panel_page); 
+    sizer->Fit(m_panel_page);
+
+    // The outer panel (this) must own a sizer, otherwise m_panel_page is never
+    // repositioned/resized when a parent sizer changes our size: the content
+    // would float at its construction-time geometry (clipped or offset).
+    auto* outer_sizer = new wxBoxSizer(wxVERTICAL);
+    outer_sizer->Add(m_panel_page, 1, wxEXPAND);
+    parent->SetSizer(outer_sizer);
+    parent->Layout();
 }
 
 void IconText::setText(wxString text)
 {
     m_text_ctrl->SetLabel(text);
+    if (wxWindow* page = m_text_ctrl->GetParent()) {
+        page->Layout();
+    }
+    Layout();
     Refresh();
 }
 
@@ -1006,6 +1026,7 @@ void TempMixDevice::setState(int state, bool lampState)
         } else {
             m_idle_filter_button->SetIcon("device_filter");
         }
+        m_idle_device_info_button->Unbind(wxEVT_LEFT_DOWN, &TempMixDevice::onDevInfoBtnClicked, this);
         m_idle_device_info_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onDevInfoBtnClicked, this);
         //m_idle_lamp_control_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onLampBtnClicked, this);
         m_idle_filter_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onFilterBtnClicked, this);
@@ -1020,6 +1041,7 @@ void TempMixDevice::setState(int state, bool lampState)
         } else {
             m_idle_filter_button->SetIcon("device_filter");
         }
+        m_idle_device_info_button->Unbind(wxEVT_LEFT_DOWN, &TempMixDevice::onDevInfoBtnClicked, this);
         m_idle_device_info_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onDevInfoBtnClicked, this);
         //m_idle_lamp_control_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onLampBtnClicked, this);
         m_idle_filter_button->Bind(wxEVT_LEFT_DOWN, &TempMixDevice::onFilterBtnClicked, this);
@@ -1173,7 +1195,10 @@ void TempMixDevice::changeMachineType(unsigned short pid)
         m_panel_idle_device_title->Show();
         m_panel_u_device->Show();
     } else {
-        m_panel_idle_device_info->Hide();
+        // Device information is already populated by the periodic detail
+        // update. Show it immediately when entering the page; the filter
+        // button may still switch to the filter panel when requested.
+        m_panel_idle_device_info->Show();
         m_panel_idle_device_state->Show();
         m_panel_idle_device_title->Hide();
         m_panel_u_device->Hide();
@@ -1739,41 +1764,35 @@ void PosCtrlButton::SetCurId(int curId)
 NewTempInputPanel::NewTempInputPanel(wxWindow* parent) : 
     wxPanel(parent, wxID_ANY)  
 { 
-    SetSize(wxSize(FromDIP(491), FromDIP(286)));
-    SetMinSize(wxSize(FromDIP(491), FromDIP(286)));
+    SetSize(wxSize(FromDIP(491), -1));
+    SetMinSize(wxSize(FromDIP(491), -1));
     SetBackgroundColour(*wxWHITE);
-    m_tempSizer = new wxBoxSizer(wxHORIZONTAL);
-    auto main_panel = new wxPanel(this);
-    main_panel->SetMinSize(wxSize(FromDIP(491), FromDIP(286)));
-    auto       main_panel_sizer = new wxBoxSizer(wxVERTICAL);
-    auto sizer          = new wxBoxSizer(wxHORIZONTAL);
-    auto top_temp = new NewTempInput(main_panel, wxString("device_top_temperature"));
+    wxBoxSizer* rootSizer = new wxBoxSizer(wxVERTICAL);
+    m_main_panel = new wxPanel(this);
+    m_main_panel_sizer     = new wxBoxSizer(wxVERTICAL);
+    auto top_temp = new NewTempInput(m_main_panel, wxString("device_top_temperature"));
     m_tempInputs["top"] = top_temp;
-    auto bottom_temp = new NewTempInput(main_panel, wxString("device_bottom_temperature"));
+    auto bottom_temp = new NewTempInput(m_main_panel, wxString("device_bottom_temperature"));
     m_tempInputs["bottom"] = bottom_temp;
-    auto mid_temp = new NewTempInput(main_panel, wxString("device_mid_temperature"));
+    auto mid_temp = new NewTempInput(m_main_panel, wxString("device_mid_temperature"));
     m_tempInputs["mid"] = mid_temp;
-    main_panel_sizer->AddSpacer(FromDIP(16));
-    main_panel_sizer->Add(top_temp, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(26));
-    main_panel_sizer->AddSpacer(FromDIP(16));
-    main_panel_sizer->Add(bottom_temp, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(26));
-    main_panel_sizer->AddSpacer(FromDIP(16));
-    main_panel_sizer->Add(mid_temp, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(26));
-    main_panel_sizer->AddSpacer(FromDIP(58));
+    m_main_panel_sizer->AddSpacer(FromDIP(16));
+    m_main_panel_sizer->Add(top_temp, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(26));
+    m_main_panel_sizer->AddSpacer(FromDIP(16));
+    m_main_panel_sizer->Add(bottom_temp, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(26));
+    m_main_panel_sizer->AddSpacer(FromDIP(16));
+    m_main_panel_sizer->Add(mid_temp, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(26));
+    m_main_panel_sizer->AddSpacer(FromDIP(58));
     for (auto temp : m_tempInputs) {
-        temp.second->SetCurrTemp(INT_MAX);
-        temp.second->EnableTargetTemp(true);
+        temp.second->SetCurrTemp(NO_TEMP);
         temp.second->SetWindowStyle(wxALIGN_CENTER);
         temp.second->SetMinSize((wxSize(-1, FromDIP(58))));
         temp.second->SetBorderWidth(0);
     }
-    main_panel->SetSizer(main_panel_sizer);
-    main_panel_sizer->Fit(main_panel);
-    main_panel->Layout();
-    m_tempSizer->Add(main_panel, 0, wxALL | wxEXPAND, 0);
-    sizer->Add(m_tempSizer, 0, wxALL | wxEXPAND, 0);
-    SetSizer(sizer);
-    sizer->Fit(this);
+    m_main_panel->SetSizer(m_main_panel_sizer);
+    rootSizer->Add(m_main_panel, 0, wxALIGN_CENTER | wxALIGN_CENTER_VERTICAL | wxEXPAND, 0);
+    SetSizer(rootSizer);
+    m_main_panel->Layout();
     Layout();
 }
 
@@ -1781,51 +1800,37 @@ void NewTempInputPanel::UpdateTempatrue(const com_dev_data_t& data)
 {
     if (m_cur_id == -1) {
         for (auto temp : m_tempInputs) {
-            temp.second->SetCurrTemp(INT_MAX);
+            temp.second->SetCurrTemp(NO_TEMP);
         }
         return;
     }
 
     auto pid = FFUtils::getPid(m_cur_id);
     if (pid == C5) {
-        std::vector<double> nozzlesTemp;
-        std::vector<double> nozzlesTagTemp;
-        for (int i = 0; i < data.devDetail->nozzleCnt; i++) {
-            nozzlesTemp.push_back(data.devDetail->nozzleTemps[i]);
-            nozzlesTagTemp.push_back(data.devDetail->nozzleTargetTemps[i]);
+        for (int i = 1; i <= m_count; i++) {
+            NewTempInput* input = m_tempInputs["t" + std::to_string(i)];
+            if (i <= data.devDetail->nozzleCnt && data.devDetail->nozzleTemps
+                && data.devDetail->nozzleTargetTemps) {
+                input->SetCurrTemp(data.devDetail->nozzleTemps[i - 1], true);
+                input->SetTagTemp(data.devDetail->nozzleTargetTemps[i - 1], true);
+            } else {
+                input->SetCurrTemp(NO_TEMP);
+            }
         }
-        if (nozzlesTemp.size() < 4) {
-            return;
-        }
-        m_tempInputs["t1"]->SetCurrTemp(nozzlesTemp[0], true);
-        m_tempInputs["t1"]->SetTagTemp(nozzlesTagTemp[0], true);
-        m_tempInputs["t2"]->SetCurrTemp(nozzlesTemp[1], true);
-        m_tempInputs["t2"]->SetTagTemp(nozzlesTagTemp[1], true);
-        m_tempInputs["t3"]->SetCurrTemp(nozzlesTemp[2], true);
-        m_tempInputs["t3"]->SetTagTemp(nozzlesTagTemp[2], true);
-        m_tempInputs["t4"]->SetCurrTemp(nozzlesTemp[3], true);
-        m_tempInputs["t4"]->SetTagTemp(nozzlesTagTemp[3], true);
-        m_tempInputs["mid"]->SetCurrTemp(data.devDetail->platTemp, true);
-        m_tempInputs["mid"]->SetTagTemp(data.devDetail->platTargetTemp, true);
+        m_tempInputs["bottom"]->SetCurrTemp(data.devDetail->platTemp, true);
+        m_tempInputs["bottom"]->SetTagTemp(data.devDetail->platTargetTemp, true);
     } 
     else if (pid == C5P) {
-        std::vector<double> nozzlesTemp;
-        std::vector<double> nozzlesTagTemp;
-        for (int i = 0; i < data.devDetail->nozzleCnt; i++) {
-            nozzlesTemp.push_back(data.devDetail->nozzleTemps[i]);
-            nozzlesTagTemp.push_back(data.devDetail->nozzleTargetTemps[i]);
+        for (int i = 1; i <= m_count; i++) {
+            NewTempInput* input = m_tempInputs["t" + std::to_string(i)];
+            if (i <= data.devDetail->nozzleCnt && data.devDetail->nozzleTemps
+                && data.devDetail->nozzleTargetTemps) {
+                input->SetCurrTemp(data.devDetail->nozzleTemps[i - 1], true);
+                input->SetTagTemp(data.devDetail->nozzleTargetTemps[i - 1], true);
+            } else {
+                input->SetCurrTemp(NO_TEMP);
+            }
         }
-        if (nozzlesTemp.size() < 4) {
-            return;
-        }
-        m_tempInputs["t1"]->SetCurrTemp(nozzlesTemp[0], true);
-        m_tempInputs["t1"]->SetTagTemp(nozzlesTagTemp[0], true);
-        m_tempInputs["t2"]->SetCurrTemp(nozzlesTemp[1], true);
-        m_tempInputs["t2"]->SetTagTemp(nozzlesTagTemp[1], true);
-        m_tempInputs["t3"]->SetCurrTemp(nozzlesTemp[2], true);
-        m_tempInputs["t3"]->SetTagTemp(nozzlesTagTemp[2], true);
-        m_tempInputs["t4"]->SetCurrTemp(nozzlesTemp[3], true);
-        m_tempInputs["t4"]->SetTagTemp(nozzlesTagTemp[3], true);
         m_tempInputs["bottom"]->SetCurrTemp(data.devDetail->platTemp, true);
         m_tempInputs["bottom"]->SetTagTemp(data.devDetail->platTargetTemp, true);
         m_tempInputs["mid"]->SetCurrTemp(data.devDetail->chamberTemp, true);
@@ -1849,11 +1854,101 @@ void NewTempInputPanel::UpdateTempatrue(const com_dev_data_t& data)
     }
 }
 
+wxSizer* NewTempInputPanel::createNozzlesSizer(wxPanel* panel, int cnt, int min_temp, int max_temp)
+{
+    m_count                = cnt;
+    auto u1_panel_up_sizer = new wxGridSizer(2, FromDIP(19), FromDIP(26));
+    m_tempSlotIds.clear();
+    for (int i = 1; i <= cnt; i++) {
+        auto temp = new NewTempInput(panel);
+        temp->SetNozzleIndex(i);
+        temp->SetMinTemp(min_temp);
+        temp->SetMaxTemp(max_temp);
+        temp->SetMinSize(wxSize(-1, FromDIP(58)));
+        temp->SetMaxSize(wxSize(-1, FromDIP(58)));
+        m_tempInputs["t" + std::to_string(i)] = temp;
+        m_tempSlotIds.push_back(i);
+        u1_panel_up_sizer->Add(temp, 1, wxEXPAND, 0);
+    }
+    return u1_panel_up_sizer;
+}
+
+void NewTempInputPanel::updateNozzleCount(int cnt)
+{
+    StateColor tempinput_text_colour(std::make_pair(wxColour(51, 51, 51), (int) StateColor::Disabled),
+                                     std::make_pair(wxColour(48, 58, 60), (int) StateColor::Normal));
+    StateColor tempinput_border_colour(std::make_pair(*wxWHITE, (int) StateColor::Disabled),
+                                       std::make_pair(wxColour(0, 150, 136), (int) StateColor::Focused),
+                                       std::make_pair(wxColour(0, 150, 136), (int) StateColor::Hovered),
+                                       std::make_pair(*wxWHITE, (int) StateColor::Normal));
+
+    //if (FFUtils::getPid(m_cur_id) != C5S) {
+    //    return;
+    //}
+    m_tempInputs.clear();
+    clearSizerContent(m_main_panel_sizer);
+    auto u1_panel_up_sizer = createNozzlesSizer(m_main_panel, cnt, 0, 350);
+    auto bottom_temp       = new NewTempInput(m_main_panel, wxString("device_bottom_temperature"));
+    bottom_temp->SetMinTemp(0);
+    bottom_temp->SetMaxTemp(120);
+    m_tempInputs["bottom"] = bottom_temp;
+
+    for (auto temp : m_tempInputs) {
+        temp.second->SetWindowStyle(wxALIGN_CENTER);
+        temp.second->SetMinSize((wxSize(-1, FromDIP(58))));
+        temp.second->SetBorderWidth(0);
+        temp.second->SetTextColor(tempinput_text_colour);
+        temp.second->SetBorderColor(tempinput_border_colour);
+        temp.second->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& event) {
+            event.Skip();
+            lostTempModify();
+        });
+        temp.second->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent& event) {
+            event.Skip();
+            lostTempModify();
+        });
+    }
+
+    m_main_panel_sizer->AddSpacer(FromDIP(16));
+    m_main_panel_sizer->Add(u1_panel_up_sizer, 0, wxLEFT | wxRIGHT | wxCENTER | wxEXPAND, FromDIP(26));
+    m_main_panel_sizer->AddSpacer(FromDIP(19));
+    m_main_panel_sizer->Add(bottom_temp, 0, wxLEFT | wxRIGHT | wxCENTER | wxEXPAND, FromDIP(26));
+    m_main_panel_sizer->AddSpacer(FromDIP(58));
+    m_main_panel->Layout();
+    Layout();
+}
+
+void NewTempInputPanel::updateNozzleSlotId(std::vector<int>& slotIds)
+{
+    /*if (slotIds.size() != m_count) {
+        return;
+    }
+    std::unordered_map<std::string, NewTempInput*> tempInputs;
+    for (int i = 0; i < m_count; i++) {
+        int j = m_tempSlotIds[i];
+        if (m_tempInputs.find("t" + std::to_string(j)) == m_tempInputs.end()) {
+            continue;
+        }
+        auto temp = m_tempInputs["t" + std::to_string(j)];
+        m_tempInputs.erase("t" + std::to_string(j));
+        temp->SetNozzleIndex(slotIds[i]);
+        tempInputs["t" + std::to_string(slotIds[i])] = temp;
+    }
+    for (auto val : m_tempInputs) {
+        tempInputs[val.first] = val.second;
+    }
+    m_tempInputs = tempInputs;
+    m_tempSlotIds = slotIds;
+    Layout();
+    Refresh();*/
+}
+
 void NewTempInputPanel::ReInitTempature(int curId)
 {
     m_tempInputs.clear();
-    m_tempSizer->Clear(true);
+    clearSizerContent(m_main_panel_sizer);
     m_cur_id = curId;
+    m_count  = -1;
 
     StateColor tempinput_text_colour(std::make_pair(wxColour(51, 51, 51), (int)StateColor::Disabled),
         std::make_pair(wxColour(48, 58, 60), (int)StateColor::Normal));
@@ -1861,40 +1956,33 @@ void NewTempInputPanel::ReInitTempature(int curId)
         std::make_pair(wxColour(0, 150, 136), (int)StateColor::Focused),
         std::make_pair(wxColour(0, 150, 136), (int)StateColor::Hovered),
         std::make_pair(*wxWHITE, (int)StateColor::Normal));
-    auto main_panel = new wxPanel(this);
-    main_panel->SetMinSize(wxSize(FromDIP(491), FromDIP(286)));
-    auto       main_panel_sizer = new wxBoxSizer(wxVERTICAL);
 
     if (curId == -1) {
-        auto top_temp = new NewTempInput(main_panel, wxString("device_top_temperature"));
+        auto top_temp = new NewTempInput(m_main_panel, wxString("device_top_temperature"));
         m_tempInputs["top"] = top_temp;
-        auto bottom_temp = new NewTempInput(main_panel, wxString("device_bottom_temperature"));
+        auto bottom_temp = new NewTempInput(m_main_panel, wxString("device_bottom_temperature"));
         m_tempInputs["bottom"] = bottom_temp;
-        auto mid_temp = new NewTempInput(main_panel, wxString("device_mid_temperature"));
+        auto mid_temp = new NewTempInput(m_main_panel, wxString("device_mid_temperature"));
         m_tempInputs["mid"] = mid_temp;
 
-        main_panel_sizer->AddSpacer(FromDIP(16));
-        main_panel_sizer->Add(top_temp, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(26));
-        main_panel_sizer->AddSpacer(FromDIP(16));
-        main_panel_sizer->Add(bottom_temp, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(26));
-        main_panel_sizer->AddSpacer(FromDIP(16));
-        main_panel_sizer->Add(mid_temp, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(26));
-        main_panel_sizer->AddSpacer(FromDIP(58));
-
-		main_panel->SetSizer(main_panel_sizer);
-		main_panel_sizer->Fit(main_panel);
-		main_panel->Layout();
-		m_tempSizer->Add(main_panel, 0, wxALL | wxEXPAND, 0);
+        m_main_panel_sizer->AddSpacer(FromDIP(16));
+        m_main_panel_sizer->Add(top_temp, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(26));
+        m_main_panel_sizer->AddSpacer(FromDIP(16));
+        m_main_panel_sizer->Add(bottom_temp, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(26));
+        m_main_panel_sizer->AddSpacer(FromDIP(16));
+        m_main_panel_sizer->Add(mid_temp, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(26));
+        m_main_panel_sizer->AddSpacer(FromDIP(58));
 
         for (auto temp : m_tempInputs) {
-            temp.second->SetCurrTemp(INT_MAX);
-            temp.second->EnableTargetTemp(true);
+            temp.second->SetCurrTemp(NO_TEMP);
             temp.second->SetWindowStyle(wxALIGN_CENTER);
             temp.second->SetMinSize((wxSize(-1, FromDIP(58))));
+            temp.second->SetMaxSize((wxSize(-1, FromDIP(58))));
             temp.second->SetBorderWidth(0);
             temp.second->SetTextColor(tempinput_text_colour);
             temp.second->SetBorderColor(tempinput_border_colour);
         }
+		m_main_panel->Layout();
         Layout();
 		return;
     }
@@ -1902,83 +1990,35 @@ void NewTempInputPanel::ReInitTempature(int curId)
     auto pid = FFUtils::getPid(curId);
     switch(pid) {
     case C5: {
-        auto       u1_panel_up_sizer = new wxGridSizer(2, 2, FromDIP(19), FromDIP(26));
-        auto t1_temp = new NewTempInput(main_panel);
-        t1_temp->SetNozzleIndex(1);
-        t1_temp->SetMinTemp(0);
-        t1_temp->SetMaxTemp(320);
-        m_tempInputs["t1"] = t1_temp;
-        auto t2_temp = new NewTempInput(main_panel);
-        t2_temp->SetNozzleIndex(2);
-        t2_temp->SetMinTemp(0);
-        t2_temp->SetMaxTemp(320);
-        m_tempInputs["t2"] = t2_temp;
-        auto t3_temp = new NewTempInput(main_panel);
-        t3_temp->SetNozzleIndex(3);
-        t3_temp->SetMinTemp(0);
-        t3_temp->SetMaxTemp(320);
-        m_tempInputs["t3"] = t3_temp;
-        auto t4_temp = new NewTempInput(main_panel);
-        t4_temp->SetNozzleIndex(4);
-        t4_temp->SetMinTemp(0);
-        t4_temp->SetMaxTemp(320);
-        m_tempInputs["t4"] = t4_temp;
-        auto mid_temp = new NewTempInput(main_panel, wxString("device_bottom_temperature"));
-        mid_temp->SetMinTemp(0);
-        mid_temp->SetMaxTemp(65);
-        m_tempInputs["mid"] = mid_temp;
-
-        u1_panel_up_sizer->Add(t1_temp, 0, wxEXPAND, 0);
-        u1_panel_up_sizer->Add(t2_temp, 0, wxEXPAND, 0);
-        u1_panel_up_sizer->Add(t3_temp, 0, wxEXPAND, 0);
-        u1_panel_up_sizer->Add(t4_temp, 0, wxEXPAND, 0);
-        main_panel_sizer->AddSpacer(FromDIP(16));
-        main_panel_sizer->Add(u1_panel_up_sizer, 0, wxLEFT | wxRIGHT | wxEXPAND, FromDIP(26));
-        main_panel_sizer->AddSpacer(FromDIP(19));
-        main_panel_sizer->Add(mid_temp, 0, wxLEFT | wxRIGHT | wxEXPAND, FromDIP(26));
-        main_panel_sizer->AddSpacer(FromDIP(58));
-        break;
-    }
-    case C5P: {
-        auto u1_panel_up_sizer = new wxGridSizer(3, 2, FromDIP(19), FromDIP(26));
-        auto t1_temp           = new NewTempInput(main_panel);
-        t1_temp->SetNozzleIndex(1);
-        t1_temp->SetMinTemp(0);
-        t1_temp->SetMaxTemp(320);
-        m_tempInputs["t1"] = t1_temp;
-        auto t2_temp       = new NewTempInput(main_panel);
-        t2_temp->SetNozzleIndex(2);
-        t2_temp->SetMinTemp(0);
-        t2_temp->SetMaxTemp(320);
-        m_tempInputs["t2"] = t2_temp;
-        auto t3_temp       = new NewTempInput(main_panel);
-        t3_temp->SetNozzleIndex(3);
-        t3_temp->SetMinTemp(0);
-        t3_temp->SetMaxTemp(320);
-        m_tempInputs["t3"] = t3_temp;
-        auto t4_temp       = new NewTempInput(main_panel);
-        t4_temp->SetNozzleIndex(4);
-        t4_temp->SetMinTemp(0);
-        t4_temp->SetMaxTemp(320);
-        m_tempInputs["t4"] = t4_temp;
-        auto bottom_temp      = new NewTempInput(main_panel, wxString("device_bottom_temperature"));
+        auto u1_panel_up_sizer = createNozzlesSizer(m_main_panel, 4, 0, 320);
+        auto bottom_temp = new NewTempInput(m_main_panel, wxString("device_bottom_temperature"));
         bottom_temp->SetMinTemp(0);
         bottom_temp->SetMaxTemp(120);
         m_tempInputs["bottom"] = bottom_temp;
-        auto mid_temp       = new NewTempInput(main_panel, wxString("device_mid_temperature"));
+
+        m_main_panel_sizer->AddSpacer(FromDIP(16));
+        m_main_panel_sizer->Add(u1_panel_up_sizer, 0, wxLEFT | wxRIGHT | wxEXPAND, FromDIP(26));
+        m_main_panel_sizer->AddSpacer(FromDIP(19));
+        m_main_panel_sizer->Add(bottom_temp, 0, wxLEFT | wxRIGHT | wxEXPAND, FromDIP(26));
+        m_main_panel_sizer->AddSpacer(FromDIP(58));
+        break;
+    }
+    case C5P: {
+        auto u1_panel_up_sizer = createNozzlesSizer(m_main_panel, 4, 0, 320);
+        auto bottom_temp      = new NewTempInput(m_main_panel, wxString("device_bottom_temperature"));
+        bottom_temp->SetMinTemp(0);
+        bottom_temp->SetMaxTemp(65);
+        m_tempInputs["bottom"] = bottom_temp;
+        auto mid_temp       = new NewTempInput(m_main_panel, wxString("device_mid_temperature"));
         mid_temp->SetMinTemp(0);
         mid_temp->SetMaxTemp(65);
         m_tempInputs["mid"] = mid_temp;
 
-        u1_panel_up_sizer->Add(t1_temp, 0, wxEXPAND, 0);
-        u1_panel_up_sizer->Add(t2_temp, 0, wxEXPAND, 0);
-        u1_panel_up_sizer->Add(t3_temp, 0, wxEXPAND, 0);
-        u1_panel_up_sizer->Add(t4_temp, 0, wxEXPAND, 0);
-        u1_panel_up_sizer->Add(bottom_temp, 0, wxEXPAND, 0);
-        u1_panel_up_sizer->Add(mid_temp, 0, wxEXPAND, 0);
-        main_panel_sizer->AddSpacer(FromDIP(16));
-        main_panel_sizer->Add(u1_panel_up_sizer, 0, wxLEFT | wxRIGHT | wxEXPAND, FromDIP(26));
-        main_panel_sizer->AddSpacer(FromDIP(58));
+        u1_panel_up_sizer->Add(bottom_temp, 1, wxEXPAND, 0);
+        u1_panel_up_sizer->Add(mid_temp, 1, wxEXPAND, 0);
+        m_main_panel_sizer->AddSpacer(FromDIP(16));
+        m_main_panel_sizer->Add(u1_panel_up_sizer, 0, wxLEFT | wxRIGHT | wxEXPAND, FromDIP(26));
+        m_main_panel_sizer->AddSpacer(FromDIP(58));
         break;
     }
     case ADVENTURER_5M:
@@ -1988,11 +2028,11 @@ void NewTempInputPanel::ReInitTempature(int curId)
     case AD5X:
     case ADVENTURER_A5:
     case GUIDER_3_ULTRA: {
-        auto top_temp = new NewTempInput(main_panel, wxString("device_top_temperature"));
+        auto top_temp = new NewTempInput(m_main_panel, wxString("device_top_temperature"));
         m_tempInputs["top"] = top_temp;
-        auto bottom_temp = new NewTempInput(main_panel, wxString("device_bottom_temperature"));
+        auto bottom_temp = new NewTempInput(m_main_panel, wxString("device_bottom_temperature"));
         m_tempInputs["bottom"] = bottom_temp;
-        auto mid_temp = new NewTempInput(main_panel, wxString("device_mid_temperature"));
+        auto mid_temp = new NewTempInput(m_main_panel, wxString("device_mid_temperature"));
         m_tempInputs["mid"] = mid_temp;
         if (pid == ADVENTURER_5M || pid == ADVENTURER_5M_PRO || pid == ADVENTURER_A5) {
             top_temp->SetMinTemp(0);
@@ -2000,7 +2040,7 @@ void NewTempInputPanel::ReInitTempature(int curId)
             bottom_temp->SetMinTemp(0);
             bottom_temp->SetMaxTemp(110);
             mid_temp->SetReadOnly(true);
-            mid_temp->SetTagTemp(INT_MAX);
+            mid_temp->SetCurrTemp(NO_TEMP);
         }
         else if (pid == GUIDER_4 || pid == GUIDER_4_PRO) {
             top_temp->SetMinTemp(0);
@@ -2017,7 +2057,7 @@ void NewTempInputPanel::ReInitTempature(int curId)
             bottom_temp->SetMinTemp(0);
             bottom_temp->SetMaxTemp(110);
             mid_temp->SetReadOnly(true);
-            mid_temp->SetTagTemp(INT_MAX);
+            mid_temp->SetCurrTemp(NO_TEMP);
         }
         else if (pid == GUIDER_3_ULTRA) {
             top_temp->SetMinTemp(0);
@@ -2032,26 +2072,21 @@ void NewTempInputPanel::ReInitTempature(int curId)
             mid_temp->SetNormalIcon("device_bottom_temperature");
         }
 
-        main_panel_sizer->AddSpacer(FromDIP(16));
-        main_panel_sizer->Add(top_temp, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(26));
-        main_panel_sizer->AddSpacer(FromDIP(16));
-        main_panel_sizer->Add(bottom_temp, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(26));
-        main_panel_sizer->AddSpacer(FromDIP(16));
-        main_panel_sizer->Add(mid_temp, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(26));
-        main_panel_sizer->AddSpacer(FromDIP(58));
+        m_main_panel_sizer->AddSpacer(FromDIP(16));
+        m_main_panel_sizer->Add(top_temp, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(26));
+        m_main_panel_sizer->AddSpacer(FromDIP(16));
+        m_main_panel_sizer->Add(bottom_temp, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(26));
+        m_main_panel_sizer->AddSpacer(FromDIP(16));
+        m_main_panel_sizer->Add(mid_temp, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(26));
+        m_main_panel_sizer->AddSpacer(FromDIP(58));
         break;
     }
     }
 
-    main_panel->SetSizer(main_panel_sizer);
-    main_panel_sizer->Fit(main_panel);
-    main_panel->Layout();
-    m_tempSizer->Add(main_panel, 0, wxALL | wxEXPAND, 0);
-
     for (auto temp : m_tempInputs) {
-        temp.second->EnableTargetTemp(true);
         temp.second->SetWindowStyle(wxALIGN_CENTER);
         temp.second->SetMinSize((wxSize(-1, FromDIP(58))));
+        temp.second->SetMaxSize((wxSize(-1, FromDIP(58))));
         temp.second->SetBorderWidth(0);
         temp.second->SetTextColor(tempinput_text_colour);
         temp.second->SetBorderColor(tempinput_border_colour);
@@ -2064,6 +2099,8 @@ void NewTempInputPanel::ReInitTempature(int curId)
             lostTempModify();
         });
     }
+
+    m_main_panel->Layout();
     Layout();
 }
 
@@ -2079,6 +2116,7 @@ void NewTempInputPanel::lostTempModify()
     if (m_cur_id == -1) {
         return;
     }
+
     auto pid = FFUtils::getPid(m_cur_id);
     switch (pid) {
     case ADVENTURER_5M:
@@ -2102,25 +2140,25 @@ void NewTempInputPanel::lostTempModify()
         break;
     }
     case C5: {
-        double              t1_tag_temp  = m_tempInputs["t1"]->GetTagTemp();
-        double              t2_tag_temp  = m_tempInputs["t2"]->GetTagTemp();
-        double              t3_tag_temp  = m_tempInputs["t3"]->GetTagTemp();
-        double              t4_tag_temp  = m_tempInputs["t4"]->GetTagTemp();
-        double              mid_tag_temp = m_tempInputs["mid"]->GetTagTemp();
-        std::vector<double> nozzlesTemp  = {t1_tag_temp, t2_tag_temp, t3_tag_temp, t4_tag_temp};
-        ComTempCtrl*        tempCtrl     = new ComTempCtrl(mid_tag_temp, 0, 0, 0);
+        double              bottom_tag_temp = m_tempInputs["bottom"]->GetTagTemp();
+        std::vector<double> nozzlesTemp;
+        for (int i = 1; i <= m_count; i++) {
+            double nozzle_tag_temp = m_tempInputs["t" + std::to_string(i)]->GetTagTemp();
+            nozzlesTemp.push_back(nozzle_tag_temp);
+        }
+        ComTempCtrl*        tempCtrl     = new ComTempCtrl(bottom_tag_temp, 0, 0, 0);
         tempCtrl->addNozzlesTemp(nozzlesTemp);
         MultiComMgr::inst()->putCommand(m_cur_id, tempCtrl);
         break;
     }
     case C5P: {
-        double t1_tag_temp = m_tempInputs["t1"]->GetTagTemp();
-        double t2_tag_temp = m_tempInputs["t2"]->GetTagTemp();
-        double t3_tag_temp = m_tempInputs["t3"]->GetTagTemp();
-        double t4_tag_temp = m_tempInputs["t4"]->GetTagTemp();
         double              mid_tag_temp = m_tempInputs["mid"]->GetTagTemp();
         double              bottom_tag_temp = m_tempInputs["bottom"]->GetTagTemp();
-        std::vector<double> nozzlesTemp = { t1_tag_temp, t2_tag_temp, t3_tag_temp, t4_tag_temp };
+        std::vector<double> nozzlesTemp;
+        for (int i = 1; i <= m_count; i++) {
+            double nozzle_tag_temp = m_tempInputs["t" + std::to_string(i)]->GetTagTemp();
+            nozzlesTemp.push_back(nozzle_tag_temp);
+        }
         ComTempCtrl* tempCtrl = new ComTempCtrl(bottom_tag_temp, 0, 0, mid_tag_temp);
         tempCtrl->addNozzlesTemp(nozzlesTemp);
         MultiComMgr::inst()->putCommand(m_cur_id, tempCtrl);
@@ -2387,7 +2425,9 @@ void MachineComboBox::OnPaint(wxPaintEvent& evt)
 
     auto& arrowBmp = m_isDropped ? m_arrowUp : m_arrowDown;
     if (arrowBmp.bmp().IsOk()) {
-        gdc.DrawBitmap(arrowBmp.bmp(), arrowBmp.GetBmpWidth(), arrowBmp.GetBmpHeight(), true);
+        int bmpX = rect.width - arrowBmp.GetBmpWidth() - 12;
+        int bmpY = (rect.height - arrowBmp.GetBmpHeight()) / 2;
+        gdc.DrawBitmap(arrowBmp.bmp(), bmpX, bmpY, true);
     } else {
         gdc.SetPen(wxPen(text_color, 2));
         wxPoint arrowPoints[3];
@@ -2497,6 +2537,14 @@ MachineIconCombo::MachineIconCombo(
     m_panel_page->SetSizer(sizer);
     m_panel_page->Layout();
     sizer->Fit(m_panel_page);
+
+    // The outer panel (this) must own a sizer so m_panel_page (which holds the
+    // icon and the native combobox) follows our size when the grid lays us out;
+    // otherwise the combobox floats at its construction-time position.
+    auto* outer_sizer = new wxBoxSizer(wxVERTICAL);
+    outer_sizer->Add(m_panel_page, 1, wxEXPAND);
+    SetSizer(outer_sizer);
+    Layout();
 }
 
 MachineComboBox* MachineIconCombo::combobox() { return m_combobox; }

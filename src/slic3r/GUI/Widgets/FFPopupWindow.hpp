@@ -29,8 +29,13 @@ private:
     void onLeftUp(wxMouseEvent& event);
     void onMotion(wxMouseEvent& event);
 
+    // Drops the mouse capture this window owns. Pass callReleaseMouse=false when
+    // the system already revoked the capture (e.g. from onCaptureMouseLost).
+    void releaseCapture(bool callReleaseMouse);
+
 private:
     bool    m_leftPressed {false};
+    bool    m_mouseCaptured {false};
 };
 
 #endif

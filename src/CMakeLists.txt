@@ -148,7 +148,7 @@ if (MINGW)
 endif (MINGW)
 
 if (NOT WIN32 AND NOT APPLE)
-    set_target_properties(Orca-Flashforge PROPERTIES OUTPUT_NAME "Flash Studio")
+    set_target_properties(Orca-Flashforge PROPERTIES OUTPUT_NAME "FlashStudio")
     set(SLIC3R_APP_CMD "flash studio")
     add_custom_command(TARGET Orca-Flashforge POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E create_symlink "FlashStudio" "Flash Studio"

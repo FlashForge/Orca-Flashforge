@@ -76,7 +76,6 @@ public:
               const wxSize&   size         = wxDefaultSize,
               bool            titleCenter  = true);
 
-
 private:
     wxWebView* m_browser{nullptr};
     void       OnNavigated(wxWebViewEvent& evt);

@@ -3,6 +3,7 @@
 #include "ClipperUtils.hpp"
 #include "Config.hpp"
 #include "MaterialType.hpp"
+#include "TriangleSelector.hpp"
 #include "I18N.hpp"
 #include "format.hpp"
 
@@ -1099,13 +1100,13 @@ void PrintConfigDef::init_fff_params()
     def             = this->add("first_layer_print_sequence", coInts);
     def->label      = L("First layer print sequence");
     def->min        = 0;
-    def->max        = 16;
+    def->max        = int(EnforcerBlockerType::ExtruderMax);
     def->set_default_value(new ConfigOptionInts{0});
 
     def        = this->add("other_layers_print_sequence", coInts);
     def->label = L("Other layers print sequence");
     def->min   = 0;
-    def->max   = 16;
+    def->max   = int(EnforcerBlockerType::ExtruderMax);
     def->set_default_value(new ConfigOptionInts{0});
 
     def        = this->add("other_layers_print_sequence_nums", coInt);
@@ -9062,6 +9063,7 @@ bool DynamicPrintConfig::is_using_different_extruders()
 
 bool DynamicPrintConfig::support_different_extruders(int& extruder_count)
 {
+    extruder_count = 0;
     std::set<std::string> variant_set;
 
     auto nozzle_diameters_opt = dynamic_cast<const ConfigOptionFloats*>(this->option("nozzle_diameter"));
@@ -9725,13 +9727,24 @@ void DynamicPrintConfig::update_values_to_printer_extruders(DynamicPrintConfig& 
         //int extruder_count = opt_nozzle_diameters->size();
         auto opt_extruder_type = dynamic_cast<const ConfigOptionEnumsGeneric*>(printer_config.option("extruder_type"));
         auto opt_nozzle_volume_type = dynamic_cast<const ConfigOptionEnumsGeneric*>(printer_config.option("nozzle_volume_type"));
-        if (!opt_extruder_type || !opt_nozzle_volume_type) {
-            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(", Line %1%: extruder_type or nozzle_volume_type option not found, skipping")%__LINE__;
+        const size_t printer_extruder_count = extruder_count > 0 ?
+            std::min({static_cast<size_t>(extruder_count), opt_extruder_type != nullptr ? opt_extruder_type->size() : 0,
+                      opt_nozzle_volume_type != nullptr ? opt_nozzle_volume_type->size() : 0}) : 0;
+        if (printer_extruder_count == 0) {
+            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(", Line %1%: invalid printer extruder config, extruder_count=%2%")
+                %__LINE__ %extruder_count;
             return;
         }
+
+        if (extruder_id > printer_extruder_count) {
+            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(", Line %1%: invalid extruder_id %2%, printer_extruder_count=%3%, fallback to 1")
+                %__LINE__ %extruder_id %printer_extruder_count;
+            extruder_id = 1;
+        }
+
         std::vector<int> variant_index;
 
-        if (extruder_id > 0 && extruder_id <= static_cast<unsigned> (extruder_count)) {
+        if (extruder_id > 0) {
             variant_index.resize(1);
             ExtruderType extruder_type = (ExtruderType)(opt_extruder_type->get_at(extruder_id - 1));
             NozzleVolumeType nozzle_volume_type = (NozzleVolumeType)(opt_nozzle_volume_type->get_at(extruder_id - 1));
@@ -9748,6 +9761,7 @@ void DynamicPrintConfig::update_values_to_printer_extruders(DynamicPrintConfig& 
             extruder_count = 1;
         }
         else {
+            extruder_count = static_cast<int>(printer_extruder_count);
             variant_index.resize(extruder_count);
 
             for (int e_index = 0; e_index < extruder_count; e_index++)
@@ -9775,6 +9789,12 @@ void DynamicPrintConfig::update_values_to_printer_extruders(DynamicPrintConfig& 
             const ConfigOptionDef *optdef  = config_def->get(key);
             if (!optdef) {
                 BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(", Line %1%: can not find opt define for %2%")%__LINE__%key;
+                continue;
+            }
+            ConfigOption *opt_base = this->option(key, false);
+            ConfigOptionVectorBase *opt_vec_base = dynamic_cast<ConfigOptionVectorBase *>(opt_base);
+            if (opt_vec_base == nullptr || opt_vec_base->empty()) {
+                BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(", Line %1%: empty or invalid option for %2%")%__LINE__%key;
                 continue;
             }
             switch (optdef->type) {
@@ -9903,7 +9923,7 @@ void DynamicPrintConfig::update_values_to_printer_extruders_for_multiple_filamen
         //int extruder_count = opt_nozzle_diameters->size();
         auto opt_extruder_type = dynamic_cast<const ConfigOptionEnumsGeneric*>(printer_config.option("extruder_type"));
         auto opt_nozzle_volume_type = dynamic_cast<const ConfigOptionEnumsGeneric*>(printer_config.option("nozzle_volume_type"));
-        if (!opt_extruder_type || !opt_nozzle_volume_type) {
+        if (extruder_count <= 0 || !opt_extruder_type || !opt_nozzle_volume_type) {
             BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(", Line %1%: extruder_type or nozzle_volume_type option not found, skipping")%__LINE__;
             return;
         }
@@ -9915,6 +9935,19 @@ void DynamicPrintConfig::update_values_to_printer_extruders_for_multiple_filamen
             return;
         }
         auto opt_ids = id_name.empty()? nullptr: dynamic_cast<const ConfigOptionInts*>(this->option(id_name));
+
+        bool normalized_filament_maps = false;
+        for (int &map : filament_maps) {
+            if (map < 1 || static_cast<size_t>(map) > printer_extruder_count) {
+                BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(", Line %1%: invalid filament_map value %2%, printer_extruder_count=%3%, fallback to 1")
+                    %__LINE__ %map %printer_extruder_count;
+                map = 1;
+                normalized_filament_maps = true;
+            }
+        }
+        if (normalized_filament_maps)
+            printer_config.option<ConfigOptionInts>("filament_map", true)->values = filament_maps;
+
         std::vector<int> variant_index;
 
         variant_index.resize(filament_count, -1);
@@ -9961,6 +9994,12 @@ void DynamicPrintConfig::update_values_to_printer_extruders_for_multiple_filamen
             const ConfigOptionDef *optdef  = config_def->get(key);
             if (!optdef) {
                 BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(", Line %1%: can not find opt define for %2%")%__LINE__%key;
+                continue;
+            }
+            ConfigOption *opt_base = this->option(key, false);
+            ConfigOptionVectorBase *opt_vec_base = dynamic_cast<ConfigOptionVectorBase *>(opt_base);
+            if (opt_vec_base == nullptr || opt_vec_base->empty()) {
+                BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(", Line %1%: empty or invalid option for %2%")%__LINE__%key;
                 continue;
             }
             switch (optdef->type) {

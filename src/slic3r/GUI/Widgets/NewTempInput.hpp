@@ -77,6 +77,8 @@ private:
     wxStaticText* m_info{nullptr};
 };
 
+#define NO_TEMP -273
+
 class NewTempInput : public StaticBox
 {
     bool hover;
@@ -91,8 +93,8 @@ class NewTempInput : public StaticBox
     wxTextCtrl* text_ctrl;
     wxStaticText* warning_text;
 
-    int curr_temp = INT_MAX;
-    int target_temp = INT_MAX;
+    int curr_temp = NO_TEMP;
+    int target_temp = NO_TEMP;
     int  max_temp = 0;
     int  min_temp = 0;
     bool warning_mode = false;
@@ -473,9 +475,16 @@ public:
 
 private:
     std::unordered_map<std::string, NewTempInput*> m_tempInputs;
-    wxBoxSizer*             m_tempSizer;
+    std::vector<int>                                            m_tempSlotIds;
+    wxBoxSizer* m_main_panel_sizer{nullptr};
+    wxPanel* m_main_panel{nullptr};
+    wxBoxSizer* m_sizer{nullptr};
+    int m_count  = -1;
     int m_cur_id = -1;
     void lostTempModify();
+    wxSizer* createNozzlesSizer(wxPanel* panel, int cnt, int min_temp, int max_temp);
+    void updateNozzleCount(int cnt);
+    void updateNozzleSlotId(std::vector<int>& slotIds);
 };
    
 }} // namespace Slic3r::GUI

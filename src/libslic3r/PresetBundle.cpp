@@ -105,6 +105,43 @@ const char *PresetBundle::ORCA_DEFAULT_FILAMENT = "Generic PLA @System";
 const char *PresetBundle::ORCA_FILAMENT_LIBRARY = "OrcaFilamentLibrary";
 const char *PresetBundle::ORCA_DEFAULT_FILAMENT_PLACEHOLDER = "Default Filament";
 
+namespace {
+
+static size_t get_config_vector_size(const ConfigOption *opt)
+{
+    const auto *vec = dynamic_cast<const ConfigOptionVectorBase *>(opt);
+    return vec ? vec->size() : 0;
+}
+
+static size_t get_config_extruder_count(const DynamicPrintConfig &config)
+{
+    size_t count = get_config_vector_size(config.option("nozzle_diameter"));
+    if (count == 0)
+        count = get_config_vector_size(config.option("extruder_type"));
+    if (count == 0)
+        count = get_config_vector_size(config.option("nozzle_volume_type"));
+    if (count == 0)
+        count = get_config_vector_size(config.option("physical_extruder_map"));
+    return count == 0 ? 1 : count;
+}
+
+static void normalize_filament_maps(std::vector<int> &filament_maps, size_t num_filaments, const DynamicPrintConfig &config, const char *context)
+{
+    if (filament_maps.size() != num_filaments)
+        filament_maps.resize(num_filaments, 1);
+
+    const size_t extruder_count = get_config_extruder_count(config);
+    for (int &map : filament_maps) {
+        if (map < 1 || static_cast<size_t>(map) > extruder_count) {
+            BOOST_LOG_TRIVIAL(warning) << context << ": invalid filament_map value " << map << ", extruder_count=" << extruder_count
+                                       << ", fallback to 1";
+            map = 1;
+        }
+    }
+}
+
+}
+
 DynamicPrintConfig PresetBundle::construct_full_config(
     Preset& in_printer_preset,
     Preset& in_print_preset,
@@ -128,10 +165,7 @@ DynamicPrintConfig PresetBundle::construct_full_config(
     std::vector<int> filament_maps = out.option<ConfigOptionInts>("filament_map")->values;
     if (filament_maps_new.has_value())
         filament_maps = *filament_maps_new;
-    // in some middle state, they may be different
-    if (filament_maps.size() != num_filaments) {
-        filament_maps.resize(num_filaments, 1);
-    }
+    normalize_filament_maps(filament_maps, num_filaments, out, __FUNCTION__);
 
     auto *extruder_diameter = dynamic_cast<const ConfigOptionFloats *>(out.option("nozzle_diameter"));
     // Collect the "compatible_printers_condition" and "inherits" values over all presets (print, filaments, printers) into a single vector.
@@ -4100,13 +4134,7 @@ DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optio
     std::vector<int> filament_maps = out.option<ConfigOptionInts>("filament_map")->values;
     if (filament_maps_new.has_value())
         filament_maps = *filament_maps_new;
-    //in some middle state, they may be different
-    if (filament_maps.size() != num_filaments) {
-        filament_maps.resize(num_filaments, 1);
-    }
-    else {
-        assert(filament_maps.size() == num_filaments);
-    }
+    normalize_filament_maps(filament_maps, num_filaments, out, __FUNCTION__);
 
     auto* extruder_diameter = dynamic_cast<const ConfigOptionFloats*>(out.option("nozzle_diameter"));
     // Collect the "compatible_printers_condition" and "inherits" values over all presets (print, filaments, printers) into a single vector.

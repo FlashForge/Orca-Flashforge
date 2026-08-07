@@ -382,9 +382,13 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: |
+          rm -f ./build/Flash\ Studio_*_V*.AppImage
           ./build_linux.sh -istrlL
-          ./scripts/check_appimage_libs.sh ./build/package ./build/package/bin/orca-slicer
-          mv -n ./build/OrcaSlicer_Linux_V${{ env.ver_pure }}.AppImage ./build/OrcaSlicer_Linux_AppImage${{ env.ubuntu-ver-str }}_${{ env.ver }}.AppImage
+          ./scripts/check_appimage_libs.sh ./build/package "./build/package/bin/flash studio"
+          shopt -s nullglob
+          appimages=(./build/Flash\ Studio_*_V*.AppImage)
+          test "${#appimages[@]}" -eq 1
+          mv -f "${appimages[0]}" ./build/OrcaSlicer_Linux_AppImage${{ env.ubuntu-ver-str }}_${{ env.ver }}.AppImage
           chmod +x ./build/OrcaSlicer_Linux_AppImage${{ env.ubuntu-ver-str }}_${{ env.ver }}.AppImage
           tar -cvpf build_tests.tar build/tests
 
@@ -408,7 +412,7 @@ jobs:
           test_repo_dir="${{ runner.temp }}/orca-test-repo"
           rm -rf "$test_repo_dir"
           git clone --depth 1 https://github.com/OrcaSlicer/orca-test-repo.git "$test_repo_dir"
-          python3 "$test_repo_dir/run_test.py" "${{ github.workspace }}/build/package/bin/orca-slicer"
+          python3 "$test_repo_dir/run_test.py" "${{ github.workspace }}/build/package/bin/flash studio"
 
       - name: Build orca_custom_preset_tests
         if: github.ref == 'refs/heads/main' && runner.os == 'Linux' && !vars.SELF_HOSTED

@@ -132,6 +132,7 @@ src/slic3r/GUI/ImageGrid.cpp
 src/slic3r/GUI/Widgets/ImageSwitchButton.cpp
 src/slic3r/GUI/Printer/PrinterFileSystem.cpp
 src/slic3r/GUI/Mouse3DController.cpp
+src/slic3r/GUI/MulticolorModelDialog.cpp
 src/slic3r/GUI/SelectMachinePop.cpp
 src/slic3r/GUI/StatusPanel.cpp
 src/slic3r/GUI/Monitor.cpp
@@ -179,7 +180,6 @@ src/slic3r/GUI/KBShortcutsDialog.cpp
 src/slic3r/GUI/ReleaseNote.cpp
 src/slic3r/GUI/ReleaseNote.hpp
 src/slic3r/GUI/UpgradePanel.cpp
-src/slic3r/Utils/FixModelByWin10.cpp
 src/slic3r/Utils/PresetUpdater.cpp
 src/slic3r/Utils/Http.cpp
 src/slic3r/Utils/Process.cpp
@@ -253,3 +253,6 @@ src/slic3r/GUI/MixedFilamentColorMatchDialog.cpp
 src/slic3r/GUI/MixedFilamentColorMatchDialog.hpp
 src/slic3r/GUI/MixedFilamentConfigPanel.cpp
 src/slic3r/GUI/MixedFilamentConfigPanel.hpp
+src/slic3r/GUI/MixedGradientSelector.cpp
+src/slic3r/GUI/MixedGradientWeightsDialog.cpp
+src/slic3r/GUI/FlashForge/FFRTMPVideoCtrl.cpp

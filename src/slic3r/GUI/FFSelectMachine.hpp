@@ -242,7 +242,7 @@ private:
     void      on_connect_ready(ComConnectionReadyEvent &event);
     void      on_devList_Updated(DeviceListUpdateEvent &event);
 };
-#elif defined(__APPLE__)
+#else // non-Windows (macOS / Linux): "#else if __APPLE__" was a no-op typo for "#else"
 class SelectMachinePopup : public FFPopupWindow
 {
 public:

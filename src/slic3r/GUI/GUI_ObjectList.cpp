@@ -795,7 +795,10 @@ void ObjectList::update_filament_values_for_items_when_delete_filament(const siz
     auto update_optional_filament_key = [&remap_filament_id](ModelConfig &config, const char *key) {
         if (!config.has(key))
             return;
-        const int mapped = remap_filament_id(config.opt_int(key), 0);
+        const int old_value = config.opt_int(key);
+        const int mapped    = remap_filament_id(old_value, 0);
+        if (mapped == old_value)
+            return;
         if (mapped <= 0)
             config.erase(key);
         else
@@ -804,9 +807,6 @@ void ObjectList::update_filament_values_for_items_when_delete_filament(const siz
 
     for (size_t i = 0; i < m_objects->size(); ++i) {
         wxDataViewItem item = m_objects_model->GetItemById(i);
-        if (!item)
-            continue;
-
         auto     object = (*m_objects)[i];
         wxString extruder;
         if (!object->config.has("extruder")) {
@@ -820,22 +820,27 @@ void ObjectList::update_filament_values_for_items_when_delete_filament(const siz
             extruder = wxString::Format("%d", new_extruder);
             object->config.set_key_value("extruder", new ConfigOptionInt(new_extruder));
         }
-        m_objects_model->SetExtruder(extruder, item);
+        if (item)
+            m_objects_model->SetExtruder(extruder, item);
+        const wxString object_extruder = extruder;
 
-        static const char *keys[] = {"support_filament", "support_interface_filament"};
-        for (auto key : keys)
+        static const char *config_filament_keys[] = {
+            "support_filament", "support_interface_filament",
+            "wall_filament", "sparse_infill_filament", "solid_infill_filament"
+        };
+        for (const char *key : config_filament_keys)
             update_optional_filament_key(object->config, key);
 
         //if (object->volumes.size() > 1) {
             for (size_t id = 0; id < object->volumes.size(); id++) {
                 item = m_objects_model->GetItemByVolumeId(i, id);
 
-                for (auto key : keys)
+                for (const char *key : config_filament_keys)
                     update_optional_filament_key(object->volumes[id]->config, key);
 
                 if (!object->volumes[id]->config.has("extruder")) {
                     if (item)
-                        m_objects_model->SetExtruder(extruder, item);
+                        m_objects_model->SetExtruder(object_extruder, item);
                 }
                 else {
                     int new_extruder = remap_filament_id(object->volumes[id]->config.extruder(), replace_filament_id);
@@ -849,7 +854,25 @@ void ObjectList::update_filament_values_for_items_when_delete_filament(const siz
             }
         //}
 
+        const int removed_value = replace_id == -1 ? 0 : replace_filament_id;
+        for (auto &layer_config_range : object->layer_config_ranges) {
+            ModelConfig &layer_config = layer_config_range.second;
+            for (const char *key : config_filament_keys)
+                update_optional_filament_key(layer_config, key);
+
+            if (layer_config.has("extruder")) {
+                const int old_extruder = layer_config.opt_int("extruder");
+                int new_extruder = remap_filament_id(old_extruder, removed_value);
+                if (new_extruder < 0)
+                    new_extruder = 0;
+                if (new_extruder != old_extruder)
+                    layer_config.set("extruder", new_extruder);
+            }
+        }
+
         item = m_objects_model->GetItemById(i);
+        if (!item)
+            continue;
         ObjectDataViewModelNode *object_node = static_cast<ObjectDataViewModelNode *>(item.GetID());
         if (object_node->GetChildCount() == 0)
             continue;
@@ -869,13 +892,7 @@ void ObjectList::update_filament_values_for_items_when_delete_filament(const siz
                     auto& layer_range_item = *(l_iter);
                     if (!layer_range_item.second.has("extruder"))
                         continue;
-                    const int layer_filament_id = layer_range_item.second.option("extruder")->getInt();
-                    const int removed_value     = replace_id == -1 ? 0 : replace_filament_id;
-                    int       new_extruder      = remap_filament_id(layer_filament_id, removed_value);
-                    if (new_extruder < 0)
-                        new_extruder = 0;
-                    extruder = wxString::Format("%d", new_extruder);
-                    layer_range_item.second.set("extruder", new_extruder);
+                    extruder = wxString::Format("%d", layer_range_item.second.opt_int("extruder"));
                     m_objects_model->SetExtruder(extruder, layer_item);
                 }
             }

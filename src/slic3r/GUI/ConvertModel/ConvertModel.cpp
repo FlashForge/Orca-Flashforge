@@ -45,6 +45,41 @@ cvt_colors_t ConvertModel::clusterColors(const convert_model_data_t &convertMode
     return convertModelData.convertProc->clusterColors(colorNum);
 }
 
+std::array<float, 3> ConvertModel::modelSize(const convert_model_data_t &convertModelData) const
+{
+    if (convertModelData.convertProc.get() == nullptr) {
+        return { 0.0f, 0.0f, 0.0f };
+    }
+    return convertModelData.convertProc->modelSize();
+}
+
+bool ConvertModel::makePreviewModel(const convert_model_data_t &convertModelData, out_model_data_t &outData,
+    const cvt_colors_t &dstColors) const
+{
+    if (convertModelData.convertProc.get() == nullptr) {
+        return false;
+    }
+    convertModelData.convertProc->makePreviewModel(outData, dstColors);
+    return !outData.vertices.empty() && !outData.triangles.empty();
+}
+
+bool ConvertModel::makeMappedPreviewModel(const convert_model_data_t &convertModelData, out_model_data_t &outData,
+    const cvt_colors_t &sourceColors, const cvt_colors_t &targetColors) const
+{
+    if (convertModelData.convertProc.get() == nullptr) {
+        return false;
+    }
+    convertModelData.convertProc->makeMappedPreviewModel(outData, sourceColors, targetColors);
+    return !outData.vertices.empty() && !outData.triangles.empty();
+}
+
+void ConvertModel::setScaleModelSize(convert_model_data_t &convertModelData, bool scaleModelSize)
+{
+    if (convertModelData.convertProc.get() != nullptr) {
+        convertModelData.convertProc->setScaleModelSize(scaleModelSize);
+    }
+}
+
 bool ConvertModel::doConvert(convert_model_data_t &convertModelData, const cvt_colors_t &dstColors,
     const wxString &outOBjPath, const wxString &outMtlPath)
 {
@@ -58,6 +93,37 @@ bool ConvertModel::doConvert(convert_model_data_t &convertModelData, const cvt_c
         return false;
     }
     return true;
+}
+
+bool ConvertModel::doConvertMapped(convert_model_data_t &convertModelData, const cvt_colors_t &sourceColors, const cvt_colors_t &targetColors,
+    const wxString &outOBjPath, const wxString &outMtlPath)
+{
+    if (convertModelData.convertProc.get() == nullptr) {
+        return false;
+    }
+    out_model_data_t outData;
+    convertModelData.convertProc->doConvertMapped(sourceColors, targetColors, outData);
+    convertModelData.convertProc.reset();
+    if (!CMSaveObj().saveObj(outData, outOBjPath, outMtlPath)) {
+        return false;
+    }
+    return true;
+}
+
+bool ConvertModel::doConvertMapped(convert_model_data_t &convertModelData, const cvt_colors_t &sourceColors, const cvt_colors_t &targetColors,
+    out_model_data_t &outData)
+{
+    if (convertModelData.convertProc.get() == nullptr) {
+        return false;
+    }
+    convertModelData.convertProc->doConvertMapped(sourceColors, targetColors, outData);
+    convertModelData.convertProc.reset();
+    return !outData.vertices.empty() && !outData.triangles.empty();
+}
+
+bool ConvertModel::saveObj(const out_model_data_t &outData, const wxString &outOBjPath, const wxString &outMtlPath) const
+{
+    return CMSaveObj().saveObj(outData, outOBjPath, outMtlPath);
 }
 
 void ConvertModel::clearObjExtraData(convert_model_data_t &convertModelData)

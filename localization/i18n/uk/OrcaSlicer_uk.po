@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: orcaslicerua\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-03-20 23:26+0800\n"
+"POT-Creation-Date: 2026-07-13 15:22+0800\n"
 "PO-Revision-Date: 2025-03-07 09:30+0200\n"
 "Last-Translator: \n"
 "Language-Team: Ukrainian\n"
@@ -74,7 +74,7 @@ msgstr ""
 msgid "PPA-CF is brittle and could break in bended PTFE tube above Toolhead."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid "%s is not supported by %s extruder."
 msgstr ""
 
@@ -186,7 +186,6 @@ msgstr "Заповнення"
 msgid "Gap Fill"
 msgstr "Заповнення прогалин"
 
-#, boost-format
 msgid "Allows painting only on facets selected by: \"%1%\""
 msgstr "Малювання лише на вибраних гранях: \"%1%\""
 
@@ -205,7 +204,6 @@ msgstr "Gizmo - Покласти на грань"
 msgid "Lay on face"
 msgstr "Покласти на грань"
 
-#, boost-format
 msgid ""
 "Filament count exceeds the maximum number that painting tool supports. Only "
 "the first %1% filaments will be available in painting tool."
@@ -283,7 +281,6 @@ msgstr "Горизонтальний"
 msgid "Remove painted color"
 msgstr "Видалити зафарбований колір"
 
-#, boost-format
 msgid "Painted using: Filament %1%"
 msgstr "Забарвлений за допомогою: Філамент %1%"
 
@@ -648,7 +645,7 @@ msgstr "Попередження"
 msgid "Invalid connectors detected"
 msgstr "Виявлено неприпустимі з'єднувачі"
 
-#, c-format, boost-format
+#, c-format
 msgid "%1$d connector is out of cut contour"
 msgid_plural "%1$d connectors are out of cut contour"
 msgstr[0] "%1$d з'єднання виходить за контур розрізання"
@@ -656,7 +653,7 @@ msgstr[1] "%1$d з'єднання виходить за контур розрі�
 msgstr[2] "%1$d з'єднань виходить за контур розрізання"
 msgstr[3] "%1$d з'єднання виходить за контур розрізання"
 
-#, c-format, boost-format
+#, c-format
 msgid "%1$d connector is out of object"
 msgid_plural "%1$d connectors are out of object"
 msgstr[0] "%1$d з'єднання знаходиться за межами об'єкту"
@@ -705,7 +702,6 @@ msgstr "Рівень деталізації"
 msgid "Decimate ratio"
 msgstr "Коефіцієнт зменшення"
 
-#, boost-format
 msgid ""
 "Processing model '%1%' with more than 1M triangles could be slow. It is "
 "highly recommended to simplify the model."
@@ -740,7 +736,7 @@ msgstr "Низький"
 msgid "Extra low"
 msgstr "Наднизький"
 
-#, c-format, boost-format
+#, c-format
 msgid "%d triangles"
 msgstr "%d трикутники"
 
@@ -902,7 +898,6 @@ msgstr "Текст не показує поточне вирівнювання �
 msgid "Revert font changes."
 msgstr "Скасувати зміну шрифту."
 
-#, boost-format
 msgid "Font \"%1%\" can't be selected."
 msgstr "Шрифт \"%1%\" не може бути обраний."
 
@@ -936,7 +931,6 @@ msgstr "Натисніть, щоб змінити тип деталі на мо�
 msgid "Change Text Type"
 msgstr "Змінити тип тексту"
 
-#, boost-format
 msgid "Rename style (%1%) for embossing text"
 msgstr "Перейменувати стиль(%1%) для тиснення тексту"
 
@@ -961,7 +955,6 @@ msgstr "Неможливо перейменувати тимчасовий ст�
 msgid "First Add style to list."
 msgstr "Спочатку додайте стиль до списку."
 
-#, boost-format
 msgid "Save %1% style"
 msgstr "Зберегти стиль %1%"
 
@@ -989,31 +982,24 @@ msgstr "Видалити стиль"
 msgid "Can't remove the last existing style."
 msgstr "Неможливо видалити останній існуючий стиль."
 
-#, boost-format
 msgid "Are you sure you want to permanently remove the \"%1%\" style?"
 msgstr "Ви впевнені, що хочете назавжди видалити стиль \"%1%\"?"
 
-#, boost-format
 msgid "Delete \"%1%\" style."
 msgstr "Видаліть стиль \"%1%\"."
 
-#, boost-format
 msgid "Can't delete \"%1%\". It is last style."
 msgstr "Не вдається видалити \"%1%\". Це останній стиль."
 
-#, boost-format
 msgid "Can't delete temporary style \"%1%\"."
 msgstr "Не вдається видалити тимчасовий стиль \"%1%\"."
 
-#, boost-format
 msgid "Modified style \"%1%\""
 msgstr "Модифікований стиль \"%1%\""
 
-#, boost-format
 msgid "Current style is \"%1%\""
 msgstr "Поточний стиль \"%1%\""
 
-#, boost-format
 msgid ""
 "Changing style to \"%1%\" will discard current style modification.\n"
 "\n"
@@ -1026,7 +1012,6 @@ msgstr ""
 msgid "Not valid style."
 msgstr "Невірний стиль."
 
-#, boost-format
 msgid "Style \"%1%\" can't be used and will be removed from a list."
 msgstr "Стиль \"%1%\" не може бути використаний і буде вилучений зі списку."
 
@@ -1152,11 +1137,9 @@ msgstr "Текст лицьовою стороною до камери"
 msgid "Orient the text towards the camera."
 msgstr "Зорієнтувати текст у напрямку камери."
 
-#, boost-format
 msgid "Font \"%1%\" can't be used. Please select another."
 msgstr ""
 
-#, boost-format
 msgid ""
 "Can't load exactly same font (\"%1%\"). Application selected a similar one "
 "(\"%2%\"). You have to specify font for enable edit text."
@@ -1252,11 +1235,9 @@ msgstr "Дії з SVG"
 msgid "SVG"
 msgstr "SVG"
 
-#, boost-format
 msgid "Opacity (%1%)"
 msgstr "Прозорість (%1%)"
 
-#, boost-format
 msgid "Color gradient (%1%)"
 msgstr "Градієнт кольору (%1%)"
 
@@ -1287,20 +1268,16 @@ msgstr ""
 "Фінальна форма містить самоперетин або декілька точок з однаковою "
 "координатою."
 
-#, boost-format
 msgid "Shape is marked as invisible (%1%)."
 msgstr "Фігура позначена як невидима (%1%)."
 
 #. TRN: The first placeholder is shape identifier, the second is text describing the problem.
-#, boost-format
 msgid "Fill of shape (%1%) contains unsupported: %2%."
 msgstr "Заливка фігури (%1%) не підтримується: %2%."
 
-#, boost-format
 msgid "Stroke of shape (%1%) is too thin (minimal width is %2% mm)."
 msgstr "Обведення фігури (%1%) занадто тонке (мінімальна товщина %2% мм)."
 
-#, boost-format
 msgid "Stroke of shape (%1%) contains unsupported: %2%."
 msgstr "Обведення фігури (%1%) не підтримується: %2%."
 
@@ -1311,7 +1288,6 @@ msgstr "Лицьовою стороною до камери"
 msgid "Unknown filename"
 msgstr "Невідоме ім'я файлу"
 
-#, boost-format
 msgid "SVG file path is \"%1%\""
 msgstr "Шлях до файлу SVG \"%1%\""
 
@@ -1356,7 +1332,6 @@ msgid "Size in emboss direction."
 msgstr "Глибина рельєфу."
 
 #. TRN: The placeholder contains a number.
-#, boost-format
 msgid "Scale also changes amount of curve samples (%1%)"
 msgstr "Масштаб також змінює кількість вибірок кривої (%1%)"
 
@@ -1402,19 +1377,15 @@ msgstr "Дзеркально"
 msgid "Choose SVG file for emboss:"
 msgstr "Виберіть SVG файл для рельєфу:"
 
-#, boost-format
 msgid "File does NOT exist (%1%)."
 msgstr "Файл НЕ існує (%1%)."
 
-#, boost-format
 msgid "Filename has to end with \".svg\" but you selected %1%"
 msgstr "Ім'я файлу має закінчуватися на \".svg\", а не на %1%"
 
-#, boost-format
 msgid "Nano SVG parser can't load from file (%1%)."
 msgstr "Парсер NanoSVG не може прочитати файл (%1%)."
 
-#, boost-format
 msgid "SVG file does NOT contain a single path to be embossed (%1%)."
 msgstr "Файл SVG не містить жодного шляху для рельєфного тексту (%1%)."
 
@@ -1599,12 +1570,11 @@ msgstr "Повідомлення"
 msgid "Undefined"
 msgstr "Не визначено"
 
-#, boost-format
 msgid "%1% was replaced with %2%"
 msgstr "%1% замінено на %2%"
 
-msgid "The configuration may be generated by a newer version of OrcaSlicer."
-msgstr "Конфігурація може бути створена новішою версією OrcaSlicer."
+msgid "The configuration may be generated by a newer version of Flash Studio."
+msgstr ""
 
 msgid "Some values have been replaced. Please check them:"
 msgstr "Деякі значення було замінено. Будь ласка, перевірте їх:"
@@ -1621,15 +1591,11 @@ msgstr "Машина"
 msgid "Configuration package was loaded, but some values were not recognized."
 msgstr "Пакет конфігурації був завантажений, але деякі значення не розпізнано."
 
-#, boost-format
 msgid ""
 "Configuration file \"%1%\" was loaded, but some values were not recognized."
 msgstr ""
 "Файл конфігурації “%1%” був завантажений, але деякі значення не були "
 "розпізнані."
-
-msgid "Based on PrusaSlicer and BambuStudio"
-msgstr ""
 
 msgid "STEP files"
 msgstr ""
@@ -1680,28 +1646,23 @@ msgid "Draco files"
 msgstr ""
 
 msgid ""
-"OrcaSlicer will terminate because of running out of memory. It may be a bug. "
-"It will be appreciated if you report the issue to our team."
+"Flash Studio will terminate because of running out of memory.It may be a "
+"bug. It will be appreciated if you report the issue to our team."
 msgstr ""
-"OrcaSlicer завершить роботу через брак пам'яті. Можливо, це помилка. Ми "
-"будемо вдячні, якщо ви повідомите про проблему нашій команді."
 
 msgid "Fatal error"
 msgstr "Фатальна помилка"
 
 msgid ""
-"OrcaSlicer will terminate because of a localization error. It will be "
+"Flash Studio will terminate because of a localization error. It will be "
 "appreciated if you report the specific scenario this issue happened."
 msgstr ""
-"Програма OrcaSlicer завершить роботу через помилку локалізації. Буде "
-"вдячний, якщо ви повідомите про конкретний сценарій виникнення цієї проблеми."
 
 msgid "Critical error"
 msgstr "Критична помилка"
 
-#, boost-format
-msgid "OrcaSlicer got an unhandled exception: %1%"
-msgstr "Невідома помилка OrcaSlicer : %1%"
+msgid "Flash Studio got an unhandled exception: %1%"
+msgstr ""
 
 msgid "Untitled"
 msgstr "Без назви"
@@ -1712,8 +1673,8 @@ msgstr ""
 msgid "Downloading Network Plug-in"
 msgstr ""
 
-msgid "Downloading Bambu Network Plug-in"
-msgstr "Завантаження мережевого плагіна для принтерів Bambu"
+msgid "Downloading FlashForge Network Plug-in"
+msgstr ""
 
 msgid "Login information expired. Please login again."
 msgstr "Термін дії даних для входу минув. Будь ласка, увійдіть знову."
@@ -1721,26 +1682,27 @@ msgstr "Термін дії даних для входу минув. Будь л
 msgid "Incorrect password"
 msgstr "Невірний пароль"
 
-#, c-format, boost-format
+#, c-format
 msgid "Connect %s failed! [SN:%s, code=%s]"
 msgstr "Не вдалося підключити %s! [Серійний номер:%s, код=%s]"
 
 msgid ""
-"Orca Slicer requires the Microsoft WebView2 Runtime to operate certain "
+"Flash Studio requires the Microsoft WebView2 Runtime to operate certain "
 "features.\n"
 "Click Yes to install it now."
 msgstr ""
-"Для роботи деяких функцій Orca Slicer потрібен Microsoft WebView2 Runtime.\n"
-"Натисніть Так, щоб встановити його зараз."
 
 msgid "WebView2 Runtime"
 msgstr "Виконання WebView2"
 
-#, c-format, boost-format
+#, c-format
 msgid "Resources path does not exist or is not a directory: %s"
 msgstr ""
 
-#, c-format, boost-format
+msgid "Account Auto Connect Failed!"
+msgstr ""
+
+#, c-format
 msgid ""
 "%s\n"
 "Do you want to continue?"
@@ -1752,31 +1714,18 @@ msgstr "Запам'ятати мій вибір"
 msgid "Loading configuration"
 msgstr "Завантаження конфігурації"
 
-#, c-format, boost-format
-msgid "Click to download new version in default browser: %s"
-msgstr ""
-"Натисніть OK, щоб завантажити останню версію в стандартному браузері: %s"
-
-msgid "The Orca Slicer needs an upgrade"
-msgstr "Orca Slicer потребує оновлення"
-
-msgid "This is the newest version."
-msgstr "Це найновіша версія."
-
 msgid "Info"
 msgstr "Інформація"
 
 msgid ""
-"The OrcaSlicer configuration file may be corrupted and cannot be parsed.\n"
-"OrcaSlicer has attempted to recreate the configuration file.\n"
+"The Flash Studio configuration file may be corrupted and cannot be parsed."
+"Flash Studio has attempted to recreate the configuration file.\n"
 "Please note, application settings will be lost, but printer profiles will "
 "not be affected."
 msgstr ""
-"Можливо, файл конфігурації OrcaSlicer пошкоджений і не може бути "
-"оброблений.\n"
-"OrcaSlicer спробував відтворити конфігураційний файл.\n"
-"Зверніть увагу, що налаштування програми будуть втрачені, але профілі "
-"принтера не торкнуться."
+
+msgid "Server connection exception"
+msgstr ""
 
 msgid "Rebuild"
 msgstr "Відновлення"
@@ -1787,15 +1736,17 @@ msgstr "Завантаження поточних налаштувань"
 msgid "Loading a mode view"
 msgstr "Завантаження режиму перегляду"
 
+msgid "Account Auto Connecting..."
+msgstr ""
+
 msgid "Choose one file (3MF):"
 msgstr "Виберіть один файл (3MF):"
 
-msgid "Choose one or more files (3MF/STEP/STL/SVG/OBJ/AMF/USD*/ABC/PLY):"
+msgid "Choose one or more files (3MF/STEP/STL/SVG/OBJ/GLB/AMF/USD*/ABC/PLY):"
 msgstr ""
-"Виберіть один або кілька файлів (3MF/STEP/STL/SVG/OBJ/AMF/USD*/ABC/PLY):"
 
-msgid "Choose one or more files (3MF/STEP/STL/SVG/OBJ/AMF):"
-msgstr "Виберіть один або кілька файлів (3MF/STEP/STL/SVG/OBJ/AMF):"
+msgid "Choose one or more files (3MF/STEP/STL/SVG/OBJ/GLB/AMF):"
+msgstr ""
 
 msgid "Choose ZIP file"
 msgstr "Виберіть ZIP файл"
@@ -1819,6 +1770,26 @@ msgstr ""
 msgid "User logged out"
 msgstr "Користувач вийшов із системи"
 
+msgid "Are you sure to log out?"
+msgstr "Ви впевнені, що вийшли?"
+
+msgid "Confirm"
+msgstr "Підтвердити"
+
+msgid "Get White List Failed: "
+msgstr ""
+
+msgid ""
+"The all-new Flashforge App is here! Search and print from a vast library of "
+"3D models online."
+msgstr ""
+
+msgid "New Product"
+msgstr ""
+
+msgid "Learn More"
+msgstr ""
+
 msgid "new or open project file is not allowed during the slicing process!"
 msgstr "новий або відкритий файл проекту не дозволяється в процесі нарізки!"
 
@@ -1826,11 +1797,27 @@ msgid "Open Project"
 msgstr "Відкрити проєкт"
 
 msgid ""
-"The version of Orca Slicer is too low and needs to be updated to the latest "
-"version before it can be used normally."
+"The version of Flash Studio is too low and needs to be updated to the latest "
+"version before it can be used normally"
 msgstr ""
-"Версія студії Bambu надто низька, її необхідно оновити до останньоїверсії, "
-"перш ніж її можна буде використовувати у звичайному режимі"
+
+msgid "The current account has been logged out!"
+msgstr ""
+
+msgid "Click to jump"
+msgstr ""
+
+msgid "Check Version Code Failed: "
+msgstr ""
+
+msgid "Check Version List Empty: "
+msgstr ""
+
+msgid "Download Version Code Failed: "
+msgstr ""
+
+msgid "Download Version File Empty: "
+msgstr ""
 
 msgid "Retrieving printer information, please try again later."
 msgstr ""
@@ -1870,6 +1857,9 @@ msgstr ""
 
 msgid "Privacy Policy Update"
 msgstr "Оновлення політики конфіденційності"
+
+msgid "Already the newest version!"
+msgstr ""
 
 msgid ""
 "The number of user presets cached in the cloud has exceeded the upper limit, "
@@ -1934,10 +1924,9 @@ msgstr "Відкрити"
 msgid "Rename"
 msgstr "Перейменувати"
 
-msgid "Orca Slicer GUI initialization failed"
-msgstr "Помилка ініціалізації графічного інтерфейсу Orca Slicer"
+msgid "Flash Studio GUI initialization failed"
+msgstr ""
 
-#, boost-format
 msgid "Fatal error, exception caught: %1%"
 msgstr "Критична помилка, виявлено виняток: %1%"
 
@@ -2177,7 +2166,7 @@ msgstr "Встановити філамент для вибраних елеме
 msgid "Default"
 msgstr "За замовчуванням"
 
-#, c-format, boost-format
+#, c-format
 msgid "Filament %d"
 msgstr "Філамент %d"
 
@@ -2427,7 +2416,7 @@ msgstr "Ім'я"
 msgid "Fila."
 msgstr "Філам."
 
-#, c-format, boost-format
+#, c-format
 msgid "%1$d error repaired"
 msgid_plural "%1$d errors repaired"
 msgstr[0] "%1$d помилка виправлена"
@@ -2435,27 +2424,36 @@ msgstr[1] "%1$d помилки виправлені"
 msgstr[2] "%1$d помилок виправлено"
 msgstr[3] "%1$d помилки виправлено"
 
-#, c-format, boost-format
-msgid "Error: %1$d non-manifold edge."
-msgid_plural "Error: %1$d non-manifold edges."
-msgstr[0] "Помилка: %1$d відкрите ребро."
-msgstr[1] "Помилка: %1$d відкритих ребер."
-msgstr[2] "Помилка: %1$d відкритих ребер."
-msgstr[3] ""
-
-msgid "Remaining errors"
-msgstr "Залишилось помилок"
-
-#, c-format, boost-format
-msgid "%1$d non-manifold edge"
-msgid_plural "%1$d non-manifold edges"
-msgstr[0] "%1$d відкрите ребро"
-msgstr[1] "%1$d відкритих ребер"
-msgstr[2] "%1$d відкритих ребер"
-msgstr[3] ""
-
-msgid "Click the icon to repair model object"
+#, c-format
+msgid "Error: %1$d non-manifold edges, %2$d non-manifold vertices"
 msgstr ""
+
+#, c-format
+msgid "Error: %1$d non-manifold edge"
+msgid_plural "Error: %1$d non-manifold edges"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+msgstr[3] ""
+
+#, c-format
+msgid "Error: %1$d non-manifold vertex"
+msgid_plural "Error: %1$d non-manifold vertices"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+msgstr[3] ""
+
+#, c-format
+msgid "Info: %1$d open edge"
+msgid_plural "Info: %1$d open edges"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+msgstr[3] ""
+
+msgid "Right click the icon to fix model object"
+msgstr "Клацніть правою кнопкою миші значок, щоб виправити об'єкт моделі"
 
 msgid "Right button click the icon to drop the object settings"
 msgstr ""
@@ -2640,13 +2638,13 @@ msgstr[3] "Не вдалося відремонтувати такі части�
 msgid "Repairing was canceled"
 msgstr "Ремонт було скасовано"
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "\"%s\" will exceed 1 million faces after this subdivision, which may "
 "increase slicing time. Do you want to continue?"
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid "\"%s\" part's mesh contains errors. Please repair it first."
 msgstr ""
 
@@ -2731,7 +2729,7 @@ msgstr "Багатоколірний друк"
 msgid "Line Type"
 msgstr "Тип лінії"
 
-#, c-format, boost-format
+#, c-format
 msgid "1x1 Grid: %d mm"
 msgstr ""
 
@@ -2743,9 +2741,6 @@ msgstr "Відкрийте налаштування."
 
 msgid "Open next tip."
 msgstr "Відкрийте наступну пораду."
-
-msgid "Open Documentation in web browser."
-msgstr "Відкрийте документацію у веб-браузері."
 
 msgid "Color"
 msgstr "Колір"
@@ -2828,8 +2823,8 @@ msgstr "..."
 msgid "Failed to connect to the server"
 msgstr "Не вдалося підключитися до сервера"
 
-msgid "Check the status of current system services"
-msgstr "Перевірте стан поточних системних служб"
+msgid "Check cloud service status"
+msgstr ""
 
 msgid "code"
 msgstr "код"
@@ -2849,8 +2844,14 @@ msgstr "Помилка підключення до принтера"
 msgid "Please check the network connection of the printer and Orca."
 msgstr "Перевірте мережеве з'єднання принтера і Orca."
 
+msgid "Account Offline,Connecting..."
+msgstr ""
+
 msgid "Connecting..."
 msgstr "Підключення..."
+
+msgid "Unable to connect to printer"
+msgstr ""
 
 msgid "Auto Refill"
 msgstr "Автоматична заміна"
@@ -3058,7 +3059,7 @@ msgstr ""
 "Помилка впорядкування. Виявлено деякі винятки під час обробки геометрії "
 "моделей."
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "Arrangement ignored the following objects which can't fit into a single "
 "bed:\n"
@@ -3190,16 +3191,16 @@ msgstr "Невідома помилка."
 msgid "Sending print configuration"
 msgstr "Надсилання конфігурації друку"
 
-#, c-format, boost-format
+#, c-format
 msgid "Successfully sent. Will automatically jump to the device page in %ss"
 msgstr "Успішно надіслано. Автоматично перейде на сторінку пристрою в %sс"
 
-#, c-format, boost-format
+#, c-format
 msgid "Successfully sent. Will automatically jump to the next page in %ss"
 msgstr ""
 "Успішно відправлено. Автоматично перейде на наступну сторінку через %sс"
 
-#, c-format, boost-format
+#, c-format
 msgid "Access code:%s IP address:%s"
 msgstr ""
 
@@ -3232,7 +3233,7 @@ msgstr "Надсилання файлу gcode по локальній мереж
 msgid "Sending G-code file to SD card"
 msgstr "Надсилання файлу gcode на карту SD"
 
-#, c-format, boost-format
+#, c-format
 msgid "Successfully sent. Close current page in %s s"
 msgstr "Успішно надіслано. Закрити поточну сторінку в %sс"
 
@@ -3272,6 +3273,11 @@ msgstr ""
 msgid "Bad input data for UseSurfaceJob."
 msgstr ""
 
+msgid ""
+"It is used default volume for embossed text, try to change text or font to "
+"fix it."
+msgstr ""
+
 #. TRN: This is the title of the action appearing in undo/redo stack.
 #. It is same for Text and SVG.
 msgid "Emboss attribute change"
@@ -3297,7 +3303,7 @@ msgid ""
 "print quality. Printing will start once preconditioning is complete."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid "Remaining time: %dmin%ds"
 msgstr ""
 
@@ -3360,8 +3366,8 @@ msgstr "Авторські права"
 msgid "License"
 msgstr "Ліцензія"
 
-msgid "Orca Slicer is licensed under "
-msgstr "Orca Slicer знаходиться під ліцензією "
+msgid "Flash Studio is licensed under "
+msgstr ""
 
 msgid "GNU Affero General Public License, version 3"
 msgstr "Стандартна громадська ліцензія GNU Affero, версія 3"
@@ -3376,38 +3382,22 @@ msgid ""
 "This software uses open source components whose copyright and other "
 "proprietary rights belong to their respective owners"
 msgstr ""
-"Це програмне забезпечення використовує компоненти з відкритим вихідним "
-"кодом,авторські права та інші\n"
+"Це програмне забезпечення використовує компоненти з відкритим вихідним кодом,"
+"авторські права та інші\n"
 "права власності належать їх відповідним власникам"
 
-#, c-format, boost-format
+#, c-format
 msgid "About %s"
 msgstr "Про %s"
 
-msgid "OrcaSlicer is based on BambuStudio, PrusaSlicer, and SuperSlicer."
-msgstr "OrcaSlicer базується на BambuStudio, PrusaSlicer та SuperSlicer."
-
-msgid "BambuStudio is originally based on PrusaSlicer by PrusaResearch."
-msgstr "BambuStudio спочатку базується на PrusaSlicer від PrusaResearch."
-
-msgid "PrusaSlicer is originally based on Slic3r by Alessandro Ranellucci."
-msgstr "PrusaSlicer спочатку базується на Slic3r від Алессандро Ранеллуччі."
-
-msgid ""
-"Slic3r was created by Alessandro Ranellucci with the help of many other "
-"contributors."
+msgid "Tailor-Make Everyone's World"
 msgstr ""
-"Slic3r був створений Алессандро Ранеллуччі за допомогою багатьох інших\n"
-"учасники."
 
-msgid "Version"
-msgstr "Версія"
+msgid "Based On OrcaSlicer"
+msgstr ""
 
 msgid "AMS Materials Setting"
 msgstr "Налаштування матеріалів AMS"
-
-msgid "Confirm"
-msgstr "Підтвердити"
 
 msgid "Close"
 msgstr "Закрити"
@@ -3425,7 +3415,6 @@ msgstr "макс"
 msgid "min"
 msgstr "мін"
 
-#, boost-format
 msgid "The input value should be greater than %1% and less than %2%"
 msgstr "Вхідне значення має бути більше %1% і менше %2%"
 
@@ -3457,11 +3446,11 @@ msgstr "Ви впевнені, що хочете видалити інформа
 msgid "You need to select the material type and color first."
 msgstr "Спочатку потрібно вибрати тип матеріалу та колір."
 
-#, c-format, boost-format
+#, c-format
 msgid "Please input a valid value (K in %.1f~%.1f)"
 msgstr "Будь ласка введіть коректне значення (K в %.1f~%.1f)"
 
-#, c-format, boost-format
+#, c-format
 msgid "Please input a valid value (K in %.1f~%.1f, N in %.1f~%.1f)"
 msgstr "Будь ласка введіть коректне значення (K в %.1f~%.1f, N в %.1f~%.1f)"
 
@@ -3540,14 +3529,14 @@ msgstr "Останній крок"
 msgid "Example"
 msgstr "Приклад"
 
-#, c-format, boost-format
+#, c-format
 msgid "Calibrating... %d%%"
 msgstr "Калібрування... %d%%"
 
 msgid "Calibration completed"
 msgstr "Калібрування завершено"
 
-#, c-format, boost-format
+#, c-format
 msgid "%s does not support %s"
 msgstr "%s не підтримує %s"
 
@@ -3578,6 +3567,9 @@ msgid ""
 "Lower half area:  Filament in AMS\n"
 "And you cannot click it to modify"
 msgstr ""
+
+msgid "Device"
+msgstr "Пристрій"
 
 msgid "AMS Slots"
 msgstr "Слоти AMS"
@@ -3612,14 +3604,14 @@ msgstr ""
 msgid "Nozzle"
 msgstr "Сопло"
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "Note: the filament type(%s) does not match with the filament type(%s) in the "
 "slicing file. If you want to use this slot, you can install %s instead of %s "
 "and change slot information on the 'Device' page."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "Note: the slot is empty or undefined. If you want to use this slot, you can "
 "install %s and change slot information on the 'Device' page."
@@ -3874,7 +3866,6 @@ msgstr ""
 "Відбулася помилка. Можливо не вистачає системноъ пам'яті або це баг самої "
 "програми"
 
-#, boost-format
 msgid "A fatal error occurred: \"%1%\""
 msgstr ""
 
@@ -3917,7 +3908,6 @@ msgstr "Скрипт післяобробки успішно виконаний"
 msgid "Unknown error occurred during exporting G-code."
 msgstr "Під час експорту G-коду сталася невідома помилка."
 
-#, boost-format
 msgid ""
 "Copying of the temporary G-code to the output G-code failed. Maybe the SD "
 "card is write locked?\n"
@@ -3927,7 +3917,6 @@ msgstr ""
 "коду. Чи може ваша SD карта захищена від запису?\n"
 "Повідомлення про помилку: %1%"
 
-#, boost-format
 msgid ""
 "Copying of the temporary G-code to the output G-code failed. There might be "
 "problem with target device, please try exporting again or using different "
@@ -3937,7 +3926,6 @@ msgstr ""
 "цільовим пристроєм, спробуйте експортувати ще раз або використати інший "
 "пристрій. Пошкоджений вихідний G-код - %1% .tmp."
 
-#, boost-format
 msgid ""
 "Renaming of the G-code after copying to the selected destination folder has "
 "failed. Current path is %1%.tmp. Please try exporting again."
@@ -3945,7 +3933,6 @@ msgstr ""
 "Не вдалося перейменувати G-код після копіювання у вибрану папку призначення. "
 "Поточний шлях - %1%.tmp. Спробуйте експортувати ще раз."
 
-#, boost-format
 msgid ""
 "Copying of the temporary G-code has finished but the original code at %1% "
 "couldn't be opened during copy check. The output G-code is at %2%.tmp."
@@ -3953,7 +3940,6 @@ msgstr ""
 "Копіювання тимчасового G-коду закінчено, але оригінальний код на рівні %1% "
 "не вдалося відкрити під час перевірки копії. Вихідний G-код - %2% .tmp."
 
-#, boost-format
 msgid ""
 "Copying of the temporary G-code has finished but the exported code couldn't "
 "be opened during copy check. The output G-code is at %1%.tmp."
@@ -3961,14 +3947,13 @@ msgstr ""
 "Копіювання тимчасового G-коду завершено, але експортований код не вдалося "
 "відкрити під час перевірки копії. Вихідний G-код - %1% .tmp."
 
-#, boost-format
 msgid "G-code file exported to %1%"
 msgstr "Файл G-коду експортується до %1%"
 
 msgid "Unknown error when exporting G-code."
 msgstr "Невідома помилка під час експорту G-коду."
 
-#, fuzzy, boost-format
+#, fuzzy
 msgid ""
 "Failed to save G-code file.\n"
 "Error message: %1%.\n"
@@ -3981,7 +3966,6 @@ msgstr ""
 msgid "Copying of the temporary G-code to the output G-code failed"
 msgstr "Не вдалося скопіювати тимчасовий G-код у вихідний G-код"
 
-#, boost-format
 msgid "Scheduling upload to `%1%`. See Window -> Print Host Upload Queue"
 msgstr ""
 "Планування завантаження в `%1%`. Див. вікно -> Черга завантаження на хост "
@@ -4053,11 +4037,11 @@ msgstr "Виберіть файл STL для імпорту моделі сто�
 msgid "Bed Shape"
 msgstr "Форма столу"
 
-#, c-format, boost-format
+#, c-format
 msgid "A minimum temperature above %d℃ is recommended for %s.\n"
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid "A maximum temperature below %d℃ is recommended for %s.\n"
 msgstr ""
 
@@ -4081,7 +4065,7 @@ msgstr ""
 "Переконайтеся, що для друку використовується температура.\n"
 "\n"
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "The recommended nozzle temperature for this filament type is [%d, %d] "
 "degrees Celsius."
@@ -4096,7 +4080,7 @@ msgstr ""
 "Надто маленька максимальна об'ємна швидкість.\n"
 "Скинути до 0,5"
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "Current chamber temperature is higher than the material's safe temperature, "
 "this may result in material softening and clogging. The maximum safe "
@@ -4216,7 +4200,7 @@ msgstr ""
 "seam_slope_start_height має бути менше висоти шару.\n"
 "Значення скинуто на 0."
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "Lock depth should smaller than skin depth.\n"
 "Reset to 50% of skin depth."
@@ -4461,14 +4445,14 @@ msgid ""
 "resumed on printer."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "The chamber temperature is too high, which may cause the filament to soften. "
 "Please wait until the chamber temperature drops below %d℃. You may open the "
 "front door or enable fans to cool down."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "AMS temperature is too high, which may cause the filament to soften. Please "
 "wait until the AMS temperature drops below %d℃."
@@ -4585,7 +4569,6 @@ msgstr ""
 msgid "default"
 msgstr "за замовчуванням"
 
-#, boost-format
 msgid "Edit Custom G-code (%1%)"
 msgstr "Редагування користувацького G-коду (%1%)"
 
@@ -4628,7 +4611,6 @@ msgstr "Температури"
 msgid "Timestamps"
 msgstr "Відмітки часу"
 
-#, boost-format
 msgid "Specific for %1%"
 msgstr "Специфічно для %1%"
 
@@ -4662,23 +4644,23 @@ msgstr ""
 msgid "Value is out of range."
 msgstr "Значення поза допустимим діапазоном."
 
-#, c-format, boost-format
+#, c-format
 msgid "%s can't be a percentage"
 msgstr "%s не може бути відсотком"
 
-#, c-format, boost-format
+#, c-format
 msgid "Value %s is out of range, continue?"
 msgstr "Значення %s поза допустимим діапазоном, продовжити?"
 
 msgid "Parameter validation"
 msgstr "Перевірка параметрів"
 
-#, c-format, boost-format
+#, c-format
 msgid "Value %s is out of range. The valid range is from %d to %d."
 msgstr ""
 "Значення %s знаходиться за межами діапазону. Дійсний діапазон від %d до %d."
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "Is it %s%% or %s %s?\n"
 "YES for %s%%, \n"
@@ -4688,7 +4670,6 @@ msgstr ""
 "ТАК для %s%%, \n"
 "НІ для %s %s."
 
-#, boost-format
 msgid ""
 "Invalid input format. Expected vector of dimensions in the following format: "
 "\"%1%\""
@@ -4710,7 +4691,6 @@ msgid ""
 "entry. Examples: 5, 5#2, 1,7,9, 5,9#2,18."
 msgstr ""
 
-#, boost-format
 msgid "Invalid format. Expected vector format: \"%1%\""
 msgstr "Невірний формат. Очікуваний векторний формат: \"%1%\""
 
@@ -4932,32 +4912,26 @@ msgstr "Поради:"
 msgid "Current grouping of slice result is not optimal."
 msgstr ""
 
-#, boost-format
 msgid "Increase %1%g filament and %2% changes compared to optimal grouping."
 msgstr ""
 
-#, boost-format
 msgid ""
 "Increase %1%g filament and save %2% changes compared to optimal grouping."
 msgstr ""
 
-#, boost-format
 msgid ""
 "Save %1%g filament and increase %2% changes compared to optimal grouping."
 msgstr ""
 
-#, boost-format
 msgid ""
 "Save %1%g filament and %2% changes compared to a printer with one nozzle."
 msgstr ""
 
-#, boost-format
 msgid ""
 "Save %1%g filament and increase %2% changes compared to a printer with one "
 "nozzle."
 msgstr ""
 
-#, boost-format
 msgid ""
 "Increase %1%g filament and save %2% changes compared to a printer with one "
 "nozzle."
@@ -5136,11 +5110,11 @@ msgstr ""
 msgid "right nozzle"
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid "The position or size of some models exceeds the %s's printable range."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid "The position or size of the model %s exceeds the %s's printable range."
 msgstr ""
 
@@ -5149,11 +5123,9 @@ msgid ""
 "range:\n"
 msgstr ""
 
-#, boost-format
 msgid "Left nozzle: X:%1%-%2%, Y:%3%-%4%, Z:%5%-%6%\n"
 msgstr ""
 
-#, boost-format
 msgid "Right nozzle: X:%1%-%2%, Y:%3%-%4%, Z:%5%-%6%"
 msgstr ""
 
@@ -5318,7 +5290,7 @@ msgstr "Об'єм:"
 msgid "Size:"
 msgstr "Розмір:"
 
-#, fuzzy, boost-format
+#, fuzzy, c-format
 msgid ""
 "Conflicts of G-code paths have been found at layer %d, Z = %.2lfmm. Please "
 "separate the conflicted objects farther (%s <-> %s)."
@@ -5338,29 +5310,29 @@ msgstr "Шлях G-коду виходить за межі пластини."
 msgid "Not support printing 2 or more TPU filaments."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid "Tool %d"
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "Filament %s is placed in the %s, but the generated G-code path exceeds the "
 "printable range of the %s."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "Filaments %s are placed in the %s, but the generated G-code path exceeds the "
 "printable range of the %s."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "Filament %s is placed in the %s, but the generated G-code path exceeds the "
 "printable height of the %s."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "Filaments %s are placed in the %s, but the generated G-code path exceeds the "
 "printable height of the %s."
@@ -5372,7 +5344,7 @@ msgstr ""
 msgid "Only the object being edited is visible."
 msgstr "Відображається лише редагований об'єкт."
 
-#, c-format, boost-format
+#, c-format
 msgid "Filaments %s cannot be printed directly on the surface of this plate."
 msgstr ""
 
@@ -5464,24 +5436,43 @@ msgstr "Спеціальне джерело камери"
 msgid "Show \"Live Video\" guide page."
 msgstr "Показати \\Пряме відео\\ сторінку посібника."
 
-msgid "Connect Printer (LAN)"
-msgstr "Підключити принтер (локальна мережа)"
+msgid "ConnectPrinter (LAN)"
+msgstr ""
 
 msgid "Please input the printer access code:"
 msgstr "Введіть код доступу до принтера:"
 
 msgid ""
-"You can find it in \"Settings > Network > Access code\"\n"
-"on the printer, as shown in the figure:"
+"You can find it in \"Settings > Network > Network Mode\"\n"
+"on the printer; To facilitate device identification, \n"
+"you can change the device name on the device page."
 msgstr ""
 
-msgid ""
-"You can find it in \"Setting > Setting > LAN only > Access Code\"\n"
-"on the printer, as shown in the figure:"
+msgid "The access code is wrong, please input again."
+msgstr ""
+
+msgid "Connect Printer (LAN)"
+msgstr "Підключити принтер (локальна мережа)"
+
+msgid "Please input the printer access code."
 msgstr ""
 
 msgid "Invalid input."
 msgstr "Помилка введення."
+
+msgid "Failed to connect to printer."
+msgstr "Не вдалося підключитися до принтера."
+
+msgid "Connecting, please wait..."
+msgstr ""
+
+msgid ""
+"Failed to connect to printer. Please check the printer and network, then try "
+"again."
+msgstr ""
+
+msgid "Failed to connect to printer. Please try again."
+msgstr ""
 
 msgid "New Window"
 msgstr "Нове вікно"
@@ -5489,11 +5480,31 @@ msgstr "Нове вікно"
 msgid "Open a new window"
 msgstr "Відкрити нове вікно"
 
+msgid "Upload zip file"
+msgstr ""
+
 msgid "Application is closing"
 msgstr "Додаток закривається"
 
 msgid "Closing Application while some presets are modified."
 msgstr "Закриття програми під чвс зміни деяких налаштувань."
+
+#, c-format
+msgid ""
+"When using Flash Studio V%s, please update Flash Studio Mobile to V%s, and "
+"also update your device firmware to the latest version."
+msgstr ""
+
+#, c-format
+msgid ""
+"When using Flash Studio Desktop V%s, please use Flash Studio Mobile APP "
+"instead of Flash Maker, and also update your device firmware to the latest "
+"version.Please note that devices that are not updated will be displayed as "
+"offline and will be unable to connect."
+msgstr ""
+
+msgid "Do not show again"
+msgstr ""
 
 msgid "Logging"
 msgstr "Ведення журналу"
@@ -5504,14 +5515,30 @@ msgstr "Підготовка"
 msgid "Preview"
 msgstr "Попередній перегляд"
 
-msgid "Device"
-msgstr "Пристрій"
+msgid "Upload log"
+msgstr ""
+
+#, c-format
+msgid "Please update %s and the remaining %d devices to %s or later."
+msgstr ""
+
+#, c-format
+msgid "Please update %s to %s or later."
+msgstr ""
+
+msgid ""
+"To ensure the normal operation of the above devices. Flash Studio Desktop "
+"cannot correctly retrieve the status of devices that have not been updated."
+msgstr ""
 
 msgid "Multi-device"
 msgstr "Багато пристроїв"
 
 msgid "Project"
 msgstr "Проєкт"
+
+msgid "Guide"
+msgstr "Гід"
 
 msgid "Yes"
 msgstr "Так"
@@ -5570,7 +5597,16 @@ msgstr ""
 msgid "Open Network Test"
 msgstr "Відкритий мережевий тест"
 
-#, c-format, boost-format
+msgid "One-click export log"
+msgstr ""
+
+msgid "Unload log"
+msgstr ""
+
+msgid "Software log"
+msgstr ""
+
+#, c-format
 msgid "&About %s"
 msgstr "&Про %s"
 
@@ -5874,12 +5910,6 @@ msgstr ""
 msgid "Input Shaping Frequency"
 msgstr ""
 
-msgid "Input Shaping Damping/zeta factor"
-msgstr ""
-
-msgid "Input Shaping"
-msgstr ""
-
 msgid "VFA"
 msgstr "Вертикальні дрібні артефакти (VFA)"
 
@@ -5888,6 +5918,12 @@ msgstr "Посібник"
 
 msgid "Calibration help"
 msgstr "Довідка з калібрування"
+
+msgid "Input Shaping Damping/zeta factor"
+msgstr ""
+
+msgid "Input Shaping"
+msgstr ""
 
 msgid "&Open G-code"
 msgstr "&Відкрити G-код"
@@ -5913,7 +5949,7 @@ msgstr "Відкрита студія"
 msgid "&Quit"
 msgstr "&Вихід"
 
-#, c-format, boost-format
+#, c-format
 msgid "Quit %s"
 msgstr "Вийти %s"
 
@@ -5926,11 +5962,11 @@ msgstr "&Вигляд"
 msgid "&Help"
 msgstr "&Допомога"
 
-#, c-format, boost-format
+#, c-format
 msgid "A file exists with the same name: %s, do you want to overwrite it?"
 msgstr "Існує файл із таким же ім'ям: %s, ви хочете перезаписати його?"
 
-#, c-format, boost-format
+#, c-format
 msgid "A config exists with the same name: %s, do you want to overwrite it?"
 msgstr "Існує конфігурація з таким же ім'ям: %s, хочете Її перезаписати?"
 
@@ -5949,7 +5985,7 @@ msgstr "Ні для всіх"
 msgid "Choose a directory"
 msgstr "Виберіть каталог"
 
-#, c-format, boost-format
+#, c-format
 msgid "There is %d config exported. (Only non-system configs)"
 msgid_plural "There are %d configs exported. (Only non-system configs)"
 msgstr[0] ""
@@ -5969,7 +6005,7 @@ msgstr "Експорт результату"
 msgid "Select profile to load:"
 msgstr "Виберіть профіль для завантаження:"
 
-#, c-format, boost-format
+#, c-format
 msgid "There is %d config imported. (Only non-system and compatible configs)"
 msgid_plural ""
 "There are %d configs imported. (Only non-system and compatible configs)"
@@ -6097,14 +6133,11 @@ msgstr "Завантаження інструментів віртуальної
 
 msgid ""
 "Another virtual camera is running.\n"
-"Orca Slicer supports only a single virtual camera.\n"
+"Flashforge Studio supports only a single virtual camera.\n"
 "Do you want to stop this virtual camera?"
 msgstr ""
-"Працює інша віртуальна камера.\n"
-"Orca Slicer підтримує лише одну віртуальну камеру.\n"
-"Ви хочете зупинити цю віртуальну камеру?"
 
-#, c-format, boost-format
+#, c-format
 msgid "Virtual camera initialize failed (%s)!"
 msgstr "Помилка ініціалізації віртуальної камери (%s)!"
 
@@ -6198,7 +6231,7 @@ msgstr "Помилка підключення LAN (Не вдалося пере�
 msgid "Browsing file in storage is not supported in LAN Only Mode."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid "You are going to delete %u file from printer. Are you sure to continue?"
 msgid_plural ""
 "You are going to delete %u files from printer. Are you sure to continue?"
@@ -6216,7 +6249,7 @@ msgstr[3] ""
 msgid "Delete files"
 msgstr "Видалити файли"
 
-#, c-format, boost-format
+#, c-format
 msgid "Do you want to delete the file '%s' from printer?"
 msgstr "Ви хочете видалити файл '%s' з принтера?"
 
@@ -6233,17 +6266,15 @@ msgid "Failed to parse model information."
 msgstr "Не вдалося розібрати інформацію про модель."
 
 msgid ""
-"The .gcode.3mf file contains no G-code data. Please slice it with Orca "
-"Slicer and export a new .gcode.3mf file."
+"The .gcode.3mf file contains no G-code data.Please slice it with Orca-"
+"Flashforge and export a new .gcode.3mf file."
 msgstr ""
-"Файл .gcode.3mf не містить даних G-коду. Будь ласка, розріжте його за "
-"допомогою Orca Slicer і експортуйте новий файл .gcode.3mf."
 
-#, c-format, boost-format
+#, c-format
 msgid "File '%s' was lost! Please download it again."
 msgstr "Файл '%s' втрачений! Завантажте його знову."
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "File: %s\n"
 "Title: %s\n"
@@ -6263,7 +6294,7 @@ msgstr "Відкрити папку"
 msgid "Download finished"
 msgstr "Завантаження завершено"
 
-#, c-format, boost-format
+#, c-format
 msgid "Downloading %d%%..."
 msgstr "Завантаження %d%%..."
 
@@ -6320,7 +6351,7 @@ msgstr ""
 msgid "File upload failed, please try again."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid "Error code: %d"
 msgstr "Код помилки: %d"
 
@@ -6368,6 +6399,36 @@ msgstr "Інвертувати вісь нахилу"
 
 msgid "Invert Roll axis"
 msgstr "Інвертувати вісь Roll"
+
+msgid "Import Model"
+msgstr ""
+
+msgid "Color Quantization"
+msgstr ""
+
+msgid "Original Model"
+msgstr ""
+
+msgid "Number of Colors"
+msgstr ""
+
+msgid "Parameters have changed, please click Apply to take effect"
+msgstr ""
+
+msgid "Filament Mapping"
+msgstr ""
+
+msgid "Auto match added filaments"
+msgstr ""
+
+msgid "Skip matching"
+msgstr ""
+
+msgid "Current filament list"
+msgstr ""
+
+msgid "New filament"
+msgstr ""
 
 msgid "(LAN)"
 msgstr ""
@@ -6549,15 +6610,15 @@ msgstr "Завантаження..."
 msgid "Cloud Slicing..."
 msgstr "Поділ хмари..."
 
-#, c-format, boost-format
+#, c-format
 msgid "In Cloud Slicing Queue, there are %s tasks ahead."
 msgstr "У черзі Cloud Slicing Queue попереду %s завдань."
 
-#, c-format, boost-format
+#, c-format
 msgid "Layer: %s"
 msgstr "Шар: %s"
 
-#, c-format, boost-format
+#, c-format
 msgid "Layer: %d/%d"
 msgstr "Шар: %d/%d"
 
@@ -6722,22 +6783,15 @@ msgstr ""
 msgid "click to add machine"
 msgstr ""
 
-msgid "Status"
-msgstr "Статус"
-
-msgctxt "Firmware"
-msgid "Update"
+msgid "Device List"
 msgstr ""
 
-msgid "Assistant(HMS)"
-msgstr ""
-
-#, c-format, boost-format
-msgid "Network plug-in v%s"
-msgstr ""
-
-#, c-format, boost-format
+#, c-format
 msgid "Network plug-in v%s (%s)"
+msgstr ""
+
+#, c-format
+msgid "Network plug-in v%s"
 msgstr ""
 
 msgid "Don't show again"
@@ -6749,27 +6803,26 @@ msgstr ""
 msgid "Later"
 msgstr ""
 
-#, c-format, boost-format
-msgid "%s error"
-msgstr "%s помилка"
+msgid "error"
+msgstr "помилка"
 
-#, c-format, boost-format
+#, c-format
 msgid "%s has encountered an error"
 msgstr "%s виявив помилку"
 
-#, c-format, boost-format
+#, c-format
 msgid "%s warning"
 msgstr "%s попередження"
 
-#, c-format, boost-format
+#, c-format
 msgid "%s has a warning"
 msgstr "%s має попередження"
 
-#, c-format, boost-format
+#, c-format
 msgid "%s info"
 msgstr "%s інфо"
 
-#, c-format, boost-format
+#, c-format
 msgid "%s information"
 msgstr "%s інформація"
 
@@ -6827,6 +6880,9 @@ msgid ""
 msgstr ""
 "Сервер не може відповісти. Будь ласка, натисніть на посилання нижче, щоб "
 "перевірити стан сервера."
+
+msgid "Check the status of current system services"
+msgstr "Перевірте стан поточних системних служб"
 
 msgid ""
 "If the server is in a fault state, you can temporarily use offline printing "
@@ -6889,7 +6945,7 @@ msgstr "Відкрити папку."
 msgid "Safely remove hardware."
 msgstr "Безпечне видалення пристрою."
 
-#, c-format, boost-format
+#, c-format
 msgid "%1$d Object has custom supports."
 msgid_plural "%1$d Objects have custom supports."
 msgstr[0] "%1$d Об'єкт має опори користувача."
@@ -6897,7 +6953,7 @@ msgstr[1] "%1$d Об'єкти мають опори користувача."
 msgstr[2] "%1$d Об'єкти мають опори користувача."
 msgstr[3] ""
 
-#, c-format, boost-format
+#, c-format
 msgid "%1$d Object has color painting."
 msgid_plural "%1$d Objects have color painting."
 msgstr[0] "%1$d Об'єкт має кольорове забарвлення."
@@ -6905,7 +6961,7 @@ msgstr[1] "%1$d Об'єкти мають кольорове забарвленн
 msgstr[2] "%1$d Об'єкти мають кольорове забарвлення."
 msgstr[3] ""
 
-#, c-format, boost-format
+#, c-format
 msgid "%1$d object was loaded as a part of cut object."
 msgid_plural "%1$d objects were loaded as parts of cut object."
 msgstr[0] "%1$d завантажено як частину обрізаного об'єкта."
@@ -6913,7 +6969,7 @@ msgstr[1] "%1$d завантажено як частини обрізаних о
 msgstr[2] "%1$d завантажено як частини обрізаних об'єктів"
 msgstr[3] ""
 
-#, c-format, boost-format
+#, c-format
 msgid "%1$d object was loaded with fuzzy skin painting."
 msgid_plural "%1$d objects were loaded with fuzzy skin painting."
 msgstr[0] ""
@@ -6954,9 +7010,6 @@ msgstr "Серйозне попередження:"
 msgid " (Repair)"
 msgstr " (Ремонт)"
 
-msgid " Click here to install it."
-msgstr " Натисніть тут, щоб встановити його."
-
 msgid "WARNING:"
 msgstr "ПОПЕРЕДЖЕННЯ:"
 
@@ -6990,7 +7043,7 @@ msgstr "Будь ласка, оновіть драйвер відеокарти.
 msgid "Unsupported OpenGL version"
 msgstr "Непідтримувана версія OpenGL"
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "Unable to load shaders:\n"
 "%s"
@@ -7186,18 +7239,16 @@ msgstr "Перемістити пластину на перед"
 msgid "Customize current plate"
 msgstr "Налаштувати поточну пластину"
 
-#, c-format, boost-format
+#, c-format
 msgid "The %s nozzle can not print %s."
 msgstr ""
 
-#, boost-format
 msgid "Mixing %1% with %2% in printing is not recommended.\n"
 msgstr ""
 
 msgid " nozzle"
 msgstr ""
 
-#, boost-format
 msgid ""
 "It is not recommended to print the following filament(s) with %1%: %2%\n"
 msgstr ""
@@ -7207,11 +7258,9 @@ msgid ""
 "combinations:\n"
 msgstr ""
 
-#, boost-format
 msgid "%1% with %2%\n"
 msgstr ""
 
-#, boost-format
 msgid " plate %1%:"
 msgstr " Пластина %1%:"
 
@@ -7261,11 +7310,11 @@ msgstr ""
 msgid "Switch diameter"
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid "Left nozzle: %smm"
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid "Right nozzle: %smm"
 msgstr ""
 
@@ -7310,8 +7359,8 @@ msgstr "Додайте один філамент"
 msgid "Remove last filament"
 msgstr "Видалити останній філамент"
 
-msgid "Synchronize filament list from AMS"
-msgstr "Синхронізувати список ниток з AMS"
+msgid "Sync List from Device"
+msgstr ""
 
 msgid "Set filaments to use"
 msgstr "Встановити філаменти для використання"
@@ -7322,7 +7371,7 @@ msgstr "Пошук пластини, об’єкта і деталі."
 msgid "Pellets"
 msgstr "Гранули"
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "After completing your operation, %s project will be closed and create a new "
 "project."
@@ -7331,13 +7380,10 @@ msgstr ""
 msgid "There are no compatible filaments, and sync is not performed."
 msgstr "Немає сумісних філаментів, а синхронізація не виконується."
 
-msgid "Sync filaments with AMS"
-msgstr "Синхронізація ниток з AMS"
-
 msgid ""
-"There are some unknown or incompatible filaments mapped to generic preset.\n"
-"Please update Orca Slicer or restart Orca Slicer to check if there is an "
-"update to system presets."
+"There are some unknown filaments mapped to generic preset. Please update "
+"Flash Studio or restart Flash Studio to check if there is an update to "
+"system presets."
 msgstr ""
 
 msgid "Only filament color information has been synchronized from printer."
@@ -7348,11 +7394,117 @@ msgid ""
 "information is not included."
 msgstr ""
 
-#, boost-format
+msgid "Repair"
+msgstr ""
+
+msgid "Repairing model"
+msgstr ""
+
+msgid "Model repair has been canceled or failed."
+msgstr ""
+
+msgid "Windows 3D repair service is not available in this build."
+msgstr ""
+
+#, c-format
+msgid "%1$d non-manifold edge"
+msgid_plural "%1$d non-manifold edges"
+msgstr[0] "%1$d відкрите ребро"
+msgstr[1] "%1$d відкритих ребер"
+msgstr[2] "%1$d відкритих ребер"
+msgstr[3] ""
+
+#, c-format
+msgid "%1$d non-manifold vertex"
+msgid_plural "%1$d non-manifold vertices"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+msgstr[3] ""
+
+#, c-format
+msgid "%1$d open edge"
+msgid_plural "%1$d open edges"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+msgstr[3] ""
+
+msgid ""
+"The mesh has non-manifold geometry or open boundaries. You can import it as-"
+"is or repair it with Windows 3D repair service before importing."
+msgstr ""
+
+msgid "Mesh repair"
+msgstr ""
+
+msgid "Import without repair"
+msgstr ""
+
+msgid "Repair and import"
+msgstr ""
+
+msgid "Cancel import"
+msgstr ""
+
+msgid "Please note that the mesh has non-manifold geometry or open boundaries."
+msgstr ""
+
+msgid "Mesh issue"
+msgstr ""
+
+msgid "Continue"
+msgstr ""
+
+msgid "The repaired model still has non-manifold geometry or open boundaries."
+msgstr ""
+
+msgid "Object too small"
+msgstr "Об'єкт занадто малий"
+
+#, c-format
+msgid ""
+"The object from file %s seems to be defined in meters or inches. Flash "
+"Studio's internal unit is millimeters. Do you want to convert to millimeters?"
+msgstr ""
+
+msgid "Model file and device do not match"
+msgstr ""
+
+msgid ""
+"The currently selected printer does not support multicolor printing. Switch "
+"to a multicolor-capable printer?"
+msgstr ""
+
+msgid "Confirm and add"
+msgstr ""
+
+msgid "Do not add now"
+msgstr ""
+
+msgid "The selected file is a "
+msgstr ""
+
+msgid "multicolor model"
+msgstr ""
+
+msgid ""
+", and the currently selected printer does not support multicolor printing,"
+msgstr ""
+
+msgid "please select one of the following "
+msgstr ""
+
+msgid "multicolor printers"
+msgstr ""
+
+msgid " and add it"
+msgstr ""
+
 msgid "Do you want to save changes to \"%1%\"?"
 msgstr "Ви хочете зберегти зміни в \\%1%\\?"
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "Successfully unmounted. The device %s (%s) can now be safely removed from "
 "the computer."
@@ -7360,7 +7512,7 @@ msgstr ""
 "Успішно змонтовано. Тепер пристрій %s(%s) можна безпечно видалити з "
 "комп'ютер."
 
-#, c-format, boost-format
+#, c-format
 msgid "Ejecting of device %s (%s) has failed."
 msgstr ""
 
@@ -7410,17 +7562,15 @@ msgstr "Згорнути бічну панель"
 msgid "Tab"
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid "Loading file: %s"
 msgstr "Завантаження файлу: %s"
 
-#, fuzzy
-msgid "The 3MF is not supported by OrcaSlicer, loading geometry data only."
-msgstr "3mf не від Orca Slicer, завантажуйте лише дані геометрії."
+msgid "The 3mf is not supported by Flash Studio, load geometry data only."
+msgstr ""
 
-#, fuzzy
-msgid "Load 3MF"
-msgstr "Завантажити 3mf"
+msgid "Load 3mf"
+msgstr ""
 
 msgid ""
 "This project was created with an OrcaSlicer 2.3.1-alpha and uses infill "
@@ -7433,7 +7583,7 @@ msgid ""
 "template settings?"
 msgstr ""
 
-#, fuzzy, c-format, boost-format
+#, fuzzy, c-format
 msgid ""
 "The 3MF file version %s is newer than %s's version %s, found the following "
 "unrecognized keys:"
@@ -7442,7 +7592,7 @@ msgstr "Версія 3MF %s новіша, ніж версія %s %s, знайд�
 msgid "You'd better upgrade your software.\n"
 msgstr "Вам краще оновити програмне забезпечення.\n"
 
-#, fuzzy, c-format, boost-format
+#, fuzzy, c-format
 msgid ""
 "The 3MF file version %s is newer than %s's version %s, we suggest to upgrade "
 "your software."
@@ -7454,6 +7604,10 @@ msgid ""
 "The 3MF file was generated by an old OrcaSlicer version, loading geometry "
 "data only."
 msgstr ""
+
+#, fuzzy
+msgid "Load 3MF"
+msgstr "Завантажити 3mf"
 
 msgid "Invalid values found in the 3MF:"
 msgstr "У 3MF знайдено неприпустимі значення:"
@@ -7491,9 +7645,8 @@ msgstr ""
 msgid "Customized Preset"
 msgstr "Налаштований параметр"
 
-#, fuzzy
-msgid "Name of components inside STEP file is not UTF8 format!"
-msgstr "Ім'я компонентів всередині крокового файлу не у форматі UTF8!"
+msgid "Name of components inside step file is not UTF8 format!"
+msgstr ""
 
 msgid "The name may show garbage characters!"
 msgstr "Ім'я може містити символи для сміття!"
@@ -7501,7 +7654,6 @@ msgstr "Ім'я може містити символи для сміття!"
 msgid "Remember my choice."
 msgstr "Запам'ятай мій вибір."
 
-#, boost-format
 msgid "Failed loading file \"%1%\". An invalid configuration was found."
 msgstr ""
 "Не вдалося завантажити файл \\%1%\\. Виявлено неприпустиму конфігурацію."
@@ -7512,16 +7664,13 @@ msgstr "Об'єкти з нульовим об'ємом видалені"
 msgid "The volume of the object is zero"
 msgstr "Об'єм об'єкта дорівнює нулю"
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "The object from file %s is too small, and maybe in meters or inches.\n"
 " Do you want to scale to millimeters?"
 msgstr ""
 "Об'єкт із файлу %s занадто малий, можливо, в метрах або дюймах.\n"
 "Ви хочете масштабувати до міліметрів?"
-
-msgid "Object too small"
-msgstr "Об'єкт занадто малий"
 
 msgid ""
 "This file contains several objects positioned at multiple heights.\n"
@@ -7541,7 +7690,7 @@ msgstr "Завантажити ці файли як єдиний об'єкт з 
 msgid "Object with multiple parts was detected"
 msgstr "Виявлено об'єкт, що складається з кількох частин"
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "Connected printer is %s. It must match the project preset for printing.\n"
 msgstr ""
@@ -7580,7 +7729,7 @@ msgstr "Зберегти файл як:"
 msgid "Export OBJ file:"
 msgstr "Експор файлу OBJ:"
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "The file %s already exists\n"
 "Do you want to replace it?"
@@ -7633,19 +7782,15 @@ msgstr ""
 msgid "Replaced with 3D files from directory:\n"
 msgstr ""
 
-#, boost-format
 msgid "✖ Skipped %1%: same file.\n"
 msgstr ""
 
-#, boost-format
 msgid "✖ Skipped %1%: file does not exist.\n"
 msgstr ""
 
-#, boost-format
 msgid "✖ Skipped %1%: failed to replace.\n"
 msgstr ""
 
-#, boost-format
 msgid "✔ Replaced %1%.\n"
 msgstr ""
 
@@ -7682,18 +7827,12 @@ msgstr "Неправильні дані"
 msgid "Slicing Canceled"
 msgstr "Нарізка скасована"
 
-#, c-format, boost-format
+#, c-format
 msgid "Slicing Plate %d"
 msgstr "Пластина для нарізки %d"
 
 msgid "Please resolve the slicing errors and publish again."
 msgstr "Виправте помилки нарізки та опублікуйте знову."
-
-msgid ""
-"The network plug-in was not detected. Network related features are "
-"unavailable."
-msgstr ""
-"Мережевий плагін не виявлено. Функції, пов'язані з мережею, недоступні."
 
 msgid ""
 "Preview only mode:\n"
@@ -7752,16 +7891,14 @@ msgstr "завантажую проект..."
 msgid "Download failed, File size exception."
 msgstr "Завантаження не вдалося через виняток розміру файлу."
 
-#, c-format, boost-format
+#, c-format
 msgid "Project downloaded %d%%"
 msgstr "Проект завантажено %d%%"
 
 msgid ""
-"Importing to Orca Slicer failed. Please download the file and manually "
+"Importing to Flash Studio failed. Please download the file and manually "
 "import it."
 msgstr ""
-"Не вдалося імпортувати файл до Orca Slicer. Завантажте файл і імпортуйте "
-"його вручну."
 
 msgid "INFO:"
 msgstr ""
@@ -7790,16 +7927,13 @@ msgid "Error occurs while loading G-code file"
 msgstr "Помилка під час завантаження файлу G-коду"
 
 #. TRN %1% is archive path
-#, boost-format
 msgid "Loading of a ZIP archive on path %1% has failed."
 msgstr "Не вдалося завантажити ZIP-архів за шляхом %1%."
 
 #. TRN: First argument = path to file, second argument = error description
-#, boost-format
 msgid "Failed to unzip file to %1%: %2%"
 msgstr "Не вдалося розархівувати файл до %1%: %2%"
 
-#, boost-format
 msgid "Failed to find unzipped file at %1%. Unzipping of file has failed."
 msgstr ""
 "Не вдалося знайти розархівований файл за адресою %1%. Не вдалося "
@@ -7857,7 +7991,7 @@ msgstr "Слідуючі символи не допускаються файло
 msgid "Save Sliced file as:"
 msgstr "Зберегти нарізаний файл як:"
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "The file %s has been sent to the printer's storage space and can be viewed "
 "on the printer."
@@ -7877,19 +8011,15 @@ msgstr ""
 "Неможливо виконати булеву операцію на сітках моделі. Будуть залишені лише "
 "позитивні частини. Ви можете виправити сітки і спробувати ще раз."
 
-#, boost-format
 msgid "Reason: part \"%1%\" is empty."
 msgstr "Причина: частина “%1%” порожня."
 
-#, boost-format
 msgid "Reason: part \"%1%\" does not bound a volume."
 msgstr "Причина: частина “%1%” не обмежує об’єм."
 
-#, boost-format
 msgid "Reason: part \"%1%\" has self intersection."
 msgstr "Причина: частина “%1%” має самоперетин."
 
-#, boost-format
 msgid "Reason: \"%1%\" and another part have no intersection."
 msgstr "Причина: “%1%” та інша частина не мають перетину."
 
@@ -7931,19 +8061,19 @@ msgstr ""
 msgid "Optimize Rotation"
 msgstr "Оптимізація повороту"
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "Printer not connected. Please go to the device page to connect %s before "
 "syncing."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "OrcaSlicer can't connect to %s. Please check if the printer is powered on "
 "and connected to the network."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "The currently connected printer on the device page is not %s. Please switch "
 "to %s before syncing."
@@ -7955,64 +8085,52 @@ msgid ""
 msgstr ""
 
 msgid ""
-"The filaments on the printer are all unknown types. Please go to the printer "
-"screen or software device page to set the filament type."
+"Filament type unknown. Please set it on the printer screen or in the "
+"slicer's device page."
 msgstr ""
 
 msgid "Device Page"
 msgstr ""
 
-msgid "Synchronize AMS Filament Information"
+msgid "Sync Device Filament Info"
 msgstr ""
 
 msgid "Plate Settings"
 msgstr "Параметри планшета"
 
-#, boost-format
 msgid "Number of currently selected parts: %1%\n"
 msgstr "Кількість вибраних зараз деталей: %1%\n"
 
-#, boost-format
 msgid "Number of currently selected objects: %1%\n"
 msgstr "Кількість об'єктів, що вибрані зараз: %1%\n"
 
-#, boost-format
 msgid "Part name: %1%\n"
 msgstr "Назва частини: %1%\n"
 
-#, boost-format
 msgid "Object name: %1%\n"
 msgstr "Ім'я об'єкта: %1%\n"
 
-#, boost-format
 msgid "Size: %1% x %2% x %3% in\n"
 msgstr "Розмір: %1% x %2% x %3% in\n"
 
-#, boost-format
 msgid "Size: %1% x %2% x %3% mm\n"
 msgstr "Розмір: %1% x %2% x %3% мм\n"
 
-#, boost-format
 msgid "Volume: %1% in³\n"
 msgstr "Об'єм: %1% in³\n"
 
-#, boost-format
 msgid "Volume: %1% mm³\n"
 msgstr "Об'єм: %1% мм³\n"
 
-#, boost-format
 msgid "Triangles: %1%\n"
 msgstr "Трикутники: %1%\n"
 
 msgid ""
 "\"Fix Model\" feature is currently only on Windows. Please repair the model "
-"on Orca Slicer(windows) or CAD softwares."
+"on Flash Studio(windows) or CAD softwares."
 msgstr ""
-"Функція \\Fix Model\\ доступна лише у Windows. Будь ласка, відремонтуйте "
-"модель \n"
-"на Orca Slicer (Windows) або у програмах САПР."
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "Plate %d: %s is not suggested to be used to print filament %s (%s). If you "
 "still want to do this print job, please set this filament's bed temperature "
@@ -8240,6 +8358,9 @@ msgstr ""
 "Якщо увімкнено, Orca запам'ятовує та автоматично перемикає конфігурацію "
 "нитки/процесу для кожного принтера."
 
+msgid "Retain filament information when switching devices"
+msgstr ""
+
 msgid "Group user filament presets"
 msgstr ""
 
@@ -8413,8 +8534,12 @@ msgstr "Регіон входу"
 msgid "Stealth mode"
 msgstr "Прихований режим"
 
-msgid "This stops sending data to cloud services. Users who use LAN mode only can safely turn on this function."
-msgstr "Це зупиняє передавання даних до хмарних сервісів. Користувачі, які використовують лише режим LAN, можуть безпечно ввімкнути цю функцію."
+msgid ""
+"This stops sending data to cloud services. Users who use LAN mode only can "
+"safely turn on this function."
+msgstr ""
+"Це зупиняє передавання даних до хмарних сервісів. Користувачі, які "
+"використовують лише режим LAN, можуть безпечно ввімкнути цю функцію."
 
 msgid "Network test"
 msgstr "Тест мережі"
@@ -8483,7 +8608,7 @@ msgstr ""
 msgid "Failed to load network plug-in. Please restart the application."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "You've selected network plug-in version %s.\n"
 "\n"
@@ -8559,9 +8684,6 @@ msgstr "Журнал рівня"
 
 msgid "fatal"
 msgstr "фатальний"
-
-msgid "error"
-msgstr "помилка"
 
 msgid "warning"
 msgstr "попередження"
@@ -8810,7 +8932,7 @@ msgstr ""
 msgid "Jump to webpage"
 msgstr "Перейти на веб-сторінку"
 
-#, c-format, boost-format
+#, c-format
 msgid "Save %s as"
 msgstr "Зберегти %s як"
 
@@ -8829,11 +8951,9 @@ msgstr "Ім'я недоступне."
 msgid "Overwriting a system profile is not allowed."
 msgstr "Перезаписування системного профілю заборонено"
 
-#, boost-format
 msgid "Preset \"%1%\" already exists."
 msgstr "Предустановка \\%1%\\ вже існує."
 
-#, boost-format
 msgid ""
 "Preset \"%1%\" already exists and is incompatible with the current printer."
 msgstr "Предустановка \\%1%\\ вже існує і несумісна з поточним принтером."
@@ -8852,23 +8972,18 @@ msgctxt "PresetName"
 msgid "Copy"
 msgstr "Копіювати"
 
-#, boost-format
 msgid "Printer \"%1%\" is selected with preset \"%2%\""
 msgstr "Принтер \"%1%\" вибраний з попередньо інсталяцією \"%2%\""
 
-#, boost-format
 msgid "Please choose an action with \"%1%\" preset after saving."
 msgstr "Після збереження виберіть дію з налаштуванням \"%1%\"."
 
-#, boost-format
 msgid "For \"%1%\", change \"%2%\" to \"%3%\" "
 msgstr "Для \"%1%\" змініть \"%2%\" на \"%3%\" "
 
-#, boost-format
 msgid "For \"%1%\", add \"%2%\" as a new preset"
 msgstr "Для \"%1%\" додайте \"%2%\" як новий пресет"
 
-#, boost-format
 msgid "Simply switch to \"%1%\""
 msgstr "Просто перейдіть на \"%1%\""
 
@@ -8950,14 +9065,14 @@ msgstr "Код помилки"
 msgid "High Flow"
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "The nozzle flow setting of %s(%s) doesn't match with the slicing file(%s). "
 "Please make sure the nozzle installed matches with settings in printer, then "
 "set the corresponding printer preset while slicing."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "Filament %s does not match the filament in AMS slot %s. Please update the "
 "printer firmware to support AMS slot assignment."
@@ -8972,7 +9087,7 @@ msgstr ""
 "Філамент не відповідає філаменту в слоті AMS. Будь ласка, оновіть Прошивка "
 "принтера для підтримки призначення слотів AMS."
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "The selected printer (%s) is incompatible with the print file configuration "
 "(%s). Please adjust the printer preset in the prepare page or choose a "
@@ -9047,7 +9162,7 @@ msgstr "Підготовка завдання для друку"
 msgid "The name length exceeds the limit."
 msgstr "Довжина імені перевищує обмеження."
 
-#, c-format, boost-format
+#, c-format
 msgid "Cost %dg filament and %d changes more than optimal grouping."
 msgstr ""
 
@@ -9062,41 +9177,41 @@ msgid ""
 "'Device -> Printer parts' to change your nozzle setting."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "The %s diameter(%.1fmm) of current printer doesn't match with the slicing "
 "file (%.1fmm). Please make sure the nozzle installed matches with settings "
 "in printer, then set the corresponding printer preset when slicing."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "The current nozzle diameter (%.1fmm) doesn't match with the slicing file "
 "(%.1fmm). Please make sure the nozzle installed matches with settings in "
 "printer, then set the corresponding printer preset when slicing."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "The hardness of current material (%s) exceeds the hardness of %s(%s). Please "
 "verify the nozzle or material settings and try again."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "[ %s ] requires printing in a high-temperature environment. Please close the "
 "door."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid "[ %s ] requires printing in a high-temperature environment."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid "The filament on %s may soften. Please unload."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid "The filament on %s is unknown and may soften. Please set filament."
 msgstr ""
 
@@ -9215,53 +9330,86 @@ msgstr ""
 msgid "Please refer to Wiki before use->"
 msgstr ""
 
-msgid "Current firmware does not support file transfer to internal storage."
+msgid "MultiSend:send_to_printer, is busy"
 msgstr ""
 
-msgid "Send to Printer storage"
+msgid "no valid printer"
 msgstr ""
 
-msgid "Try to connect"
+msgid "send prepare fail"
 msgstr ""
 
-msgid "Internal Storage"
+msgid "Tip"
 msgstr ""
 
-msgid "External Storage"
-msgstr ""
-
-msgid "Upload file timeout, please check if the firmware version supports it."
-msgstr ""
-
-msgid "Connection timed out, please check your network."
-msgstr ""
-
-msgid "Connection failed. Click the icon to retry"
-msgstr ""
-
-msgid "Cannot send the print task when the upgrade is in progress"
-msgstr "Не вдалося надіслати завдання на друк під час оновлення"
-
-msgid "The selected printer is incompatible with the chosen printer presets."
-msgstr "Вибраний принтер несумісний зі встановленими налаштуваннями."
-
-msgid "Storage needs to be inserted before send to printer."
-msgstr ""
-
-msgid "The printer is required to be in the same LAN as Orca Slicer."
-msgstr ""
-"Принтер повинен бути підключений до тієї ж локальної мережі, що й Orca "
-"Slicer."
-
-msgid "The printer does not support sending to printer storage."
-msgstr ""
-
-msgid "Sending..."
+msgid "File sent successfully"
 msgstr ""
 
 msgid ""
-"File upload timed out. Please check if the firmware version supports this "
-"operation or verify if the printer is functioning properly."
+"File sending failure: inconsistent model and slicing configuration or "
+"network abnormality"
+msgstr ""
+
+msgid "Send printing tasks to"
+msgstr ""
+
+msgid ""
+"Please click the filament and select its corresponding slot\n"
+"before sending the print job."
+msgstr ""
+
+msgid "Levelling"
+msgstr ""
+
+msgid "Enable IFS"
+msgstr ""
+
+msgid "Time-Lapse Video"
+msgstr ""
+
+msgid "Select Printer"
+msgstr "Виберіть принтер"
+
+msgid "Network"
+msgstr "Мережа"
+
+msgid "Lan"
+msgstr ""
+
+msgid "No idle devices"
+msgstr ""
+
+#, c-format
+msgid ""
+"No \"%s\" idle printer model. Please select the currently connected device "
+"model, then reslice and send the print."
+msgstr ""
+
+msgid "IFS not enabled, unable to select the slot"
+msgstr ""
+
+msgid "Sending task, do you want to cancel it?"
+msgstr ""
+
+msgid "Preparing printing task"
+msgstr ""
+
+msgid "Canceling the print job, please wait"
+msgstr ""
+
+msgid "Send completed, automatically redirected to device status"
+msgstr ""
+
+msgid "The printer is busy and cannot receive printing commands."
+msgstr ""
+
+msgid "Canceling the print job successfully."
+msgstr ""
+
+msgid "Send failed, please check network or device status"
+msgstr ""
+
+msgid "Send completed"
 msgstr ""
 
 msgid "Slice ok."
@@ -9297,121 +9445,38 @@ msgstr "Отримано звіт про вхід з перевищеним ча
 msgid "Unknown Failure"
 msgstr "Невідомий збій"
 
-msgid ""
-"Please Find the Pin Code in Account page on printer screen,\n"
-" and type in the Pin Code below."
+msgid "Register printer"
 msgstr ""
-"Будь ласка, знайдіть Пін-код на сторінці облікового запису на екрані "
-"принтера, \n"
-" і введіть Пін-код нижче."
 
-msgid "Can't find Pin Code?"
-msgstr "Не можу знайти Пін-код?"
-
-msgid "Pin Code"
-msgstr "Пін-код"
-
-msgid "Binding..."
-msgstr "Прив’язка…"
-
-msgid "Please confirm on the printer screen"
-msgstr "Будь ласка, підтвердьте на екрані принтера"
-
-msgid "Log in failed. Please check the Pin Code."
-msgstr "Вхід не вдається. Будь ласка, перевірте Пін-код."
-
-msgid "Log in printer"
-msgstr "Вхід до принтера"
-
-msgid "Would you like to log in to this printer with the current account?"
-msgstr "Ви хочете увійти до цього принтера з поточним обліковим записом?"
-
-msgid "Check the reason"
-msgstr "Перевірте причину"
+msgid "Would you like to register the printer to this account?"
+msgstr ""
 
 msgid "Read and accept"
 msgstr "Прочитайте і згодьтеся"
 
-msgid "Terms and Conditions"
-msgstr "Умови використання"
-
-msgid ""
-"Thank you for purchasing a Bambu Lab device. Before using your Bambu Lab "
-"device, please read the terms and conditions. By clicking to agree to use "
-"your Bambu Lab device, you agree to abide by the Privacy Policy and Terms of "
-"Use (collectively, the \"Terms\"). If you do not comply with or agree to the "
-"Bambu Lab Privacy Policy, please do not use Bambu Lab equipment and services."
+msgid "Term of Service"
 msgstr ""
-"Дякуємо за покупку пристрою Bambu Lab. Перед використанням вашого пристрою "
-"Bambu Lab, ознайомтеся з умовами та положеннями. Клацнувши, щоб погодитися "
-"використовувати ваш пристрій Bambu Lab, ви погоджуєтесь дотримуватися "
-"Політики конфіденційності та Умов використання (разом \"Умови\"). Якщо ви не "
-"виконуєте або не погоджуєтесь із Політикою конфіденційності Bambu Lab, будь "
-"ласка, не використовуйте обладнання та послуги Bambu Lab."
-
-msgid "and"
-msgstr "і"
 
 msgid "Privacy Policy"
 msgstr "Політика конфіденційності"
 
-msgid "We ask for your help to improve everyone's printer"
-msgstr "Ми просимо вашої допомоги для покращення роботи всіх принтерів"
+msgid "and"
+msgstr "і"
 
-msgid "Statement about User Experience Improvement Program"
-msgstr "Заява про Програму покращення користувацького досвіду"
-
-#, c-format, boost-format
-msgid ""
-"In the 3D Printing community, we learn from each other's successes and "
-"failures to adjust our own slicing parameters and settings. %s follows the "
-"same principle and uses machine learning to improve its performance from the "
-"successes and failures of the vast number of prints by our users. We are "
-"training %s to be smarter by feeding them the real-world data. If you are "
-"willing, this service will access information from your error logs and usage "
-"logs, which may include information described in Privacy Policy. We will not "
-"collect any Personal Data by which an individual can be identified directly "
-"or indirectly, including without limitation names, addresses, payment "
-"information, or phone numbers. By enabling this service, you agree to these "
-"terms and the statement about Privacy Policy."
+msgid "The device registration failed!"
 msgstr ""
-"У спільноті 3D-друку ми навчаємося на прикладі успіхів і невдач інших, щоб "
-"налаштувати параметри і налаштування свого власного зрізування. %s "
-"дотримується того ж принципу і використовує машинне навчання для покращення "
-"своєї ефективності на основі успіхів і невдач великої кількості друків наших "
-"користувачів. Ми навчаємо %s бути розумнішими, подаючи їм дані з реального "
-"світу. Якщо ви готові, ця послуга буде мати доступ до інформації з вашого "
-"журналу помилок і журналу використання, включаючи інформацію, описану в "
-"Політиці конфіденційності. Ми не будемо збирати жодних Особистих даних, за "
-"якими можна ідентифікувати особу безпосередньо чи опосередковано, включаючи, "
-"але не обмежуючись, імена, адреси, інформацію про платежі або номери "
-"телефонів. Увімкнувши цю службу, ви погоджуєтеся з цими умовами та заявою "
-"про Політику конфіденційності."
 
-msgid "Statement on User Experience Improvement Plan"
-msgstr "Заява щодо Плану покращення користувацького досвіду"
-
-msgid "Log in successful."
-msgstr "Авторизація успішна."
+msgid "The device registration successful!"
+msgstr ""
 
 msgid "Log out printer"
 msgstr "Вийти з принтера"
 
-msgid "Would you like to log out the printer?"
-msgstr "Хочете вийти з принтера?"
-
-msgid "Please log in first."
-msgstr "Будь ласка, увійдіть спочатку."
-
-msgid "There was a problem connecting to the printer. Please try again."
+msgid "Would you like to log the printer out of this account?"
 msgstr ""
-"Виникла проблема з підключенням до принтера. Будь ласка, спробуйте ще раз."
-
-msgid "Failed to log out."
-msgstr "Не вдалося вийти."
 
 #. TRN "Save current Settings"
-#, c-format, boost-format
+#, c-format
 msgid "Save current %s"
 msgstr "Зберегти поточний %s"
 
@@ -9567,8 +9632,8 @@ msgstr ""
 msgid ""
 "When recording timelapse without toolhead, it is recommended to add a "
 "\"Timelapse Wipe Tower\" \n"
-"by right-click the empty position of build plate and choose \"Add "
-"Primitive\"->\"Timelapse Wipe Tower\"."
+"by right-click the empty position of build plate and choose \"Add Primitive"
+"\"->\"Timelapse Wipe Tower\"."
 msgstr ""
 "При записі таймлапсу без інструментальної головки рекомендується додати "
 "“Timelapse Wipe Tower” \n"
@@ -9738,7 +9803,7 @@ msgstr "Примітки"
 msgid "Frequent"
 msgstr "Частий"
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "Following line %s contains reserved keywords.\n"
 "Please remove it, or will beat G-code visualization and printing time "
@@ -9922,7 +9987,6 @@ msgid "Printable space"
 msgstr "Місце для друку"
 
 #. TRN: The first argument is the parameter's name; the second argument is its value.
-#, boost-format
 msgid "Invalid value provided for parameter %1%: %2%"
 msgstr "Надано некоректне значення для параметру %1%: %2%"
 
@@ -10069,7 +10133,7 @@ msgstr ""
 msgid "Detached"
 msgstr "Окремий"
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "%d Filament Preset and %d Process Preset is attached to this printer. Those "
 "presets would be deleted if the printer is deleted."
@@ -10090,7 +10154,6 @@ msgstr[2] "Профілі вказані нижче, успадковуютьс�
 msgstr[3] ""
 
 #. TRN  Remove/Delete
-#, boost-format
 msgid "%1% Preset"
 msgstr "%1% Передустановка"
 
@@ -10110,15 +10173,14 @@ msgstr ""
 "Якщо пресет відповідає філаменту, який в даний момент використовується на "
 "вашому принтері, будь ласка, скиньте інформацію про філамент для цього слоту."
 
-#, boost-format
 msgid "Are you sure to %1% the selected preset?"
 msgstr "Ви впевнені, що %1% вибраної установки?"
 
-#, c-format, boost-format
+#, c-format
 msgid "Left: %s"
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid "Right: %s"
 msgstr ""
 
@@ -10176,7 +10238,6 @@ msgstr "Збережіть вибрані установки."
 msgid "Transfer the selected options to the newly selected preset."
 msgstr "Перенесіть вибрані параметри в новий вибраний пресет."
 
-#, boost-format
 msgid ""
 "Save the selected options to preset \n"
 "\"%1%\"."
@@ -10184,7 +10245,6 @@ msgstr ""
 "Збережіть вибрані параметри у передвстановленні \n"
 "\"%1%\"."
 
-#, boost-format
 msgid ""
 "Transfer the selected options to the newly selected preset \n"
 "\"%1%\"."
@@ -10192,11 +10252,9 @@ msgstr ""
 "Перенесіть вибрані опції в нове попереднє встановлення \n"
 "\"%1%\"."
 
-#, boost-format
 msgid "Preset \"%1%\" contains the following unsaved changes:"
 msgstr "Попередня установка \"%1%\" містить такі незбережені зміни:"
 
-#, boost-format
 msgid ""
 "Preset \"%1%\" is not compatible with the new printer profile and it "
 "contains the following unsaved changes:"
@@ -10204,7 +10262,6 @@ msgstr ""
 "Попередня установка \"%1%\" не сумісна з новим профілем принтера, і вона "
 "містить такі незбережені зміни:"
 
-#, boost-format
 msgid ""
 "Preset \"%1%\" is not compatible with the new process profile and it "
 "contains the following unsaved changes:"
@@ -10212,7 +10269,6 @@ msgstr ""
 "Попередня установка \"%1%\" не сумісна з новим профілем процесу, і "
 "вонамістить такі незбережені зміни:"
 
-#, boost-format
 msgid "You have changed some settings of preset \"%1%\"."
 msgstr "Ви змінили деякі налаштування пресету “%1%”."
 
@@ -10296,7 +10352,6 @@ msgstr "Встановити як обкладинку"
 msgid "Cover"
 msgstr "Обкладинка"
 
-#, boost-format
 msgid "The name \"%1%\" already exists."
 msgstr "Ім'я %1% вже існує."
 
@@ -10321,7 +10376,7 @@ msgstr "Назва моделі"
 msgid "Description:"
 msgstr "Опис:"
 
-#, c-format, boost-format
+#, c-format
 msgid "%s Update"
 msgstr "%s Оновлення"
 
@@ -10337,7 +10392,7 @@ msgstr "Доступний новий пакет конфігурації, чи 
 msgid "the configuration package is incompatible with the current application."
 msgstr "пакет конфігурації несумісний із поточною програмою."
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "The configuration package is incompatible with the current application.\n"
 "%s will update the configuration package to allow the application to start."
@@ -10345,7 +10400,7 @@ msgstr ""
 "Пакет конфігурації несумісний із поточною програмою.\n"
 "%s оновить пакет конфігурації, інакше він не зможе запуститися"
 
-#, c-format, boost-format
+#, c-format
 msgid "Exit %s"
 msgstr "Вихід %s"
 
@@ -10417,32 +10472,21 @@ msgstr ""
 msgid "—> "
 msgstr ""
 
+msgid "No Available Device"
+msgstr ""
+
 msgid ""
 "Synchronizing AMS filaments will discard your modified but unsaved filament "
 "presets.\n"
 "Are you sure you want to continue?"
 msgstr ""
 
-msgctxt "Sync_AMS"
-msgid "Original"
-msgstr ""
-
-msgid "After mapping"
-msgstr ""
-
 msgid "After overwriting"
-msgstr ""
-
-msgctxt "Sync_AMS"
-msgid "Plate"
 msgstr ""
 
 msgid ""
 "The connected printer does not match the currently selected printer. Please "
 "change the selected printer."
-msgstr ""
-
-msgid "Mapping"
 msgstr ""
 
 msgid "Overwriting"
@@ -10476,11 +10520,7 @@ msgstr ""
 msgid "Use AMS"
 msgstr "Використовуйте AMS"
 
-msgid "Tip"
-msgstr ""
-
-msgid ""
-"Only synchronize filament type and color, not including AMS slot information."
+msgid "Sync Filament Type and Color Only"
 msgstr ""
 
 msgid ""
@@ -10534,7 +10574,7 @@ msgstr ""
 msgid "Storage is not available or is in read-only mode."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "The selected printer (%s) is incompatible with the chosen printer profile in "
 "the slicer (%s)."
@@ -10550,6 +10590,10 @@ msgstr ""
 msgid ""
 "You selected external and AMS filament at the same time in an extruder, you "
 "will need manually change external filament."
+msgstr ""
+
+msgctxt "Sync_AMS"
+msgid "Original"
 msgstr ""
 
 msgid "Successfully synchronized nozzle information."
@@ -10599,7 +10643,6 @@ msgstr ""
 "Це налаштування на рівні експерта, неправильне регулювання, ймовірно, "
 "призведе до заклинювання, подрібнення екструдерного колеса до філаменту тощо."
 
-#, boost-format
 msgid "For constant flow rate, hold %1% while dragging."
 msgstr ""
 
@@ -10624,11 +10667,11 @@ msgstr ""
 msgid "Flushing volume (mm³) for each filament pair."
 msgstr "Об'єм промивки (мм³) для кожної пари філаментів."
 
-#, c-format, boost-format
+#, c-format
 msgid "Suggestion: Flushing Volume in range [%d, %d]"
 msgstr "Пропозиція: Об'єм промивки в діапазоні [%d, %d]"
 
-#, c-format, boost-format
+#, c-format
 msgid "The multiplier should be in range [%.2f, %.2f]."
 msgstr "Множина повинна знаходитися в діапазоні [%.2f, %.2f]"
 
@@ -10678,12 +10721,9 @@ msgstr ""
 
 msgid ""
 "Your system is missing H.264 codecs for GStreamer, which are required to "
-"play video. (Try installing the gstreamer1.0-plugins-bad or gstreamer1.0-"
-"libav packages, then restart Orca Slicer?)"
+"play video.  (Try installing the gstreamer1.0-plugins-bad or gstreamer1.0-"
+"libav packages, then restart Flash Studio?)"
 msgstr ""
-"Вашій системі бракує кодеків H.264 для GStreamer, які необхідні для "
-"відтворення відео. (Спробуйте встановити пакети gstreamer1.0-plugins-bad або "
-"gstreamer1.0-libav, а потім перезапустіть Orca Slicer?)"
 
 msgid "Bambu Network plug-in not detected."
 msgstr "Плагін мережі Bambu не виявлено."
@@ -10712,8 +10752,8 @@ msgstr "Панель інструментів"
 msgid "Objects list"
 msgstr "Список об'єктів"
 
-msgid "Import geometry data from STL/STEP/3MF/OBJ/AMF files"
-msgstr "Імпорт геометричних даних із файлів STL/STEP/3MF/OBJ/AMF"
+msgid "Import geometry data from STL/STEP/3MF/OBJ/GLB/AMF files"
+msgstr ""
 
 msgid "Paste from clipboard"
 msgstr "Вставити з буфера обміну"
@@ -10925,7 +10965,7 @@ msgstr "Горизонтальний повзунок - Перемістити �
 msgid "Release Note"
 msgstr "Примітка до випуску"
 
-#, c-format, boost-format
+#, c-format
 msgid "version %s update information:"
 msgstr "версія %s інформація про оновлення:"
 
@@ -10933,20 +10973,26 @@ msgid "Network plug-in update"
 msgstr "Оновлення мережевого плагіна"
 
 msgid ""
-"Click OK to update the Network plug-in when Orca Slicer launches next time."
+"Click OK to update the Network plug-in when Flash Studio launches next time."
 msgstr ""
-"Натисніть OK, щоб оновити мережевий плагін під час наступного запуску Orca "
-"Slicer."
 
-#, c-format, boost-format
+#, c-format
 msgid "A new Network plug-in (%s) is available. Do you want to install it?"
 msgstr "Доступний новий мережевий плагін (%s), чи хочете ви встановити його?"
 
-msgid "New version of Orca Slicer"
-msgstr "Нова версія Orca Slicer"
+msgid "New version of Flash Studio"
+msgstr ""
 
 msgid "Skip this Version"
 msgstr "Пропустити цю версію"
+
+msgid "Exit"
+msgstr ""
+
+#, c-format
+msgid "Click to download new version in default browser: %s"
+msgstr ""
+"Натисніть OK, щоб завантажити останню версію в стандартному браузері: %s"
 
 msgid "Confirm and Update Nozzle"
 msgstr "Підтвердити і оновити сопло"
@@ -10959,18 +11005,23 @@ msgid ""
 "to the printer."
 msgstr ""
 
-msgid "1. Please confirm Orca Slicer and your printer are in the same LAN."
+msgid ""
+"Step 1. Please confirm Flash Studio and your printer are in the same LAN."
 msgstr ""
 
 msgid ""
-"2. If the IP and Access Code below are different from the actual values on "
-"your printer, please correct them."
+"Step 2. If the IP and Access Code below are different from the actual values "
+"on your printer, please correct them."
 msgstr ""
+"Крок 2. Якщо IP та Код доступу нижче відрізняються від значень на принтері, "
+"будь-ласка відкоригуйте їх."
 
 msgid ""
-"3. Please obtain the device SN from the printer side; it is usually found in "
-"the device information on the printer screen."
+"Step 3. Please obtain the device SN from the printer side; it is usually "
+"found in the device information on the printer screen."
 msgstr ""
+"Крок 3. Будь-ласка знайдіть Серійний Номер (SN) принтера; зазвичай його "
+"модна знайти в інформації на екрані принтера."
 
 msgid "IP"
 msgstr ""
@@ -10998,9 +11049,6 @@ msgstr ""
 
 msgid "connecting..."
 msgstr "підключення…"
-
-msgid "Failed to connect to printer."
-msgstr "Не вдалося підключитися до принтера."
 
 msgid "Failed to publish login request."
 msgstr "Не вдалося опублікувати запит на вхід."
@@ -11139,13 +11187,15 @@ msgstr "Відремонтований файл 3MF не містить жодн
 msgid "Repaired 3MF file contains more than one volume"
 msgstr "Відремонтований файл 3MF містить більше одного тома"
 
+msgid "Repaired 3MF file contains more than one instance"
+msgstr ""
+
 msgid "Repair finished"
 msgstr "Ремонт завершено"
 
 msgid "Repair canceled"
 msgstr "Ремонт скасовано"
 
-#, boost-format
 msgid "Copying of file %1% to %2% failed: %3%"
 msgstr "Копіювання %1% у %2% не вдалося: %3%"
 
@@ -11168,11 +11218,9 @@ msgstr ""
 "Один об'єкт має порожній початковий шар і не може бути надрукований. Будь "
 "ласка, обріжте нижню частину або увімкніть підтримки."
 
-#, boost-format
 msgid "Object can't be printed for empty layer between %1% and %2%."
 msgstr "Об'єкт не може бути надрукований для порожнього шару між %1% та %2%."
 
-#, boost-format
 msgid "Object: %1%"
 msgstr "Об'єкт: %1%"
 
@@ -11205,7 +11253,6 @@ msgstr ""
 "Будь ласка, перевірте G-код користувача або використовуйте за замовчуванням "
 "G-код."
 
-#, boost-format
 msgid "Generating G-code: layer %1%"
 msgstr "Генерація G-коду: шар %1%"
 
@@ -11224,7 +11271,6 @@ msgstr "Внутрішній міст"
 msgid "Multiple"
 msgstr "Кілька"
 
-#, boost-format
 msgid "Failed to calculate line width of %1%. Cannot get value of \"%2%\" "
 msgstr ""
 "Не вдалося обчислити ширину лінії %1%. Неможливо отримати значення \"%2%\" "
@@ -11329,18 +11375,15 @@ msgstr "валідація не пройшла"
 msgid "write callback failed"
 msgstr "збій зворотного виклику запису"
 
-#, boost-format
 msgid ""
 "%1% is too close to exclusion area, there may be collisions when printing."
 msgstr ""
 "%1% знаходиться надто близько до забороненої зони, можливі зіткнення при "
 "друку."
 
-#, boost-format
 msgid "%1% is too close to others, and collisions may be caused."
 msgstr "%1% знаходиться надто близько до інших, що може призвести до зіткнень."
 
-#, boost-format
 msgid "%1% is too tall, and collisions will be caused."
 msgstr "%1% занадто високий, і можуть виникнути зіткнення."
 
@@ -11430,7 +11473,6 @@ msgid ""
 msgstr ""
 "Режим спіральної вази не працює, якщо об'єкт містить більше одногоматеріалу."
 
-#, boost-format
 msgid ""
 "While the object %1% itself fits the build volume, it exceeds the maximum "
 "build volume height because of material shrinkage compensation."
@@ -11438,11 +11480,9 @@ msgstr ""
 "Об'єкт %1% влазить в робочий об'єм, але він перевищує максимальну висоту "
 "робочого об'єму із-за компенсації усадки матеріалу."
 
-#, boost-format
 msgid "The object %1% exceeds the maximum build volume height."
 msgstr "Об'єкт %1% перевищує максимальну висоту об'єму друку."
 
-#, boost-format
 msgid ""
 "While the object %1% itself fits the build volume, its last layer exceeds "
 "the maximum build volume height."
@@ -11623,7 +11663,7 @@ msgstr ""
 "У layer_gcode знайдено \"G92 E0\", що несумісне з абсолютною адресацією "
 "екструдера."
 
-#, c-format, boost-format
+#, c-format
 msgid "Plate %d: %s does not support filament %s"
 msgstr "Плита %d: %s не підтримує філамент %s"
 
@@ -14233,8 +14273,8 @@ msgstr ""
 "знайдено, лінія заповнення з'єднується з сегментом периметра лише з одного "
 "боку, і довжина взятого сегменту периметра обмежена цим параметром, але не "
 "більше anchor_length_max.\n"
-"Встановіть цей параметр рівним нулю, щоб вимкнути периметри "
-"прив'язки.пов'язані з однією лінією заповнення."
+"Встановіть цей параметр рівним нулю, щоб вимкнути периметри прив'язки."
+"пов'язані з однією лінією заповнення."
 
 msgid "0 (no open anchors)"
 msgstr "0 (немає відкритих прив'язок)"
@@ -14301,8 +14341,8 @@ msgid "mm/s² or %"
 msgstr "мм/с² або %"
 
 msgid ""
-"Acceleration of sparse infill. If the value is expressed as a percentage "
-"(e.g. 100%), it will be calculated based on the default acceleration."
+"Acceleration of sparse infill. If the value is expressed as a percentage (e."
+"g. 100%), it will be calculated based on the default acceleration."
 msgstr ""
 "Прискорення заповнення. Якщо значення виражено у відсотках (наприклад, "
 "100%), воно буде розраховане на основі прискорення за умовчанням."
@@ -14333,7 +14373,7 @@ msgstr ""
 msgid "accel_to_decel"
 msgstr "прискорення до уповільнення"
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "Klipper's max_accel_to_decel will be adjusted to this %% of acceleration."
 msgstr "Klipper-ів max_accel_to_decel буде скориговано на цей %% прискорення"
@@ -14423,10 +14463,10 @@ msgstr "Повна швидкість вентилятора на шарі"
 
 msgid ""
 "Fan speed will be ramped up linearly from zero at layer "
-"\"close_fan_the_first_x_layers\" to maximum at layer "
-"\"full_fan_speed_layer\". \"full_fan_speed_layer\" will be ignored if lower "
-"than \"close_fan_the_first_x_layers\", in which case the fan will be running "
-"at maximum allowed speed at layer \"close_fan_the_first_x_layers\" + 1."
+"\"close_fan_the_first_x_layers\" to maximum at layer \"full_fan_speed_layer"
+"\". \"full_fan_speed_layer\" will be ignored if lower than "
+"\"close_fan_the_first_x_layers\", in which case the fan will be running at "
+"maximum allowed speed at layer \"close_fan_the_first_x_layers\" + 1."
 msgstr ""
 "Швидкість вентилятора лінійно збільшується від нуля на "
 "рівні«close_fan_the_first_x_layers» до максимуму на рівні "
@@ -14565,7 +14605,7 @@ msgstr "Чи потрібно застосовувати Шорстку Пове
 msgid "Fuzzy skin generator mode"
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "Fuzzy skin generation mode. Works only with Arachne!\n"
 "Displacement: Сlassic mode when the pattern is formed by shifting the nozzle "
@@ -15780,7 +15820,7 @@ msgstr ""
 msgid "Detect overhang walls"
 msgstr "Виявлення стінок що нависають"
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "Detect the overhang percentage relative to line width and use different "
 "speed to print. For 100%% overhang, bridge speed is used."
@@ -16290,8 +16330,8 @@ msgid "Role base wipe speed"
 msgstr "Швидкість протирання залежно від типу"
 
 msgid ""
-"The wipe speed is determined by the speed of the current extrusion role. "
-"e.g. if a wipe action is executed immediately following an outer wall "
+"The wipe speed is determined by the speed of the current extrusion role. e."
+"g. if a wipe action is executed immediately following an outer wall "
 "extrusion, the speed of the outer wall extrusion will be utilized for the "
 "wipe action."
 msgstr ""
@@ -16307,8 +16347,8 @@ msgid ""
 "To minimize the visibility of the seam in a closed loop extrusion, a small "
 "inward movement is executed before the extruder leaves the loop."
 msgstr ""
-"Щоб звести до мінімуму видимість шва при екструзії із замкнутим "
-"контуром,Невеликий рух усередину виконується до виходу екструдера з контуру."
+"Щоб звести до мінімуму видимість шва при екструзії із замкнутим контуром,"
+"Невеликий рух усередину виконується до виходу екструдера з контуру."
 
 msgid "Wipe before external loop"
 msgstr "Протирати перед зовнішнім контуром"
@@ -16803,8 +16843,8 @@ msgid ""
 "Only create support for critical regions including sharp tail, cantilever, "
 "etc."
 msgstr ""
-"Створювати підтримку тільки для критичних областей, включаючи гострий "
-"хвіст,консоль і т.д."
+"Створювати підтримку тільки для критичних областей, включаючи гострий хвіст,"
+"консоль і т.д."
 
 msgid "Ignore small overhangs"
 msgstr ""
@@ -17163,8 +17203,8 @@ msgstr "Увімкнути контроль температури"
 
 msgid ""
 "Enable this option for automated chamber temperature control. This option "
-"activates the emitting of an M191 command before the "
-"\"machine_start_gcode\"\n"
+"activates the emitting of an M191 command before the \"machine_start_gcode"
+"\"\n"
 " which sets the chamber temperature and waits until it is reached. In "
 "addition, it emits an M141 command at the end of the print to turn off the "
 "chamber heater, if present.\n"
@@ -17344,9 +17384,9 @@ msgstr ""
 "Залежно від тривалості операції витирання, швидкості та тривалості "
 "втягування екструдера/нитки, може знадобитися рух накату для нитки.\n"
 "\n"
-"Якщо встановити значення у параметрі \"Кількість втягування перед "
-"витиранням\" нижче, надлишкове втягування буде виконано перед витиранням, "
-"інакше воно буде виконано після нього."
+"Якщо встановити значення у параметрі \"Кількість втягування перед витиранням"
+"\" нижче, надлишкове втягування буде виконано перед витиранням, інакше воно "
+"буде виконано після нього."
 
 msgid ""
 "The wiping tower can be used to clean up the residue on the nozzle and "
@@ -18097,8 +18137,8 @@ msgid "Debug level"
 msgstr "Рівень налагодження"
 
 msgid ""
-"Sets debug logging level. 0:fatal, 1:error, 2:warning, 3:info, 4:debug, "
-"5:trace\n"
+"Sets debug logging level. 0:fatal, 1:error, 2:warning, 3:info, 4:debug, 5:"
+"trace\n"
 msgstr ""
 "Встановлює рівень реєстрації налагодження. 0: непереборний, 1: помилка, 2: "
 "попередження, 3: інформація, 4: налагодження, 5: трасування\n"
@@ -18571,7 +18611,7 @@ msgstr "плаваюча консоль"
 msgid "large overhangs"
 msgstr "великі звіси"
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "It seems object %s has %s. Please re-orient the object or enable support "
 "generation."
@@ -18628,13 +18668,13 @@ msgstr "Наданий файл не вдалося прочитати, оскі
 msgid ""
 "Unknown file format. Input file must have .stl, .obj, .amf(.xml) extension."
 msgstr ""
-"Невідомий формат файлу: вхідний файл повинен мати розширення .stl, .obj "
-"або .amf (.xml)."
+"Невідомий формат файлу: вхідний файл повинен мати розширення .stl, .obj або ."
+"amf (.xml)."
 
 msgid "Unknown file format. Input file must have .3mf or .zip.amf extension."
 msgstr ""
-"Невідомий формат файлу: вхідний файл повинен мати розширення .3mf "
-"або .zip.amf."
+"Невідомий формат файлу: вхідний файл повинен мати розширення .3mf або .zip."
+"amf."
 
 msgid "load_obj: failed to parse"
 msgstr "помилка завантаження файлу OBJ: не вдалося розпізнати формат"
@@ -18722,7 +18762,7 @@ msgstr "Потік"
 msgid "Max Volumetric Speed"
 msgstr "Максимальна об’ємна швидкість"
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "Please input valid values:\n"
 "Start value: >= %.1f\n"
@@ -18739,7 +18779,7 @@ msgstr ""
 msgid "The name cannot be empty."
 msgstr "Ім’я не може бути порожнім."
 
-#, c-format, boost-format
+#, c-format
 msgid "The selected preset: %s was not found."
 msgstr "Обраний пресет: %s не знайдено."
 
@@ -18752,7 +18792,7 @@ msgstr "Назва така сама, як інша існуюча назва н
 msgid "create new preset failed."
 msgstr "не вдалося створити новий передвстановлений параметр."
 
-#, c-format, boost-format
+#, c-format
 msgid "Could not find parameter: %s."
 msgstr ""
 
@@ -18787,13 +18827,13 @@ msgstr ""
 "створювати нові історичні результати калібрування.\n"
 "Ви все ще хочете продовжити калібрування?"
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "Only one of the results with the same name: %s will be saved. Are you sure "
 "you want to override the other results?"
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "There is already a historical calibration result with the same name: %s. "
 "Only one of the results with the same name is saved. Are you sure you want "
@@ -18803,14 +18843,14 @@ msgstr ""
 "Зберігається лише один з результатів з такою самою назвою. Ви впевнені, що "
 "хочете перезаписати історичний результат?"
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "Within the same extruder, the name(%s) must be unique when the filament "
 "type, nozzle diameter, and nozzle flow are the same.\n"
 "Are you sure you want to override the historical result?"
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "This machine type can only hold %d history results per nozzle. This result "
 "will not be saved."
@@ -19066,7 +19106,7 @@ msgstr "Заповніть значення над блоком з найгла�
 msgid "Skip Calibration2"
 msgstr "Пропустити калібрування2"
 
-#, c-format, boost-format
+#, c-format
 msgid "flow ratio : %s "
 msgstr "коєфіцієнт потоку : %s "
 
@@ -19109,7 +19149,7 @@ msgstr ""
 msgid "Please connect the printer first before synchronizing."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "Printer %s nozzle information has not been set. Please configure it before "
 "proceeding with the calibration."
@@ -19148,7 +19188,7 @@ msgstr "Зразок"
 msgid "Method"
 msgstr "Метод"
 
-#, c-format, boost-format
+#, c-format
 msgid "%s is not compatible with %s"
 msgstr "%s несумісний з %s"
 
@@ -19208,14 +19248,14 @@ msgstr "Оновлення історичних записів калібрув�
 msgid "Action"
 msgstr "Дія"
 
-#, c-format, boost-format
+#, c-format
 msgid "This machine type can only hold %d history results per nozzle."
 msgstr "Цей тип машини може зберігати лише %d результатів історії на сопло."
 
 msgid "Edit Flow Dynamics Calibration"
 msgstr "Редагувати калібрування динаміки потоку"
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "Within the same extruder, the name '%s' must be unique when the filament "
 "type, nozzle diameter, and nozzle flow are identical. Please choose a "
@@ -19258,7 +19298,6 @@ msgstr "Завершено"
 msgid "Multiple resolved IP addresses"
 msgstr "Кілька дозволених IP-адрес"
 
-#, boost-format
 msgid ""
 "There are several IP addresses resolving to hostname %1%.\n"
 "Please select one that should be used."
@@ -19541,13 +19580,13 @@ msgid ""
 "OrcaSlicer will convert the values to mm/min when necessary."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "Please input valid values:\n"
 "(0 <= Cornering <= %s)"
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid "NOTE: High values may cause Layer shift (>%s)"
 msgstr ""
 
@@ -19567,7 +19606,7 @@ msgstr "Завантажити до сховища"
 msgid "Switch to Device tab after upload."
 msgstr "Перемкнутися на вкладку Пристрій після завантаження."
 
-#, c-format, boost-format
+#, c-format
 msgid "Upload filename doesn't end with \"%s\". Do you wish to continue?"
 msgstr ""
 "Назва файлу для завантаження не закінчується на \"%s\". Бажаєте продовжити?"
@@ -19583,6 +19622,9 @@ msgstr "Ідентифікатор"
 
 msgid "Progress"
 msgstr "Прогрес"
+
+msgid "Status"
+msgstr "Статус"
 
 msgid "Host"
 msgstr "Хост"
@@ -19796,7 +19838,7 @@ msgstr ""
 "Ви ще не вибрали принтер або налаштування. Будь ласка, виберіть принаймні "
 "одне з них."
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "The Filament name %s you created already exists.\n"
 "If you continue creating, the preset created will be displayed with its full "
@@ -19817,8 +19859,8 @@ msgstr ""
 "Чи бажаєте ви їх перезаписати?"
 
 msgid ""
-"We would rename the presets as \"Vendor Type Serial @printer you "
-"selected\".\n"
+"We would rename the presets as \"Vendor Type Serial @printer you selected"
+"\".\n"
 "To add preset for more printers, please go to printer selection"
 msgstr ""
 "Ми б перейменували попередні налаштування на «Вибраний вами серійний "
@@ -19850,9 +19892,6 @@ msgstr "Тип"
 msgid "The model was not found, please reselect vendor."
 msgstr "Модель не знайдено. Будь ласка, перевиберіть виробника."
 
-msgid "Select Printer"
-msgstr "Виберіть принтер"
-
 msgid "Select Model"
 msgstr "Виберіть модель"
 
@@ -19880,7 +19919,7 @@ msgstr "SVG для гарячого ліжка"
 msgid "Max Print Height"
 msgstr "Максимальна висота друку"
 
-#, c-format, boost-format
+#, c-format
 msgid "The file exceeds %d MB, please import again."
 msgstr "Файл перевищує %d МБ, будь ласка, імпортуйте знову."
 
@@ -20080,7 +20119,7 @@ msgstr "помилка відкриття записаного файлу ZIP"
 msgid "Export successful"
 msgstr "Експорт успішний"
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "The '%s' folder already exists in the current directory. Do you want to "
 "clear it and rebuild it.\n"
@@ -20092,7 +20131,7 @@ msgstr ""
 "Якщо ні, буде додано суфікс з часом, і ви зможете змінити ім’я після "
 "створення."
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "The file: %s\n"
 "may have been opened by another program.\n"
@@ -20256,11 +20295,11 @@ msgid ""
 "Please click the Sync button above and restart the calibration."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid "nozzle size in preset: %d"
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid "nozzle size memorized: %d"
 msgstr ""
 
@@ -20269,11 +20308,11 @@ msgid ""
 "Did you change your nozzle lately?"
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid "nozzle[%d] in preset: %.1f"
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid "nozzle[%d] memorized: %.1f"
 msgstr ""
 
@@ -20282,7 +20321,7 @@ msgid ""
 "change your nozzle lately?"
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid "Printing %1s material with %2s nozzle may cause nozzle damage."
 msgstr ""
 
@@ -20297,13 +20336,13 @@ msgid ""
 "does not match."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "The nozzle diameter of %s extruder is 0.2mm which does not support automatic "
 "Flow Dynamics calibration."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "The currently selected nozzle diameter of %s extruder does not match the "
 "actual nozzle diameter.\n"
@@ -20315,7 +20354,7 @@ msgid ""
 "Please click the Sync button above and restart the calibration."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "The currently selected nozzle type of %s extruder does not match the actual "
 "printer nozzle type.\n"
@@ -20346,9 +20385,6 @@ msgstr "Неможливо отримати дійсне посилання на
 msgid "Success!"
 msgstr "Успіх!"
 
-msgid "Are you sure to log out?"
-msgstr "Ви впевнені, що вийшли?"
-
 msgid "View print host webui in Device tab"
 msgstr "Переглянути веб-інтерфейс друку у вкладці Пристрій"
 
@@ -20368,7 +20404,7 @@ msgstr "Файли сертифікатів (*.crt, *.pem)|*.crt;*.pem|Всі ф
 msgid "Open CA certificate file"
 msgstr "Відкрити файл сертифіката ЦС"
 
-#, c-format, boost-format
+#, c-format
 msgid ""
 "On this system, %s uses HTTPS certificates from the system Certificate Store "
 "or Keychain."
@@ -20389,7 +20425,7 @@ msgstr "Вхід/Тест"
 msgid "Connection to printers connected via the print host failed."
 msgstr "Не вдалося підключитися до принтерів, підключених через вузол друку."
 
-#, c-format, boost-format
+#, c-format
 msgid "Mismatched type of print host: %s"
 msgstr "Невідповідність типу принт-сервера: %s"
 
@@ -20464,17 +20500,14 @@ msgid "Storages found"
 msgstr "Сховища знайдено"
 
 #. TRN %1% = storage path
-#, boost-format
 msgid "%1% : read only"
 msgstr "%1% : лише читання"
 
 #. TRN %1% = storage path
-#, boost-format
 msgid "%1% : no free space"
 msgstr "%1% : немає вільного місця"
 
 #. TRN %1% = host
-#, boost-format
 msgid "Upload has failed. There is no suitable storage found at %1%."
 msgstr ""
 "Відбулася помилка завантаження. За адресою %1% не знайдено відповідного "
@@ -20495,7 +20528,6 @@ msgstr "Не вдалося підключитися до Repetier"
 msgid "Note: Repetier version 0.90.0 or higher is required."
 msgstr "Примітка: потрібна версія Repetier принаймні 0.90.0."
 
-#, boost-format
 msgid ""
 "HTTP status: %1%\n"
 "Message body: \"%2%\""
@@ -20503,7 +20535,6 @@ msgstr ""
 "Статус HTTP: %1%\n"
 "Тіло повідомлення: “%2%"
 
-#, boost-format
 msgid ""
 "Parsing of host response failed.\n"
 "Message body: \"%1%\"\n"
@@ -20513,7 +20544,6 @@ msgstr ""
 "Тіло повідомлення: “%1%”\n"
 "Помилка: “%2%”"
 
-#, boost-format
 msgid ""
 "Enumeration of host printers failed.\n"
 "Message body: \"%1%\"\n"
@@ -20955,11 +20985,11 @@ msgstr "Редагувати кілька принтерів"
 msgid "Select connected printers (0/6)"
 msgstr "Вибрати підключені принтери (0/6)"
 
-#, c-format, boost-format
+#, c-format
 msgid "Select Connected Printers (%d/6)"
 msgstr "Вибрати підключені принтери (%d/6)"
 
-#, c-format, boost-format
+#, c-format
 msgid "The maximum number of printers that can be selected is %d"
 msgstr "Максимальна кількість принтерів, які можна вибрати, становить %d"
 
@@ -21171,7 +21201,7 @@ msgstr ""
 msgid "Load skipping objects information failed. Please try again."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid "/%d Selected"
 msgstr ""
 
@@ -21190,7 +21220,7 @@ msgstr ""
 msgid "The printing job will be stopped. Continue?"
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid "Skipping %d objects."
 msgstr ""
 
@@ -21198,9 +21228,6 @@ msgid "This action cannot be undone. Continue?"
 msgstr ""
 
 msgid "Skipping objects."
-msgstr ""
-
-msgid "Continue"
 msgstr ""
 
 msgid "Select Filament"
@@ -21233,7 +21260,7 @@ msgid ""
 "and remote printing."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid "Error: %s"
 msgstr ""
 
@@ -21252,7 +21279,7 @@ msgstr ""
 msgid "A new version of the Bambu Network Plug-in is available."
 msgstr ""
 
-#, c-format, boost-format
+#, c-format
 msgid "Current version: %s"
 msgstr ""
 
@@ -21339,392 +21366,659 @@ msgstr ""
 msgid "The filament model is unknown. A random filament preset will be used."
 msgstr ""
 
-#: resources/data/hints.ini: [hint:Precise wall]
-msgid ""
-"Precise wall\n"
-"Did you know that turning on precise wall can improve precision and layer "
-"consistency?"
-msgstr ""
-"Точна стінка\n"
-"Чи знаєте ви, що ввімкнення точної стінки може покращити точність і "
-"узгодженість шару?"
+#~ msgid "The configuration may be generated by a newer version of OrcaSlicer."
+#~ msgstr "Конфігурація може бути створена новішою версією OrcaSlicer."
 
-#: resources/data/hints.ini: [hint:Sandwich mode]
-msgid ""
-"Sandwich mode\n"
-"Did you know that you can use sandwich mode (inner-outer-inner) to improve "
-"precision and layer consistency if your model doesn't have very steep "
-"overhangs?"
-msgstr ""
-"Сендвіч режим\n"
-"Чи знаєте ви, що можна використовувати сендвіч-режим (внутрішній-зовнішній-"
-"внутрішній), щоб покращити точність і узгодженість шарів, якщо ваша модель "
-"не має дуже крутих нависань?"
+#~ msgid ""
+#~ "OrcaSlicer will terminate because of running out of memory. It may be a "
+#~ "bug. It will be appreciated if you report the issue to our team."
+#~ msgstr ""
+#~ "OrcaSlicer завершить роботу через брак пам'яті. Можливо, це помилка. Ми "
+#~ "будемо вдячні, якщо ви повідомите про проблему нашій команді."
 
-#: resources/data/hints.ini: [hint:Chamber temperature]
-msgid ""
-"Chamber temperature\n"
-"Did you know that OrcaSlicer supports chamber temperature?"
-msgstr ""
-"Температура камери\n"
-"Чи знаєте ви, що OrcaSlicer вміє керувати температурою камери?"
+#~ msgid ""
+#~ "OrcaSlicer will terminate because of a localization error. It will be "
+#~ "appreciated if you report the specific scenario this issue happened."
+#~ msgstr ""
+#~ "Програма OrcaSlicer завершить роботу через помилку локалізації. Буде "
+#~ "вдячний, якщо ви повідомите про конкретний сценарій виникнення цієї "
+#~ "проблеми."
 
-#: resources/data/hints.ini: [hint:Calibration]
-msgid ""
-"Calibration\n"
-"Did you know that calibrating your printer can do wonders? Check out our "
-"beloved calibration solution in OrcaSlicer."
-msgstr ""
-"Калібрування\n"
-"Чи знаєте ви, що калібрування принтера може творити чудеса? Перегляньте наш "
-"улюблений набір тестів для калібрування в OrcaSlicer."
+#, boost-format
+#~ msgid "OrcaSlicer got an unhandled exception: %1%"
+#~ msgstr "Невідома помилка OrcaSlicer : %1%"
 
-#: resources/data/hints.ini: [hint:Auxiliary fan]
-msgid ""
-"Auxiliary fan\n"
-"Did you know that OrcaSlicer supports Auxiliary part cooling fan?"
-msgstr ""
-"Допоміжний вентилятор\n"
-"Чи знаєте ви, що OrcaSlicer підтримує вентилятор охолодження допоміжної "
-"частини?"
+#~ msgid "Downloading Bambu Network Plug-in"
+#~ msgstr "Завантаження мережевого плагіна для принтерів Bambu"
 
-#: resources/data/hints.ini: [hint:Air filtration]
-msgid ""
-"Air filtration/Exhaust Fan\n"
-"Did you know that OrcaSlicer can support Air filtration/Exhaust Fan?"
-msgstr ""
-"Фільтрація повітря/витяжний вентилятор\n"
-"Чи знаєте ви, що OrcaSlicer підтримує фільтрацію повітря/витяжний вентилятор?"
+#~ msgid ""
+#~ "Orca Slicer requires the Microsoft WebView2 Runtime to operate certain "
+#~ "features.\n"
+#~ "Click Yes to install it now."
+#~ msgstr ""
+#~ "Для роботи деяких функцій Orca Slicer потрібен Microsoft WebView2 "
+#~ "Runtime.\n"
+#~ "Натисніть Так, щоб встановити його зараз."
 
-#: resources/data/hints.ini: [hint:G-code window]
-msgid ""
-"G-code window\n"
-"You can turn on/off the G-code window by pressing the <b>C</b> key."
-msgstr ""
-"Вікно G-коду\n"
-"Ви можете вмикати/вимикати вікно G-коду, натискаючи клавішу <b>C</b>."
+#~ msgid "The Orca Slicer needs an upgrade"
+#~ msgstr "Orca Slicer потребує оновлення"
 
-#: resources/data/hints.ini: [hint:Switch workspaces]
-msgid ""
-"Switch workspaces\n"
-"You can switch between <b>Prepare</b> and <b>Preview</b> workspaces by "
-"pressing the <b>Tab</b> key."
-msgstr ""
-"Перемикання робочих областей\n"
-"Ви можете переключатися між робочими областями <b>Підготовка</b> і "
-"<b>Перегляд</b>, натискаючи клавішу <b>Tab</b>."
+#~ msgid "This is the newest version."
+#~ msgstr "Це найновіша версія."
 
-#: resources/data/hints.ini: [hint:How to use keyboard shortcuts]
-msgid ""
-"How to use keyboard shortcuts\n"
-"Did you know that Orca Slicer offers a wide range of keyboard shortcuts and "
-"3D scene operations?"
-msgstr ""
-"Як використовувати комбінації клавіш\n"
-"Чи знаєте ви, що Orca Slicer пропонує широкий спектр комбінацій клавіш для "
-"роботи з 3D-сценами?"
+#~ msgid ""
+#~ "The OrcaSlicer configuration file may be corrupted and cannot be parsed.\n"
+#~ "OrcaSlicer has attempted to recreate the configuration file.\n"
+#~ "Please note, application settings will be lost, but printer profiles will "
+#~ "not be affected."
+#~ msgstr ""
+#~ "Можливо, файл конфігурації OrcaSlicer пошкоджений і не може бути "
+#~ "оброблений.\n"
+#~ "OrcaSlicer спробував відтворити конфігураційний файл.\n"
+#~ "Зверніть увагу, що налаштування програми будуть втрачені, але профілі "
+#~ "принтера не торкнуться."
 
-#: resources/data/hints.ini: [hint:Reverse on odd]
-msgid ""
-"Reverse on odd\n"
-"Did you know that <b>Reverse on odd</b> feature can significantly improve "
-"the surface quality of your overhangs?"
-msgstr ""
-"Reverse on odd\n"
-"Чи знали ви, що функція <b>Реверс по непарних периметрах</b> може значно "
-"покращити якість поверхні ваших нависань?"
+#~ msgid "Choose one or more files (3MF/STEP/STL/SVG/OBJ/AMF/USD*/ABC/PLY):"
+#~ msgstr ""
+#~ "Виберіть один або кілька файлів (3MF/STEP/STL/SVG/OBJ/AMF/USD*/ABC/PLY):"
 
-#: resources/data/hints.ini: [hint:Cut Tool]
-msgid ""
-"Cut Tool\n"
-"Did you know that you can cut a model at any angle and position with the "
-"cutting tool?"
-msgstr ""
-"Інструмент вирізування\n"
-"Чи знаєте ви, що можна вирізати модель під будь-яким кутом і в будь-якому "
-"положенніза допомогою різального інструмента?"
+#~ msgid "Choose one or more files (3MF/STEP/STL/SVG/OBJ/AMF):"
+#~ msgstr "Виберіть один або кілька файлів (3MF/STEP/STL/SVG/OBJ/AMF):"
 
-#: resources/data/hints.ini: [hint:Fix Model]
-msgid ""
-"Fix Model\n"
-"Did you know that you can fix a corrupted 3D model to avoid a lot of slicing "
-"problems on the Windows system?"
-msgstr ""
-"Виправлення моделі\n"
-"Чи знаєте ви, що ви можете виправити пошкоджену 3D-модель, щоб уникнути "
-"багатьох проблем з нарізанням (slicing) на операційній системі Windows?"
+#~ msgid ""
+#~ "The version of Orca Slicer is too low and needs to be updated to the "
+#~ "latest version before it can be used normally."
+#~ msgstr ""
+#~ "Версія студії Bambu надто низька, її необхідно оновити до "
+#~ "останньоїверсії, перш ніж її можна буде використовувати у звичайному "
+#~ "режимі"
 
-#: resources/data/hints.ini: [hint:Timelapse]
-msgid ""
-"Timelapse\n"
-"Did you know that you can generate a timelapse video during each print?"
-msgstr ""
-"Таймлапс\n"
-"Чи знаєте ви, що ви можете генерувати відео під час кожного друку?"
+#~ msgid "Orca Slicer GUI initialization failed"
+#~ msgstr "Помилка ініціалізації графічного інтерфейсу Orca Slicer"
 
-#: resources/data/hints.ini: [hint:Auto-Arrange]
-msgid ""
-"Auto-Arrange\n"
-"Did you know that you can auto-arrange all the objects in your project?"
-msgstr ""
-"Автоматичне впорядкування\n"
-"Чи знаєте ви, що можна автоматично розташувати всі об'єкти в проєкті?"
+#, c-format, boost-format
+#~ msgid "Error: %1$d non-manifold edge."
+#~ msgid_plural "Error: %1$d non-manifold edges."
+#~ msgstr[0] "Помилка: %1$d відкрите ребро."
+#~ msgstr[1] "Помилка: %1$d відкритих ребер."
+#~ msgstr[2] "Помилка: %1$d відкритих ребер."
+#~ msgstr[3] ""
 
-#: resources/data/hints.ini: [hint:Auto-Orient]
-msgid ""
-"Auto-Orient\n"
-"Did you know that you can rotate objects to an optimal orientation for "
-"printing with a simple click?"
-msgstr ""
-"Автоорієнтація\n"
-"Чи знаєте ви, що можна повертати об'єкти в оптимальну орієнтацію для друку "
-"простим клацанням?"
+#~ msgid "Remaining errors"
+#~ msgstr "Залишилось помилок"
 
-#: resources/data/hints.ini: [hint:Lay on Face]
-msgid ""
-"Lay on Face\n"
-"Did you know that you can quickly orient a model so that one of its faces "
-"sits on the print bed? Select the \"Place on face\" function or press the "
-"<b>F</b> key."
-msgstr ""
-"Покласти на обличчя\n"
-"Чи знаєте ви, що ви можете швидко зорієнтувати модель так, щоб одна з її "
-"граней лежала на столі? Виберіть функцію «Розмістити на межі» або натисніть "
-"клавішу < b > F </b >."
+#~ msgid "Open Documentation in web browser."
+#~ msgstr "Відкрийте документацію у веб-браузері."
 
-#: resources/data/hints.ini: [hint:Object List]
-msgid ""
-"Object List\n"
-"Did you know that you can view all objects/parts in a list and change "
-"settings for each object/part?"
-msgstr ""
-"Список об'єктів\n"
-"Чи знаєте ви, що можна переглядати всі об'єкти/деталі у списку та змінювати "
-"Параметри для кожного об'єкта/деталі?"
+#~ msgid "Orca Slicer is licensed under "
+#~ msgstr "Orca Slicer знаходиться під ліцензією "
 
-#: resources/data/hints.ini: [hint:Search Functionality]
-msgid ""
-"Search Functionality\n"
-"Did you know that you use the Search tool to quickly find a specific Orca "
-"Slicer setting?"
-msgstr ""
-"Функція пошуку\n"
-"Чи знаєте ви, що для швидкого пошуку певних налаштувань Orca Slicer ви "
-"можете скористатися інструментом \"Пошук\"?"
+#~ msgid "OrcaSlicer is based on BambuStudio, PrusaSlicer, and SuperSlicer."
+#~ msgstr "OrcaSlicer базується на BambuStudio, PrusaSlicer та SuperSlicer."
 
-#: resources/data/hints.ini: [hint:Simplify Model]
-msgid ""
-"Simplify Model\n"
-"Did you know that you can reduce the number of triangles in a mesh using the "
-"Simplify mesh feature? Right-click the model and select Simplify model."
-msgstr ""
-"Спростити модель\n"
-"Чи знаєте ви, що можна зменшити кількість трикутників у сітці за допомогою "
-"функції Спростити сітку? Клацніть правою кнопкою миші на моделі і виберіть "
-"Спростити модель."
+#~ msgid "BambuStudio is originally based on PrusaSlicer by PrusaResearch."
+#~ msgstr "BambuStudio спочатку базується на PrusaSlicer від PrusaResearch."
 
-#: resources/data/hints.ini: [hint:Slicing Parameter Table]
-msgid ""
-"Slicing Parameter Table\n"
-"Did you know that you can view all objects/parts on a table and change "
-"settings for each object/part?"
-msgstr ""
-"Таблиця параметрів зрізу\n"
-"Чи знаєте ви, що можна переглядати всі об'єкти/деталі в таблиці та змінювати "
-"налаштування для кожного об'єкта/деталі?"
+#~ msgid "PrusaSlicer is originally based on Slic3r by Alessandro Ranellucci."
+#~ msgstr "PrusaSlicer спочатку базується на Slic3r від Алессандро Ранеллуччі."
 
-#: resources/data/hints.ini: [hint:Split to Objects/Parts]
-msgid ""
-"Split to Objects/Parts\n"
-"Did you know that you can split a big object into small ones for easy "
-"colorizing or printing?"
-msgstr ""
-"Розділити на об'єкти/деталі\n"
-"Чи знаєте ви, що ви можете розділити великий об'єкт на маленькі для "
-"легкоїзабарвлення чи друку?"
+#~ msgid ""
+#~ "Slic3r was created by Alessandro Ranellucci with the help of many other "
+#~ "contributors."
+#~ msgstr ""
+#~ "Slic3r був створений Алессандро Ранеллуччі за допомогою багатьох інших\n"
+#~ "учасники."
 
-#: resources/data/hints.ini: [hint:Subtract a Part]
-msgid ""
-"Subtract a Part\n"
-"Did you know that you can subtract one mesh from another using the Negative "
-"part modifier? That way you can, for example, create easily resizable holes "
-"directly in Orca Slicer."
-msgstr ""
-"Відняти частину\n"
-"Чи знаєте ви, що можна віднімати одну сіть від іншої за допомогою "
-"модифікатора \"Від'ємна частина\"? Таким чином, ви можете, наприклад, "
-"створювати отвори зі змінним розміром безпосередньо в Orca Slicer."
+#~ msgid "Version"
+#~ msgstr "Версія"
 
-#: resources/data/hints.ini: [hint:STEP]
-msgid ""
-"STEP\n"
-"Did you know that you can improve your print quality by slicing a STEP file "
-"instead of an STL?\n"
-"Orca Slicer supports slicing STEP files, providing smoother results than a "
-"lower resolution STL. Give it a try!"
-msgstr ""
-"STEP\n"
-"Чи знаєте ви, що ви можете покращити якість друку, нарізавши файл "
-"STEPзамість STL?\n"
-"Orca Slicer підтримує нарізання файлів STEP, забезпечуючи більш "
-"плавнірезультати порівняно з нижчою роздільною здатністю STL. Спробуй!"
+#~ msgid ""
+#~ "Another virtual camera is running.\n"
+#~ "Orca Slicer supports only a single virtual camera.\n"
+#~ "Do you want to stop this virtual camera?"
+#~ msgstr ""
+#~ "Працює інша віртуальна камера.\n"
+#~ "Orca Slicer підтримує лише одну віртуальну камеру.\n"
+#~ "Ви хочете зупинити цю віртуальну камеру?"
 
-#: resources/data/hints.ini: [hint:Z seam location]
-msgid ""
-"Z seam location\n"
-"Did you know that you can customize the location of the Z seam, and even "
-"paint it on your print, to have it in a less visible location? This improves "
-"the overall look of your model. Check it out!"
-msgstr ""
-"Місце з'єднання Z-шва\n"
-"Чи знали ви, що ви можете налаштовувати розташування Z-шва, і навіть "
-"розфарбовувати його на друці, щоб зробити його менш видимим? Це покращує "
-"загальний вигляд вашої моделі. Перевірте це!"
+#~ msgid ""
+#~ "The .gcode.3mf file contains no G-code data. Please slice it with Orca "
+#~ "Slicer and export a new .gcode.3mf file."
+#~ msgstr ""
+#~ "Файл .gcode.3mf не містить даних G-коду. Будь ласка, розріжте його за "
+#~ "допомогою Orca Slicer і експортуйте новий файл .gcode.3mf."
 
-#: resources/data/hints.ini: [hint:Fine-tuning for flow rate]
-msgid ""
-"Fine-tuning for flow rate\n"
-"Did you know that flow rate can be fine-tuned for even better-looking "
-"prints? Depending on the material, you can improve the overall finish of the "
-"printed model by doing some fine-tuning."
-msgstr ""
-"Тонке налаштування витрати\n"
-"Чи знаєте ви, що швидкість потоку може бути точно налаштована для навіть "
-"більшекрасивих відбитків? Залежно від матеріалу можна покращити загальне "
-"оздобленнядрукарської моделі, виконавши деяке тонке налаштування."
+#, c-format, boost-format
+#~ msgid "%s error"
+#~ msgstr "%s помилка"
 
-#: resources/data/hints.ini: [hint:Split your prints into plates]
-msgid ""
-"Split your prints into plates\n"
-"Did you know that you can split a model that has a lot of parts into "
-"individual plates ready to print? This will simplify the process of keeping "
-"track of all the parts."
-msgstr ""
-"Розбийте відбитки на пластини\n"
-"Чи знаєте ви, що можна розділити модель з великою кількістю деталей на "
-"окремі столи, готові до друку? Це спростить процес відстеження всіхдеталей."
+#~ msgid " Click here to install it."
+#~ msgstr " Натисніть тут, щоб встановити його."
 
-#: resources/data/hints.ini: [hint:Speed up your print with Adaptive Layer
-#: Height]
-msgid ""
-"Speed up your print with Adaptive Layer Height\n"
-"Did you know that you can print a model even faster, by using the Adaptive "
-"Layer Height option? Check it out!"
-msgstr ""
-"Прискорення друку за допомогою функції «Адаптивна висота шару»\n"
-"Чи знаєте ви, що можна друкувати модель ще швидше за допомогою параметра "
-"«Адаптивна висота шару»? Подивися!"
+#~ msgid "Synchronize filament list from AMS"
+#~ msgstr "Синхронізувати список ниток з AMS"
 
-#: resources/data/hints.ini: [hint:Support painting]
-msgid ""
-"Support painting\n"
-"Did you know that you can paint the location of your supports? This feature "
-"makes it easy to place the support material only on the sections of the "
-"model that actually need it."
-msgstr ""
-"Опорне забарвлення\n"
-"Ти знав, що можеш намалювати розташування своїх опор? Ця функція "
-"спрощуєрозміщення матеріалу опори тільки на тих перерізах моделі, які в "
-"цьомупотребують."
+#~ msgid "Sync filaments with AMS"
+#~ msgstr "Синхронізація ниток з AMS"
 
-#: resources/data/hints.ini: [hint:Different types of supports]
-msgid ""
-"Different types of supports\n"
-"Did you know that you can choose from multiple types of supports? Tree "
-"supports work great for organic models, while saving filament and improving "
-"print speed. Check them out!"
-msgstr ""
-"Різні типи опор\n"
-"Чи знаєте ви, що можна вибрати один із кількох типів опор? Підтримка Tree "
-"відмінно працює для органічних моделей, зберігаючи при цьому ниткинапруження "
-"і підвищуючи швидкість друку. Перевірте їх!"
-
-#: resources/data/hints.ini: [hint:Printing Silk Filament]
-msgid ""
-"Printing Silk Filament\n"
-"Did you know that Silk filament needs special consideration to print it "
-"successfully? Higher temperature and lower speed are always recommended for "
-"the best results."
-msgstr ""
-"Друк шовковим філаментом\n"
-"Чи знаєте ви, що шовковий іламент потребує особливої уваги, щоб її Успішно "
-"надрукувати? Для досягнення найкращих результатів завждирекомендується більш "
-"висока температура та нижча швидкість."
-
-#: resources/data/hints.ini: [hint:Brim for better adhesion]
-msgid ""
-"Brim for better adhesion\n"
-"Did you know that when printed models have a small contact interface with "
-"the printing surface, it's recommended to use a brim?"
-msgstr ""
-"Кайма для кращого прилипання\n"
-"Чи знаєте ви, що при друці моделей які мають невелику площу контакту з "
-"поверхнею друку, рекомендується використовувати кайму?"
-
-#: resources/data/hints.ini: [hint:Set parameters for multiple objects]
-msgid ""
-"Set parameters for multiple objects\n"
-"Did you know that you can set slicing parameters for all selected objects at "
-"once?"
-msgstr ""
-"Встановлення параметрів для кількох об'єктів\n"
-"Чи знаєте ви, що можна встановити параметри нарізки для всіх "
-"вибранихоб'єктів одночасно?"
-
-#: resources/data/hints.ini: [hint:Stack objects]
-msgid ""
-"Stack objects\n"
-"Did you know that you can stack objects as a whole one?"
-msgstr ""
-"Стек об’єктів\n"
-"Чи знаєте ви, що можна складати об’єкти як одне ціле?"
-
-#: resources/data/hints.ini: [hint:Flush into support/objects/infill]
-msgid ""
-"Flush into support/objects/infill\n"
-"Did you know that you can save wasted filament by flushing it into support/"
-"objects/infill during filament change?"
-msgstr ""
-"Промивати в підтримки/об'єкти/заповнення\n"
-"Чи знаєте ви, що ви можете зберегти витрачений філамент, промиваючи його в "
-"підтримки/об'єкти/заповнення під час зміни філаменту?"
-
-#: resources/data/hints.ini: [hint:Improve strength]
-msgid ""
-"Improve strength\n"
-"Did you know that you can use more wall loops and higher sparse infill "
-"density to improve the strength of the model?"
-msgstr ""
-"Підвищення міцності\n"
-"Чи знаєте ви, що для підвищення міцності моделі можна використовувати "
-"більшепериметрів та вищу щільність заповнення?"
-
-#: resources/data/hints.ini: [hint:When do you need to print with the printer
-#: door opened]
 #, fuzzy
-msgid ""
-"When do you need to print with the printer door opened?\n"
-"Did you know that opening the printer door can reduce the probability of "
-"extruder/hotend clogging when printing lower temperature filament with a "
-"higher enclosure temperature? More info about this in the Wiki."
-msgstr ""
-"Коли потрібно друкувати з відкритими дверцятами принтера\n"
-"Чи знаєте ви, що відкриття дверцят принтера може знизити ймовірність "
-"засмічення екструдера/гарячого блока при друку низькотемпературного "
-"філаменту при вищій температурі усередині корпусу? Більше інформації "
-"знаходиться в Вікі."
+#~ msgid "The 3MF is not supported by OrcaSlicer, loading geometry data only."
+#~ msgstr "3mf не від Orca Slicer, завантажуйте лише дані геометрії."
 
-#: resources/data/hints.ini: [hint:Avoid warping]
-msgid ""
-"Avoid warping\n"
-"Did you know that when printing materials that are prone to warping such as "
-"ABS, appropriately increasing the heatbed temperature can reduce the "
-"probability of warping?"
-msgstr ""
-"Уникнення деформації\n"
-"Чи знаєте ви, що при друку матеріалами, схильними до деформації, такими як "
-"ABS, відповідне підвищення температури гарячого ліжка може зменшити "
-"ймовірність деформації?"
+#, fuzzy
+#~ msgid "Name of components inside STEP file is not UTF8 format!"
+#~ msgstr "Ім'я компонентів всередині крокового файлу не у форматі UTF8!"
+
+#~ msgid ""
+#~ "The network plug-in was not detected. Network related features are "
+#~ "unavailable."
+#~ msgstr ""
+#~ "Мережевий плагін не виявлено. Функції, пов'язані з мережею, недоступні."
+
+#~ msgid ""
+#~ "Importing to Orca Slicer failed. Please download the file and manually "
+#~ "import it."
+#~ msgstr ""
+#~ "Не вдалося імпортувати файл до Orca Slicer. Завантажте файл і імпортуйте "
+#~ "його вручну."
+
+#~ msgid ""
+#~ "\"Fix Model\" feature is currently only on Windows. Please repair the "
+#~ "model on Orca Slicer(windows) or CAD softwares."
+#~ msgstr ""
+#~ "Функція \\Fix Model\\ доступна лише у Windows. Будь ласка, відремонтуйте "
+#~ "модель \n"
+#~ "на Orca Slicer (Windows) або у програмах САПР."
+
+#~ msgid "Cannot send the print task when the upgrade is in progress"
+#~ msgstr "Не вдалося надіслати завдання на друк під час оновлення"
+
+#~ msgid ""
+#~ "The selected printer is incompatible with the chosen printer presets."
+#~ msgstr "Вибраний принтер несумісний зі встановленими налаштуваннями."
+
+#~ msgid "The printer is required to be in the same LAN as Orca Slicer."
+#~ msgstr ""
+#~ "Принтер повинен бути підключений до тієї ж локальної мережі, що й Orca "
+#~ "Slicer."
+
+#~ msgid ""
+#~ "Please Find the Pin Code in Account page on printer screen,\n"
+#~ " and type in the Pin Code below."
+#~ msgstr ""
+#~ "Будь ласка, знайдіть Пін-код на сторінці облікового запису на екрані "
+#~ "принтера, \n"
+#~ " і введіть Пін-код нижче."
+
+#~ msgid "Can't find Pin Code?"
+#~ msgstr "Не можу знайти Пін-код?"
+
+#~ msgid "Pin Code"
+#~ msgstr "Пін-код"
+
+#~ msgid "Binding..."
+#~ msgstr "Прив’язка…"
+
+#~ msgid "Please confirm on the printer screen"
+#~ msgstr "Будь ласка, підтвердьте на екрані принтера"
+
+#~ msgid "Log in failed. Please check the Pin Code."
+#~ msgstr "Вхід не вдається. Будь ласка, перевірте Пін-код."
+
+#~ msgid "Log in printer"
+#~ msgstr "Вхід до принтера"
+
+#~ msgid "Would you like to log in to this printer with the current account?"
+#~ msgstr "Ви хочете увійти до цього принтера з поточним обліковим записом?"
+
+#~ msgid "Check the reason"
+#~ msgstr "Перевірте причину"
+
+#~ msgid "Terms and Conditions"
+#~ msgstr "Умови використання"
+
+#~ msgid ""
+#~ "Thank you for purchasing a Bambu Lab device. Before using your Bambu Lab "
+#~ "device, please read the terms and conditions. By clicking to agree to use "
+#~ "your Bambu Lab device, you agree to abide by the Privacy Policy and Terms "
+#~ "of Use (collectively, the \"Terms\"). If you do not comply with or agree "
+#~ "to the Bambu Lab Privacy Policy, please do not use Bambu Lab equipment "
+#~ "and services."
+#~ msgstr ""
+#~ "Дякуємо за покупку пристрою Bambu Lab. Перед використанням вашого "
+#~ "пристрою Bambu Lab, ознайомтеся з умовами та положеннями. Клацнувши, щоб "
+#~ "погодитися використовувати ваш пристрій Bambu Lab, ви погоджуєтесь "
+#~ "дотримуватися Політики конфіденційності та Умов використання (разом "
+#~ "\"Умови\"). Якщо ви не виконуєте або не погоджуєтесь із Політикою "
+#~ "конфіденційності Bambu Lab, будь ласка, не використовуйте обладнання та "
+#~ "послуги Bambu Lab."
+
+#~ msgid "We ask for your help to improve everyone's printer"
+#~ msgstr "Ми просимо вашої допомоги для покращення роботи всіх принтерів"
+
+#~ msgid "Statement about User Experience Improvement Program"
+#~ msgstr "Заява про Програму покращення користувацького досвіду"
+
+#, c-format, boost-format
+#~ msgid ""
+#~ "In the 3D Printing community, we learn from each other's successes and "
+#~ "failures to adjust our own slicing parameters and settings. %s follows "
+#~ "the same principle and uses machine learning to improve its performance "
+#~ "from the successes and failures of the vast number of prints by our "
+#~ "users. We are training %s to be smarter by feeding them the real-world "
+#~ "data. If you are willing, this service will access information from your "
+#~ "error logs and usage logs, which may include information described in "
+#~ "Privacy Policy. We will not collect any Personal Data by which an "
+#~ "individual can be identified directly or indirectly, including without "
+#~ "limitation names, addresses, payment information, or phone numbers. By "
+#~ "enabling this service, you agree to these terms and the statement about "
+#~ "Privacy Policy."
+#~ msgstr ""
+#~ "У спільноті 3D-друку ми навчаємося на прикладі успіхів і невдач інших, "
+#~ "щоб налаштувати параметри і налаштування свого власного зрізування. %s "
+#~ "дотримується того ж принципу і використовує машинне навчання для "
+#~ "покращення своєї ефективності на основі успіхів і невдач великої "
+#~ "кількості друків наших користувачів. Ми навчаємо %s бути розумнішими, "
+#~ "подаючи їм дані з реального світу. Якщо ви готові, ця послуга буде мати "
+#~ "доступ до інформації з вашого журналу помилок і журналу використання, "
+#~ "включаючи інформацію, описану в Політиці конфіденційності. Ми не будемо "
+#~ "збирати жодних Особистих даних, за якими можна ідентифікувати особу "
+#~ "безпосередньо чи опосередковано, включаючи, але не обмежуючись, імена, "
+#~ "адреси, інформацію про платежі або номери телефонів. Увімкнувши цю "
+#~ "службу, ви погоджуєтеся з цими умовами та заявою про Політику "
+#~ "конфіденційності."
+
+#~ msgid "Statement on User Experience Improvement Plan"
+#~ msgstr "Заява щодо Плану покращення користувацького досвіду"
+
+#~ msgid "Log in successful."
+#~ msgstr "Авторизація успішна."
+
+#~ msgid "Would you like to log out the printer?"
+#~ msgstr "Хочете вийти з принтера?"
+
+#~ msgid "Please log in first."
+#~ msgstr "Будь ласка, увійдіть спочатку."
+
+#~ msgid "There was a problem connecting to the printer. Please try again."
+#~ msgstr ""
+#~ "Виникла проблема з підключенням до принтера. Будь ласка, спробуйте ще раз."
+
+#~ msgid "Failed to log out."
+#~ msgstr "Не вдалося вийти."
+
+#~ msgid ""
+#~ "Your system is missing H.264 codecs for GStreamer, which are required to "
+#~ "play video. (Try installing the gstreamer1.0-plugins-bad or gstreamer1.0-"
+#~ "libav packages, then restart Orca Slicer?)"
+#~ msgstr ""
+#~ "Вашій системі бракує кодеків H.264 для GStreamer, які необхідні для "
+#~ "відтворення відео. (Спробуйте встановити пакети gstreamer1.0-plugins-bad "
+#~ "або gstreamer1.0-libav, а потім перезапустіть Orca Slicer?)"
+
+#~ msgid "Import geometry data from STL/STEP/3MF/OBJ/AMF files"
+#~ msgstr "Імпорт геометричних даних із файлів STL/STEP/3MF/OBJ/AMF"
+
+#~ msgid ""
+#~ "Click OK to update the Network plug-in when Orca Slicer launches next "
+#~ "time."
+#~ msgstr ""
+#~ "Натисніть OK, щоб оновити мережевий плагін під час наступного запуску "
+#~ "Orca Slicer."
+
+#~ msgid "New version of Orca Slicer"
+#~ msgstr "Нова версія Orca Slicer"
+
+#~ msgid ""
+#~ "Precise wall\n"
+#~ "Did you know that turning on precise wall can improve precision and layer "
+#~ "consistency?"
+#~ msgstr ""
+#~ "Точна стінка\n"
+#~ "Чи знаєте ви, що ввімкнення точної стінки може покращити точність і "
+#~ "узгодженість шару?"
+
+#~ msgid ""
+#~ "Sandwich mode\n"
+#~ "Did you know that you can use sandwich mode (inner-outer-inner) to "
+#~ "improve precision and layer consistency if your model doesn't have very "
+#~ "steep overhangs?"
+#~ msgstr ""
+#~ "Сендвіч режим\n"
+#~ "Чи знаєте ви, що можна використовувати сендвіч-режим (внутрішній-"
+#~ "зовнішній-внутрішній), щоб покращити точність і узгодженість шарів, якщо "
+#~ "ваша модель не має дуже крутих нависань?"
+
+#~ msgid ""
+#~ "Chamber temperature\n"
+#~ "Did you know that OrcaSlicer supports chamber temperature?"
+#~ msgstr ""
+#~ "Температура камери\n"
+#~ "Чи знаєте ви, що OrcaSlicer вміє керувати температурою камери?"
+
+#~ msgid ""
+#~ "Calibration\n"
+#~ "Did you know that calibrating your printer can do wonders? Check out our "
+#~ "beloved calibration solution in OrcaSlicer."
+#~ msgstr ""
+#~ "Калібрування\n"
+#~ "Чи знаєте ви, що калібрування принтера може творити чудеса? Перегляньте "
+#~ "наш улюблений набір тестів для калібрування в OrcaSlicer."
+
+#~ msgid ""
+#~ "Auxiliary fan\n"
+#~ "Did you know that OrcaSlicer supports Auxiliary part cooling fan?"
+#~ msgstr ""
+#~ "Допоміжний вентилятор\n"
+#~ "Чи знаєте ви, що OrcaSlicer підтримує вентилятор охолодження допоміжної "
+#~ "частини?"
+
+#~ msgid ""
+#~ "Air filtration/Exhaust Fan\n"
+#~ "Did you know that OrcaSlicer can support Air filtration/Exhaust Fan?"
+#~ msgstr ""
+#~ "Фільтрація повітря/витяжний вентилятор\n"
+#~ "Чи знаєте ви, що OrcaSlicer підтримує фільтрацію повітря/витяжний "
+#~ "вентилятор?"
+
+#~ msgid ""
+#~ "G-code window\n"
+#~ "You can turn on/off the G-code window by pressing the <b>C</b> key."
+#~ msgstr ""
+#~ "Вікно G-коду\n"
+#~ "Ви можете вмикати/вимикати вікно G-коду, натискаючи клавішу <b>C</b>."
+
+#~ msgid ""
+#~ "Switch workspaces\n"
+#~ "You can switch between <b>Prepare</b> and <b>Preview</b> workspaces by "
+#~ "pressing the <b>Tab</b> key."
+#~ msgstr ""
+#~ "Перемикання робочих областей\n"
+#~ "Ви можете переключатися між робочими областями <b>Підготовка</b> і "
+#~ "<b>Перегляд</b>, натискаючи клавішу <b>Tab</b>."
+
+#~ msgid ""
+#~ "How to use keyboard shortcuts\n"
+#~ "Did you know that Orca Slicer offers a wide range of keyboard shortcuts "
+#~ "and 3D scene operations?"
+#~ msgstr ""
+#~ "Як використовувати комбінації клавіш\n"
+#~ "Чи знаєте ви, що Orca Slicer пропонує широкий спектр комбінацій клавіш "
+#~ "для роботи з 3D-сценами?"
+
+#~ msgid ""
+#~ "Reverse on odd\n"
+#~ "Did you know that <b>Reverse on odd</b> feature can significantly improve "
+#~ "the surface quality of your overhangs?"
+#~ msgstr ""
+#~ "Reverse on odd\n"
+#~ "Чи знали ви, що функція <b>Реверс по непарних периметрах</b> може значно "
+#~ "покращити якість поверхні ваших нависань?"
+
+#~ msgid ""
+#~ "Cut Tool\n"
+#~ "Did you know that you can cut a model at any angle and position with the "
+#~ "cutting tool?"
+#~ msgstr ""
+#~ "Інструмент вирізування\n"
+#~ "Чи знаєте ви, що можна вирізати модель під будь-яким кутом і в будь-якому "
+#~ "положенніза допомогою різального інструмента?"
+
+#~ msgid ""
+#~ "Fix Model\n"
+#~ "Did you know that you can fix a corrupted 3D model to avoid a lot of "
+#~ "slicing problems on the Windows system?"
+#~ msgstr ""
+#~ "Виправлення моделі\n"
+#~ "Чи знаєте ви, що ви можете виправити пошкоджену 3D-модель, щоб уникнути "
+#~ "багатьох проблем з нарізанням (slicing) на операційній системі Windows?"
+
+#~ msgid ""
+#~ "Timelapse\n"
+#~ "Did you know that you can generate a timelapse video during each print?"
+#~ msgstr ""
+#~ "Таймлапс\n"
+#~ "Чи знаєте ви, що ви можете генерувати відео під час кожного друку?"
+
+#~ msgid ""
+#~ "Auto-Arrange\n"
+#~ "Did you know that you can auto-arrange all the objects in your project?"
+#~ msgstr ""
+#~ "Автоматичне впорядкування\n"
+#~ "Чи знаєте ви, що можна автоматично розташувати всі об'єкти в проєкті?"
+
+#~ msgid ""
+#~ "Auto-Orient\n"
+#~ "Did you know that you can rotate objects to an optimal orientation for "
+#~ "printing with a simple click?"
+#~ msgstr ""
+#~ "Автоорієнтація\n"
+#~ "Чи знаєте ви, що можна повертати об'єкти в оптимальну орієнтацію для "
+#~ "друку простим клацанням?"
+
+#~ msgid ""
+#~ "Lay on Face\n"
+#~ "Did you know that you can quickly orient a model so that one of its faces "
+#~ "sits on the print bed? Select the \"Place on face\" function or press the "
+#~ "<b>F</b> key."
+#~ msgstr ""
+#~ "Покласти на обличчя\n"
+#~ "Чи знаєте ви, що ви можете швидко зорієнтувати модель так, щоб одна з її "
+#~ "граней лежала на столі? Виберіть функцію «Розмістити на межі» або "
+#~ "натисніть клавішу < b > F </b >."
+
+#~ msgid ""
+#~ "Object List\n"
+#~ "Did you know that you can view all objects/parts in a list and change "
+#~ "settings for each object/part?"
+#~ msgstr ""
+#~ "Список об'єктів\n"
+#~ "Чи знаєте ви, що можна переглядати всі об'єкти/деталі у списку та "
+#~ "змінювати Параметри для кожного об'єкта/деталі?"
+
+#~ msgid ""
+#~ "Search Functionality\n"
+#~ "Did you know that you use the Search tool to quickly find a specific Orca "
+#~ "Slicer setting?"
+#~ msgstr ""
+#~ "Функція пошуку\n"
+#~ "Чи знаєте ви, що для швидкого пошуку певних налаштувань Orca Slicer ви "
+#~ "можете скористатися інструментом \"Пошук\"?"
+
+#~ msgid ""
+#~ "Simplify Model\n"
+#~ "Did you know that you can reduce the number of triangles in a mesh using "
+#~ "the Simplify mesh feature? Right-click the model and select Simplify "
+#~ "model."
+#~ msgstr ""
+#~ "Спростити модель\n"
+#~ "Чи знаєте ви, що можна зменшити кількість трикутників у сітці за "
+#~ "допомогою функції Спростити сітку? Клацніть правою кнопкою миші на моделі "
+#~ "і виберіть Спростити модель."
+
+#~ msgid ""
+#~ "Slicing Parameter Table\n"
+#~ "Did you know that you can view all objects/parts on a table and change "
+#~ "settings for each object/part?"
+#~ msgstr ""
+#~ "Таблиця параметрів зрізу\n"
+#~ "Чи знаєте ви, що можна переглядати всі об'єкти/деталі в таблиці та "
+#~ "змінювати налаштування для кожного об'єкта/деталі?"
+
+#~ msgid ""
+#~ "Split to Objects/Parts\n"
+#~ "Did you know that you can split a big object into small ones for easy "
+#~ "colorizing or printing?"
+#~ msgstr ""
+#~ "Розділити на об'єкти/деталі\n"
+#~ "Чи знаєте ви, що ви можете розділити великий об'єкт на маленькі для "
+#~ "легкоїзабарвлення чи друку?"
+
+#~ msgid ""
+#~ "Subtract a Part\n"
+#~ "Did you know that you can subtract one mesh from another using the "
+#~ "Negative part modifier? That way you can, for example, create easily "
+#~ "resizable holes directly in Orca Slicer."
+#~ msgstr ""
+#~ "Відняти частину\n"
+#~ "Чи знаєте ви, що можна віднімати одну сіть від іншої за допомогою "
+#~ "модифікатора \"Від'ємна частина\"? Таким чином, ви можете, наприклад, "
+#~ "створювати отвори зі змінним розміром безпосередньо в Orca Slicer."
+
+#~ msgid ""
+#~ "STEP\n"
+#~ "Did you know that you can improve your print quality by slicing a STEP "
+#~ "file instead of an STL?\n"
+#~ "Orca Slicer supports slicing STEP files, providing smoother results than "
+#~ "a lower resolution STL. Give it a try!"
+#~ msgstr ""
+#~ "STEP\n"
+#~ "Чи знаєте ви, що ви можете покращити якість друку, нарізавши файл "
+#~ "STEPзамість STL?\n"
+#~ "Orca Slicer підтримує нарізання файлів STEP, забезпечуючи більш "
+#~ "плавнірезультати порівняно з нижчою роздільною здатністю STL. Спробуй!"
+
+#~ msgid ""
+#~ "Z seam location\n"
+#~ "Did you know that you can customize the location of the Z seam, and even "
+#~ "paint it on your print, to have it in a less visible location? This "
+#~ "improves the overall look of your model. Check it out!"
+#~ msgstr ""
+#~ "Місце з'єднання Z-шва\n"
+#~ "Чи знали ви, що ви можете налаштовувати розташування Z-шва, і навіть "
+#~ "розфарбовувати його на друці, щоб зробити його менш видимим? Це покращує "
+#~ "загальний вигляд вашої моделі. Перевірте це!"
+
+#~ msgid ""
+#~ "Fine-tuning for flow rate\n"
+#~ "Did you know that flow rate can be fine-tuned for even better-looking "
+#~ "prints? Depending on the material, you can improve the overall finish of "
+#~ "the printed model by doing some fine-tuning."
+#~ msgstr ""
+#~ "Тонке налаштування витрати\n"
+#~ "Чи знаєте ви, що швидкість потоку може бути точно налаштована для навіть "
+#~ "більшекрасивих відбитків? Залежно від матеріалу можна покращити загальне "
+#~ "оздобленнядрукарської моделі, виконавши деяке тонке налаштування."
+
+#~ msgid ""
+#~ "Split your prints into plates\n"
+#~ "Did you know that you can split a model that has a lot of parts into "
+#~ "individual plates ready to print? This will simplify the process of "
+#~ "keeping track of all the parts."
+#~ msgstr ""
+#~ "Розбийте відбитки на пластини\n"
+#~ "Чи знаєте ви, що можна розділити модель з великою кількістю деталей на "
+#~ "окремі столи, готові до друку? Це спростить процес відстеження "
+#~ "всіхдеталей."
+
+#~ msgid ""
+#~ "Speed up your print with Adaptive Layer Height\n"
+#~ "Did you know that you can print a model even faster, by using the "
+#~ "Adaptive Layer Height option? Check it out!"
+#~ msgstr ""
+#~ "Прискорення друку за допомогою функції «Адаптивна висота шару»\n"
+#~ "Чи знаєте ви, що можна друкувати модель ще швидше за допомогою параметра "
+#~ "«Адаптивна висота шару»? Подивися!"
+
+#~ msgid ""
+#~ "Support painting\n"
+#~ "Did you know that you can paint the location of your supports? This "
+#~ "feature makes it easy to place the support material only on the sections "
+#~ "of the model that actually need it."
+#~ msgstr ""
+#~ "Опорне забарвлення\n"
+#~ "Ти знав, що можеш намалювати розташування своїх опор? Ця функція "
+#~ "спрощуєрозміщення матеріалу опори тільки на тих перерізах моделі, які в "
+#~ "цьомупотребують."
+
+#~ msgid ""
+#~ "Different types of supports\n"
+#~ "Did you know that you can choose from multiple types of supports? Tree "
+#~ "supports work great for organic models, while saving filament and "
+#~ "improving print speed. Check them out!"
+#~ msgstr ""
+#~ "Різні типи опор\n"
+#~ "Чи знаєте ви, що можна вибрати один із кількох типів опор? Підтримка Tree "
+#~ "відмінно працює для органічних моделей, зберігаючи при цьому "
+#~ "ниткинапруження і підвищуючи швидкість друку. Перевірте їх!"
+
+#~ msgid ""
+#~ "Printing Silk Filament\n"
+#~ "Did you know that Silk filament needs special consideration to print it "
+#~ "successfully? Higher temperature and lower speed are always recommended "
+#~ "for the best results."
+#~ msgstr ""
+#~ "Друк шовковим філаментом\n"
+#~ "Чи знаєте ви, що шовковий іламент потребує особливої уваги, щоб її "
+#~ "Успішно надрукувати? Для досягнення найкращих результатів "
+#~ "завждирекомендується більш висока температура та нижча швидкість."
+
+#~ msgid ""
+#~ "Brim for better adhesion\n"
+#~ "Did you know that when printed models have a small contact interface with "
+#~ "the printing surface, it's recommended to use a brim?"
+#~ msgstr ""
+#~ "Кайма для кращого прилипання\n"
+#~ "Чи знаєте ви, що при друці моделей які мають невелику площу контакту з "
+#~ "поверхнею друку, рекомендується використовувати кайму?"
+
+#~ msgid ""
+#~ "Set parameters for multiple objects\n"
+#~ "Did you know that you can set slicing parameters for all selected objects "
+#~ "at once?"
+#~ msgstr ""
+#~ "Встановлення параметрів для кількох об'єктів\n"
+#~ "Чи знаєте ви, що можна встановити параметри нарізки для всіх "
+#~ "вибранихоб'єктів одночасно?"
+
+#~ msgid ""
+#~ "Stack objects\n"
+#~ "Did you know that you can stack objects as a whole one?"
+#~ msgstr ""
+#~ "Стек об’єктів\n"
+#~ "Чи знаєте ви, що можна складати об’єкти як одне ціле?"
+
+#~ msgid ""
+#~ "Flush into support/objects/infill\n"
+#~ "Did you know that you can save wasted filament by flushing it into "
+#~ "support/objects/infill during filament change?"
+#~ msgstr ""
+#~ "Промивати в підтримки/об'єкти/заповнення\n"
+#~ "Чи знаєте ви, що ви можете зберегти витрачений філамент, промиваючи його "
+#~ "в підтримки/об'єкти/заповнення під час зміни філаменту?"
+
+#~ msgid ""
+#~ "Improve strength\n"
+#~ "Did you know that you can use more wall loops and higher sparse infill "
+#~ "density to improve the strength of the model?"
+#~ msgstr ""
+#~ "Підвищення міцності\n"
+#~ "Чи знаєте ви, що для підвищення міцності моделі можна використовувати "
+#~ "більшепериметрів та вищу щільність заповнення?"
+
+#, fuzzy
+#~ msgid ""
+#~ "When do you need to print with the printer door opened?\n"
+#~ "Did you know that opening the printer door can reduce the probability of "
+#~ "extruder/hotend clogging when printing lower temperature filament with a "
+#~ "higher enclosure temperature? More info about this in the Wiki."
+#~ msgstr ""
+#~ "Коли потрібно друкувати з відкритими дверцятами принтера\n"
+#~ "Чи знаєте ви, що відкриття дверцят принтера може знизити ймовірність "
+#~ "засмічення екструдера/гарячого блока при друку низькотемпературного "
+#~ "філаменту при вищій температурі усередині корпусу? Більше інформації "
+#~ "знаходиться в Вікі."
+
+#~ msgid ""
+#~ "Avoid warping\n"
+#~ "Did you know that when printing materials that are prone to warping such "
+#~ "as ABS, appropriately increasing the heatbed temperature can reduce the "
+#~ "probability of warping?"
+#~ msgstr ""
+#~ "Уникнення деформації\n"
+#~ "Чи знаєте ви, що при друку матеріалами, схильними до деформації, такими "
+#~ "як ABS, відповідне підвищення температури гарячого ліжка може зменшити "
+#~ "ймовірність деформації?"
 
 #~ msgid ""
 #~ "Zero first layer height is invalid.\n"
@@ -21890,9 +22184,6 @@ msgstr ""
 
 #~ msgid "Ext Spool"
 #~ msgstr "Зовнішня котушка"
-
-#~ msgid "Guide"
-#~ msgstr "Гід"
 
 #~ msgid "Calibrating AMS..."
 #~ msgstr "Калібрування АМС..."
@@ -22188,9 +22479,6 @@ msgstr ""
 #~ msgid "Auto arrange plate after object cloning"
 #~ msgstr "Автоматично впорядкувати об'єкти пластини після копіювання об'єкту"
 
-#~ msgid "Network"
-#~ msgstr "Мережа"
-
 #~ msgid "User Sync"
 #~ msgstr "Синхронізація користувачів"
 
@@ -22382,20 +22670,6 @@ msgstr ""
 #~ "Крок 1. Будь-ласка переконайтесь що Orca Slicer та принтер знаходяться в "
 #~ "одній в мережі."
 
-#~ msgid ""
-#~ "Step 2. If the IP and Access Code below are different from the actual "
-#~ "values on your printer, please correct them."
-#~ msgstr ""
-#~ "Крок 2. Якщо IP та Код доступу нижче відрізняються від значень на "
-#~ "принтері, будь-ласка відкоригуйте їх."
-
-#~ msgid ""
-#~ "Step 3. Please obtain the device SN from the printer side; it is usually "
-#~ "found in the device information on the printer screen."
-#~ msgstr ""
-#~ "Крок 3. Будь-ласка знайдіть Серійний Номер (SN) принтера; зазвичай його "
-#~ "модна знайти в інформації на екрані принтера."
-
 #~ msgid " is too close to others, there may be collisions when printing."
 #~ msgstr " занадто близько до інших, під час друку можливі зіткнення."
 
@@ -22559,9 +22833,6 @@ msgstr ""
 #, boost-format
 #~ msgid "%1%"
 #~ msgstr "%1%"
-
-#~ msgid "Right click the icon to fix model object"
-#~ msgstr "Клацніть правою кнопкою миші значок, щоб виправити об'єкт моделі"
 
 #~ msgid "The target object contains only one part and cannot be split."
 #~ msgstr "Цільова модель єдина і не може бути поділена на частини."

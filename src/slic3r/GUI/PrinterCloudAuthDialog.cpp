@@ -36,6 +36,7 @@ PrinterCloudAuthDialog::PrinterCloudAuthDialog(wxWindow* parent, PrintHost* host
         wxLogError("Could not init m_browser");
         return;
     }
+    WebView::AddOpenNewWindowScript(m_browser);
     m_browser->Hide();
     m_browser->SetSize(0, 0);
 
@@ -85,6 +86,12 @@ void PrinterCloudAuthDialog::OnNewWindow(wxWebViewEvent& evt) {
 
 void PrinterCloudAuthDialog::OnScriptMessage(wxWebViewEvent& evt)
 {
+    wxString url;
+    if (WebView::TryGetOpenNewWindowUrl(evt, &url)) {
+        m_browser->LoadURL(url);
+        return;
+    }
+
     wxString str_input = evt.GetString();
     try {
         json     j      = json::parse(into_u8(str_input));

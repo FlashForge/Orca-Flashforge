@@ -3921,6 +3921,8 @@ void Print::_make_wipe_tower()
         // Get wiping matrix to get number of extruders and convert vector<double> to vector<float>:
         bool               is_mutli_extruder = m_config.nozzle_diameter.values.size() > 1;
         size_t nozzle_nums = m_config.nozzle_diameter.values.size();
+        if (nozzle_nums == 0)
+            nozzle_nums = 1;
         using FlushMatrix = std::vector<std::vector<float>>;
         std::vector<FlushMatrix> multi_extruder_flush;
         for (size_t nozzle_id = 0; nozzle_id < nozzle_nums; ++nozzle_id) {
@@ -3933,10 +3935,26 @@ void Print::_make_wipe_tower()
         }
 
         std::vector<int>filament_maps = get_filament_maps();
+        auto safe_nozzle_id = [&filament_maps, nozzle_nums](unsigned int filament_id) -> size_t {
+            if (filament_id >= filament_maps.size()) {
+                BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": invalid filament id " << filament_id
+                                           << ", filament_map size=" << filament_maps.size();
+                return 0;
+            }
+
+            const int mapped_nozzle = filament_maps[filament_id];
+            if (mapped_nozzle < 1 || static_cast<size_t>(mapped_nozzle) > nozzle_nums) {
+                BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": invalid filament_map value " << mapped_nozzle
+                                           << ", nozzle count=" << nozzle_nums << ", fallback to 1";
+                return 0;
+            }
+
+            return static_cast<size_t>(mapped_nozzle - 1);
+        };
 
         std::vector<unsigned int> nozzle_cur_filament_ids(nozzle_nums, -1);
         unsigned int current_filament_id = m_wipe_tower_data.tool_ordering.first_extruder();
-        size_t cur_nozzle_id = filament_maps[current_filament_id] - 1;
+        size_t cur_nozzle_id = safe_nozzle_id(current_filament_id);
         nozzle_cur_filament_ids[cur_nozzle_id] = current_filament_id;
         std::vector<std::pair<coordf_t, std::vector<GCode::LayerToPrint>>> layers_to_print;
         if (m_config.dithering_local_z_mode)
@@ -3967,7 +3985,7 @@ void Print::_make_wipe_tower()
                     used_filament_ids.insert(toolchange.old_tool);
                     used_filament_ids.insert(toolchange.new_tool);
 
-                    const int nozzle_id = filament_maps[current_filament_id] - 1;
+                    const size_t nozzle_id = safe_nozzle_id(current_filament_id);
                     nozzle_cur_filament_ids[nozzle_id] = current_filament_id;
                 }
             }
@@ -3982,7 +4000,7 @@ void Print::_make_wipe_tower()
                 if (filament_id == current_filament_id)
                     continue;
 
-                int          nozzle_id = filament_maps[filament_id] - 1;
+                size_t       nozzle_id = safe_nozzle_id(filament_id);
                 unsigned int pre_filament_id = nozzle_cur_filament_ids[nozzle_id];
 
                 float volume_to_purge = 0;

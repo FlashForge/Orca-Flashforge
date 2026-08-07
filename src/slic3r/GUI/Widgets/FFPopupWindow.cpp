@@ -31,20 +31,37 @@ void FFPopupWindow::Popup(wxWindow* focus/*=nullptr*/)
 
 bool FFPopupWindow::Show(bool show/* = true*/)
 {
-    if (wxPopupWindow::Show(show)) {
-        if (show) {
+    if (show) {
+        bool changed = wxPopupWindow::Show(true);
+        if (!m_mouseCaptured) {
             CaptureMouse();
+            m_mouseCaptured = true;
             Bind(wxEVT_MOUSE_CAPTURE_LOST, &FFPopupWindow::onCaptureMouseLost, this);
             Slic3r::GUI::wxGetApp().Bind(wxEVT_ACTIVATE_APP, &FFPopupWindow::onActivateApp, this);
-        } else {
-            Unbind(wxEVT_MOUSE_CAPTURE_LOST, &FFPopupWindow::onCaptureMouseLost, this);
-            Slic3r::GUI::wxGetApp().Unbind(wxEVT_ACTIVATE_APP, &FFPopupWindow::onActivateApp, this);
-            ReleaseMouse();
-            OnDismiss();
         }
-        return true;
+        return changed;
+    } else {
+        // Always drop our mouse capture when hiding -- even if the window was
+        // already hidden. Otherwise a stale pointer is left on the global
+        // wxMouseCapture::stack, and a later wxDialog::ShowModal() that walks
+        // that stack (via NotifyCaptureLost) dereferences freed memory.
+        releaseCapture(/*callReleaseMouse=*/true);
+        bool changed = wxPopupWindow::Show(false);
+        if (changed)
+            OnDismiss();
+        return changed;
     }
-    return false;
+}
+
+void FFPopupWindow::releaseCapture(bool callReleaseMouse)
+{
+    if (!m_mouseCaptured)
+        return;
+    m_mouseCaptured = false;
+    Unbind(wxEVT_MOUSE_CAPTURE_LOST, &FFPopupWindow::onCaptureMouseLost, this);
+    Slic3r::GUI::wxGetApp().Unbind(wxEVT_ACTIVATE_APP, &FFPopupWindow::onActivateApp, this);
+    if (callReleaseMouse && HasCapture())
+        ReleaseMouse();
 }
 
 void FFPopupWindow::Dismiss()
@@ -86,6 +103,9 @@ void FFPopupWindow::onActivateApp(wxActivateEvent &event)
 
 void FFPopupWindow::onCaptureMouseLost(wxMouseCaptureLostEvent& event)
 {
+    // The system already revoked the capture, so don't call ReleaseMouse() --
+    // just clear our bookkeeping and unbind, then dismiss.
+    releaseCapture(/*callReleaseMouse=*/false);
     Dismiss();
     event.Skip();
 }

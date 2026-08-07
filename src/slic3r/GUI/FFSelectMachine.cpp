@@ -676,18 +676,16 @@ void SelectMachinePopup::update_other_devices()
         other_machine_list.push_back(it);
     }
 
-    std::sort(other_machine_list.begin(), other_machine_list.end(), [&](auto &a, auto &b) {
-        if (a.second && b.second) {
-            if (a.second->connectMode() == 0 && b.second->connectMode() == 1)
-                return true;
-            else if (a.second->connectMode() == 1 && b.second->connectMode() == 0) {
-                return false;
-            } else
-                a.second->get_dev_name().compare(b.second->get_dev_name()) < 0;
-            
-            // return a.second->get_dev_name().compare(b.second->get_dev_name()) < 0;
-        }
-        return false;
+    std::sort(other_machine_list.begin(), other_machine_list.end(), [](const auto &a, const auto &b) {
+        if (a.second == b.second)
+            return false;
+        if (!a.second)
+            return false;
+        if (!b.second)
+            return true;
+        if (a.second->connectMode() != b.second->connectMode())
+            return a.second->connectMode() < b.second->connectMode();
+        return a.second->get_dev_name().compare(b.second->get_dev_name()) < 0;
     });
 
     BOOST_LOG_TRIVIAL(trace) << "SelectMachinePopup update_other_devices start";
@@ -807,24 +805,19 @@ void SelectMachinePopup::update_user_devices()
         user_machine_list.push_back(it);
     }
 
-    std::sort(user_machine_list.begin(), user_machine_list.end(), [&](auto& a, auto&b) {
-            if (a.second && b.second) {
-                if (a.second->is_online() && !b.second->is_online()) return true;
-                else if (!a.second->is_online() && b.second->is_online()) {
-                    return false;
-                } else {
-                    if (a.second->is_lan_mode_printer() && !b.second->is_lan_mode_printer())
-                        return true;
-                    else if (!a.second->is_lan_mode_printer() && b.second->is_lan_mode_printer()) {
-                        return false;
-                    }
-                    else
-                        a.second->get_dev_name().compare(b.second->get_dev_name()) < 0;
-                }
-                //return a.second->get_dev_name().compare(b.second->get_dev_name()) < 0;
-            }
+    std::sort(user_machine_list.begin(), user_machine_list.end(), [](const auto &a, const auto &b) {
+        if (a.second == b.second)
             return false;
-        });
+        if (!a.second)
+            return false;
+        if (!b.second)
+            return true;
+        if (a.second->is_online() != b.second->is_online())
+            return a.second->is_online();
+        if (a.second->is_lan_mode_printer() != b.second->is_lan_mode_printer())
+            return a.second->is_lan_mode_printer();
+        return a.second->get_dev_name().compare(b.second->get_dev_name()) < 0;
+    });
 
     BOOST_LOG_TRIVIAL(trace) << "SelectMachinePopup update_machine_list start";
     this->Freeze();
@@ -1070,7 +1063,7 @@ void SelectMachinePopup::OnLeftUp(wxMouseEvent &event)
         }*/
     }
 }
-#elif defined(__APPLE__)
+#else // non-Windows (macOS / Linux): "#else if __APPLE__" was a no-op typo for "#else"
 SelectMachinePopup::SelectMachinePopup(wxWindow *parent)
     //: PopupWindow(parent, wxBORDER_NONE | wxPU_CONTAINS_CONTROLS), m_dismiss(false), m_updateConnect(false)
 :FFPopupWindow(parent), m_dismiss(false), m_updateConnect(false)
@@ -1322,18 +1315,16 @@ void SelectMachinePopup::update_other_devices()
         other_machine_list.push_back(it);
     }
 
-    std::sort(other_machine_list.begin(), other_machine_list.end(), [&](auto &a, auto &b) {
-        if (a.second && b.second) {
-            if (a.second->connectMode() == 0 && b.second->connectMode() == 1)
-                return true;
-            else if (a.second->connectMode() == 1 && b.second->connectMode() == 0) {
-                return false;
-            } else
-                a.second->get_dev_name().compare(b.second->get_dev_name()) < 0;
-            
-            // return a.second->get_dev_name().compare(b.second->get_dev_name()) < 0;
-        }
-        return false;
+    std::sort(other_machine_list.begin(), other_machine_list.end(), [](const auto &a, const auto &b) {
+        if (a.second == b.second)
+            return false;
+        if (!a.second)
+            return false;
+        if (!b.second)
+            return true;
+        if (a.second->connectMode() != b.second->connectMode())
+            return a.second->connectMode() < b.second->connectMode();
+        return a.second->get_dev_name().compare(b.second->get_dev_name()) < 0;
     });
 
     BOOST_LOG_TRIVIAL(trace) << "SelectMachinePopup update_other_devices start";
@@ -1458,23 +1449,18 @@ void SelectMachinePopup::update_user_devices()
         user_machine_list.push_back(it);
     }
 
-    std::sort(user_machine_list.begin(), user_machine_list.end(), [&](auto& a, auto&b) {
-            if (a.second && b.second) {
-                if (a.second->is_online() && !b.second->is_online()) return true;
-                else if (!a.second->is_online() && b.second->is_online()) {
-                    return false;
-                } else {
-                    if (a.second->is_lan_mode_printer() && !b.second->is_lan_mode_printer())
-                        return true;
-                    else if (!a.second->is_lan_mode_printer() && b.second->is_lan_mode_printer()) {
-                        return false;
-                    }
-                    else
-                        a.second->get_dev_name().compare(b.second->get_dev_name()) < 0;
-                }
-                //return a.second->get_dev_name().compare(b.second->get_dev_name()) < 0;
-            }
-            return false;
+    std::sort(user_machine_list.begin(), user_machine_list.end(), [](const auto &a, const auto &b) {
+            if (a.second == b.second)
+                return false;
+            if (!a.second)
+                return false;
+            if (!b.second)
+                return true;
+            if (a.second->is_online() != b.second->is_online())
+                return a.second->is_online();
+            if (a.second->is_lan_mode_printer() != b.second->is_lan_mode_printer())
+                return a.second->is_lan_mode_printer();
+            return a.second->get_dev_name().compare(b.second->get_dev_name()) < 0;
         });
 
     BOOST_LOG_TRIVIAL(trace) << "SelectMachinePopup update_machine_list start";

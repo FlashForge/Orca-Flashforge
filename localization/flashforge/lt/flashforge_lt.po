@@ -14039,7 +14039,6 @@ msgstr ""
 
 msgid "Exit"
 msgstr "Išeiti iš"
-
 msgid "Expert settings"
 msgstr "Eksperto nustatymai"
 

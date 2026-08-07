@@ -12,6 +12,14 @@ namespace GUI {
 
 class NotificationManager;
 
+#ifdef __linux__
+void show_linux_web_download_start(size_t id, const wxString &filename, const wxString &folder);
+void show_linux_web_download_progress(size_t id, float percentage);
+void show_linux_web_download_complete(const wxString &path);
+void show_linux_web_download_complete(size_t id, const wxString &path);
+void show_linux_web_download_error(size_t id, const wxString &message);
+#endif
+
 enum DownloadState
 {
     DownloadPending = 0,

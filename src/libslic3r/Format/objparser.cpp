@@ -51,14 +51,14 @@ static bool obj_parseline(const char *line, ObjData &data)
 				line = endptr;
 				EATWS();
 			}
-			/*double w = 0;
+			double w = 0;
 			if (*line != 0) {
 				w = strtod(line, &endptr);
 				if (endptr == 0 || (*endptr != ' ' && *endptr != '\t' && *endptr != 0))
 					return false;
 				line = endptr;
 				EATWS();
-			}*/
+			}
 			if (*line != 0)
 				return false;
 			data.textureCoordinates.push_back((float)u);
@@ -245,7 +245,7 @@ static bool obj_parseline(const char *line, ObjData &data)
             else
 				-- vertex.normalIdx;
 			if (vertex.textureCoordIdx < 0)
-                vertex.textureCoordIdx += (int)data.textureCoordinates.size() / 3;
+                vertex.textureCoordIdx += (int)data.textureCoordinates.size() / 2;
             else
 				-- vertex.textureCoordIdx;
 			data.vertices.push_back(vertex);

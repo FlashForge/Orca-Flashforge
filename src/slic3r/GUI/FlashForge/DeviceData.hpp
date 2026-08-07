@@ -222,6 +222,8 @@ public:
 
     bool          set_selected_machine(const std::string& dev_id, bool my_machine = false);
     DeviceObject* get_selected_machine();
+    bool          set_device_access_code(const std::string& dev_id, const std::string& code, bool only_refresh = false);
+    com_id_t      get_connection_id(const std::string& dev_id) const;
 
     void unbind_lan_machine(DeviceObject *obj);
     ComErrno unbind_wan_machine(const std::string& dev_id, const std::string& bind_id, const std::string& dev_topic);

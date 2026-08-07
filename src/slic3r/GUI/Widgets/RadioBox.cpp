@@ -75,6 +75,16 @@ RadioButton::RadioButton(wxWindow* parent)
     , m_off_hover(this, "radio_false_hover", 16)
 {
     connectEvent();
+#ifdef __WXGTK__
+    // GTK backs wxBitmapToggleButton with a native GtkButton that does not
+    // fire wxEVT_PAINT for owner-drawing, so paintEvent() never runs and the
+    // widget renders blank. Push bitmaps through SetBitmap*() so GTK renders
+    // them, and re-apply on toggle / hover changes.
+    SetSize(m_off_normal.GetBmpSize());
+    SetMinSize(m_off_normal.GetBmpSize());
+    update();
+    Bind(wxEVT_TOGGLEBUTTON, [this](wxCommandEvent &e) { update(); e.Skip(); });
+#endif
     Refresh();
 }
 
@@ -83,8 +93,25 @@ RadioButton::~RadioButton() {}
 void RadioButton::SetValue(bool value)
 {
     wxBitmapToggleButton::SetValue(value);
+#ifdef __WXGTK__
+    update();
+#endif
     Refresh();
 }
+
+#ifdef __WXGTK__
+void RadioButton::update()
+{
+    const ScalableBitmap &bmp = GetValue()
+        ? (m_mode == PaintMode::Hover ? m_on_hover : m_on_normal)
+        : (m_mode == PaintMode::Hover ? m_off_hover : m_off_normal);
+    SetBitmap(bmp.bmp());
+    SetBitmapLabel(bmp.bmp());
+    SetBitmapPressed(bmp.bmp());
+    SetBitmapCurrent(bmp.bmp());
+    SetBitmapDisabled(bmp.bmp());
+}
+#endif
 
 bool RadioButton::GetValue()
 {
@@ -119,12 +146,18 @@ void RadioButton::paintEvent(wxPaintEvent& event)
 void RadioButton::OnMouseEnter(wxMouseEvent& event)
 {
     m_mode = PaintMode::Hover;
+#ifdef __WXGTK__
+    update();
+#endif
     Refresh();
 }
 
 void RadioButton::OnMouseLeave(wxMouseEvent& event)
 {
     m_mode = PaintMode::Normal;
+#ifdef __WXGTK__
+    update();
+#endif
     Refresh();
 }
 

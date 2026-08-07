@@ -253,6 +253,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/GLSelectionRectangle.cpp
     GUI/GLSelectionRectangle.hpp
     GUI/GLShader.cpp
+    GUI/MulticolorModelDialog.cpp
+    GUI/MulticolorModelDialog.hpp
     GUI/Gizmos/GizmoObjectManipulation.cpp
     GUI/Gizmos/GizmoObjectManipulation.hpp
     GUI/ConvertModel/CMLoadGlb.cpp
@@ -313,6 +315,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/FlashForge/FFDownloadTool.hpp
 	GUI/FlashForge/FFTextCtrl.cpp
 	GUI/FlashForge/FFTextCtrl.hpp
+    GUI/FlashForge/FFRTMPVideoCtrl.cpp
+    GUI/FlashForge/FFRTMPVideoCtrl.h
     GUI/FlashForge/FFTitleLessDialog.cpp
     GUI/FlashForge/FFTitleLessDialog.hpp
     GUI/FlashForge/FFTransientWindow.cpp
@@ -391,6 +395,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/GUI_Colors.cpp
     GUI/GUI_Colors.hpp
     GUI/GUI.cpp
+    GUI/LinuxXErrorHandler.cpp
+    GUI/LinuxXErrorHandler.hpp
     GUI/GUI_Factories.cpp
     GUI/GUI_Factories.hpp
     GUI/GUI_Geometry.cpp
@@ -965,14 +971,43 @@ endif()
 
 target_link_libraries(libslic3r_gui libslic3r cereal::cereal imgui imguizmo minilzo libvgcode md4c-html glad ${_opengl_link_lib} hidapi ${wxWidgets_LIBRARIES} glfw libcurl OpenSSL::SSL OpenSSL::Crypto noise::noise)
 
+# CMAKE_PREFIX_PATH helps CMake locate packages but is not itself a compiler
+# include path. FFRTMPVideoCtrl includes the FFmpeg headers directly.
+find_path(FFMPEG_INCLUDE_DIR NAMES libavformat/avformat.h
+    PATHS ${CMAKE_PREFIX_PATH} PATH_SUFFIXES include NO_DEFAULT_PATH REQUIRED)
+target_include_directories(libslic3r_gui SYSTEM PRIVATE "${FFMPEG_INCLUDE_DIR}")
+
 
 if (MSVC)
     target_link_libraries(libslic3r_gui Setupapi.lib)
+
+    # FFmpeg for RTMP video control
+    find_library(AVCODEC_LIB avcodec PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
+    find_library(AVFORMAT_LIB avformat PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
+    find_library(AVUTIL_LIB avutil PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
+    find_library(SWSCALE_LIB swscale PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
+    find_library(SWRESAMPLE_LIB swresample PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
+    find_library(AVFILTER_LIB avfilter PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
+    target_compile_definitions(libslic3r_gui PRIVATE FFRTMP_USE_FFMPEG)
+    target_link_libraries(libslic3r_gui
+        ${AVCODEC_LIB} ${AVFORMAT_LIB} ${AVUTIL_LIB} ${SWSCALE_LIB} ${SWRESAMPLE_LIB} ${AVFILTER_LIB}
+    )
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     FIND_LIBRARY(WAYLAND_SERVER_LIBRARIES NAMES wayland-server)
     FIND_LIBRARY(WAYLAND_EGL_LIBRARIES    NAMES wayland-egl)
     FIND_LIBRARY(WAYLAND_CLIENT_LIBRARIES NAMES wayland-client)
     find_package(CURL REQUIRED)
+
+    # FFmpeg for RTMP video control. Require static archives explicitly: the
+    # Linux package does not collect FFmpeg shared objects.
+    find_file(AVCODEC_LINUX_STATIC_LIB NAMES libavcodec.a PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
+    find_file(AVFORMAT_LINUX_STATIC_LIB NAMES libavformat.a PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
+    find_file(AVUTIL_LINUX_STATIC_LIB NAMES libavutil.a PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
+    find_file(SWSCALE_LINUX_STATIC_LIB NAMES libswscale.a PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
+    find_file(SWRESAMPLE_LINUX_STATIC_LIB NAMES libswresample.a PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
+    find_library(FFMPEG_ATOMIC_LIB atomic)
+    target_compile_definitions(libslic3r_gui PRIVATE FFRTMP_USE_FFMPEG)
+
     target_link_libraries(libslic3r_gui
         OpenGL::EGL
         ${DBUS_LIBRARIES}
@@ -980,12 +1015,48 @@ elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
         ${WAYLAND_EGL_LIBRARIES}
         ${WAYLAND_CLIENT_LIBRARIES}
         ${CURL_LIBRARIES}
+        "-Wl,--start-group"
+        ${AVFORMAT_LINUX_STATIC_LIB}
+        ${AVCODEC_LINUX_STATIC_LIB}
+        ${SWSCALE_LINUX_STATIC_LIB}
+        ${SWRESAMPLE_LINUX_STATIC_LIB}
+        ${AVUTIL_LINUX_STATIC_LIB}
+        "-Wl,--end-group"
+        OpenSSL::SSL OpenSSL::Crypto Threads::Threads ${CMAKE_DL_LIBS} m
     )
+    if (FFMPEG_ATOMIC_LIB)
+        target_link_libraries(libslic3r_gui ${FFMPEG_ATOMIC_LIB})
+    endif()
 elseif (APPLE)
+    # FFmpeg for RTMP video control. Require the archives explicitly: an old
+    # dependency prefix may still contain dylibs from a previous shared build,
+    # and find_library() prefers those on macOS. New variable names also avoid
+    # reusing cached AV*_LIB paths from an older CMake configuration.
+    find_file(AVCODEC_STATIC_LIB NAMES libavcodec.a PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
+    find_file(AVFORMAT_STATIC_LIB NAMES libavformat.a PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
+    find_file(AVUTIL_STATIC_LIB NAMES libavutil.a PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
+    find_file(SWSCALE_STATIC_LIB NAMES libswscale.a PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
+    find_file(SWRESAMPLE_STATIC_LIB NAMES libswresample.a PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
+    target_compile_definitions(libslic3r_gui PRIVATE FFRTMP_USE_FFMPEG)
+
+    # FFmpeg is built as static archives on macOS so the application bundle
+    # remains self-contained. Keep dependent archives before the libraries
+    # they consume; static linking is order-sensitive.
+    set(FFMPEG_MACOS_LIBS
+        ${AVFORMAT_STATIC_LIB}
+        ${AVCODEC_STATIC_LIB}
+        ${SWSCALE_STATIC_LIB}
+        ${SWRESAMPLE_STATIC_LIB}
+        ${AVUTIL_STATIC_LIB}
+        "-framework CoreFoundation"
+        "-framework Security"
+    )
+
     if(CMAKE_VERSION VERSION_GREATER_EQUAL "4.0")
-        target_link_libraries(libslic3r_gui ${DISKARBITRATION_LIBRARY} "-framework Security" "-framework OpenGL")
+        target_link_libraries(libslic3r_gui ${DISKARBITRATION_LIBRARY} "-framework OpenGL"
+            ${FFMPEG_MACOS_LIBS})
     else()
-        target_link_libraries(libslic3r_gui ${DISKARBITRATION_LIBRARY} "-framework Security")
+        target_link_libraries(libslic3r_gui ${DISKARBITRATION_LIBRARY} ${FFMPEG_MACOS_LIBS})
     endif()
 endif()
 
@@ -1017,9 +1088,8 @@ if (UNIX AND NOT APPLE)
     pkg_check_modules(webkit2gtk REQUIRED webkit2gtk-4.1)
     if (FLATPAK)
         # I don't know why this is needed, but for whatever reason slic3r isn't
-        # linking to X11 and webkit2gtk. force it.
-        find_package(X11 REQUIRED)
-        target_link_libraries (libslic3r_gui ${X11_LIBRARIES} ${webkit2gtk_LIBRARIES})
+        # linking to webkit2gtk. Force it.
+        target_link_libraries(libslic3r_gui ${webkit2gtk_LIBRARIES})
     endif()
     target_include_directories(libslic3r_gui SYSTEM PRIVATE ${GTK${SLIC3R_GTK}_INCLUDE_DIRS} ${LIBSECRET_INCLUDE_DIRS} ${webkit2gtk_INCLUDE_DIRS})
     target_link_libraries(libslic3r_gui ${GTK${SLIC3R_GTK}_LIBRARIES} fontconfig ${LIBSECRET_LIBRARIES})
@@ -1027,6 +1097,11 @@ if (UNIX AND NOT APPLE)
     # Propagate GDK backend detection results as compile definitions so that
     # LinuxDisplayBackend.cpp can include the right GDK headers.
     if (wxHAVE_GDK_X11)
+        # LinuxXErrorHandler calls Xlib directly, so do not rely on GTK or GL
+        # to expose libX11 transitively.
+        find_package(X11 REQUIRED)
+        target_include_directories(libslic3r_gui SYSTEM PRIVATE ${X11_INCLUDE_DIR})
+        target_link_libraries(libslic3r_gui ${X11_LIBRARIES})
         target_compile_definitions(libslic3r_gui PRIVATE wxHAVE_GDK_X11)
     endif ()
     if (wxHAVE_GDK_WAYLAND)

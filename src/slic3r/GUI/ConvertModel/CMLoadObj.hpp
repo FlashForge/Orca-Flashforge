@@ -4,6 +4,7 @@
 #include <deque>
 #include <map>
 #include <string>
+#include <boost/filesystem.hpp>
 #include <wx/image.h>
 #include <wx/string.h>
 #include "ConvertModelDef.hpp"
@@ -26,9 +27,14 @@ public:
         obj_extra_data_t &objExtraData);
 
 private:
-    using mtl_map_t = std::map<std::string, ObjParser::ObjNewMtl>;
+    struct mtl_entry_t {
+        ObjParser::ObjNewMtl material;
+        std::string          base_dir;
+    };
 
-    bool loadMtlLibs(const wxString &dirPath, const ObjParser::ObjData &objData,
+    using mtl_map_t = std::map<std::string, mtl_entry_t>;
+
+    bool loadMtlLibs(const boost::filesystem::path &objPath, const ObjParser::ObjData &objData,
         mtl_map_t &mtlMap);
 
     bool checkObjData(const ObjParser::ObjData &objData, int &triangleCnt, int &maxPolySize);

@@ -5,12 +5,14 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 #include <cstring>
 #include <wx/dir.h>
 #include <wx/file.h>
 #include <wx/filename.h>
 #include <wx/platinfo.h>
 #include <wx/stdpaths.h>
+#include "libslic3r/Utils.hpp"
 #include "slic3r/GUI/GUI_App.hpp"
 #include "slic3r/GUI/MainFrame.hpp"
 #include "FreeInDestructor.h"
@@ -18,6 +20,21 @@
 #include "WanDevTokenMgr.hpp"
 
 namespace Slic3r { namespace GUI {
+
+// [UNBIND] 解绑耗时诊断：与 SingleDeviceState / FFRTMPVideoCtrl 的 [UNBIND] 共用同一时间轴。
+// 用于定位设备解绑时 UI 线程卡在哪一段（相邻两条时间戳差即该段耗时）。定位后置 false 关闭。
+static const bool g_unbind_timing_enabled = false;
+static void unbind_ts(const std::string &tag)
+{
+    if (!g_unbind_timing_enabled) return;
+    int64_t ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                     std::chrono::steady_clock::now().time_since_epoch()).count();
+    std::string line = "[UNBIND] t=" + std::to_string(ms) + "ms | " + tag;
+    BOOST_LOG_TRIVIAL(info) << line;
+#ifdef _WIN32
+    OutputDebugStringA((line + "\n").c_str());
+#endif
+}
 
 namespace {
 
@@ -113,6 +130,8 @@ bool MultiComMgr::initalize(const std::string &dllPath, const std::string &dataD
 
 #ifdef __APPLE__
     std::string serverSettingsPath = (appPathWithSep + "../Resources/data/" + DAT_FILE_NAME).ToUTF8().data();
+#elif defined(__linux__)
+    std::string serverSettingsPath = Slic3r::resources_dir() + "/data/" + DAT_FILE_NAME;
 #else
     std::string serverSettingsPath = (appPathWithSep + "resources/data/" + DAT_FILE_NAME).ToUTF8().data();
 #endif
@@ -480,6 +499,9 @@ void MultiComMgr::onTimer(const wxTimerEvent &event)
                     QueueEvent(new ComWanDevInfoUpdateEvent(COM_WAN_DEV_INFO_UPDATE_EVENT, comId));
                     BOOST_LOG_TRIVIAL(warning) << devData.wanDevInfo.devId << ", "
                         << devData.wanDevInfo.serialNumber << ", timeout offline";
+#ifdef _WIN32
+                    OutputDebugStringA("[CAMDBG] MultiComMgr: 20s no-heartbeat -> mark offline\n");
+#endif
                 }
             }
         }
@@ -618,20 +640,27 @@ void MultiComMgr::onConnectionReady(const ComConnectionReadyEvent &event)
 
 void MultiComMgr::onConnectionExit(const ComConnectionExitEvent &event)
 {
+    // [UNBIND] 本函数在 UI 线程执行，且先于 SingleDeviceState::onConnectExit（A.）运行。
+    // 若解绑卡顿发生在这里（joinThread 或 free* 阻塞），A. 之前就会有明显时间空档。
+    unbind_ts("M0. MultiComMgr::onConnectionExit ENTER id=" + std::to_string(event.id));
     if (m_readyIdSet.find(event.id) != m_readyIdSet.end()) {
         const std::string &serialNumber = m_ptrMap.left.at(event.id)->serialNumber();
         BOOST_LOG_TRIVIAL(info) << "devices count: " << m_readyIdSet.size();
         BOOST_LOG_TRIVIAL(info) << serialNumber << ", connection_exit";
     }
     ComConnection *comConnection = m_ptrMap.left.at(event.id);
+    unbind_ts("M1. joinThread BEGIN (UI线程等连接线程退出)");
     comConnection->joinThread();
+    unbind_ts("M2. joinThread END");
     com_dev_data_t &devData = m_datMap.at(event.id);
+    unbind_ts("M3. free dev data BEGIN (freeDevProduct/Detail/GcodeList/TimeLapse)");
     m_networkIntfc->freeDevProduct(devData.devProduct);
     m_networkIntfc->freeDevDetail(devData.devDetail);
     m_networkIntfc->freeGcodeList(devData.lanGcodeList.gcodeDatas, devData.lanGcodeList.gcodeCnt);
     m_networkIntfc->freeGcodeList(devData.wanGcodeList.gcodeDatas, devData.wanGcodeList.gcodeCnt);
     m_networkIntfc->freeTimeLapseVideoList(devData.wanTimeLapseVideoList.videoDatas,
         devData.wanTimeLapseVideoList.videoCnt);
+    unbind_ts("M4. free dev data END");
     m_readyIdSet.erase(event.id);
     if (comConnection->connectMode() == COM_CONNECT_WAN) {
         m_devAliveTimeMap.erase(event.id);
@@ -640,7 +669,9 @@ void MultiComMgr::onConnectionExit(const ComConnectionExitEvent &event)
     m_datMap.erase(event.id);
     m_ptrMap.left.erase(event.id);
     m_comPtrs.remove_if([comConnection](auto &ptr) { return ptr.get() == comConnection; });
+    unbind_ts("M5. QueueEvent(clone) -> 广播给 SingleDeviceState::onConnectExit (A.)");
     QueueEvent(event.Clone());
+    unbind_ts("M6. MultiComMgr::onConnectionExit EXIT");
 }
 
 void MultiComMgr::onDevDetailUpdate(const ComDevDetailUpdateEvent &event)

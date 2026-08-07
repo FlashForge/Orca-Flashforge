@@ -97,10 +97,10 @@ jobs:
         if: runner.os == 'Linux'
         working-directory: ${{ github.workspace }}
         run: |
-            mkdir -p ${{ github.workspace }}/deps/build/destdir
+            mkdir -p ${{ github.workspace }}/deps/build
             ./build_linux.sh -drlL
             cd deps/build
-            tar -czvf OrcaSlicer_dep_ubuntu_$(date +"%Y%m%d").tar.gz destdir
+            tar -czvf OrcaSlicer_dep_ubuntu_$(date +"%Y%m%d").tar.gz OrcaSlicer_dep
 
 
       # Upload Artifacts

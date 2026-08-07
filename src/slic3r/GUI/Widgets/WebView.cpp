@@ -7,6 +7,8 @@
 #include <boost/log/trivial.hpp>
 #include <cctype>
 
+#include <nlohmann/json.hpp>
+
 #include <wx/webviewarchivehandler.h>
 #include <wx/webviewfshandler.h>
 #include <wx/filename.h>
@@ -27,10 +29,18 @@
 #include <Shellapi.h>
 #include <slic3r/Utils/Http.hpp>
 #elif defined __linux__
+#include "slic3r/GUI/Downloader.hpp"
+
+#include <set>
 #include <gtk/gtk.h>
+#include <wx/filename.h>
+#include <wx/stdpaths.h>
 #define WEBKIT_API
 struct WebKitWebView;
+struct WebKitWebContext;
 struct WebKitJavascriptResult;
+struct WebKitDownload;
+struct WebKitURIRequest;
 extern "C" {
 WEBKIT_API void
 webkit_web_view_run_javascript                       (WebKitWebView             *web_view,
@@ -41,9 +51,22 @@ webkit_web_view_run_javascript                       (WebKitWebView             
 WEBKIT_API WebKitJavascriptResult *
 webkit_web_view_run_javascript_finish                (WebKitWebView             *web_view,
                                                       GAsyncResult              *result,
-						      GError                    **error);
+                                                      GError                    **error);
 WEBKIT_API void
-webkit_javascript_result_unref              (WebKitJavascriptResult *js_result);
+webkit_javascript_result_unref                       (WebKitJavascriptResult    *js_result);
+WEBKIT_API WebKitWebContext *
+webkit_web_view_get_context                         (WebKitWebView             *web_view);
+WEBKIT_API WebKitURIRequest *
+webkit_download_get_request                          (WebKitDownload            *download);
+WEBKIT_API const gchar *
+webkit_uri_request_get_uri                           (WebKitURIRequest          *request);
+WEBKIT_API void
+webkit_download_set_destination                      (WebKitDownload            *download,
+                                                      const gchar               *destination);
+WEBKIT_API double
+webkit_download_get_estimated_progress               (WebKitDownload            *download);
+WEBKIT_API const gchar *
+webkit_download_get_destination                      (WebKitDownload            *download);
 }
 #endif
 
@@ -300,6 +323,182 @@ wxDEFINE_EVENT(EVT_WEBVIEW_RECREATED, wxCommandEvent);
 static std::vector<wxWebView*> g_webviews;
 static std::vector<wxWebView*> g_delay_webviews;
 
+static wxString BuildFlashForgeUserAgent(bool dark)
+{
+    const char *theme = dark ? "dark" : "light";
+
+#ifdef __WIN32__
+    return wxString::Format(
+        "Orca-Flashforge/%s (Windows; %s) Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/107.0.1418.52",
+        Orca_Flashforge_VERSION, theme);
+#elif defined(__WXMAC__)
+    return wxString::Format(
+        "Orca-Flashforge/%s (macOS; %s) Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/605.1.15 (KHTML, like Gecko)",
+        Orca_Flashforge_VERSION, theme);
+#else
+    return wxString::Format(
+        "Orca-Flashforge/%s (Linux; %s) Mozilla/5.0 (X11; Linux x86_64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36",
+        Orca_Flashforge_VERSION, theme);
+#endif
+}
+
+#ifdef __linux__
+namespace {
+
+struct NativeDownloadInfo
+{
+    size_t   id{0};
+    wxString filename;
+    wxString folder;
+    wxString path;
+};
+
+wxString sanitize_download_filename(const wxString &filename)
+{
+    wxString sanitized;
+    wxString forbidden_chars = wxFileName::GetForbiddenChars();
+    for (auto ch : filename) {
+        if (forbidden_chars.find(ch) == wxNOT_FOUND) {
+            sanitized.append(ch);
+        }
+    }
+    if (sanitized.empty()) {
+        sanitized = "download";
+    }
+    return sanitized;
+}
+
+wxString filename_from_uri(const wxString &uri)
+{
+    wxString without_query = uri.BeforeFirst('?');
+    wxString filename = wxFileName(without_query).GetFullName();
+    if (filename.empty()) {
+        filename = "download";
+    }
+    return sanitize_download_filename(filename);
+}
+
+wxString configured_download_folder()
+{
+    if (Slic3r::GUI::wxGetApp().app_config != nullptr) {
+        wxString folder = wxString::FromUTF8(Slic3r::GUI::wxGetApp().app_config->get("download_path"));
+        if (!folder.empty() && wxFileName::DirExists(folder)) {
+            return folder;
+        }
+    }
+    return wxStandardPaths::Get().GetDocumentsDir();
+}
+
+wxString unique_download_path(const wxString &folder, const wxString &filename)
+{
+    wxFileName file_name(folder, sanitize_download_filename(filename));
+    wxString base = file_name.GetName();
+    wxString ext = file_name.GetExt();
+
+    for (int i = 1; file_name.Exists(); ++i) {
+        file_name.SetName(wxString::Format("%s(%d)", base, i));
+        file_name.SetExt(ext);
+    }
+    return file_name.GetFullPath();
+}
+
+gboolean on_linux_download_decide_destination(WebKitDownload *download, gchar *suggested_filename, gpointer user_data)
+{
+    auto *info = static_cast<NativeDownloadInfo *>(user_data);
+    info->filename = sanitize_download_filename(wxString::FromUTF8(suggested_filename ? suggested_filename : ""));
+    info->path = unique_download_path(info->folder, info->filename);
+
+    char *destination_uri = g_filename_to_uri(info->path.utf8_str(), nullptr, nullptr);
+    if (destination_uri == nullptr) {
+        Slic3r::GUI::show_linux_web_download_error(info->id, _L("Download failed"));
+        return FALSE;
+    }
+
+    webkit_download_set_destination(download, destination_uri);
+    g_free(destination_uri);
+    Slic3r::GUI::show_linux_web_download_start(info->id, info->filename, info->folder);
+    return TRUE;
+}
+
+void on_linux_download_received_data(WebKitDownload *download, guint64, gpointer user_data)
+{
+    auto *info = static_cast<NativeDownloadInfo *>(user_data);
+    Slic3r::GUI::show_linux_web_download_progress(info->id, static_cast<float>(webkit_download_get_estimated_progress(download)));
+}
+
+void on_linux_download_finished(WebKitDownload *download, gpointer user_data)
+{
+    auto *info = static_cast<NativeDownloadInfo *>(user_data);
+    wxString path = info->path;
+    if (path.empty()) {
+        const gchar *destination = webkit_download_get_destination(download);
+        if (destination != nullptr) {
+            char *filename = g_filename_from_uri(destination, nullptr, nullptr);
+            if (filename != nullptr) {
+                path = wxString::FromUTF8(filename);
+                g_free(filename);
+            }
+        }
+    }
+    Slic3r::GUI::show_linux_web_download_complete(info->id, path);
+    delete info;
+}
+
+void on_linux_download_failed(WebKitDownload *, GError *error, gpointer user_data)
+{
+    auto *info = static_cast<NativeDownloadInfo *>(user_data);
+    Slic3r::GUI::show_linux_web_download_error(info->id, error != nullptr && error->message != nullptr
+        ? wxString::FromUTF8(error->message)
+        : _L("Download failed"));
+    delete info;
+}
+
+void on_linux_download_started(WebKitWebContext *, WebKitDownload *download, gpointer)
+{
+    static size_t next_download_id = 2000000000;
+    auto *info = new NativeDownloadInfo;
+    info->id = ++next_download_id;
+    info->folder = configured_download_folder();
+
+    WebKitURIRequest *request = webkit_download_get_request(download);
+    const gchar *uri = request != nullptr ? webkit_uri_request_get_uri(request) : nullptr;
+    info->filename = filename_from_uri(wxString::FromUTF8(uri != nullptr ? uri : ""));
+    Slic3r::GUI::show_linux_web_download_start(info->id, info->filename, info->folder);
+
+    g_signal_connect(download, "decide-destination", G_CALLBACK(on_linux_download_decide_destination), info);
+    g_signal_connect(download, "received-data", G_CALLBACK(on_linux_download_received_data), info);
+    g_signal_connect(download, "finished", G_CALLBACK(on_linux_download_finished), info);
+    g_signal_connect(download, "failed", G_CALLBACK(on_linux_download_failed), info);
+}
+
+void connect_linux_download_signals(wxWebView *webView)
+{
+    if (webView == nullptr) {
+        return;
+    }
+    auto *native_webview = static_cast<WebKitWebView *>(webView->GetNativeBackend());
+    if (native_webview == nullptr) {
+        return;
+    }
+    WebKitWebContext *context = webkit_web_view_get_context(native_webview);
+    if (context == nullptr) {
+        return;
+    }
+
+    static std::set<WebKitWebContext *> connected_contexts;
+    if (!connected_contexts.insert(context).second) {
+        return;
+    }
+
+    g_signal_connect(context, "download-started", G_CALLBACK(on_linux_download_started), nullptr);
+}
+
+} // namespace
+#endif
+
 class WebViewRef : public wxObjectRefData
 {
 public:
@@ -343,9 +542,7 @@ wxWebView* WebView::CreateWebView(wxWindow * parent, wxString const & url)
     if (webView) {
         webView->SetBackgroundColour(StateColor::darkModeColorFor(*wxWHITE));
 #ifdef __WIN32__
-        webView->SetUserAgent(wxString::Format("BBL-Slicer/v%s (%s) Orca-Flashforge/v%s Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/107.0.1418.52", SLIC3R_VERSION, 
-            Slic3r::GUI::wxGetApp().dark_mode() ? "dark" : "light", Orca_Flashforge_VERSION));
+        webView->SetUserAgent(BuildFlashForgeUserAgent(Slic3r::GUI::wxGetApp().dark_mode()));
         webView->Create(parent, wxID_ANY, url2, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
         // We register the wxfs:// protocol for testing purposes
         webView->RegisterHandler(wxSharedPtr<wxWebViewHandler>(new wxWebViewArchiveHandler("bbl")));
@@ -362,8 +559,10 @@ wxWebView* WebView::CreateWebView(wxWindow * parent, wxString const & url)
             s_schemes_registered = true;
         }
         webView->Create(parent, wxID_ANY, url2, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
-        webView->SetUserAgent(wxString::Format("BBL-Slicer/v%s (%s) Orca-Flashforge/v%s Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)", SLIC3R_VERSION,
-                                               Slic3r::GUI::wxGetApp().dark_mode() ? "dark" : "light", Orca_Flashforge_VERSION));
+        webView->SetUserAgent(BuildFlashForgeUserAgent(Slic3r::GUI::wxGetApp().dark_mode()));
+#ifdef __linux__
+        connect_linux_download_signals(webView);
+#endif
 #endif
 #ifdef __WXMAC__
         WKWebView * wkWebView = (WKWebView *) webView->GetNativeBackend();
@@ -479,12 +678,86 @@ bool WebView::RunScript(wxWebView *webView, wxString const &javascript)
     }
 }
 
+void WebView::AddOpenNewWindowScript(wxWebView *webView)
+{
+    if (webView == nullptr) {
+        return;
+    }
+
+    // WebKitGTK 2.50.x aborts when wx handles window.open through the
+    // new-window signal. Route real new-window requests through script
+    // messages, but keep same-context navigation inside the WebView.
+    webView->AddUserScript(R"JS((function(){
+  window.open = function(url, target){
+    try {
+      if (!url) {
+        return null;
+      }
+
+      var normalizedTarget = target == null ? "" : ("" + target).toLowerCase();
+      if (normalizedTarget === "_self") {
+        window.location.assign(url);
+        return window;
+      }
+      if (normalizedTarget === "_parent") {
+        window.parent.location.assign(url);
+        return window.parent;
+      }
+      if (normalizedTarget === "_top") {
+        window.top.location.assign(url);
+        return window.top;
+      }
+
+      var resolvedUrl = "" + url;
+      try {
+        resolvedUrl = new URL(resolvedUrl, document.baseURI).href;
+      } catch(e) {}
+
+      var message = JSON.stringify({
+        command: "ff_open_new_window",
+        url: resolvedUrl,
+        target: target ? "" + target : ""
+      });
+
+      // wxWebView exposes different message bridges depending on the backend.
+      if (window.wx && typeof window.wx.postMessage === "function") {
+        window.wx.postMessage(message);
+      } else if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.wx) {
+        window.webkit.messageHandlers.wx.postMessage(message);
+      }
+    } catch(e) {}
+    return null;
+  };
+})();)JS");
+}
+
+bool WebView::TryGetOpenNewWindowUrl(wxWebViewEvent &event, wxString *url)
+{
+    try {
+        nlohmann::json json = nlohmann::json::parse(event.GetString().utf8_string());
+        if (json.value("command", std::string()) != "ff_open_new_window") {
+            return false;
+        }
+
+        wxString parsed_url = wxString::FromUTF8(json.value("url", std::string()));
+        if (parsed_url.empty()) {
+            return false;
+        }
+
+        if (url != nullptr) {
+            *url = parsed_url;
+        }
+        return true;
+    } catch (const std::exception &) {
+        return false;
+    }
+}
+
 void WebView::RecreateAll()
 {
     auto dark = Slic3r::GUI::wxGetApp().dark_mode();
     for (auto webView : g_webviews) {
-        webView->SetUserAgent(wxString::Format("BBL-Slicer/v%s (%s) Orca-Flashforge/v%s Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)", SLIC3R_VERSION,
-                                               dark ? "dark" : "light", Orca_Flashforge_VERSION));
+        webView->SetUserAgent(BuildFlashForgeUserAgent(dark));
         webView->Reload();
     }
 }

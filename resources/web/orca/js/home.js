@@ -158,6 +158,99 @@ function SetLoginInfo(strAvatar, strName) {
 var flag = false;
 var flag1 = false;
 var flagFullScreen = false;
+var currentVideoClickHandler = null;
+var currentImageClickHandler = null;
+var currentVideoStopPropagationHandler = null;
+var currentImageStopPropagationHandler = null;
+
+function ClearStreamTimer(timerName) {
+  if (window[timerName]) {
+    clearTimeout(window[timerName]);
+    window[timerName] = null;
+  }
+}
+
+function DestroyCurrentStream() {
+  var currentVideo = document.getElementById("video");
+  var currentImage = document.getElementById("videoStream");
+  var currentLoader = document.getElementById("videoLoader");
+  var currentPauseIcon = document.getElementById("zanting");
+
+  ClearStreamTimer("hlsStartupTimer");
+  ClearStreamTimer("hlsHardResetTimer");
+  ClearStreamTimer("hlsShortRetryTimer");
+  ClearStreamTimer("hlsRuntimeRecoveryTimer");
+  ClearStreamTimer("flvStartupTimer");
+  ClearStreamTimer("flvHardResetTimer");
+
+  if (currentVideo && window.hlsCurrentPauseHandler) {
+    currentVideo.removeEventListener("pause", window.hlsCurrentPauseHandler);
+    window.hlsCurrentPauseHandler = null;
+  }
+  if (currentVideo && window.flvCurrentPauseHandler) {
+    currentVideo.removeEventListener("pause", window.flvCurrentPauseHandler);
+    window.flvCurrentPauseHandler = null;
+  }
+  if (currentVideo && window.flvCurrentPlayingHandler) {
+    currentVideo.removeEventListener(
+      "playing",
+      window.flvCurrentPlayingHandler,
+    );
+    window.flvCurrentPlayingHandler = null;
+  }
+
+  if (window.currentHlsPlayer) {
+    try {
+      window.currentHlsPlayer.destroy();
+    } catch (e) {
+      console.warn("HLS destroy warning:", e.message);
+    }
+    window.currentHlsPlayer = null;
+  }
+
+  if (window.currentFlvPlayer) {
+    try {
+      window.currentFlvPlayer.pause();
+    } catch (e) {}
+    try {
+      window.currentFlvPlayer.detachMediaElement();
+    } catch (e) {}
+    try {
+      window.currentFlvPlayer.unload();
+    } catch (e) {}
+    try {
+      window.currentFlvPlayer.destroy();
+    } catch (e) {
+      console.warn("FLV destroy warning:", e.message);
+    }
+    window.currentFlvPlayer = null;
+  }
+
+  window.flvHasFailed = false;
+  streamPaused = false;
+
+  if (currentLoader) currentLoader.style.display = "none";
+  if (currentVideo) {
+    try {
+      currentVideo.pause();
+    } catch (e) {}
+    currentVideo.removeAttribute("src");
+    try {
+      currentVideo.load();
+    } catch (e) {}
+    currentVideo.style.display = "none";
+    currentVideo.style.backgroundImage = "url('hei.svg')";
+    currentVideo.style.backgroundSize = "cover";
+    currentVideo.style.backgroundRepeat = "no-repeat";
+    currentVideo.style.backgroundPosition = "center";
+  }
+  if (currentImage) {
+    currentImage.style.display = "block";
+    currentImage.src = "hei.svg";
+    currentImage.style.backgroundImage = 'url("hei.svg")';
+  }
+  if (currentPauseIcon) currentPauseIcon.style.display = "block";
+}
 
 function SetUrlInfo(strAddress, strLanguage) {
   var handleClickFullScreen = function (event) {
@@ -170,18 +263,24 @@ function SetUrlInfo(strAddress, strLanguage) {
   var full_screen_icon = document.getElementById("full_screen_icon");
   var videoStream = document.getElementById("videoStream");
 
-  if (!flagFullScreen) {
+  if (!flagFullScreen && full_screen_icon) {
     flagFullScreen = true;
     full_screen_icon.removeEventListener("click", handleClickFullScreen, true);
     full_screen_icon.addEventListener("click", handleClickFullScreen, true);
   }
 
-  video.addEventListener("click", function (e) {
-    e.stopPropagation();
-  });
-  videoStream.addEventListener("click", function (e) {
-    e.stopPropagation();
-  });
+  if (!currentVideoStopPropagationHandler) {
+    currentVideoStopPropagationHandler = function (e) {
+      e.stopPropagation();
+    };
+    video.addEventListener("click", currentVideoStopPropagationHandler);
+  }
+  if (!currentImageStopPropagationHandler && videoStream) {
+    currentImageStopPropagationHandler = function (e) {
+      e.stopPropagation();
+    };
+    videoStream.addEventListener("click", currentImageStopPropagationHandler);
+  }
 
   // >>> 临时测试：把 m3u8 后缀替换为 flv 测试 flv 流，测完删除此 if 块 <<<
   // if (/\.m3u8(\?|$|\/|#)/i.test(strAddress)) {
@@ -206,6 +305,9 @@ function SetUrlInfo(strAddress, strLanguage) {
     console.log("[Mac] flv 已改用 m3u8 播放:", strAddress);
   }
 
+  if (window.strAddress && window.strAddress !== strAddress) {
+    DestroyCurrentStream();
+  }
   window.strAddress = strAddress;
   $("#url-studio").text(strAddress);
   $("#url-studio-r").text(strLanguage);
@@ -615,6 +717,9 @@ function SetUrlInfo(strAddress, strLanguage) {
                         clearTimeout(window.hlsHardResetTimer);
                         window.hlsHardResetTimer = null;
                       }
+                      ClearStreamTimer("hlsStartupTimer");
+                      ClearStreamTimer("hlsShortRetryTimer");
+                      ClearStreamTimer("hlsRuntimeRecoveryTimer");
                       if (window.hlsCurrentPauseHandler) {
                         video.removeEventListener(
                           "pause",
@@ -658,7 +763,8 @@ function SetUrlInfo(strAddress, strLanguage) {
                       runtimeRetryCount++;
                       loader.style.display = "block";
 
-                      setTimeout(function () {
+                      window.hlsRuntimeRecoveryTimer = setTimeout(function () {
+                        window.hlsRuntimeRecoveryTimer = null;
                         runtimeRetryPending = false;
                         if (hasFinalFallback) return;
 
@@ -706,7 +812,9 @@ function SetUrlInfo(strAddress, strLanguage) {
                         if (!isVideoStarting && data.fatal) {
                           if (shortRetryCount < maxShortRetry) {
                             shortRetryCount++;
-                            setTimeout(function () {
+                            ClearStreamTimer("hlsShortRetryTimer");
+                            window.hlsShortRetryTimer = setTimeout(function () {
+                              window.hlsShortRetryTimer = null;
                               startHlsPlayback();
                             }, shortRetryDelay);
                             return;
@@ -776,7 +884,8 @@ function SetUrlInfo(strAddress, strLanguage) {
                     video.addEventListener("pause", onPause);
 
                     // 设置一个超时时间，在30秒后检查视频是否开始播放
-                    setTimeout(function () {
+                    window.hlsStartupTimer = setTimeout(function () {
+                      window.hlsStartupTimer = null;
                       if (!isVideoStarting) {
                         rollbackToPlaceholder();
                       }
@@ -824,13 +933,21 @@ function SetUrlInfo(strAddress, strLanguage) {
         }
       };
 
-      if (!flag) {
-        flag = true;
-        zting.removeEventListener("click", handleClick);
-        zting.addEventListener("click", handleClick);
-        video.removeEventListener("click", handleClick);
-        video.addEventListener("click", handleClick);
+      if (currentImageClickHandler) {
+        for (let i = 0; i < imgs.length; i++) {
+          imgs[i].removeEventListener("click", currentImageClickHandler);
+        }
+        currentImageClickHandler = null;
+        flag1 = false;
       }
+      if (currentVideoClickHandler) {
+        zting.removeEventListener("click", currentVideoClickHandler);
+        video.removeEventListener("click", currentVideoClickHandler);
+      }
+      currentVideoClickHandler = handleClick;
+      zting.addEventListener("click", currentVideoClickHandler);
+      video.addEventListener("click", currentVideoClickHandler);
+      flag = true;
     } else {
       // flag = false;
       // alert(flag)
@@ -953,13 +1070,22 @@ function SetUrlInfo(strAddress, strLanguage) {
         }
       };
 
-      if (!flag1) {
-        flag1 = true;
+      if (currentVideoClickHandler) {
+        zting.removeEventListener("click", currentVideoClickHandler);
+        video.removeEventListener("click", currentVideoClickHandler);
+        currentVideoClickHandler = null;
+        flag = false;
+      }
+      if (currentImageClickHandler) {
         for (let i = 0; i < imgs.length; i++) {
-          imgs[i].removeEventListener("click", handleClicktr);
-          imgs[i].addEventListener("click", handleClicktr);
+          imgs[i].removeEventListener("click", currentImageClickHandler);
         }
       }
+      currentImageClickHandler = handleClicktr;
+      for (let i = 0; i < imgs.length; i++) {
+        imgs[i].addEventListener("click", currentImageClickHandler);
+      }
+      flag1 = true;
     }
   } else {
     video.style.display = "none";
@@ -989,6 +1115,8 @@ function ShowFullScreenIcon() {
 }
 
 function SetClose() {
+  DestroyCurrentStream();
+  window.strAddress = "";
   $("#url-studio").text("设备离线了");
 }
 

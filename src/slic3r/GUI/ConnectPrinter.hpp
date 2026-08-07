@@ -21,6 +21,7 @@
 #include "Widgets/Label.hpp"
 #include "DeviceManager.hpp"
 #include "TitleDialog.hpp"
+#include "FlashForge/MultiComEvent.hpp"
 
 class FFPushButton;
 namespace Slic3r { namespace GUI {
@@ -41,6 +42,14 @@ protected:
     DeviceObject*   m_devObj {nullptr};
     wxString        m_input_access_code;
     wxPanel        *m_error_panel;
+    std::string     m_dev_id;
+    com_id_t        m_pending_conn_id { ComInvalidId };
+    bool            m_connecting { false };
+
+    void set_connecting_state(bool connecting);
+    void show_status(const wxString& text, bool error);
+    void on_connect_ready(ComConnectionReadyEvent& event);
+    void on_connect_exit(ComConnectionExitEvent& event);
 
 public:
     /*ConnectPrinterDialog(wxWindow       *parent,

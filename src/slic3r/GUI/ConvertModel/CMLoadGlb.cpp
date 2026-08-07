@@ -1,4 +1,5 @@
 #include "CMLoadGlb.hpp"
+#include <algorithm>
 #include <boost/log/trivial.hpp>
 
 namespace Slic3r { namespace GUI {
@@ -16,6 +17,7 @@ bool CMLoadGlb::loadGlb(const wxString &glbPath, in_model_data_t &inData, glb_da
     m_pointIndexMap.clear();
     m_pointMap.clear();
     m_textrueIndexMap.clear();
+    m_colorIndexMap.clear();
     if (model.defaultScene < 0 || model.defaultScene >= model.scenes.size()) {
         BOOST_LOG_TRIVIAL(warning) << "invalid glb scene, " << model.defaultScene;
         return false;
@@ -44,8 +46,12 @@ bool CMLoadGlb::addNode(const tinygltf::Model &model, int nodeIdx, const Eigen::
             return true;
         }
         for (auto &primitive : model.meshes[node.mesh].primitives) {
+            int vertexCnt = 0;
+            if (!getPrimitiveVertexCount(model, primitive, vertexCnt)) {
+                return false;
+            }
             indices_info_t info;
-            if (!addIndices(model, primitive.mode, primitive.indices, glbData, info)) {
+            if (!addIndices(model, primitive.mode, primitive.indices, vertexCnt, glbData, info)) {
                 return false;
             }
             if (info.cnt <= 0) {
@@ -96,18 +102,38 @@ Eigen::Matrix4f CMLoadGlb::getNodeMatrix(const tinygltf::Node &node)
     return transform.matrix();
 }
 
-bool CMLoadGlb::addIndices(const tinygltf::Model &model, int mode, int accessorIdx, glb_data_t &glbData,
+bool CMLoadGlb::getPrimitiveVertexCount(const tinygltf::Model &model, const tinygltf::Primitive &primitive,
+    int &vertexCnt)
+{
+    vertexCnt = 0;
+    auto vertexIt = primitive.attributes.find("POSITION");
+    if (vertexIt == primitive.attributes.end()) {
+        BOOST_LOG_TRIVIAL(error) << "can't find glb vertex";
+        return false;
+    }
+    if (vertexIt->second < 0 || vertexIt->second >= model.accessors.size()) {
+        BOOST_LOG_TRIVIAL(error) << "invalid glb accessor, " << vertexIt->second;
+        return false;
+    }
+    vertexCnt = model.accessors[vertexIt->second].count;
+    return true;
+}
+
+bool CMLoadGlb::addIndices(const tinygltf::Model &model, int mode, int accessorIdx, int vertexCnt, glb_data_t &glbData,
     indices_info_t &info)
 {
     info.maxIndex = 0;
     info.cnt = 0;
+    if (mode == -1) {
+        mode = TINYGLTF_MODE_TRIANGLES;
+    }
     if (mode != TINYGLTF_MODE_TRIANGLES && mode != TINYGLTF_MODE_TRIANGLE_FAN
      && mode != TINYGLTF_MODE_TRIANGLE_STRIP) {
         return true;
     }
     if (accessorIdx < 0 || accessorIdx >= model.accessors.size()) {
-        BOOST_LOG_TRIVIAL(error) << "invalid glb accessor, " << accessorIdx;
-        return false;
+        addSequentialIndices(vertexCnt, mode, glbData, info);
+        return true;
     }
     auto &indexAccessor = model.accessors[accessorIdx];
     if (indexAccessor.bufferView < 0 || indexAccessor.bufferView >= model.bufferViews.size()) {
@@ -131,6 +157,18 @@ bool CMLoadGlb::addIndices(const tinygltf::Model &model, int mode, int accessorI
         addIndices((const uint8_t *)indexData, indexAccessor.count, mode, glbData, info);
     }
     return true;
+}
+
+void CMLoadGlb::addSequentialIndices(int cnt, int mode, glb_data_t &glbData, indices_info_t &info)
+{
+    if (cnt < 3) {
+        return;
+    }
+    std::vector<int32_t> indices(cnt);
+    for (int i = 0; i < cnt; ++i) {
+        indices[i] = i;
+    }
+    addIndices(indices.data(), cnt, mode, glbData, info);
 }
 
 template<typename Ty>
@@ -180,7 +218,7 @@ bool CMLoadGlb::addMaterial(const tinygltf::Model &model, int materialIdx, in_mo
 {
     int textureIdx = -1;
     if (!getTextureIndex(model, materialIdx, textureIdx)) {
-        return false;
+        return addSolidColorMaterial(model, materialIdx, glbData);
     }
     int imageIdx = model.textures[textureIdx].source;
     if (imageIdx < 0 || imageIdx >= model.images.size()) {
@@ -203,6 +241,62 @@ bool CMLoadGlb::addMaterial(const tinygltf::Model &model, int materialIdx, in_mo
         glbData.materialDatas.push_back({ endTriangleIndex, &glbData.textureDatas[pair.first->second] });
     }
     return true;
+}
+
+bool CMLoadGlb::addSolidColorMaterial(const tinygltf::Model &model, int materialIdx, glb_data_t &glbData)
+{
+    cvt_color_t color = getMaterialColor(model, materialIdx);
+    auto pair = m_colorIndexMap.emplace(color, glbData.textureDatas.size());
+    if (pair.second) {
+        glbData.multiTextureBits.emplace_back(std::vector<uint8_t>{ color[0], color[1], color[2] });
+        glbData.textureDatas.emplace_back();
+        glbData.textureDatas.back().bits = glbData.multiTextureBits.back().data();
+        glbData.textureDatas.back().width = 1;
+        glbData.textureDatas.back().height = 1;
+        glbData.textureDatas.back().channels = 3;
+        glbData.textureDatas.back().bytePerLine = 3;
+        glbData.textureDatas.back().wraps[0] = TEX_WRAP_REPEAT;
+        glbData.textureDatas.back().wraps[1] = TEX_WRAP_REPEAT;
+        glbData.textureDatas.back().flipY = false;
+    }
+    int textureDataIdx = pair.first->second;
+    if (!glbData.materialDatas.empty()
+     && &glbData.textureDatas[textureDataIdx] == glbData.materialDatas.back().textureData) {
+        glbData.materialDatas.back().endTriangleIndex = glbData.texCoordIndices.size() / 3;
+    } else {
+        int32_t endTriangleIndex = glbData.texCoordIndices.size() / 3;
+        glbData.materialDatas.push_back({ endTriangleIndex, &glbData.textureDatas[textureDataIdx] });
+    }
+    return true;
+}
+
+cvt_color_t CMLoadGlb::getMaterialColor(const tinygltf::Model &model, int materialIdx)
+{
+    cvt_color_t color = { 255, 255, 255 };
+    auto setFromFactor = [&color](const std::vector<double> &factor) {
+        if (factor.size() < 3) {
+            return;
+        }
+        for (int i = 0; i < 3; ++i) {
+            color[i] = static_cast<uint8_t>(std::max(0.0, std::min(1.0, factor[i])) * 255.0);
+        }
+    };
+    if (materialIdx < 0 || materialIdx >= model.materials.size()) {
+        return color;
+    }
+    const tinygltf::Material &material = model.materials[materialIdx];
+    setFromFactor(material.pbrMetallicRoughness.baseColorFactor);
+    auto it = material.extensions.find("KHR_materials_pbrSpecularGlossiness");
+    if (it != material.extensions.end() && it->second.Has("diffuseFactor")
+     && it->second.Get("diffuseFactor").IsArray()) {
+        std::vector<double> diffuseFactor;
+        const tinygltf::Value::Array &array = it->second.Get("diffuseFactor").Get<tinygltf::Value::Array>();
+        for (const tinygltf::Value &value : array) {
+            diffuseFactor.push_back(value.GetNumberAsDouble());
+        }
+        setFromFactor(diffuseFactor);
+    }
+    return color;
 }
 
 bool CMLoadGlb::getTextureIndex(const tinygltf::Model &model, int materialIdx, int &textureIdx)
@@ -270,8 +364,10 @@ bool CMLoadGlb::getWrapType(const tinygltf::Model &model, int textureIdx, textur
         return true;
     };
     int samperIdx = model.textures[textureIdx].sampler;
-    if (samperIdx < 0 || samperIdx < model.samplers.size()) {
-        return TEX_WRAP_REPEAT;
+    if (samperIdx < 0 || samperIdx >= model.samplers.size()) {
+        wrap[0] = TEX_WRAP_REPEAT;
+        wrap[1] = TEX_WRAP_REPEAT;
+        return true;
     }
     return setWrap(model.samplers[samperIdx].wrapS, wrap[0])
         && setWrap(model.samplers[samperIdx].wrapT, wrap[1]);
@@ -299,32 +395,8 @@ bool CMLoadGlb::addCoords(const tinygltf::Model &model, const tinygltf::Primitiv
         BOOST_LOG_TRIVIAL(error) << "invalid glb buffer, " << vertexView.buffer;
         return false;
     }
-    auto texCoordIt = primitive.attributes.find("TEXCOORD_0");
-    if (texCoordIt == primitive.attributes.end()) {
-        BOOST_LOG_TRIVIAL(error) << "can't find glb texture coord";
-        return false;
-    }
-    if (texCoordIt->second < 0 || texCoordIt->second >= model.accessors.size()) {
-        BOOST_LOG_TRIVIAL(error) << "invalid glb accessor, " << texCoordIt->second;
-        return false;
-    }
-    auto &texCoordAccessor = model.accessors[texCoordIt->second];
-    if (texCoordAccessor.bufferView < 0 || texCoordAccessor.bufferView >= model.bufferViews.size()) {
-        BOOST_LOG_TRIVIAL(error) << "invalid glb bufferView, " << texCoordAccessor.bufferView;
-        return false;
-    }
-    auto &texCoordView = model.bufferViews[texCoordAccessor.bufferView];
-    if (texCoordView.buffer < 0 || texCoordView.buffer >= model.buffers.size()) {
-        BOOST_LOG_TRIVIAL(error) << "invalid glb buffer, " << texCoordView.buffer;
-        return false;
-    }
     if (info.maxIndex >= vertexAccessor.count) {
         BOOST_LOG_TRIVIAL(error) << "glb index out of range, " << info.maxIndex;
-        return false;
-    }
-    if (vertexAccessor.count != texCoordAccessor.count) {
-        BOOST_LOG_TRIVIAL(error) << "invalid vertex/texture coord count, " << vertexAccessor.count
-            << "/" << texCoordAccessor.count;
         return false;
     }
     auto vertexData = (const float*)&model.buffers[vertexView.buffer].data[
@@ -336,11 +408,38 @@ bool CMLoadGlb::addCoords(const tinygltf::Model &model, const tinygltf::Primitiv
         auto pointIt = m_pointMap.emplace(vertex, m_pointMap.size()).first;
         m_pointIndexMap.push_back(pointIt->second);
     }
-    auto texCoordData = (const float*)&model.buffers[texCoordView.buffer].data[
-        texCoordAccessor.byteOffset + texCoordView.byteOffset];
-    for (int i = 0; i < texCoordAccessor.count; ++i) {
-        glbData.texCoords.push_back(texCoordData[i * 2]);
-        glbData.texCoords.push_back(texCoordData[i * 2 + 1]);
+    auto texCoordIt = primitive.attributes.find("TEXCOORD_0");
+    if (texCoordIt == primitive.attributes.end()) {
+        for (int i = 0; i < vertexAccessor.count; ++i) {
+            glbData.texCoords.push_back(0.0f);
+            glbData.texCoords.push_back(0.0f);
+        }
+    } else {
+        if (texCoordIt->second < 0 || texCoordIt->second >= model.accessors.size()) {
+            BOOST_LOG_TRIVIAL(error) << "invalid glb accessor, " << texCoordIt->second;
+            return false;
+        }
+        auto &texCoordAccessor = model.accessors[texCoordIt->second];
+        if (texCoordAccessor.bufferView < 0 || texCoordAccessor.bufferView >= model.bufferViews.size()) {
+            BOOST_LOG_TRIVIAL(error) << "invalid glb bufferView, " << texCoordAccessor.bufferView;
+            return false;
+        }
+        auto &texCoordView = model.bufferViews[texCoordAccessor.bufferView];
+        if (texCoordView.buffer < 0 || texCoordView.buffer >= model.buffers.size()) {
+            BOOST_LOG_TRIVIAL(error) << "invalid glb buffer, " << texCoordView.buffer;
+            return false;
+        }
+        if (vertexAccessor.count != texCoordAccessor.count) {
+            BOOST_LOG_TRIVIAL(error) << "invalid vertex/texture coord count, " << vertexAccessor.count
+                << "/" << texCoordAccessor.count;
+            return false;
+        }
+        auto texCoordData = (const float*)&model.buffers[texCoordView.buffer].data[
+            texCoordAccessor.byteOffset + texCoordView.byteOffset];
+        for (int i = 0; i < texCoordAccessor.count; ++i) {
+            glbData.texCoords.push_back(texCoordData[i * 2]);
+            glbData.texCoords.push_back(texCoordData[i * 2 + 1]);
+        }
     }
     m_baseIndex += vertexAccessor.count;
     return true;

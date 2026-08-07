@@ -260,80 +260,66 @@ function clearCookie(name) {
 /*--------Studio WX Message-------*/
 function IsInSlicer()
 {
-	let bMatch=navigator.userAgent.match(  RegExp('BBL-Slicer','i') );
-	
-	return bMatch;
+	return !!(GetWXMessageBridge());
 }
 
-
+function GetWXMessageBridge()
+{
+	if (window.wx && window.wx.postMessage)
+		return function(strMsg) { window.wx.postMessage(strMsg); };
+	if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.wx)
+		return function(strMsg) { window.webkit.messageHandlers.wx.postMessage(strMsg); };
+	return null;
+}
 
 function SendWXMessage( strMsg )
 {
-	let bCheck=IsInSlicer();
+	let bridge=GetWXMessageBridge();
 	
-	if(bCheck!=null)
+	if(bridge!=null)
 	{
-		window.wx.postMessage(strMsg);
+		bridge(strMsg);
 	}
 }
 
 /*------CSS Link Control----*/
-function RemoveCssLink( LinkPath )
+function RemoveCssLink(LinkPath)
 {
-	let pNow=$("head link[href='"+LinkPath+"']");
-	
-	let nTotal=pNow.length;
-    for( let n=0;n<nTotal;n++ )
-	{
-		pNow[n].remove();
-	}	
+	let links = $("head link[href='" + LinkPath + "']");
+	for (let index = 0; index < links.length; ++index)
+		links[index].remove();
 }
 
-function AddCssLink( LinkPath )
-{	
-	var head = document.getElementsByTagName('head')[0];
-	var link = document.createElement('link');
+function AddCssLink(LinkPath)
+{
+	let head = document.getElementsByTagName('head')[0];
+	let link = document.createElement('link');
 	link.href = LinkPath;
 	link.rel = 'stylesheet';
 	link.type = 'text/css';
 	head.appendChild(link);
 }
 
-function CheckCssLinkExist( LinkPath )
+function CheckCssLinkExist(LinkPath)
 {
-	let pNow=$("head link[href='"+LinkPath+"']");
-	let nTotal=pNow.length;
-	
-	return nTotal;
+	return $("head link[href='" + LinkPath + "']").length;
 }
-
 
 /*------Dark Mode------*/
-
-function SwitchDarkMode( DarkCssPath )
-{		
-	ExecuteDarkMode( DarkCssPath );
-    setInterval("ExecuteDarkMode('"+DarkCssPath+"')",1000);	
-}
-
-function ExecuteDarkMode( DarkCssPath )
+function SwitchDarkMode(DarkCssPath)
 {
-    let nMode=0;
-	let bDarkMode=navigator.userAgent.match(  RegExp('dark','i') );	
-	if( bDarkMode!=null )
-		nMode=1;
-	
-	let nNow=CheckCssLinkExist(DarkCssPath);
-	if( nMode==0 )
-	{
-		if(nNow>0)
-			RemoveCssLink(DarkCssPath);
-	}
-	else
-	{
-		if(nNow==0)
-			AddCssLink(DarkCssPath);
-	}	
+	ExecuteDarkMode(DarkCssPath);
+	setInterval(function() { ExecuteDarkMode(DarkCssPath); }, 1000);
 }
 
-SwitchDarkMode( "../css/dark.css" );
+function ExecuteDarkMode(DarkCssPath)
+{
+	let darkMode = navigator.userAgent.match(RegExp('dark', 'i')) != null;
+	let linkCount = CheckCssLinkExist(DarkCssPath);
+	if (!darkMode && linkCount > 0)
+		RemoveCssLink(DarkCssPath);
+	else if (darkMode && linkCount == 0)
+		AddCssLink(DarkCssPath);
+}
+
+SwitchDarkMode("../css/dark.css");

@@ -94,6 +94,7 @@ ZUserLogin::ZUserLogin() : wxDialog((wxWindow *) (wxGetApp().mainframe), wxID_AN
             wxLogError("Could not init m_browser");
             return;
         }
+        WebView::AddOpenNewWindowScript(m_browser);
         m_browser->Hide();
         m_browser->SetSize(0, 0);
 
@@ -264,6 +265,12 @@ void ZUserLogin::OnFullScreenChanged(wxWebViewEvent &evt)
 
 void ZUserLogin::OnScriptMessage(wxWebViewEvent &evt)
 {
+    wxString url;
+    if (WebView::TryGetOpenNewWindowUrl(evt, &url)) {
+        m_browser->LoadURL(url);
+        return;
+    }
+
     wxString str_input = evt.GetString();
 
     try {

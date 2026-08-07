@@ -17,6 +17,7 @@ enum texture_wrap_type_t {
 
 struct in_cvt_params_t {
     bool transCoordSys{ false };
+    bool scaleModelSize{ true };
     float minModelExtent{ 75.0f };
     float maxPrintSize[3]{ 200.0f, 200.0f, 200.0f };
     float subdivideMaxEdgeLenRatio{ 0.2f };

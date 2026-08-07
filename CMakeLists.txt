@@ -851,6 +851,12 @@ function(orca_flashforge_copy_dlls target config postfix output_dlls)
             ${CMAKE_PREFIX_PATH}/bin/occt/TKXDESTEP.dll
             ${CMAKE_PREFIX_PATH}/bin/occt/TKXSBase.dll
             ${CMAKE_PREFIX_PATH}/bin/freetype.dll
+            ${CMAKE_PREFIX_PATH}/bin/avcodec-62.dll
+            ${CMAKE_PREFIX_PATH}/bin/avfilter-11.dll
+            ${CMAKE_PREFIX_PATH}/bin/avformat-62.dll
+            ${CMAKE_PREFIX_PATH}/bin/avutil-60.dll
+            ${CMAKE_PREFIX_PATH}/bin/swresample-6.dll
+            ${CMAKE_PREFIX_PATH}/bin/swscale-9.dll
          DESTINATION ${_out_dir})
 
     set(${output_dlls}
@@ -886,6 +892,13 @@ function(orca_flashforge_copy_dlls target config postfix output_dlls)
         ${_out_dir}/TKXSBase.dll
 
         ${_out_dir}/freetype.dll
+
+        ${_out_dir}/avcodec-62.dll
+        ${_out_dir}/avfilter-11.dll
+        ${_out_dir}/avformat-62.dll
+        ${_out_dir}/avutil-60.dll
+        ${_out_dir}/swresample-6.dll
+        ${_out_dir}/swscale-9.dll
 
         PARENT_SCOPE
     )

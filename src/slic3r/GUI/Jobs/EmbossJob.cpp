@@ -964,7 +964,7 @@ TriangleMesh create_mesh(DataBase &input, const Fnc& was_canceled, Job::Ctl& ctl
             return {};
         // only info
         ctl.call_on_main_thread([]() {
-            create_message("It is used default volume for embossed text, try to change text or font to fix it.");
+            create_message(_u8L("It is used default volume for embossed text, try to change text or font to fix it."));
         });
     }
 

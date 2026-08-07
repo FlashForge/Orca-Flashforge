@@ -510,7 +510,8 @@ public:
     std::vector<LayerPrintSequence> get_other_layers_print_sequence() const;
     void set_first_layer_print_sequence(const std::vector<int> &sorted_filaments);
     void set_other_layers_print_sequence(const std::vector<LayerPrintSequence>& layer_seq_list);
-    void update_first_layer_print_sequence(size_t filament_nums);
+    void update_first_layer_print_sequence(size_t total_filaments,
+                                           const std::vector<unsigned int> &filament_id_remap = {});
     void update_first_layer_print_sequence_when_delete_filament(size_t filamen_id);
 
     void print() const;

@@ -48,6 +48,7 @@ DownPluginFrame::DownPluginFrame(GUI_App *pGUI) : wxDialog((wxWindow *) (pGUI->m
         wxLogError("Could not init m_browser");
         return;
     }
+    WebView::AddOpenNewWindowScript(m_browser);
 
     SetSizer(topsizer);
     topsizer->Add(m_browser, wxSizerFlags().Expand().Proportion(1));
@@ -197,6 +198,12 @@ void DownPluginFrame::OnFullScreenChanged(wxWebViewEvent &evt)
 
 void DownPluginFrame::OnScriptMessage(wxWebViewEvent &evt)
 {
+    wxString url;
+    if (WebView::TryGetOpenNewWindowUrl(evt, &url)) {
+        wxLaunchDefaultBrowser(url, wxBROWSER_NEW_WINDOW);
+        return;
+    }
+
     try {
         wxString strInput = evt.GetString();
         json     j        = json::parse(strInput.utf8_string());

@@ -62,6 +62,9 @@
 #include <wx/log.h>
 #include <wx/intl.h>
 #include <wx/url.h>
+#ifdef __WXGTK__
+#include <wx/timer.h>
+#endif
 
 #include <wx/dialog.h>
 #include <wx/textctrl.h>
@@ -86,6 +89,7 @@
 #include "GUI_Utils.hpp"
 #include "3DScene.hpp"
 #include "MainFrame.hpp"
+#include "LinuxXErrorHandler.hpp"
 #include "Plater.hpp"
 #include "GLCanvas3D.hpp"
 #include "EncodedFilament.hpp"
@@ -611,10 +615,10 @@ static const FileWildcards file_wildcards_by_type[FT_SIZE] = {
     /* FT_GCODE */   { L("G-code files"),    { ".gcode"sv} },
 #ifdef __APPLE__
     /* FT_MODEL */
-    {L("Supported files"), {".3mf"sv, ".stl"sv, ".oltp"sv, ".stp"sv, ".step"sv, ".svg"sv, ".amf"sv, ".obj"sv, ".usd"sv, ".usda"sv, ".usdc"sv, ".usdz"sv, ".abc"sv, ".ply"sv, ".drc"sv}},
+    {L("Supported files"), {".3mf"sv, ".stl"sv, ".oltp"sv, ".stp"sv, ".step"sv, ".svg"sv, ".amf"sv, ".obj"sv, ".glb"sv, ".usd"sv, ".usda"sv, ".usdc"sv, ".usdz"sv, ".abc"sv, ".ply"sv, ".drc"sv}},
 #else
     /* FT_MODEL */
-    {L("Supported files"), {".3mf"sv, ".stl"sv, ".oltp"sv, ".stp"sv, ".step"sv, ".svg"sv, ".amf"sv, ".obj"sv, ".drc"sv}},
+    {L("Supported files"), {".3mf"sv, ".stl"sv, ".oltp"sv, ".stp"sv, ".step"sv, ".svg"sv, ".amf"sv, ".obj"sv, ".glb"sv, ".drc"sv}},
 #endif
     /* FT_ZIP */     { L("ZIP files"),       { ".zip"sv } },
     /* FT_PROJECT */ { L("Project files"),   { ".3mf"sv} },
@@ -2942,6 +2946,10 @@ bool GUI_App::on_init_inner()
     g_object_set (gtk_settings_get_default (), "gtk-menu-images", TRUE, NULL);
 #endif
 
+    // Swallow transient GLX X errors so they don't abort the process via GDK's
+    // fatal X error handler (e.g. BadMatch when switching the 3D / assembly view).
+    install_linux_x_error_handler();
+
 #if defined(__WXGTK20__) || defined(__WXGTK3__)
     // Suppress harmless GTK critical warnings from the GTK3/wxWidgets interaction.
     // These include widget allocation on hidden widgets and events on unrealized widgets.
@@ -4896,9 +4904,9 @@ void GUI_App::import_model(wxWindow *parent, wxArrayString& input_files) const
     input_files.Clear();
     wxFileDialog dialog(parent ? parent : GetTopWindow(),
 #ifdef __APPLE__
-        _L("Choose one or more files (3MF/STEP/STL/SVG/OBJ/AMF/USD*/ABC/PLY):"),
+        _L("Choose one or more files (3MF/STEP/STL/SVG/OBJ/GLB/AMF/USD*/ABC/PLY):"),
 #else
-        _L("Choose one or more files (3MF/STEP/STL/SVG/OBJ/AMF):"),
+        _L("Choose one or more files (3MF/STEP/STL/SVG/OBJ/GLB/AMF):"),
 #endif
         from_u8(app_config->get_last_dir()), "",
         file_wildcards(FT_MODEL), wxFD_OPEN | wxFD_MULTIPLE | wxFD_FILE_MUST_EXIST);
@@ -5366,7 +5374,7 @@ std::string GUI_App::handle_web_request(std::string cmd, const std::vector<std::
             else if (command_str.compare("get_recent_projects") == 0) {
                 if (mainframe) {
                     if (mainframe->m_webview) {
-                        mainframe->m_webview->SendRecentList(INT_MAX);
+                        mainframe->m_webview->SendRecentList();
                     }
                 }
             }
@@ -5402,6 +5410,30 @@ std::string GUI_App::handle_web_request(std::string cmd, const std::vector<std::
                     if (path.has_value()) {
                         this->request_remove_project(path.value());
                     }
+                }
+            }
+            else if (command_str.compare("homepage_delete_recentfiles") == 0) {
+                if (root.get_child_optional("data") != boost::none) {
+                    pt::ptree                data_node = root.get_child("data");
+                    std::vector<std::string> paths;
+
+                    boost::optional<std::string> path = data_node.get_optional<std::string>("path");
+                    if (path.has_value())
+                        paths.push_back(path.value());
+
+                    auto paths_node = data_node.get_child_optional("paths");
+                    if (paths_node != boost::none) {
+                        for (const auto &item : paths_node.value()) {
+                            std::string item_path = item.second.get_value<std::string>("");
+                            if (item_path.empty())
+                                item_path = item.second.get<std::string>("path", "");
+                            if (!item_path.empty())
+                                paths.push_back(item_path);
+                        }
+                    }
+
+                    if (!paths.empty())
+                        this->request_remove_projects(paths);
                 }
             }
             else if (command_str.compare("homepage_delete_all_recentfile") == 0) {
@@ -5554,7 +5586,17 @@ std::string GUI_App::handle_web_request(std::string cmd, const std::vector<std::
                 json j = json::parse(cmd);
                 int  b = j["data"];
                 return b ? "banner-1" : "banner-0";
-                }
+            }
+            else if (command_str.compare("common_get_token") == 0) {
+                nlohmann::json json;
+                json["command"]          = "studio_commonToken";
+                std::string access_token = wxGetApp().app_config->get("access_token");
+                json["data"]["token"]    = access_token;
+                json["sequence_id"]      = "10001";
+                std::string jsonStr      = json.dump();
+                wxString    strJS        = wxString::Format("window.postMessage(%s)", wxString::FromUTF8(jsonStr));
+                return strJS.utf8_string();
+            }
             else if (command_str.compare("download_model") == 0) {
                 boost::optional<std::string> path = root.get_optional<std::string>("url");
                 if (path.has_value()) {
@@ -5797,6 +5839,17 @@ void GUI_App::request_remove_project(std::string project_id)
     mainframe->remove_recent_project(-1, wxString::FromUTF8(project_id));
 }
 
+void GUI_App::request_remove_projects(const std::vector<std::string>& project_ids)
+{
+    std::vector<wxString> filenames;
+    filenames.reserve(project_ids.size());
+    for (const std::string &project_id : project_ids) {
+        if (!project_id.empty())
+            filenames.push_back(wxString::FromUTF8(project_id));
+    }
+    mainframe->remove_recent_projects(filenames);
+}
+
 void GUI_App::handle_http_error(unsigned int status, std::string body)
 {
     // tips body size must less than 1024
@@ -6036,6 +6089,11 @@ void GUI_App::wan_dev_maintain(ComWanDevMaintainEvent& event)
 {
     event.Skip();
     if (!event.login && m_login_success) {
+#ifdef __WXGTK__
+        const bool restore_gl_after_logout_tip = mainframe && mainframe->IsIconized() && mainframe->m_tabpanel &&
+                                                 (mainframe->m_tabpanel->GetSelection() == MainFrame::tp3DEditor ||
+                                                  mainframe->m_tabpanel->GetSelection() == MainFrame::tpPreview);
+#endif
         // login out
         handle_login_out();
         if (app_config) {
@@ -6057,8 +6115,97 @@ void GUI_App::wan_dev_maintain(ComWanDevMaintainEvent& event)
             m_logout_tip = new ShowTip(_L("The current account has been logged out!"));
         }
         m_logout_tip->Show();
+#ifdef __WXGTK__
+        if (restore_gl_after_logout_tip) {
+            request_restore_gl_canvas_after_repeat_logout();
+        }
+#endif
     }
 }
+
+#ifdef __WXGTK__
+void GUI_App::request_restore_gl_canvas_after_repeat_logout()
+{
+    m_restore_gl_canvas_after_repeat_logout_pending = true;
+}
+
+void GUI_App::restore_gl_canvas_after_repeat_logout_on_window_event(const char* reason)
+{
+    if (!m_restore_gl_canvas_after_repeat_logout_pending)
+        return;
+
+    MainFrame* frame = mainframe;
+    if (frame == nullptr || frame->is_shutdown() || frame->IsIconized())
+        return;
+
+    CallAfter([this, reason] { restore_gl_canvas_after_repeat_logout(reason, 6); });
+}
+
+void GUI_App::restore_gl_canvas_after_repeat_logout(const char* /*phase*/, int retries_left)
+{
+    if (!m_restore_gl_canvas_after_repeat_logout_pending)
+        return;
+
+    MainFrame* frame = mainframe;
+    if (frame == nullptr || frame->is_shutdown()) {
+        m_restore_gl_canvas_after_repeat_logout_pending = false;
+        return;
+    }
+
+    if (frame->IsIconized()) {
+        return;
+    }
+
+    if (frame->m_tabpanel == nullptr || frame->plater() == nullptr) {
+        m_restore_gl_canvas_after_repeat_logout_pending = false;
+        return;
+    }
+
+    const int tab = frame->m_tabpanel->GetSelection();
+    if (tab != MainFrame::tp3DEditor && tab != MainFrame::tpPreview) {
+        m_restore_gl_canvas_after_repeat_logout_pending = false;
+        return;
+    }
+
+    frame->SendSizeEvent();
+    frame->Layout();
+    if (frame->m_tabpanel->TopSizer() != nullptr)
+        frame->m_tabpanel->TopSizer()->Layout();
+    frame->m_tabpanel->SendSizeEvent();
+    frame->m_tabpanel->Layout();
+    frame->plater()->SendSizeEvent();
+    frame->plater()->Layout();
+
+    GLCanvas3D* canvas = frame->plater()->get_current_canvas3D();
+    if (canvas == nullptr || canvas->get_wxglcanvas() == nullptr) {
+        m_restore_gl_canvas_after_repeat_logout_pending = false;
+        return;
+    }
+
+    wxGLCanvas* gl_canvas = canvas->get_wxglcanvas();
+    gl_canvas->SendSizeEvent();
+    gl_canvas->Refresh(false);
+
+    const wxSize size = gl_canvas->GetSize();
+
+    if ((size.x <= 0 || size.y <= 0) && retries_left > 0) {
+        frame->m_tabpanel->SetSelection(tab);
+        wxTimer* timer = new wxTimer();
+        timer->Bind(wxEVT_TIMER, [this, timer, retries_left](wxTimerEvent&) {
+            timer->Stop();
+            delete timer;
+            restore_gl_canvas_after_repeat_logout("retry", retries_left - 1);
+        });
+        timer->StartOnce(100);
+        return;
+    }
+
+    canvas->set_as_dirty();
+    canvas->request_extra_frame();
+    gl_canvas->Refresh(false);
+    m_restore_gl_canvas_after_repeat_logout_pending = false;
+}
+#endif
 
 void GUI_App::refresh_access_token(ComRefreshTokenEvent &event)
 {
@@ -6412,6 +6559,8 @@ void GUI_App::check_new_version_sf(bool by_user, bool use_uid)
         APP_ID = 31;
 #ifdef __APPLE__
         PLATFORM_ID = 15;
+#elif defined(__linux__)
+        PLATFORM_ID = 33;
 #else
         PLATFORM_ID = 14;
 #endif

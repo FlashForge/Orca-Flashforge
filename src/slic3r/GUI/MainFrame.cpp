@@ -663,8 +663,19 @@ MainFrame::MainFrame()
     Bind(wxEVT_ACTIVATE, [this](wxActivateEvent& event) {
         if (m_plater != nullptr && event.GetActive())
             m_plater->on_activate();
+#ifdef __WXGTK__
+        if (event.GetActive())
+            wxGetApp().restore_gl_canvas_after_repeat_logout_on_window_event("activate");
+#endif
         event.Skip();
     });
+#ifdef __WXGTK__
+    Bind(wxEVT_ICONIZE, [this](wxIconizeEvent& event) {
+        if (!event.IsIconized())
+            wxGetApp().restore_gl_canvas_after_repeat_logout_on_window_event("deiconize");
+        event.Skip();
+    });
+#endif
 
 // OSX specific issue:
 // When we move application between Retina and non-Retina displays, The legend on a canvas doesn't redraw
@@ -2759,7 +2770,7 @@ void MainFrame::on_sys_color_changed()
 #ifdef __APPLE__
 static const wxString sep = " - ";
 #else
-static const wxString sep = " - ";
+static const wxString sep = "\t";
 static const wxString sep_space = "";
 #endif
 
@@ -3733,7 +3744,7 @@ void MainFrame::set_max_recent_count(int max)
         }
         wxGetApp().app_config->set_recent_projects(recent_projects);
         wxGetApp().app_config->save();
-        m_webview->SendRecentList(-1);
+        m_webview->SendRecentList();
     }
 }
 
@@ -4256,7 +4267,7 @@ void MainFrame::add_to_recent_projects(const wxString& filename)
             recent_projects.push_back(into_u8(m_recent_projects.GetHistoryFile(i)));
         }
         wxGetApp().app_config->set_recent_projects(recent_projects);
-        m_webview->SendRecentList(0);
+        m_webview->SendRecentList();
     }
 }
 
@@ -4314,7 +4325,7 @@ inline void MainFrame::FileHistory::SetMaxFiles(int max)
         RemoveFileFromHistory(--numFiles);
 }
 
-void MainFrame::get_recent_projects(boost::property_tree::wptree &tree, int images)
+void MainFrame::get_recent_projects(boost::property_tree::wptree &tree)
 {
     for (size_t i = 0; i < m_recent_projects.GetCount(); ++i) {
         boost::property_tree::wptree item;
@@ -4326,10 +4337,8 @@ void MainFrame::get_recent_projects(boost::property_tree::wptree &tree, int imag
         if (!ec) {
             std::wstring time = wxDateTime(t).FormatISOCombined(' ').ToStdWstring();
             item.put(L"time", time);
-            if (i <= images) {
-                auto thumbnail = m_recent_projects.GetThumbnailUrl(i);
-                if (!thumbnail.empty()) item.put(L"image", thumbnail);
-            }
+            auto thumbnail = m_recent_projects.GetThumbnailUrl(i);
+            if (!thumbnail.empty()) item.put(L"image", thumbnail);
         } else {
             item.put(L"time", _L("File is missing"));
         }
@@ -4361,7 +4370,7 @@ void MainFrame::open_recent_project(size_t file_id, wxString const & filename)
                 recent_projects.push_back(into_u8(m_recent_projects.GetHistoryFile(i)));
             }
             wxGetApp().app_config->set_recent_projects(recent_projects);
-            m_webview->SendRecentList(-1);
+            m_webview->SendRecentList();
         }
     }
 }
@@ -4384,7 +4393,40 @@ void MainFrame::remove_recent_project(size_t file_id, wxString const &filename)
         recent_projects.push_back(into_u8(m_recent_projects.GetHistoryFile(i)));
     }
     wxGetApp().app_config->set_recent_projects(recent_projects);
-    m_webview->SendRecentList(-1);
+    m_webview->SendRecentList();
+}
+
+void MainFrame::remove_recent_projects(const std::vector<wxString>& filenames)
+{
+    std::vector<size_t> file_ids;
+    file_ids.reserve(filenames.size());
+
+    for (const wxString &filename : filenames) {
+        if (filename.IsEmpty())
+            continue;
+
+        size_t file_id = m_recent_projects.FindFileInHistory(filename);
+        if (file_id != size_t(-1))
+            file_ids.push_back(file_id);
+    }
+
+    if (file_ids.empty())
+        return;
+
+    std::sort(file_ids.begin(), file_ids.end());
+    file_ids.erase(std::unique(file_ids.begin(), file_ids.end()), file_ids.end());
+
+    for (auto it = file_ids.rbegin(); it != file_ids.rend(); ++it)
+        m_recent_projects.RemoveFileFromHistory(*it);
+
+    std::vector<std::string> recent_projects;
+    size_t count = m_recent_projects.GetCount();
+    for (size_t i = 0; i < count; ++i)
+    {
+        recent_projects.push_back(into_u8(m_recent_projects.GetHistoryFile(i)));
+    }
+    wxGetApp().app_config->set_recent_projects(recent_projects);
+    m_webview->SendRecentList();
 }
 
 void MainFrame::load_url(wxString url)

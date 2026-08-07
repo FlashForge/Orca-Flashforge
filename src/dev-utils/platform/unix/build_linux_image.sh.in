@@ -7,21 +7,33 @@ export ROOT=$(echo $ROOT | grep . || pwd)
 export NCORES=`nproc --all`
 CONFIG=Release
 
-while getopts ":ihR:" opt; do
+while getopts ":ihN:R:" opt; do
   case ${opt} in
     i )
         export BUILD_IMAGE="1"
         ;;
-    h ) echo "Usage: ./build_linux_image.sh [-i][-R config]"
+    h ) echo "Usage: ./build_linux_image.sh [-i][-N file][-R config]"
         echo "   -i: Generate Appimage (optional)"
+        echo "   -N FILE: copy the specified FlashNetwork library next to the executable"
         echo "   -R: Specify from which config to obtain the binary: Release, RelWithDebInfo, or Debug"
         exit 1
+        ;;
+    N )
+        NETWORK_LIBRARY_PATH=$OPTARG
         ;;
     R )
         CONFIG=$OPTARG
         ;;
   esac
 done
+
+if [[ -n "$NETWORK_LIBRARY_PATH" ]] ; then
+    if [[ ! -f "$NETWORK_LIBRARY_PATH" ]] ; then
+        echo "Error: network library not found: $NETWORK_LIBRARY_PATH"
+        exit 1
+    fi
+    NETWORK_LIBRARY_PATH=$(readlink -f "$NETWORK_LIBRARY_PATH")
+fi
 
 echo -n "[9/9] Generating Linux app..."
 #{
@@ -46,6 +58,9 @@ echo -n "[9/9] Generating Linux app..."
         exit 1
     fi
     cp -fl "${ORIGINAL_BINARY_LOCATION}" "package/bin/@SLIC3R_APP_CMD@"
+    if [[ -n "$NETWORK_LIBRARY_PATH" ]] ; then
+        cp -fl "$NETWORK_LIBRARY_PATH" "package/bin/$(basename "$NETWORK_LIBRARY_PATH")"
+    fi
 
     # create bin
 cat << EOF >"@SLIC3R_APP_CMD@"
@@ -96,6 +111,16 @@ if [[ -n "$BUILD_IMAGE" ]]
 then
 echo -n "Creating Appimage for distribution..."
 #{
+    DISTRO_TAG="linux"
+    if [ -r /etc/os-release ]; then
+        . /etc/os-release
+        DISTRO_ID=${ID:-linux}
+        DISTRO_VERSION=${VERSION_ID:-}
+        DISTRO_TAG=$(printf '%s%s' "$DISTRO_ID" "$DISTRO_VERSION" | tr -cd '[:alnum:]._-')
+        if [ -z "$DISTRO_TAG" ]; then
+            DISTRO_TAG="linux"
+        fi
+    fi
     # AppImage script modifies files in place, so make a copy and clean up after.
     rm -rf package_appimage
     cp -Rf package package_appimage
@@ -104,7 +129,7 @@ echo -n "Creating Appimage for distribution..."
     if ../build_appimage.sh; then
 	# Clean up on success.
 	popd > /dev/null
-	mv package_appimage/"@SLIC3R_APP_NAME@_Linux_V@SoftFever_VERSION@.AppImage" "@SLIC3R_APP_NAME@_Linux_V@SoftFever_VERSION@.AppImage"
+	mv package_appimage/"@SLIC3R_APP_NAME@_${DISTRO_TAG}_V@Orca_Flashforge_VERSION@.AppImage" "@SLIC3R_APP_NAME@_${DISTRO_TAG}_V@Orca_Flashforge_VERSION@.AppImage"
 	rm -fR package_appimage
     else
 	# Leave files on failure so you can debug.

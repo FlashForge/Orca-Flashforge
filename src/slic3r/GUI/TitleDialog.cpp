@@ -251,6 +251,7 @@ WebDialog::WebDialog(wxWindow* parent, const wxString& title, const wxString& ur
     if (m_browser == nullptr) {
         return;
     }
+    WebView::AddOpenNewWindowScript(m_browser);
     std::string homePageEnableDebug = wxGetApp().app_config->get("home_page_enable_debug");
     m_browser->EnableAccessToDevTools(homePageEnableDebug == "true" || homePageEnableDebug == "1");
     MainSizer()->Add(m_browser, 0, wxALL | wxEXPAND, 0);
@@ -263,11 +264,24 @@ WebDialog::WebDialog(wxWindow* parent, const wxString& title, const wxString& ur
         if (m_browser == nullptr) {
             return;
         }
+        wxString url;
+        if (WebView::TryGetOpenNewWindowUrl(evt, &url)) {
+            if (url.Contains("auth.flashforge.com") || url.Contains("desktop.voxelshare.com")) {
+                wxLaunchDefaultBrowser(url, wxBROWSER_NEW_WINDOW);
+            } else {
+                m_browser->LoadURL(url);
+            }
+            return;
+        }
         std::string response = wxGetApp().handle_web_request(evt.GetString().ToUTF8().data());
         if (response == "close") {
             if (this->IsModal())
                 this->EndModal(wxID_OK);
             Close();
+        } else if (wxString respStr = wxString::FromUTF8(response); respStr.StartsWith("window.postMessage")) {
+            CallAfter([this, respStr]() {
+                m_browser->RunScript(respStr);
+            });
         }
     });
 }

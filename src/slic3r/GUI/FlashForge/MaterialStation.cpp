@@ -1,4 +1,5 @@
 #include "MaterialStation.hpp"
+#include <algorithm>
 #include <slic3r/GUI/wxExtensions.hpp>
 #include <wx/graphics.h>
 #include "slic3r/GUI/FFUtils.hpp"
@@ -1206,16 +1207,21 @@ void MaterialSlotArea::synchronize_printer_status(const com_dev_data_t& data)
 void MaterialSlotArea::synchronize_matl_station(const com_dev_data_t& data) 
 {
     //同步四色料盘的状态
-    int                    slot_cnt  = data.devDetail->matlStationInfo.slotCnt;
+    if (!data.devDetail) {
+        return;
+    }
     fnet_matl_slot_info_t* slotInfos = data.devDetail->matlStationInfo.slotInfos;
     if (!slotInfos) {
         return;
     }
+    int slot_cnt = std::min(std::max(data.devDetail->matlStationInfo.slotCnt, 0), static_cast<int>(m_material_slots_four.size()));
     for (int i = 0; i < slot_cnt; ++i) {
-        int   slotId        = (slotInfos + i)->slotId;
-        int   hasFilament   = (slotInfos + i)->hasFilament; // 1 true, 0 false，四色状态下hasFilament表示料盘是否为空
-        wxString materialName  = (slotInfos + i)->materialName;
-        wxColour materialColor = (slotInfos + i)->materialColor;
+        int         slotId        = (slotInfos + i)->slotId;
+        int         hasFilament   = (slotInfos + i)->hasFilament; // 1 true, 0 false，四色状态下hasFilament表示料盘是否为空
+        const char* material_name = (slotInfos + i)->materialName;
+        const char* material_color = (slotInfos + i)->materialColor;
+        wxString    materialName  = material_name ? wxString::FromUTF8(material_name) : wxString();
+        wxColour    materialColor = material_color ? wxColour(material_color) : wxColour();
         MaterialSlot::SlotType slot_type;
         MaterialInfo           material_info{wxEmptyString, wxColour()};
         if (hasFilament) {
@@ -1237,16 +1243,21 @@ void MaterialSlotArea::synchronize_matl_station(const com_dev_data_t& data)
         m_material_slots_four[i]->set_slot_type(slot_type);
         m_material_slots_four[i]->set_material_info(material_info);
     }
-    int currentSlot  = data.devDetail->matlStationInfo.currentSlot - 1;   //currentSlot是从1开始，m_currentSlot要求从0开始
-    m_currentSlot   = (currentSlot < 0 || currentSlot > 3) ? 0 : currentSlot;
+    int currentSlot = data.devDetail->matlStationInfo.currentSlot - 1; // currentSlot是从1开始，m_currentSlot要求从0开始
+    m_currentSlot   = (currentSlot < 0 || currentSlot >= static_cast<int>(m_material_slots_four.size())) ? 0 : currentSlot;
 }
 
 void MaterialSlotArea::synchronize_indep_matl(const com_dev_data_t& data) 
 {
     // 同步外挂料盘的状态
+    if (!data.devDetail) {
+        return;
+    }
     fnet_indep_matl_info_t& indepMatlInfo = data.devDetail->indepMatlInfo;
-    wxString materialName(indepMatlInfo.materialName);
-    wxColour materialColor(indepMatlInfo.materialColor);
+    const char*             material_name = indepMatlInfo.materialName;
+    const char*             material_color = indepMatlInfo.materialColor;
+    wxString                materialName = material_name ? wxString::FromUTF8(material_name) : wxString();
+    wxColour                materialColor = material_color ? wxColour(material_color) : wxColour();
     MaterialSlot::SlotType  slot_type;
     MaterialInfo            material_info{wxEmptyString, wxColour()};
     if (!materialName.empty() && materialColor.IsOk()) {
@@ -3089,16 +3100,21 @@ void MaterialSlotAreaU1::synchronize_printer_status(const com_dev_data_t& data)
 void MaterialSlotAreaU1::synchronize_matl_station(const com_dev_data_t& data)
 {
     // 同步U1料盘的状态
-    int                    slot_cnt  = data.devDetail->matlStationInfo.slotCnt;
+    if (!data.devDetail) {
+        return;
+    }
     fnet_matl_slot_info_t* slotInfos = data.devDetail->matlStationInfo.slotInfos;
     if (!slotInfos) {
         return;
     }
+    int slot_cnt = std::min(std::max(data.devDetail->matlStationInfo.slotCnt, 0), static_cast<int>(m_material_slots.size()));
     for (int i = 0; i < slot_cnt; ++i) {
-        int      slotId        = (slotInfos + i)->slotId;
-        int      hasFilament   = (slotInfos + i)->hasFilament; // 1 true, 0 false，四色状态下hasFilament表示料盘是否为空
-        wxString materialName  = (slotInfos + i)->materialName;
-        wxColour materialColor = (slotInfos + i)->materialColor;
+        int         slotId        = (slotInfos + i)->slotId;
+        int         hasFilament   = (slotInfos + i)->hasFilament; // 1 true, 0 false，四色状态下hasFilament表示料盘是否为空
+        const char* material_name = (slotInfos + i)->materialName;
+        const char* material_color = (slotInfos + i)->materialColor;
+        wxString    materialName  = material_name ? wxString::FromUTF8(material_name) : wxString();
+        wxColour    materialColor = material_color ? wxColour(material_color) : wxColour();
         MaterialSlotU1::SlotState slot_state;
         MaterialInfo           material_info{wxEmptyString, wxColour()};
         if (hasFilament) {
@@ -3119,7 +3135,7 @@ void MaterialSlotAreaU1::synchronize_matl_station(const com_dev_data_t& data)
         m_material_slots[i]->set_material_info(material_info);
     }
     int currentSlot = data.devDetail->matlStationInfo.currentSlot - 1; // currentSlot是从1开始，m_currentSlot要求从0开始
-    m_currentSlot   = (currentSlot < 0 || currentSlot > 3) ? 0 : currentSlot;
+    m_currentSlot   = (currentSlot < 0 || currentSlot >= static_cast<int>(m_material_slots.size())) ? 0 : currentSlot;
 }
 
 void MaterialSlotAreaU1::on_asides_mouse_down(wxMouseEvent& event)
@@ -3598,8 +3614,8 @@ FFNozzles* FFNozzles::get_inst() { return s_self; }
 FFNozzles::FFNozzles(wxWindow* parent) : 
     wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize)
 { 
-    SetMinSize(wxSize(FromDIP(680), FromDIP(255)));
-    SetSize(wxSize(FromDIP(680), FromDIP(255))); 
+    SetMinSize(wxSize(-1, FromDIP(255)));
+    SetSize(wxSize(-1, FromDIP(255)));
     SetBackgroundColour(*wxWHITE);
     auto sizer = new wxBoxSizer(wxVERTICAL);
     auto title_panel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(49)));
@@ -3610,7 +3626,6 @@ FFNozzles::FFNozzles(wxWindow* parent) :
     title_sizer->Add(title, 0, wxLEFT | wxALIGN_CENTER, FromDIP(14));
     title_sizer->AddStretchSpacer();
     title_panel->SetSizer(title_sizer);
-    title_sizer->Fit(title_panel);
     title_panel->Layout();
     sizer->Add(title_panel, 0, wxALL | wxEXPAND, 0);
     sizer->AddSpacer(FromDIP(26));
@@ -3640,7 +3655,7 @@ FFNozzles::FFNozzles(wxWindow* parent) :
         }
         m_nozzles.emplace_back(noz);
     }
-    nozzle_panel->SetSizerAndFit(nozzle_sizer);
+    nozzle_panel->SetSizer(nozzle_sizer);
     nozzle_panel->Layout();
     sizer->Add(nozzle_panel, 0, wxALL | wxALIGN_CENTER, 0);
     sizer->AddSpacer(FromDIP(16));
@@ -3693,7 +3708,6 @@ FFNozzles::FFNozzles(wxWindow* parent) :
     sizer->Add(btn_sizer, 0, wxALL | wxALIGN_CENTER, 0);
     sizer->AddSpacer(FromDIP(40));
     SetSizer(sizer);
-    sizer->Fit(this);
     Layout();
     MultiComMgr::inst()->Bind(COM_DEV_DETAIL_UPDATE_EVENT, &FFNozzles::onComDevDetailUpdate, this);
     s_self = this;
@@ -3747,25 +3761,42 @@ void FFNozzles::onComDevDetailUpdate(ComDevDetailUpdateEvent& event)
         return;
     }
     const com_dev_data_t& data = MultiComMgr::inst()->devData(m_cur_id);
-    int                    slot_cnt  = data.devDetail->matlStationInfo.slotCnt;
+    if (!data.devDetail) {
+        return;
+    }
     fnet_matl_slot_info_t* slotInfos = data.devDetail->matlStationInfo.slotInfos;
     if (!slotInfos) {
         return;
     }
+    int slot_cnt = std::min(std::max(data.devDetail->matlStationInfo.slotCnt, 0), static_cast<int>(m_nozzles.size()));
     m_count = slot_cnt;
-    for (int i = 0; i < slot_cnt; ++i) {
+    // 该回调随设备遥测每帧触发；SetFlashforgeEnabled/SetMaterialInfo 内部均会无条件 Refresh()，
+    // 每帧重绘会与摄像头持续刷新叠加，造成喷头面板“时隐时现”。这里仅在 tile 数据实际变化时才更新，
+    // 避免无谓的重绘。i 同时受 slotInfos 数量与已创建 tile 数约束，防止越界。
+    int nozzle_cnt = static_cast<int>(m_nozzles.size());
+    for (int i = 0; i < slot_cnt && i < nozzle_cnt; ++i) {
         int                    slotId        = (slotInfos + i)->slotId;
         int                    hasFilament   = (slotInfos + i)->hasFilament; // 1 true, 0 false，四色状态下hasFilament表示料盘是否为空
         wxString               materialName  = (slotInfos + i)->materialName;
         wxColour               materialColor = (slotInfos + i)->materialColor;
         auto                   noz = m_nozzles[i];
+
         if (hasFilament) {
-            noz->SetFlashforgeEnabled(true);
+            if (!noz->FlashforgeEnabled()) {
+                noz->SetFlashforgeEnabled(true);
+            }
             if (!materialName.empty() && materialColor.IsOk()) {
-                noz->SetMaterialInfo(slotId, materialName, materialColor);
+                bool changed = noz->GetIndex() != slotId
+                            || !noz->GetMaterialName().IsSameAs(materialName)
+                            || noz->GetMaterialColor() != materialColor;
+                if (changed) {
+                    noz->SetMaterialInfo(slotId, materialName, materialColor);
+                }
             }
         } else {
-            noz->SetFlashforgeEnabled(false);
+            if (noz->FlashforgeEnabled()) {
+                noz->SetFlashforgeEnabled(false);
+            }
         }
     }
 }

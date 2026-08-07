@@ -1945,7 +1945,14 @@ bool SyncAmsInfoDialog::is_nozzle_type_match(DevExtderSystem data, wxString &err
     std::map<int, std::string> used_extruders_flow;
     std::vector<int>           used_extruders; // 0 based
     for (auto f : used_filaments) {
+        if (f <= 0 || static_cast<size_t>(f) > filament_maps.size()) {
+            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": invalid filament index " << f
+                                       << ", filament_map size=" << filament_maps.size();
+            continue;
+        }
         int filament_extruder = filament_maps[f - 1] - 1;
+        if (filament_extruder < 0)
+            continue;
         if (std::find(used_extruders.begin(), used_extruders.end(), filament_extruder) == used_extruders.end()) used_extruders.emplace_back(filament_extruder);
     }
 

@@ -18,8 +18,9 @@ GuideWebPanel::GuideWebPanel(wxWindow* parent, wxWindowID id) :
     }
     m_url += "?lang=" + language;
     SetDoubleBuffered(true);
-	auto* sizer = new wxBoxSizer(wxVERTICAL);
+		auto* sizer = new wxBoxSizer(wxVERTICAL);
     m_web_view        = WebView::CreateWebView(this, m_url);
+    WebView::AddOpenNewWindowScript(m_web_view);
     m_web_view->Reload(wxWEBVIEW_RELOAD_NO_CACHE);
     m_web_view->SetMinSize(GetClientSize());
     m_loading_page = new LoadingWebPage(this);
@@ -91,8 +92,28 @@ GuideWebPanel::GuideWebPanel(wxWindow* parent, wxWindowID id) :
         m_error_panel->Hide();
         Layout();
     });
-    Bind(wxEVT_WEBVIEW_NEWWINDOW, [&](wxWebViewEvent& event) { 
-        wxLaunchDefaultBrowser(event.GetURL(), wxBROWSER_NEW_WINDOW);
+    auto open_in_browser = [](const wxString& url) {
+        if (url.empty()) {
+            return;
+        }
+        wxGetApp().CallAfter([url] {
+            if (!wxLaunchDefaultBrowser(url, wxBROWSER_NEW_WINDOW)) {
+                wxLogError("Could not launch the default browser for the Guide URL.");
+            }
+        });
+    };
+
+    m_web_view->Bind(wxEVT_WEBVIEW_NEWWINDOW, [open_in_browser](wxWebViewEvent& event) {
+        open_in_browser(event.GetURL());
+    });
+
+    m_web_view->Bind(wxEVT_WEBVIEW_SCRIPT_MESSAGE_RECEIVED, [open_in_browser](wxWebViewEvent& event) {
+        wxString url;
+        if (WebView::TryGetOpenNewWindowUrl(event, &url)) {
+            open_in_browser(url);
+        } else {
+            event.Skip();
+        }
     });
 }
 

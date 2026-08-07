@@ -20,6 +20,7 @@ export REQUIRED_DEV_PACKAGES=(
     libsecret
     libspnav
     mesa
+    nasm
     ninja
     openssl
     texinfo

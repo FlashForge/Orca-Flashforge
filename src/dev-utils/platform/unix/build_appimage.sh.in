@@ -14,7 +14,18 @@ fi
 APPIMAGETOOLURL="https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-$(uname -m).AppImage"
 
 
-APP_IMAGE="@SLIC3R_APP_NAME@_Linux_V@SoftFever_VERSION@.AppImage"
+DISTRO_TAG="linux"
+if [ -r /etc/os-release ]; then
+    . /etc/os-release
+    DISTRO_ID=${ID:-linux}
+    DISTRO_VERSION=${VERSION_ID:-}
+    DISTRO_TAG=$(printf '%s%s' "$DISTRO_ID" "$DISTRO_VERSION" | tr -cd '[:alnum:]._-')
+    if [ -z "$DISTRO_TAG" ]; then
+        DISTRO_TAG="linux"
+    fi
+fi
+
+APP_IMAGE="@SLIC3R_APP_NAME@_${DISTRO_TAG}_V@Orca_Flashforge_VERSION@.AppImage"
 
 wget ${APPIMAGETOOLURL} -O ../appimagetool.AppImage
 chmod +x ../appimagetool.AppImage
