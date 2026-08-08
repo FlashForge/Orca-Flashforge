@@ -5567,7 +5567,10 @@ static bool obj_has_loadable_texture(const fs::path &obj_path)
         fs::path texture_path;
         if (!resolve_existing_resource_path(texture_it->second.first, { texture_it->second.second, obj_dir }, texture_path))
             return false;
-        if (!boost::iends_with(texture_path.extension().string(), ".png"))
+        const std::string texture_extension = texture_path.extension().string();
+        if (!boost::iends_with(texture_extension, ".png") &&
+            !boost::iends_with(texture_extension, ".jpg") &&
+            !boost::iends_with(texture_extension, ".jpeg"))
             return false;
     }
 
