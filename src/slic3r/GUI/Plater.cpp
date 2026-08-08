@@ -9268,6 +9268,7 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                                 quantization_pipeline = std::make_unique<BambuFullColorPipeline>();
                             else
                                 quantization_pipeline = std::make_unique<ClassicFullColorPipeline>();
+                        }
                         std::set<int> allocated_filament_indices;
                         for (const MulticolorFilamentMapping &mapping : import_result.filament_mappings) {
                             if (mapping.allocated_new_filament_index >= 0)
