@@ -187,6 +187,19 @@ public:
     void on_filament_count_change(size_t num_filaments);
     void on_filaments_delete(size_t filament_id);
 
+    // Mixed Filaments panel
+    void update_mixed_filament_panel(bool sync_manager = true);
+    std::vector<unsigned int> get_ui_ordered_filament_ids() const;
+    // Returns true when any mixed filament references a component ID that is
+    // out of the physical filament range (e.g. after the user reduces the
+    // physical filament count).
+    bool has_broken_mixed_filament() const;
+    void add_mixed_filament();
+    void delete_mixed_filament(size_t mixed_id = size_t(-1), int replace_filament_id = -1);
+    void change_mixed_filament(size_t mixed_id, size_t to_id);
+    void edit_mixed_filament(size_t mixed_id = size_t(-2));
+    bool is_mixed_filament_menu_active() const;
+
     void add_filament();
     void delete_filament(size_t filament_id = size_t(-1), int replace_filament_id = -1);  // 0 base, -1 means default
     void change_filament(size_t from_id, size_t to_id);  // 0 base
@@ -214,6 +227,7 @@ public:
     // Orca
     static bool should_show_flushing_volume_button();
     static bool should_show_SEMM_buttons();
+    void show_SEMM_buttons();
     void show_SEMM_buttons(bool bshow, bool single_extruder_multi_material);
     void update_dynamic_filament_list();
     // Flashforge
@@ -313,6 +327,7 @@ public:
 #endif // ENABLE_PROJECT_DIRTY_STATE_DEBUG_WINDOW
 
     Sidebar& sidebar();
+    bool has_sidebar() const;
     const Model& model() const;
     Model& model();
     const Print& fff_print() const;
@@ -346,7 +361,8 @@ public:
 
     // SoftFever
     void calib_pa(const Calib_Params& params);
-    void calib_flowrate(bool is_linear, int pass);
+    //ORCA: Add pattern parameter to calib_flowrate
+    void calib_flowrate(bool is_linear, int pass, InfillPattern pattern = ipArchimedeanChords);
     void calib_temp(const Calib_Params& params);
     void calib_max_vol_speed(const Calib_Params& params);
     void calib_retraction(const Calib_Params& params);
@@ -571,7 +587,8 @@ public:
 
     void on_filament_change(size_t filament_idx);
     void on_filament_count_change(size_t extruders_count);
-    void on_filaments_delete(size_t extruders_count, size_t filament_id, int replace_filament_id = -1);
+    void on_filaments_delete(size_t extruders_count, size_t filament_id, int replace_filament_id = -1,
+                             const std::vector<unsigned char>& is_mixed_before_delete = {});
     std::vector<Slic3r::ColorRGBA> get_extruders_colors();
     // BBS
     void on_bed_type_change(BedType bed_type);
@@ -583,7 +600,7 @@ public:
     void force_print_bed_update();
     // On activating the parent window.
     void on_activate();
-    std::vector<std::string> get_extruder_colors_from_plater_config(const GCodeProcessorResult* const result = nullptr) const;
+    std::vector<std::string> get_extruder_colors_from_plater_config(const GCodeProcessorResult* const result = nullptr, bool include_mixed = true) const;
     std::vector<std::string> get_filament_colors_render_info() const;
     std::vector<std::string> get_filament_color_render_type() const;
     std::vector<std::string> get_colors_for_color_print(const GCodeProcessorResult* const result = nullptr) const;
@@ -659,7 +676,8 @@ public:
     void drop_selection();
     void search(bool plater_is_active, Preset::Type  type, wxWindow *tag, TextInput *etag, wxWindow *stag);
     void mirror(Axis axis);
-    void split_object();
+    void split_object(bool auto_drop = true);
+    void split_object(int obj_idx, bool auto_drop = true);
     void split_volume();
     void optimize_rotation();
     // find all empty cells on the plate and won't overlap with exclusion areas
@@ -677,7 +695,7 @@ public:
     bool can_increase_instances() const;
     bool can_decrease_instances() const;
     bool can_set_instance_to_object() const;
-    bool can_fix_through_netfabb() const;
+    bool can_fix_through_cgal() const;
     bool can_simplify() const;
     bool can_smooth_mesh() const;
     bool can_split_to_objects() const;

@@ -1,0 +1,38 @@
+{
+    "bottom_shell_layers": "5",
+    "compatible_printers": [
+        "Flashforge Creator 5 0.4 nozzle",
+        "Flashforge Creator 5 Pro 0.4 nozzle"
+    ],
+    "default_acceleration": "5000",
+    "from": "system",
+    "gap_infill_speed": "120",
+    "inherits": "0.12mm Standard @FF C5",
+    "initial_layer_infill_speed": "70",
+    "initial_layer_print_height": "0.2",
+    "initial_layer_speed": "40",
+    "inner_wall_acceleration": "0",
+    "inner_wall_speed": "120",
+    "instantiation": "true",
+    "internal_solid_infill_acceleration": "0",
+    "internal_solid_infill_speed": "120",
+    "layer_height": "0.1",
+    "name": "0.10mm Standard @FF C5",
+    "outer_wall_acceleration": "3000",
+    "outer_wall_speed": "60",
+    "print_extruder_id": [
+        "1"
+    ],
+    "print_extruder_variant": [
+        "Direct Drive Standard"
+    ],
+    "print_settings_id": "0.10mm Standard @FF C5",
+    "slowdown_for_curled_perimeters": "0",
+    "sparse_infill_speed": "100",
+    "support_base_pattern": "default",
+    "support_bottom_z_distance": "0.1",
+    "support_top_z_distance": "0.1",
+    "top_shell_layers": "7",
+    "top_surface_speed": "120",
+    "version": "2.1.1.0"
+}

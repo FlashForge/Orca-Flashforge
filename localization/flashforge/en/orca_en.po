@@ -33,6 +33,57 @@ msgstr ""
 "*We recommend you to add brand, material, type, and even humidity level in "
 "the Name"
 
+msgid "Expert settings"
+msgstr "Expert settings"
+
+msgid "Simple settings"
+msgstr "Simple settings"
+
+msgid "Local-Z pair split: requested F<a>/F<b> <percent>/<percent>."
+msgstr "Local-Z pair split: requested F<a>/F<b> <percent>/<percent>."
+
+msgid "Cycle settings visibility"
+msgstr "Cycle settings visibility"
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d."
+msgstr "Local-Z pair split: requested F%u/F%u %d/%d."
+
+msgid "Local-Z breakdown: manual pattern rows do not use pair decomposition."
+msgstr "Local-Z breakdown: manual pattern rows do not use pair decomposition."
+
+msgid "Local-Z breakdown: same-layer mode does not use local-Z pair decomposition."
+msgstr "Local-Z breakdown: same-layer mode does not use local-Z pair decomposition."
+
+msgid "Local-Z breakdown: unavailable."
+msgstr "Local-Z breakdown: unavailable."
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d, effective %d/%d over %d sublayers."
+msgstr "Local-Z pair split: requested F%u/F%u %d/%d, effective %d/%d over %d sublayers."
+
+msgid "Local-Z direct multicolor solver: %s"
+msgstr "Local-Z direct multicolor solver: %s"
+
+msgid "Carry-over error is distributed directly across all %d components instead of collapsing them into pair cadence."
+msgstr "Carry-over error is distributed directly across all %d components instead of collapsing them into pair cadence."
+
+msgid "Effective Local-Z cap: up to %d sublayers per nominal layer."
+msgstr "Effective Local-Z cap: up to %d sublayers per nominal layer."
+
+msgid "Local-Z layer cadence: %s."
+msgstr "Local-Z layer cadence: %s."
+
+msgid "Pair splits: %s."
+msgstr "Pair splits: %s."
+
+msgid "Saved row limit will apply when Local-Z dithering mode is enabled in print settings."
+msgstr "Saved row limit will apply when Local-Z dithering mode is enabled in print settings."
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers."
+msgstr "Effective Local-Z stack: %d sublayers over %d pair layers."
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers (uncapped %d)."
+msgstr "Effective Local-Z stack: %d sublayers over %d pair layers (uncapped %d)."
+
 msgid "Allow only one OrcaSlicer instance"
 msgstr "Allow only one Flash Studio instance"
 
@@ -433,3 +484,6 @@ msgstr "Current filament list"
 
 msgid "New filament"
 msgstr "New filament"
+
+msgid "No camera detected"
+msgstr "No camera detected"

@@ -1,4 +1,5 @@
 #include "ParameterUtils.hpp"
+#include <algorithm>
 #include <cassert>
 
 namespace Slic3r {
@@ -41,6 +42,40 @@ void get_other_layers_print_sequence(const std::vector<LayerPrintSequence> &cust
         sequence.push_back(customize_sequence.first.second);
         sequence.insert(sequence.end(), customize_sequence.second.begin(), customize_sequence.second.end());
     }
+}
+
+bool remap_and_normalize_filament_sequence(std::vector<int> &sequence,
+                                           size_t total_filaments,
+                                           const std::vector<unsigned int> &filament_id_remap)
+{
+    std::vector<int> normalized;
+    normalized.reserve(total_filaments);
+    std::vector<bool> seen(total_filaments + 1, false);
+
+    for (const int old_id : sequence) {
+        unsigned int mapped = 0;
+        if (filament_id_remap.empty()) {
+            if (old_id > 0)
+                mapped = unsigned(old_id);
+        } else if (old_id > 0 && size_t(old_id) < filament_id_remap.size()) {
+            mapped = filament_id_remap[size_t(old_id)];
+        }
+
+        if (mapped == 0 || mapped > total_filaments || seen[mapped])
+            continue;
+        seen[mapped] = true;
+        normalized.emplace_back(int(mapped));
+    }
+
+    for (size_t filament_id = 1; filament_id <= total_filaments; ++filament_id) {
+        if (!seen[filament_id])
+            normalized.emplace_back(int(filament_id));
+    }
+
+    if (normalized == sequence)
+        return false;
+    sequence = std::move(normalized);
+    return true;
 }
 
 int get_index_for_extruder_parameter(const DynamicPrintConfig &config, const std::string &opt_key, int cur_extruder_id, ExtruderType extruder_type, NozzleVolumeType nozzle_volume_type)

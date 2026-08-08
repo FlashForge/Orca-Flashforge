@@ -3,6 +3,10 @@
 #include "CMLoadObj.hpp"
 #include "CMSaveObj.hpp"
 #include "ConvertModelProc.hpp"
+#include "FullColorModelSource.hpp"
+
+#include <boost/log/trivial.hpp>
+#include <utility>
 
 namespace Slic3r { namespace GUI {
 
@@ -10,11 +14,21 @@ bool ConvertModel::initConvertObj(const wxString &inPath, const in_cvt_params_t 
     convert_model_data_t &convertModelData)
 {
     clearObjExtraData(convertModelData);
+    convertModelData.modelSource.reset();
     in_model_data_t inData;
     ObjParser::ObjData objData;
     if (!CMLoadObj().loadObj(inPath, inData, objData, convertModelData.objExtraData)) {
         return false;
     }
+    auto modelSource = std::make_shared<FullColorModelSource>();
+    std::string sourceError;
+    if (!FullColorModelSource::create_from_legacy_input(inData, *modelSource, &sourceError)) {
+        BOOST_LOG_TRIVIAL(error) << "create full-color OBJ source failed, " << sourceError;
+        return false;
+    }
+    modelSource->source_path = inPath.utf8_string();
+    convertModelData.modelSource = std::move(modelSource);
+    convertModelData.conversionParams = params;
     convertModelData.convertProc = std::make_unique<ConvertModelProc>(inData, params);
     std::vector<int32_t>().swap(convertModelData.objExtraData.vertexIndices);
     std::vector<int32_t>().swap(convertModelData.objExtraData.texCoordIndices);
@@ -25,15 +39,78 @@ bool ConvertModel::initConvertGlb(const wxString &inPath, const in_cvt_params_t 
     convert_model_data_t &convertModelData)
 {
     clearGlbData(convertModelData);
+    convertModelData.modelSource.reset();
     in_model_data_t inData;
     if (!CMLoadGlb().loadGlb(inPath, inData, convertModelData.glbData)) {
         return false;
     }
+    auto modelSource = std::make_shared<FullColorModelSource>();
+    std::string sourceError;
+    if (!FullColorModelSource::create_from_legacy_input(inData, *modelSource, &sourceError)) {
+        BOOST_LOG_TRIVIAL(error) << "create full-color GLB source failed, " << sourceError;
+        return false;
+    }
+    modelSource->source_path = inPath.utf8_string();
+    convertModelData.modelSource = std::move(modelSource);
+    convertModelData.conversionParams = params;
     convertModelData.convertProc = std::make_unique<ConvertModelProc>(inData, params);
     std::vector<float>().swap(convertModelData.glbData.vertices);
     std::vector<float>().swap(convertModelData.glbData.texCoords);
     std::vector<int32_t>().swap(convertModelData.glbData.vertexIndices);
     std::vector<int32_t>().swap(convertModelData.glbData.texCoordIndices);
+    return true;
+}
+
+bool ConvertModel::initConvertGltf(const wxString &inPath, const in_cvt_params_t &params,
+    convert_model_data_t &convertModelData)
+{
+    clearGlbData(convertModelData);
+    convertModelData.modelSource.reset();
+    in_model_data_t inData{};
+    if (!CMLoadGlb().loadGltf(inPath, inData, convertModelData.glbData))
+        return false;
+    auto modelSource = std::make_shared<FullColorModelSource>();
+    std::string sourceError;
+    if (!FullColorModelSource::create_from_legacy_input(inData, *modelSource, &sourceError)) {
+        BOOST_LOG_TRIVIAL(error) << "create full-color GLTF source failed, " << sourceError;
+        return false;
+    }
+    modelSource->source_path = inPath.utf8_string();
+    convertModelData.modelSource = std::move(modelSource);
+    convertModelData.conversionParams = params;
+    convertModelData.convertProc = std::make_unique<ConvertModelProc>(inData, params);
+    std::vector<float>().swap(convertModelData.glbData.vertices);
+    std::vector<float>().swap(convertModelData.glbData.texCoords);
+    std::vector<int32_t>().swap(convertModelData.glbData.vertexIndices);
+    std::vector<int32_t>().swap(convertModelData.glbData.texCoordIndices);
+    return true;
+}
+
+bool ConvertModel::initConvertFbx(const wxString &inPath, const in_cvt_params_t &params,
+    convert_model_data_t &convertModelData)
+{
+    clearFbxData(convertModelData);
+    convertModelData.modelSource.reset();
+    in_model_data_t inData{};
+    std::string loadError;
+    if (!CMLoadFbx().loadFbx(inPath, inData, convertModelData.fbxData, &loadError)) {
+        BOOST_LOG_TRIVIAL(error) << "load full-color FBX failed, " << loadError;
+        return false;
+    }
+    auto modelSource = std::make_shared<FullColorModelSource>();
+    std::string sourceError;
+    if (!FullColorModelSource::create_from_legacy_input(inData, *modelSource, &sourceError)) {
+        BOOST_LOG_TRIVIAL(error) << "create full-color FBX source failed, " << sourceError;
+        return false;
+    }
+    modelSource->source_path = inPath.utf8_string();
+    convertModelData.modelSource = std::move(modelSource);
+    convertModelData.conversionParams = params;
+    convertModelData.convertProc = std::make_unique<ConvertModelProc>(inData, params);
+    std::vector<float>().swap(convertModelData.fbxData.vertices);
+    std::vector<float>().swap(convertModelData.fbxData.texCoords);
+    std::vector<int32_t>().swap(convertModelData.fbxData.vertexIndices);
+    std::vector<int32_t>().swap(convertModelData.fbxData.texCoordIndices);
     return true;
 }
 
@@ -73,8 +150,16 @@ bool ConvertModel::makeMappedPreviewModel(const convert_model_data_t &convertMod
     return !outData.vertices.empty() && !outData.triangles.empty();
 }
 
+bool ConvertModel::makeOriginalTexturePreview(const convert_model_data_t &convertModelData,
+    FullColorOriginalPreview &preview, std::string *error_message) const
+{
+    return make_full_color_original_preview(
+        convertModelData.modelSource, convertModelData.conversionParams, preview, error_message);
+}
+
 void ConvertModel::setScaleModelSize(convert_model_data_t &convertModelData, bool scaleModelSize)
 {
+    convertModelData.conversionParams.scaleModelSize = scaleModelSize;
     if (convertModelData.convertProc.get() != nullptr) {
         convertModelData.convertProc->setScaleModelSize(scaleModelSize);
     }
@@ -144,6 +229,17 @@ void ConvertModel::clearGlbData(convert_model_data_t &convertModelData)
     convertModelData.glbData.materialDatas.clear();
     convertModelData.glbData.textureDatas.clear();
     convertModelData.glbData.multiTextureBits.clear();
+}
+
+void ConvertModel::clearFbxData(convert_model_data_t &convertModelData)
+{
+    convertModelData.fbxData.vertices.clear();
+    convertModelData.fbxData.texCoords.clear();
+    convertModelData.fbxData.vertexIndices.clear();
+    convertModelData.fbxData.texCoordIndices.clear();
+    convertModelData.fbxData.materialDatas.clear();
+    convertModelData.fbxData.textureDatas.clear();
+    convertModelData.fbxData.textureBits.clear();
 }
 
 }} // namespace Slic3r::GUI

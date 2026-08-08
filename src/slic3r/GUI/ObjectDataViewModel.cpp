@@ -205,8 +205,8 @@ void ObjectDataViewModelNode::set_printable_icon(PrintIndicator printable)
     if (m_printable == printable)
         return;
     m_printable = printable;
-    m_printable_icon = m_printable == piUndef ? m_empty_bmp :
-                       create_scaled_bitmap(m_printable == piPrintable ? "check_on" : "check_off_focused");
+    m_printable_icon = m_printable == piUndef ? 
+        m_empty_bmp : create_scaled_bitmap(m_printable == piPrintable ? "check_on" : "check_off_focused");
 }
 
 void ObjectDataViewModelNode::set_variable_height_icon(VaryHeightIndicator vari_height) {
@@ -332,12 +332,16 @@ bool ObjectDataViewModelNode::SetValue(const wxVariant& variant, unsigned col)
         m_variable_height_icon << variant;
         return true;
     case colName: {
+        if (variant.GetType() != wxT("DataViewBitmapText"))
+            return false;
         DataViewBitmapText data;
         data << variant;
         m_bmp = data.GetBitmap();
         m_name = data.GetText();
         return true; }
     case colFilament: {
+        if (variant.GetType() != wxT("DataViewBitmapText"))
+            return false;
         DataViewBitmapText data;
         data << variant;
         m_extruder_bmp = data.GetBitmap();
@@ -419,15 +423,31 @@ void ObjectDataViewModelNode::UpdateExtruderAndColorIcon(wxString extruder /*= "
         }
     }
 
+    const size_t extruder_id_1based = extruder_idx;
     if (extruder_idx > 0) --extruder_idx;
+
     // Create the bitmap with color bars.
     std::vector<wxBitmap*> bmps = get_extruder_color_icons(false);// use wide icons
-    if (bmps.empty()) {
-        m_extruder_bmp = wxNullBitmap;
+    if (!bmps.empty() && extruder_idx < bmps.size()) {
+        m_extruder_bmp = *bmps[extruder_idx];
         return;
     }
 
-    m_extruder_bmp = *bmps[extruder_idx >= bmps.size() ? 0 : extruder_idx];
+    // Fallback for mixed virtual filaments when the shared icon vector only covers physical filaments.
+    if (wxGetApp().plater() != nullptr) {
+        const std::vector<std::string> all_colors = wxGetApp().plater()->get_extruder_colors_from_plater_config(nullptr, true);
+        if (extruder_id_1based >= 1 && extruder_id_1based <= all_colors.size() && !all_colors[extruder_id_1based - 1].empty()) {
+            const double em = wxGetApp().em_unit();
+            const int    icon_width  = int(4.4 * em + 0.5);
+            const int    icon_height = int(2.0 * em + 0.5);
+            if (wxBitmap *bmp = get_extruder_color_icon(all_colors[extruder_id_1based - 1], std::to_string(extruder_id_1based), icon_width, icon_height)) {
+                m_extruder_bmp = *bmp;
+                return;
+            }
+        }
+    }
+
+    m_extruder_bmp = bmps.empty() ? wxNullBitmap : *bmps.front();
 }
 
 // *****************************************************************************

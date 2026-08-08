@@ -176,8 +176,8 @@ msgstr "Type d'outil"
 msgid "Smart fill angle"
 msgstr "Angle de remplissage intelligent"
 
-msgid "On overhangs only"
-msgstr "Sur les surplombs uniquement"
+msgid "On highlighted overhangs only"
+msgstr "Uniquement sur les surplombs mis en évidence"
 
 msgid "Auto support threshold angle: "
 msgstr "Angle de seuil de support automatique : "
@@ -5216,6 +5216,9 @@ msgstr "Coût"
 msgid "Filament change times"
 msgstr "Temps de changement de filament"
 
+msgid "Tool changes"
+msgstr "Changements d'outil"
+
 msgid "Color change"
 msgstr "Changement de couleur"
 
@@ -6662,6 +6665,15 @@ msgstr "Modèle original"
 msgid "Number of Colors"
 msgstr "Nombre de couleurs"
 
+msgid "Color Style"
+msgstr "Style de couleur"
+
+msgid "Soft"
+msgstr "Doux"
+
+msgid "Vivid"
+msgstr "Vif"
+
 msgid "Parameters have changed, please click Apply to take effect"
 msgstr "Les paramètres ont été modifiés, cliquez sur Appliquer pour les prendre en compte"
 
@@ -7256,6 +7268,12 @@ msgstr "Exportation réussie."
 msgid "Model file downloaded."
 msgstr "Modèle téléchargé."
 
+msgid "Shared profiles may be available for this printer."
+msgstr "Des profils partagés peuvent être disponibles pour cette imprimante."
+
+msgid "Browse shared profiles"
+msgstr "Parcourir les profils partagés"
+
 msgid "Serious warning:"
 msgstr "Avertissement sérieux :"
 
@@ -7821,7 +7839,9 @@ msgstr "Un seul fichier en couleur peut être ajouté à la fois"
 msgid ""
 "Only one OBJ or GLB file can be imported at a time. Please select the file "
 "you want to use this time."
-msgstr "Un seul fichier OBJ ou GLB peut être importé à la fois. Veuillez sélectionner le fichier que vous souhaitez utiliser cette fois-ci."
+msgstr ""
+"Un seul fichier OBJ ou GLB peut être importé à la fois. Veuillez "
+"sélectionner le fichier que vous souhaitez utiliser cette fois-ci."
 
 msgid "Please import model files with the same file extension each time"
 msgstr ""
@@ -22790,6 +22810,9 @@ msgstr "Vidéo en pause"
 msgid "Printer disconnected"
 msgstr "Imprimante déconnectée"
 
+msgid "No camera detected"
+msgstr "Aucune caméra détectée"
+
 #~ msgid "每次只可添加一个全彩文件"
 #~ msgstr "Un seul fichier en couleur peut être ajouté à la fois"
 
@@ -24638,9 +24661,6 @@ msgctxt "Flashforge"
 msgid "Original"
 msgstr "Original"
 
-msgid "No camera detected"
-msgstr "Aucune caméra détectée"
-
 #: resources/data/hints.ini: [hint:Chamber temperature]
 msgid ""
 "Chamber temperature\n"
@@ -24686,6 +24706,522 @@ msgstr ""
 "Comment utiliser les raccourcis clavier\n"
 "Saviez-vous qu’Flash Studio vous offre une large gamme de raccourcis clavier "
 "et d’opérations de scènes 3D ?"
+
+msgid "Dithering cadence height A"
+msgstr "Hauteur de cadence de tramage A"
+
+msgid ""
+"Layer height contribution of component A for dithering virtual filaments. Set to 0 to use normal 1-layer A / 1-layer B alternation.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"Contribution de hauteur de couche du composant A pour les filaments virtuels de tramage. Réglez sur 0 pour utiliser l'alternance normale 1 couche A / 1 couche B.\n"
+"\n"
+"Des explications détaillées des réglages de filament mélangé seront publiées lorsque le wiki du projet sera disponible."
+
+msgid "Dithering cadence height B"
+msgstr "Hauteur de cadence de tramage B"
+
+msgid ""
+"Layer height contribution of component B for dithering virtual filaments. Set to 0 to use normal 1-layer A / 1-layer B alternation.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"Contribution de hauteur de couche du composant B pour les filaments virtuels de tramage. Réglez sur 0 pour utiliser l'alternance normale 1 couche A / 1 couche B.\n"
+"\n"
+"Des explications détaillées des réglages de filament mélangé seront publiées lorsque le wiki du projet sera disponible."
+
+msgid "Height-weighted cadence"
+msgstr "Cadence pondérée par la hauteur"
+
+msgid ""
+"Enable height-weighted cadence for mixed filaments. Limitation: only one height-weighted mixed color should be present at a given Z plane, because independent per-color layer heights are not supported and the resulting layer height applies to the whole plane. When disabled, layer-cycle cadence is used.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"Active la cadence pondérée par la hauteur pour les filaments mélangés. Limitation : une seule couleur mélangée pondérée par la hauteur doit être présente sur un même plan Z, car les hauteurs de couche indépendantes par couleur ne sont pas prises en charge et la hauteur calculée s'applique à tout le plan. Si désactivé, la cadence par cycle de couches est utilisée.\n"
+"\n"
+"Des explications détaillées des réglages de filament mélangé seront publiées lorsque le wiki du projet sera disponible."
+
+msgid "Local-Z lower height bound"
+msgstr "Limite inférieure de hauteur Local-Z"
+
+msgid ""
+"Lower bound used when Local-Z mixed-filament dithering chooses per-color sublayer heights.\n"
+"\n"
+"Smaller values let Local-Z use thinner sublayers for a color when needed.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"Limite inférieure utilisée lorsque le tramage Local-Z du filament mélangé choisit les hauteurs de sous-couche par couleur.\n"
+"\n"
+"Des valeurs plus petites permettent à Local-Z d'utiliser des sous-couches plus fines pour une couleur si nécessaire.\n"
+"\n"
+"Des explications détaillées des réglages de filament mélangé seront publiées lorsque le wiki du projet sera disponible."
+
+msgid "Local-Z upper height bound"
+msgstr "Limite supérieure de hauteur Local-Z"
+
+msgid ""
+"Upper bound used when Local-Z mixed-filament dithering chooses per-color sublayer heights.\n"
+"\n"
+"Larger values let Local-Z use thicker sublayers for a color when needed.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"Limite supérieure utilisée lorsque le tramage Local-Z du filament mélangé choisit les hauteurs de sous-couche par couleur.\n"
+"\n"
+"Des valeurs plus grandes permettent à Local-Z d'utiliser des sous-couches plus épaisses pour une couleur si nécessaire.\n"
+"\n"
+"Des explications détaillées des réglages de filament mélangé seront publiées lorsque le wiki du projet sera disponible."
+
+msgid "Advanced dithering"
+msgstr "Tramage avancé"
+
+msgid ""
+"Distribute mixed filament layer-cycle cadence using an advanced ordered dithering pattern instead of a simple contiguous A-then-B run. This can reduce visible striping for some hues.\n"
+"\n"
+"This is an even more experimental mode and the perceived color may differ from normal dithering for the same filament pair and ratio.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"Répartit la cadence par cycle de couches du filament mélangé avec un motif de tramage ordonné avancé au lieu d'une simple séquence continue A puis B. Cela peut réduire les bandes visibles pour certaines teintes.\n"
+"\n"
+"Ce mode est encore plus expérimental et la couleur perçue peut différer du tramage normal pour la même paire de filaments et le même ratio.\n"
+"\n"
+"Des explications détaillées des réglages de filament mélangé seront publiées lorsque le wiki du projet sera disponible."
+
+msgid "Enable mixed filament bias"
+msgstr "Activer le biais du filament mélangé"
+
+msgid ""
+"Show and apply the per-row mixed filament Bias control.\n"
+"\n"
+"When enabled, the selected filament in a mixed pair is recessed slightly so the other component becomes more visible.\n"
+"\n"
+"Bias is ignored for grouped wall patterns, same-layer pointillisme, and Local Z dithering."
+msgstr ""
+"Affiche et applique le contrôle de biais par ligne du filament mélangé.\n"
+"\n"
+"Lorsque cette option est activée, le filament sélectionné dans une paire mélangée est légèrement en retrait afin que l'autre composant soit plus visible.\n"
+"\n"
+"Le biais est ignoré pour les motifs de paroi groupés, le pointillisme sur la même couche et le tramage Local Z."
+
+msgid "Selective Expansion contraction"
+msgstr "Expansion/contraction sélective"
+
+msgid ""
+"XY offset applied to mixed-filament painted regions before region assignment.\n"
+"\n"
+"Positive values contract the mixed zone inward. Negative values expand it outward.\n"
+"\n"
+"This applies to mixed filament usage in layer cadence, height cadence, same-layer pointillisme, and local Z dithering."
+msgstr ""
+"Décalage XY appliqué aux régions peintes avec du filament mélangé avant l'affectation des régions.\n"
+"\n"
+"Les valeurs positives contractent la zone mélangée vers l'intérieur. Les valeurs négatives l'étendent vers l'extérieur.\n"
+"\n"
+"S'applique à l'utilisation du filament mélangé en cadence de couches, cadence de hauteur, pointillisme sur la même couche et tramage Local Z."
+
+msgid "Collapse same-color mixed regions"
+msgstr "Fusionner les régions mélangées de même couleur"
+
+msgid ""
+"Merge ordinary mixed-filament painted regions into a single area when they resolve to the same physical filament on a layer.\n"
+"\n"
+"This improves continuity for adjacent same-color areas. Local Z dithering turns this off automatically when enabled, but you may turn it back on manually.\n"
+"\n"
+"Experimental with Local Z dithering."
+msgstr ""
+"Fusionne les régions ordinaires peintes avec du filament mélangé en une seule zone lorsqu'elles correspondent au même filament physique sur une couche.\n"
+"\n"
+"Cela améliore la continuité des zones adjacentes de même couleur. Le tramage Local Z désactive automatiquement cette option lorsqu'il est activé, mais vous pouvez la réactiver manuellement.\n"
+"\n"
+"Expérimental avec le tramage Local Z."
+
+msgid "Mixed filament custom definitions"
+msgstr "Définitions personnalisées de filament mélangé"
+
+msgid ""
+"Serialized custom mixed filament rows.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"Lignes personnalisées de filament mélangé sérialisées.\n"
+"\n"
+"Des explications détaillées des réglages de filament mélangé seront publiées lorsque le wiki du projet sera disponible."
+
+msgid "Pointillisme pixel size"
+msgstr "Taille de pixel du pointillisme"
+
+msgid ""
+"Length of one pointillisme segment along an extrusion path for same-layer pointillisme mode. Set to 0 to use automatic nozzle-based sizing.\n"
+"\n"
+"Warning: Same-layer pointillisme is extremely experimental and may produce unusable results."
+msgstr ""
+"Longueur d'un segment de pointillisme le long d'une trajectoire d'extrusion pour le mode de pointillisme sur la même couche. Réglez sur 0 pour utiliser la taille automatique basée sur la buse.\n"
+"\n"
+"Avertissement : le pointillisme sur la même couche est extrêmement expérimental et peut produire des résultats inutilisables."
+
+msgid "Pointillisme line gap"
+msgstr "Écart de ligne du pointillisme"
+
+msgid ""
+"Optional non-extruded spacing between adjacent pointillisme segments. Increase carefully to improve separation and print quality.\n"
+"\n"
+"Warning: Same-layer pointillisme is extremely experimental and may produce unusable results."
+msgstr ""
+"Espacement non extrudé optionnel entre des segments de pointillisme adjacents. Augmentez-le avec prudence pour améliorer la séparation et la qualité d'impression.\n"
+"\n"
+"Avertissement : le pointillisme sur la même couche est extrêmement expérimental et peut produire des résultats inutilisables."
+
+msgid "Dithering Z step size"
+msgstr "Taille du pas Z de tramage"
+
+msgid ""
+"Layer height used in Z zones painted with dithering (mixed virtual filaments). Set to 0 to keep normal layer height in those zones.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"Hauteur de couche utilisée dans les zones Z peintes avec du tramage (filaments virtuels mélangés). Réglez sur 0 pour conserver la hauteur de couche normale dans ces zones.\n"
+"\n"
+"Des explications détaillées des réglages de filament mélangé seront publiées lorsque le wiki du projet sera disponible."
+
+msgid "Local Z dithering mode"
+msgstr "Mode de tramage Local Z"
+
+msgid ""
+"Use Variable Layers for Color Blending\n"
+"\n"
+"Blend colors by varying layer heights instead of using a fixed ratio of equal-height layers. This only affects blended color zones; non-blended areas keep their nominal layer height and cadence when possible.\n"
+"\n"
+"This setting increases color blending smoothness by splitting each blended layer according to the blend ratio. For example, a 66/33 blend at 0.12 mm layer height will print as one 0.08 mm layer and one 0.04 mm layer. At 0.20 mm layer height, a 75/25 blend will print as one 0.15 mm layer and one 0.05 mm layer."
+msgstr ""
+"Utiliser des couches variables pour le mélange des couleurs\n"
+"\n"
+"Mélange les couleurs en variant les hauteurs de couche au lieu d'utiliser un ratio fixe de couches de même hauteur. Cela n'affecte que les zones de couleur mélangée ; les zones non mélangées conservent si possible leur hauteur de couche nominale et leur cadence.\n"
+"\n"
+"Ce réglage augmente la fluidité du mélange des couleurs en divisant chaque couche mélangée selon le ratio de mélange. Par exemple, un mélange 66/33 avec une hauteur de couche de 0,12 mm sera imprimé comme une couche de 0,08 mm et une couche de 0,04 mm. Avec une hauteur de couche de 0,20 mm, un mélange 75/25 sera imprimé comme une couche de 0,15 mm et une couche de 0,05 mm."
+
+msgid "Apply Local-Z to whole mixed objects"
+msgstr "Appliquer Local-Z aux objets mélangés entiers"
+
+msgid ""
+"Experimental. Extend Local-Z dithering beyond painted mixed zones so mixed wall regions can use Local-Z across the whole object.\n"
+"\n"
+"This also lets Local-Z continue through default mixed walls around painted areas instead of limiting the effect strictly to painted masks."
+msgstr ""
+"Expérimental. Étend le tramage Local-Z au-delà des zones mélangées peintes afin que les régions de paroi mélangées puissent utiliser Local-Z sur tout l'objet.\n"
+"\n"
+"Cela permet aussi à Local-Z de continuer à travers les parois mélangées par défaut autour des zones peintes, au lieu de limiter strictement l'effet aux masques peints."
+
+msgid "Use direct multicolor Local-Z solver"
+msgstr "Utiliser le solveur Local-Z multicolore direct"
+
+msgid ""
+"Experimental. For mixed rows with 3 or more physical filaments, allocate Local-Z sublayers directly across all components with carry-over error between layers instead of collapsing them into pair cadence.\n"
+"\n"
+"This can reduce visible banding in multicolor Local-Z blends at the cost of more toolchanges. It is ignored when explicit Local-Z A/B heights are set."
+msgstr ""
+"Expérimental. Pour les lignes mélangées avec 3 filaments physiques ou plus, alloue les sous-couches Local-Z directement entre tous les composants avec report d'erreur entre les couches, au lieu de les réduire à une cadence par paires.\n"
+"\n"
+"Cela peut réduire les bandes visibles dans les mélanges Local-Z multicolores au prix de davantage de changements d'outil. Ignoré lorsque des hauteurs Local-Z A/B explicites sont définies."
+
+msgid "Use step size in painted zones only"
+msgstr "Utiliser le pas uniquement dans les zones peintes"
+
+msgid ""
+"When enabled, dithering Z step size is applied only where mixed filament is painted. Unpainted zones keep their original layer height.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"Lorsque cette option est activée, le pas Z de tramage ne s'applique que là où le filament mélangé est peint. Les zones non peintes conservent leur hauteur de couche d'origine.\n"
+"\n"
+"Des explications détaillées des réglages de filament mélangé seront publiées lorsque le wiki du projet sera disponible."
+
+msgid "Local-Z mini wipe lines"
+msgstr "Mini-lignes de purge Local-Z"
+
+msgid "Mixed filaments are unreliable on a single-extruder printer."
+msgstr "Les filaments mélangés ne sont pas fiables sur une imprimante à extrudeur unique."
+
+msgid "Mixed Filament %d"
+msgstr "Filament mélangé %d"
+
+msgid "Add Color"
+msgstr "Ajouter une couleur"
+
+msgid "Hex"
+msgstr "Hex"
+
+msgid "Requested"
+msgstr "Demandé"
+
+msgid "Creates"
+msgstr "Crée"
+
+msgid "Exact preset mixes"
+msgstr "Mélanges de préréglages exacts"
+
+msgid "Matching closest supported mix..."
+msgstr "Recherche du mélange compatible le plus proche..."
+
+msgid "Calculating closest supported mix..."
+msgstr "Calcul du mélange compatible le plus proche..."
+
+msgid "%d%% min"
+msgstr "%d%% min."
+
+msgid "Use a valid hex color like #00FF88."
+msgstr "Utilisez une couleur hexadécimale valide comme #00FF88."
+
+msgid "No supported 2-color, 3-color, or 4-color recipe found."
+msgstr "Aucune recette compatible à 2, 3 ou 4 couleurs trouvée."
+
+msgid "Matching %s..."
+msgstr "Recherche de %s..."
+
+msgid "Requested %s, closest recipe delta: %.2f"
+msgstr "Demandé %s, delta de la recette la plus proche : %.2f"
+
+msgid "Unable to create a color mix from the current physical filament colors within the selected range."
+msgstr ""
+"Impossible de créer un mélange de couleur à partir des couleurs de filament physique actuelles dans la plage sélectionnée."
+
+msgid "Local-Z breakdown: manual pattern rows do not use pair decomposition."
+msgstr "Décomposition Local-Z : les lignes de motif manuel n'utilisent pas de décomposition par paires."
+
+msgid "Local-Z breakdown: same-layer mode does not use local-Z pair decomposition."
+msgstr "Décomposition Local-Z : le mode même couche n'utilise pas de décomposition Local-Z par paires."
+
+msgid "Local-Z direct multicolor solver: %s"
+msgstr "Solveur Local-Z multicolore direct : %s"
+
+msgid "Local-Z direct multicolor solver: F<n> <percent>%, ..."
+msgstr "Solveur Local-Z multicolore direct : F<n> <percent> %, ..."
+
+msgid ""
+"Carry-over error is distributed directly across all %d components instead of collapsing them into pair cadence."
+msgstr ""
+"L'erreur reportée est distribuée directement sur les %d composants au lieu d'être réduite à une cadence par paires."
+
+msgid ""
+"Carry-over error is distributed directly across all <count> components instead of collapsing them into pair cadence."
+msgstr ""
+"L'erreur reportée est distribuée directement sur les <count> composants au lieu d'être réduite à une cadence par paires."
+
+msgid "Effective Local-Z cap: up to %d sublayers per nominal layer."
+msgstr "Limite Local-Z effective : jusqu'à %d sous-couches par couche nominale."
+
+msgid "Effective Local-Z cap: up to <count> sublayers per nominal layer."
+msgstr "Limite Local-Z effective : jusqu'à <count> sous-couches par couche nominale."
+
+msgid "Local-Z layer cadence: %s."
+msgstr "Cadence de couches Local-Z : %s."
+
+msgid "Local-Z layer cadence: <pair cadence summary>."
+msgstr "Cadence de couches Local-Z : <pair cadence summary>."
+
+msgid "Pair splits: %s."
+msgstr "Répartitions par paires : %s."
+
+msgid "Pair splits: <pair split summary>."
+msgstr "Répartitions par paires : <pair split summary>."
+
+msgid "Saved row limit will apply when Local-Z dithering mode is enabled in print settings."
+msgstr ""
+"La limite de ligne enregistrée s'appliquera lorsque le mode de tramage Local-Z est activé dans les réglages d'impression."
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers."
+msgstr "Pile Local-Z effective : %d sous-couches sur %d couches de paires."
+
+msgid "Effective Local-Z stack: <count> sublayers over <count> pair layers."
+msgstr "Pile Local-Z effective : <count> sous-couches sur <count> couches de paires."
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers (uncapped %d)."
+msgstr "Pile Local-Z effective : %d sous-couches sur %d couches de paires (sans limite %d)."
+
+msgid "Effective Local-Z stack: <count> sublayers over <count> pair layers (uncapped <count>)."
+msgstr "Pile Local-Z effective : <count> sous-couches sur <count> couches de paires (sans limite <count>)."
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d."
+msgstr "Répartition par paire Local-Z : demandé F%u/F%u %d/%d."
+
+msgid "Local-Z pair split: requested F<a>/F<b> <percent>/<percent>."
+msgstr "Répartition par paire Local-Z : demandé F<a>/F<b> <percent>/<percent>."
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d, effective %d/%d over %d sublayers."
+msgstr "Répartition par paire Local-Z : demandé F%u/F%u %d/%d, effectif %d/%d sur %d sous-couches."
+
+msgid ""
+"Local-Z pair split: requested F<a>/F<b> <percent>/<percent>, effective <percent>/<percent> over <count> sublayers."
+msgstr ""
+"Répartition par paire Local-Z : demandé F<a>/F<b> <percent>/<percent>, effectif <percent>/<percent> sur <count> sous-couches."
+
+msgid "Local-Z breakdown: unavailable."
+msgstr "Décomposition Local-Z : indisponible."
+
+msgid "Click to choose a physical filament color"
+msgstr "Cliquez pour choisir une couleur de filament physique"
+
+msgid "Append filament %d to pattern"
+msgstr "Ajouter le filament %d au motif"
+
+msgid "Bias"
+msgstr "Biais"
+
+msgid "Limit Local-Z"
+msgstr "Limiter Local-Z"
+
+msgid "Max sublayers"
+msgstr "Sous-couches max."
+
+msgid ""
+"No other consumables of the same type are available for mixing. Please add consumables of the same type."
+msgstr ""
+"Aucun autre consommable du même type n'est disponible pour le mélange. Veuillez ajouter des consommables du même type."
+
+msgid "Consumable types are inconsistent. Please add consumables of the same type."
+msgstr "Les types de consommables ne correspondent pas. Veuillez ajouter des consommables du même type."
+
+msgid "%d-color layer cycle"
+msgstr "Cycle de couches à %d couleurs"
+
+msgid "%d%%/%d%%"
+msgstr "%d%%/%d%%"
+
+msgid "Simple %d%%/%d%%"
+msgstr "Simple %d%%/%d%%"
+
+msgid "None (Selected)"
+msgstr "Aucun (sélectionné)"
+
+msgid "F%d (Selected)"
+msgstr "F%d (sélectionné)"
+
+msgid "F<n> (Selected)"
+msgstr "F<n> (sélectionné)"
+
+msgid "Click to edit"
+msgstr "Cliquez pour modifier"
+
+msgid "Gradient Mix Weights"
+msgstr "Poids du mélange en dégradé"
+
+msgid "Mixed Filaments"
+msgstr "Filaments mélangés"
+
+msgid "Add Pattern"
+msgstr "Ajouter un motif"
+
+msgid "Remove last mixed filament"
+msgstr "Supprimer le dernier filament mélangé"
+
+msgid "Add mixed filament"
+msgstr "Ajouter un filament mélangé"
+
+msgid "Confirm merge"
+msgstr "Confirmer la fusion"
+
+msgid "No mixed filaments yet. Use Add to create one."
+msgstr "Aucun filament mélangé pour l'instant. Utilisez Ajouter pour en créer un."
+
+msgid "(Pattern)"
+msgstr "(Motif)"
+
+msgid "Drag to reorder mixed filaments in this panel."
+msgstr "Faites glisser pour réordonner les filaments mélangés dans ce panneau."
+
+msgid "Edit mixed filament"
+msgstr "Modifier le filament mélangé"
+
+msgid ""
+"Number of purge lines reserved for each runtime Local-Z wipe tower toolchange. Higher values improve cleanup but increase tower depth. Only used when Local-Z dithering and the prime tower are enabled."
+msgstr ""
+"Nombre de lignes de purge réservées à chaque changement d'outil de tour de purge Local-Z pendant l'exécution. Des valeurs plus élevées améliorent le nettoyage mais augmentent la profondeur de la tour. Utilisé uniquement lorsque le tramage Local-Z et la tour de purge sont activés."
+
+msgid "Using variable layer height together with Local-Z dithering may result in poor color mixing quality."
+msgstr ""
+"L'utilisation de la hauteur de couche variable avec le tramage Local-Z peut entraîner une mauvaise qualité de mélange des couleurs."
+
+msgid ""
+"Pick from the current filament gamut. The dialog previews the closest 2-color, 3-color, or 4-color FilamentMixer recipe before it is added."
+msgstr ""
+"Choisissez dans la gamme actuelle de filaments. La boîte de dialogue prévisualise la recette FilamentMixer à 2, 3 ou 4 couleurs la plus proche avant son ajout."
+
+msgid "Enter a hex color like #00FF88. The picker will snap to the closest supported FilamentMixer color."
+msgstr ""
+"Saisissez une couleur hexadécimale comme #00FF88. Le sélecteur s'alignera sur la couleur FilamentMixer compatible la plus proche."
+
+msgid "Classic color picker. The result will snap to the closest supported FilamentMixer color."
+msgstr ""
+"Sélecteur de couleur classique. Le résultat s'alignera sur la couleur FilamentMixer compatible la plus proche."
+
+msgid "Minimum percent for each participating color. Higher values block highly skewed mixes."
+msgstr ""
+"Pourcentage minimum pour chaque couleur participante. Des valeurs plus élevées bloquent les mélanges très déséquilibrés."
+
+msgid "Consumable types in the current mixing scheme are inconsistent. Please select another mixing scheme."
+msgstr ""
+"Les types de consommables dans le schéma de mélange actuel ne correspondent pas. Veuillez sélectionner un autre schéma de mélange."
+
+msgid ""
+"Manual repeating pattern. Use physical filament IDs 1..9. Use commas to define deeper perimeter patterns, for example 12,21. Example: 1/1/1/1/2/2/2/2, 12,21, or 1/2/3/4."
+msgstr ""
+"Motif répétitif manuel. Utilisez les ID de filament physique 1..9. Utilisez des virgules pour définir des motifs de périmètre plus profonds, par exemple 12,21. Exemple : 1/1/1/1/2/2/2/2, 12,21 ou 1/2/3/4."
+
+msgid ""
+"Positive bias recesses the second filament in the pair; negative bias recesses the first filament.\n"
+"\n"
+"The color chip shows which filament the current value affects.\n"
+"\n"
+"Grouped wall patterns and Local-Z dithering ignore it."
+msgstr ""
+"Un biais positif met en retrait le second filament de la paire ; un biais négatif met en retrait le premier filament.\n"
+"\n"
+"La pastille de couleur indique quel filament est affecté par la valeur actuelle.\n"
+"\n"
+"Les motifs de paroi groupés et le tramage Local-Z l'ignorent."
+
+msgid ""
+"Store a per-color Local-Z cadence cap. It applies when Local-Z dithering mode is enabled in print settings."
+msgstr ""
+"Enregistre une limite de cadence Local-Z par couleur. Elle s'applique lorsque le mode de tramage Local-Z est activé dans les réglages d'impression."
+
+msgid "Maximum number of Local-Z sublayers this color may use before its cadence repeats."
+msgstr ""
+"Nombre maximal de sous-couches Local-Z que cette couleur peut utiliser avant que sa cadence ne se répète."
+
+msgid "Pick a point in the gradient map to control multi-filament mix."
+msgstr "Choisissez un point sur la carte de dégradé pour contrôler le mélange multi-filament."
+
+msgid "Unable to create a color match from the current physical filament colors."
+msgstr ""
+"Impossible de créer une correspondance de couleur à partir des couleurs actuelles de filament physique."
+
+msgid "Merging will remove this physical filament and may invalidate the mixed filament. Continue?"
+msgstr "La fusion supprimera ce filament physique et peut rendre le filament mélangé invalide. Continuer ?"
+
+msgid "(Filament %u + Filament %u)"
+msgstr "(Filament %u + filament %u)"
+
+msgid "(Filament <a> + Filament <b>)"
+msgstr "(Filament <a> + filament <b>)"
+
+msgid "(F%u + F%u)"
+msgstr "(F%u + F%u)"
+
+msgid "(F<a> + F<b>)"
+msgstr "(F<a> + F<b>)"
+
+msgid "Expert settings"
+msgstr "Paramètres expert"
+
+msgid "Simple settings"
+msgstr "Paramètres simples"
+
+msgid "Cycle settings visibility"
+msgstr "Basculer la visibilité des paramètres"
 
 msgid "C5 or C5P Not Connected"
 msgstr "Aucun C5 ou C5P connecté"
@@ -24734,3 +25270,14 @@ msgstr "Finalisation du maillage réparé"
 
 msgid "Remapping repaired mesh colors"
 msgstr "Réassociation des couleurs du maillage réparé"
+
+#, c-format
+msgid "%lld minutes"
+msgstr "%lld minutes"
+
+#, c-format
+msgid "%lld hours %lld minutes"
+msgstr "%lld heures %lld minutes"
+
+msgid "The multicolor filament limit has been reached. Reopen the project and try again."
+msgstr "La limite de filaments multicolores est atteinte. Rouvrez le projet et réessayez."

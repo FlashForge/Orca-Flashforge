@@ -27,15 +27,20 @@ else ()
     # DESTDIR already points at the final prefix (normally .../usr/local).
     # Keep these as a CMake list so every configure option is actually passed;
     # the previous concatenated _extra_cmd string was never used.
+    set(_ffmpeg_extra_libs "-lpthread -lm")
+    if (NOT APPLE)
+        string(APPEND _ffmpeg_extra_libs " -ldl")
+    endif()
     set(_extra_cmd
         "--pkg-config-flags=--static"
         "--extra-cflags=-I${DESTDIR}/include"
         "--extra-ldflags=-L${DESTDIR}/lib"
-        "--extra-libs=-lpthread -lm"
+        "--extra-libs=${_ffmpeg_extra_libs}"
         "--bindir=${DESTDIR}/bin"
-        --enable-gpl
-        --enable-nonfree
+        --disable-autodetect
     )
+    set(_ffmpeg_depends_args)
+    set(_pkg_config_cmd)
 
     if (APPLE)
         # Keep the macOS application bundle self-contained without a separate
@@ -51,7 +56,7 @@ else ()
             --disable-iconv
         )
         set(_linkage_cmd --disable-shared --enable-static)
-        set(_minos_cmd 
+        set(_minos_cmd
             "CFLAGS=-mmacosx-version-min=${DEP_OSX_TARGET}"
             "LDFLAGS=-mmacosx-version-min=${DEP_OSX_TARGET}"
             )
@@ -67,7 +72,19 @@ else ()
             endif()
         endif()
     else()
-        set(_linkage_cmd --enable-shared)
+        # Linux packages do not collect FFmpeg shared objects. Build position-
+        # independent archives so the application remains self-contained.
+        list(APPEND _extra_cmd
+            --enable-openssl
+            --enable-pthreads
+        )
+        set(_pkg_config_cmd
+            "PKG_CONFIG_PATH=${DESTDIR}/lib/pkgconfig:${DESTDIR}/share/pkgconfig:$ENV{PKG_CONFIG_PATH}")
+        if (OPENSSL_PKG)
+            set(_ffmpeg_depends_args DEPENDS ${OPENSSL_PKG})
+        endif()
+        set(_linkage_cmd --disable-shared --enable-static)
+        set(_pic_cmd --enable-pic)
     endif()
 
     set(_build_j -j)
@@ -79,7 +96,7 @@ else ()
         URL https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n8.0.1.tar.gz
         # URL_HASH SHA256=5EB46D18D664A0CCADF7B0ADEE03BD3B7FA72893D667F36C69E202A807E6D533
         DOWNLOAD_DIR ${DEP_DOWNLOAD_DIR}/FFMPEG
-        CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env ${_minos_cmd} ${_conf_cmd}
+        CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env ${_minos_cmd} ${_pkg_config_cmd} ${_conf_cmd}
             ${_extra_cmd}
             ${_cross_cmd}
             ${_pic_cmd}
@@ -90,11 +107,12 @@ else ()
             --disable-doc
             --enable-small
             --disable-outdevs
-            --disable-filters
-            --enable-filter=*null*,afade,*fifo,*format,*resample,aeval,allrgb,allyuv,atempo,pan,*bars,color,*key,crop,draw*,eq*,framerate,*_qsv,*_vaapi,*v4l2*,hw*,scale,volume,test*
+            # The RTMP control does not use libavfilter. Keeping it disabled
+            # avoids pulling optional/GPL filter dependencies into releases.
+            --disable-avfilter
             --disable-protocols
             # tcp → 基础网络; rtmp → RTMP 推拉流; http/https → HLS/HLS 播放; 补充 tls, httpproxy
-            --enable-protocol=file,fd,pipe,rtp,udp,tcp,rtmp,http,https,tls,httpproxy
+            --enable-protocol=file,fd,pipe,rtp,udp,tcp,rtmp,http,https,tls,httpproxy,crypto,data
             --disable-muxers
             # flv → RTMP 推流; hls → HLS 输出
             --enable-muxer=rtp,flv
@@ -109,6 +127,7 @@ else ()
             --enable-demuxer=h264,hevc,mp3,mov,flv,hls,mpegts,mpjpeg,rtp,rtsp,sdp
             --disable-zlib
             --disable-avdevice
+        ${_ffmpeg_depends_args}
         BUILD_IN_SOURCE ON
         BUILD_COMMAND make ${_build_j}
         INSTALL_COMMAND make install

@@ -41,7 +41,7 @@
         "70"
     ],
     "filament_flow_ratio": [
-        "0.98"
+        "1"
     ],
     "filament_max_volumetric_speed": [
         "3.2"
@@ -73,7 +73,7 @@
         "240"
     ],
     "pressure_advance": [
-        "0.0225"
+        "0.035"
     ],
     "slow_down_layer_time": [
         "8"
@@ -93,5 +93,8 @@
     "textured_plate_temp_initial_layer": [
         "60"
     ],
-    "version": "2.3.0.3"
+    "version": "2.3.0.3",
+    "filament_extruder_variant": [
+        "Direct Drive Standard"
+    ]
 }

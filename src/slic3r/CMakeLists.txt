@@ -242,6 +242,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/Gizmos/GLGizmosManager.hpp
     GUI/Gizmos/GLGizmoSVG.cpp
     GUI/Gizmos/GLGizmoSVG.hpp
+    GUI/Gizmos/GLGizmoUtils.cpp
+    GUI/Gizmos/GLGizmoUtils.hpp
     #GUI/Gizmos/GLGizmoText.cpp
     #GUI/Gizmos/GLGizmoText.hpp
     GUI/GLCanvas3D.cpp
@@ -255,8 +257,14 @@ set(SLIC3R_GUI_SOURCES
     GUI/MulticolorModelDialog.hpp
     GUI/Gizmos/GizmoObjectManipulation.cpp
     GUI/Gizmos/GizmoObjectManipulation.hpp
+    GUI/ConvertModel/BambuFullColorPipeline.cpp
+    GUI/ConvertModel/BambuFullColorPipeline.hpp
+    GUI/ConvertModel/ClassicFullColorPipeline.cpp
+    GUI/ConvertModel/ClassicFullColorPipeline.hpp
     GUI/ConvertModel/CMLoadGlb.cpp
     GUI/ConvertModel/CMLoadGlb.hpp
+    GUI/ConvertModel/CMLoadFbx.cpp
+    GUI/ConvertModel/CMLoadFbx.hpp
     GUI/ConvertModel/CMLoadObj.cpp
     GUI/ConvertModel/CMLoadObj.hpp
     GUI/ConvertModel/CMSaveObj.cpp
@@ -268,6 +276,13 @@ set(SLIC3R_GUI_SOURCES
     GUI/ConvertModel/ConvertModelProc.hpp
     GUI/ConvertModel/ConvertModelUtils.cpp
     GUI/ConvertModel/ConvertModelUtils.hpp
+    GUI/ConvertModel/FullColorModelSource.cpp
+    GUI/ConvertModel/FullColorModelSource.hpp
+    GUI/ConvertModel/FullColorOriginalPreview.cpp
+    GUI/ConvertModel/FullColorOriginalPreview.hpp
+    GUI/ConvertModel/FullColorQuantization.hpp
+    GUI/ConvertModel/FullColorQuantizationCache.cpp
+    GUI/ConvertModel/FullColorQuantizationCache.hpp
     GUI/ConvertModel/KMeansCluster.cpp
     GUI/ConvertModel/KMeansCluster.hpp
     GUI/ConvertModel/MakeOutData.cpp
@@ -503,6 +518,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/KBShortcutsDialog.hpp
     GUI/LibVGCode/LibVGCodeWrapper.hpp
     GUI/LibVGCode/LibVGCodeWrapper.cpp
+    GUI/LinuxDisplayBackend.cpp
+    GUI/LinuxDisplayBackend.hpp
     GUI/MainFrame.cpp
     GUI/MainFrame.hpp
     GUI/MarkdownTip.cpp
@@ -527,6 +544,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/Mouse3DController.hpp
     GUI/MsgDialog.cpp
     GUI/MsgDialog.hpp
+    GUI/MultiChoiceDialog.hpp
+    GUI/MultiChoiceDialog.cpp
     GUI/MultiMachine.cpp
     GUI/MultiMachine.hpp
     GUI/MultiMachineManagerPage.cpp
@@ -569,12 +588,28 @@ set(SLIC3R_GUI_SOURCES
     GUI/FilamentGroupPopup.cpp
     GUI/PhysicalPrinterDialog.cpp
     GUI/PhysicalPrinterDialog.hpp
+    GUI/MixedGradientSelector.hpp
+    GUI/MixedGradientSelector.cpp
+    GUI/MixedGradientWeightsDialog.hpp
+    GUI/MixedGradientWeightsDialog.cpp
+    GUI/MixedFilamentColorMapPanel.hpp
+    GUI/MixedFilamentColorMapPanel.cpp
+    GUI/MixedFilamentColorMatchDialog.hpp
+    GUI/MixedFilamentColorMatchDialog.cpp
+    GUI/MixedMixPreview.hpp
+    GUI/MixedMixPreview.cpp
+    GUI/MixedFilamentConfigPanel.hpp
+    GUI/MixedFilamentConfigPanel.cpp
     GUI/Plater.cpp
     GUI/Plater.hpp
     GUI/PlateSettingsDialog.cpp
     GUI/PlateSettingsDialog.hpp
     GUI/Preferences.cpp
     GUI/Preferences.hpp
+    GUI/PresetBundleDialog.cpp
+    GUI/PresetBundleDialog.hpp
+    GUI/ExportPresetBundleDialog.cpp
+    GUI/ExportPresetBundleDialog.hpp
     GUI/PresetComboBoxes.cpp
     GUI/PresetComboBoxes.hpp
     GUI/PresetHints.cpp
@@ -584,6 +619,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/Printer/PrinterFileSystem.cpp
     GUI/Printer/PrinterFileSystem.h
     GUI/PrinterWebView.cpp
+    GUI/PrinterWebViewHandler.cpp
+    GUI/PrinterWebViewHandler.hpp
     GUI/PrinterWebView.hpp
     GUI/PrintHostDialogs.cpp
     GUI/PrintHostDialogs.hpp
@@ -688,6 +725,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/Widgets/Button.hpp
     GUI/Widgets/CheckBox.cpp
     GUI/Widgets/CheckBox.hpp
+    GUI/Widgets/CheckList.cpp
+    GUI/Widgets/CheckList.hpp
     GUI/Widgets/ComboBox.cpp
     GUI/Widgets/ComboBox.hpp
     GUI/Widgets/DialogButtons.cpp
@@ -780,8 +819,8 @@ set(SLIC3R_GUI_SOURCES
     Utils/ESP3D.hpp
     Utils/FileHelp.cpp
     Utils/FileHelp.hpp
-    Utils/FixModelByWin10.cpp
-    Utils/FixModelByWin10.hpp
+    Utils/FixModelByCgal.cpp
+    Utils/FixModelByCgal.hpp
     Utils/FlashAir.cpp
     Utils/FlashAir.hpp
     Utils/Flashforge.cpp
@@ -878,6 +917,8 @@ if (APPLE)
             GUI/Mouse3DHandlerMac.mm
             GUI/InstanceCheckMac.mm
             GUI/InstanceCheckMac.h
+            GUI/DeepLinkHandlerMac.mm
+            GUI/DeepLinkHandlerMac.h
             GUI/GUI_UtilsMac.mm
             GUI/wxMediaCtrl2.mm
             GUI/wxMediaCtrl2.h
@@ -941,7 +982,13 @@ else()
     set(_opengl_link_lib OpenGL::GL)
 endif()
 
-target_link_libraries(libslic3r_gui libslic3r cereal::cereal imgui imguizmo minilzo libvgcode md4c-html GLEW::GLEW OpenGL::GL hidapi ${wxWidgets_LIBRARIES} glfw libcurl OpenSSL::SSL OpenSSL::Crypto noise::noise)
+target_link_libraries(libslic3r_gui libslic3r cereal::cereal imgui imguizmo minilzo libvgcode md4c-html glad ${_opengl_link_lib} hidapi ${wxWidgets_LIBRARIES} glfw libcurl OpenSSL::SSL OpenSSL::Crypto noise::noise)
+
+# CMAKE_PREFIX_PATH helps CMake locate packages but is not itself a compiler
+# include path. FFRTMPVideoCtrl includes the FFmpeg headers directly.
+find_path(FFMPEG_INCLUDE_DIR NAMES libavformat/avformat.h
+    PATHS ${CMAKE_PREFIX_PATH} PATH_SUFFIXES include NO_DEFAULT_PATH REQUIRED)
+target_include_directories(libslic3r_gui SYSTEM PRIVATE "${FFMPEG_INCLUDE_DIR}")
 
 
 if (MSVC)
@@ -964,13 +1011,14 @@ elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     FIND_LIBRARY(WAYLAND_CLIENT_LIBRARIES NAMES wayland-client)
     find_package(CURL REQUIRED)
 
-    # FFmpeg for RTMP video control
-    find_library(AVCODEC_LIB avcodec PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
-    find_library(AVFORMAT_LIB avformat PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
-    find_library(AVUTIL_LIB avutil PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
-    find_library(SWSCALE_LIB swscale PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
-    find_library(SWRESAMPLE_LIB swresample PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
-    find_library(AVFILTER_LIB avfilter PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
+    # FFmpeg for RTMP video control. Require static archives explicitly: the
+    # Linux package does not collect FFmpeg shared objects.
+    find_file(AVCODEC_LINUX_STATIC_LIB NAMES libavcodec.a PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
+    find_file(AVFORMAT_LINUX_STATIC_LIB NAMES libavformat.a PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
+    find_file(AVUTIL_LINUX_STATIC_LIB NAMES libavutil.a PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
+    find_file(SWSCALE_LINUX_STATIC_LIB NAMES libswscale.a PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
+    find_file(SWRESAMPLE_LINUX_STATIC_LIB NAMES libswresample.a PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
+    find_library(FFMPEG_ATOMIC_LIB atomic)
     target_compile_definitions(libslic3r_gui PRIVATE FFRTMP_USE_FFMPEG)
 
     target_link_libraries(libslic3r_gui
@@ -980,8 +1028,18 @@ elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
         ${WAYLAND_EGL_LIBRARIES}
         ${WAYLAND_CLIENT_LIBRARIES}
         ${CURL_LIBRARIES}
-        ${AVCODEC_LIB} ${AVFORMAT_LIB} ${AVUTIL_LIB} ${SWSCALE_LIB} ${SWRESAMPLE_LIB} ${AVFILTER_LIB}
+        "-Wl,--start-group"
+        ${AVFORMAT_LINUX_STATIC_LIB}
+        ${AVCODEC_LINUX_STATIC_LIB}
+        ${SWSCALE_LINUX_STATIC_LIB}
+        ${SWRESAMPLE_LINUX_STATIC_LIB}
+        ${AVUTIL_LINUX_STATIC_LIB}
+        "-Wl,--end-group"
+        OpenSSL::SSL OpenSSL::Crypto Threads::Threads ${CMAKE_DL_LIBS} m
     )
+    if (FFMPEG_ATOMIC_LIB)
+        target_link_libraries(libslic3r_gui ${FFMPEG_ATOMIC_LIB})
+    endif()
 elseif (APPLE)
     # FFmpeg for RTMP video control. Require the archives explicitly: an old
     # dependency prefix may still contain dylibs from a previous shared build,
@@ -992,14 +1050,12 @@ elseif (APPLE)
     find_file(AVUTIL_STATIC_LIB NAMES libavutil.a PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
     find_file(SWSCALE_STATIC_LIB NAMES libswscale.a PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
     find_file(SWRESAMPLE_STATIC_LIB NAMES libswresample.a PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
-    find_file(AVFILTER_STATIC_LIB NAMES libavfilter.a PATHS "${CMAKE_PREFIX_PATH}/lib" NO_DEFAULT_PATH REQUIRED)
     target_compile_definitions(libslic3r_gui PRIVATE FFRTMP_USE_FFMPEG)
 
     # FFmpeg is built as static archives on macOS so the application bundle
     # remains self-contained. Keep dependent archives before the libraries
     # they consume; static linking is order-sensitive.
     set(FFMPEG_MACOS_LIBS
-        ${AVFILTER_STATIC_LIB}
         ${AVFORMAT_STATIC_LIB}
         ${AVCODEC_STATIC_LIB}
         ${SWSCALE_STATIC_LIB}
@@ -1042,16 +1098,28 @@ if (UNIX AND NOT APPLE)
     find_package(PkgConfig REQUIRED)
     find_package(GTK${SLIC3R_GTK} REQUIRED)
     pkg_check_modules(LIBSECRET REQUIRED libsecret-1)
+    pkg_check_modules(webkit2gtk REQUIRED webkit2gtk-4.1)
     if (FLATPAK)
         # I don't know why this is needed, but for whatever reason slic3r isn't
-        # linking to X11 and webkit2gtk. force it.
-        find_package(X11 REQUIRED)
-        pkg_check_modules(webkit2gtk REQUIRED webkit2gtk-4.1)
-        target_link_libraries (libslic3r_gui ${X11_LIBRARIES} ${webkit2gtk_LIBRARIES})
+        # linking to webkit2gtk. Force it.
+        target_link_libraries(libslic3r_gui ${webkit2gtk_LIBRARIES})
     endif()
-    target_include_directories(libslic3r_gui SYSTEM PRIVATE ${GTK${SLIC3R_GTK}_INCLUDE_DIRS} ${LIBSECRET_INCLUDE_DIRS})
+    target_include_directories(libslic3r_gui SYSTEM PRIVATE ${GTK${SLIC3R_GTK}_INCLUDE_DIRS} ${LIBSECRET_INCLUDE_DIRS} ${webkit2gtk_INCLUDE_DIRS})
     target_link_libraries(libslic3r_gui ${GTK${SLIC3R_GTK}_LIBRARIES} fontconfig ${LIBSECRET_LIBRARIES})
 
+    # Propagate GDK backend detection results as compile definitions so that
+    # LinuxDisplayBackend.cpp can include the right GDK headers.
+    if (wxHAVE_GDK_X11)
+        # LinuxXErrorHandler calls Xlib directly, so do not rely on GTK or GL
+        # to expose libX11 transitively.
+        find_package(X11 REQUIRED)
+        target_include_directories(libslic3r_gui SYSTEM PRIVATE ${X11_INCLUDE_DIR})
+        target_link_libraries(libslic3r_gui ${X11_LIBRARIES})
+        target_compile_definitions(libslic3r_gui PRIVATE wxHAVE_GDK_X11)
+    endif ()
+    if (wxHAVE_GDK_WAYLAND)
+        target_compile_definitions(libslic3r_gui PRIVATE wxHAVE_GDK_WAYLAND)
+    endif ()
 
     # We add GStreamer for bambu:/// support.
     pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0)

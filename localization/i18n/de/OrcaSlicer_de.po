@@ -172,8 +172,8 @@ msgstr "Werkzeugtyp"
 msgid "Smart fill angle"
 msgstr "Intelligenter Füllwinkel"
 
-msgid "On overhangs only"
-msgstr "Nur an Überhängen"
+msgid "On highlighted overhangs only"
+msgstr "Nur an hervorgehobenen Überhängen"
 
 msgid "Auto support threshold angle: "
 msgstr "Winkel für automatische Supports: "
@@ -1622,7 +1622,7 @@ msgstr ""
 "erkannt."
 
 msgid "STEP files"
-msgstr "SETP Dateien"
+msgstr "STEP Dateien"
 
 msgid "STL files"
 msgstr "STL Dateien"
@@ -5214,6 +5214,9 @@ msgstr "Kosten"
 msgid "Filament change times"
 msgstr "Filamentwechselzeiten"
 
+msgid "Tool changes"
+msgstr "Werkzeugwechsel"
+
 msgid "Color change"
 msgstr "Farbwechsel"
 
@@ -6660,6 +6663,15 @@ msgstr "Originalmodell"
 msgid "Number of Colors"
 msgstr "Anzahl der Farben"
 
+msgid "Color Style"
+msgstr "Farbstil"
+
+msgid "Soft"
+msgstr "Sanft"
+
+msgid "Vivid"
+msgstr "Leuchtend"
+
 msgid "Parameters have changed, please click Apply to take effect"
 msgstr "Parameter wurden geändert, klicken Sie auf Anwenden, damit sie wirksam werden"
 
@@ -7258,6 +7270,12 @@ msgstr "Export erfolgreich."
 msgid "Model file downloaded."
 msgstr "Modelldatei heruntergeladen."
 
+msgid "Shared profiles may be available for this printer."
+msgstr "Für diesen Drucker sind möglicherweise freigegebene Profile verfügbar."
+
+msgid "Browse shared profiles"
+msgstr "Freigegebene Profile durchsuchen"
+
 msgid "Serious warning:"
 msgstr "Wichtige Warnung:"
 
@@ -7817,7 +7835,9 @@ msgstr "Es kann jeweils nur eine Vollfarbdatei hinzugefügt werden"
 msgid ""
 "Only one OBJ or GLB file can be imported at a time. Please select the file "
 "you want to use this time."
-msgstr "Es kann jeweils nur eine OBJ- oder GLB-Datei importiert werden. Bitte wählen Sie die Datei aus, die Sie diesmal verwenden möchten."
+msgstr ""
+"Es kann jeweils nur eine OBJ- oder GLB-Datei importiert werden. Bitte wählen "
+"Sie die Datei aus, die Sie diesmal verwenden möchten."
 
 msgid "Please import model files with the same file extension each time"
 msgstr ""
@@ -15195,6 +15215,18 @@ msgstr "Bewegung"
 
 msgid "Travel speed of the first layer."
 msgstr "Bewegungsgeschwindigkeit der ersten Schicht"
+
+msgid "First layer travel acceleration"
+msgstr "Eilgang Beschleunigung"
+
+msgid "Travel acceleration of first layer."
+msgstr "Eilgang Beschleunigung der ersten Schicht."
+
+msgid "First layer travel jerk"
+msgstr "Eilgang Ruck"
+
+msgid "Travel jerk of first layer."
+msgstr "Eilgang Ruck der ersten Schicht."
 
 msgid "Number of slow layers"
 msgstr "Anzahl der langsamen Schichten"
@@ -22595,6 +22627,9 @@ msgstr "Video pausiert"
 
 msgid "Printer disconnected"
 msgstr "Drucker getrennt"
+
+msgid "No camera detected"
+msgstr "Keine Kamera erkannt"
 
 #~ msgid "每次只可添加一个全彩文件"
 #~ msgstr "Es kann jeweils nur eine Vollfarbdatei hinzugefügt werden"

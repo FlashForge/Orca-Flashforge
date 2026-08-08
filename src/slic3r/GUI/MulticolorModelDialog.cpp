@@ -1,4 +1,4 @@
-#include <GL/glew.h>
+#include <glad/gl.h>
 
 #include "MulticolorModelDialog.hpp"
 
@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <exception>
 #include <functional>
+#include <iterator>
 #include <limits>
 #include <memory>
 #include <mutex>
@@ -31,13 +32,15 @@
 #include "slic3r/GUI/Widgets/ComboBox.hpp"
 #include "slic3r/GUI/Widgets/ProgressDialog.hpp"
 #include "slic3r/GUI/Widgets/SpinInput.hpp"
+#include "slic3r/GUI/ConvertModel/BambuFullColorPipeline.hpp"
+#include "slic3r/GUI/ConvertModel/ClassicFullColorPipeline.hpp"
 
 namespace Slic3r { namespace GUI {
 namespace {
 
 constexpr const char *DefaultFilamentPresetName = "Flashforge PLA Basic";
 constexpr float AutoMatchDeltaEThreshold = 5.0f;
-// Keep imported full-color OBJ/GLB filament ids inside the 16 states supported by mmu segmentation.
+// Keep imported full-color model filament ids inside the 16 states supported by mmu segmentation.
 constexpr int ImportExistingMatchLimit = 12;
 constexpr int ImportFilamentLimit = 16;
 constexpr intptr_t ExistingFilamentChoiceBase = 1;
@@ -374,12 +377,25 @@ MulticolorModelPreviewCanvas::MulticolorModelPreviewCanvas(wxWindow *parent)
 
 MulticolorModelPreviewCanvas::~MulticolorModelPreviewCanvas()
 {
+    if (m_context != nullptr) {
+        SetCurrent(*m_context);
+        release_texture_objects();
+    }
     delete m_context;
 }
 
 void MulticolorModelPreviewCanvas::set_model(const out_model_data_t &model)
 {
     m_model = model;
+    m_show_textured_model = false;
+    update_bounds();
+    Refresh();
+}
+
+void MulticolorModelPreviewCanvas::set_textured_model(std::shared_ptr<const FullColorOriginalPreview> model)
+{
+    m_textured_model = std::move(model);
+    m_show_textured_model = m_textured_model != nullptr && m_textured_model->valid();
     update_bounds();
     Refresh();
 }
@@ -451,7 +467,11 @@ void MulticolorModelPreviewCanvas::on_capture_lost(wxMouseCaptureLostEvent &even
 
 void MulticolorModelPreviewCanvas::update_bounds()
 {
-    if (m_model.vertices.empty()) {
+    const std::vector<std::array<float, 3>> *vertices = &m_model.vertices;
+    if (m_show_textured_model && m_textured_model != nullptr)
+        vertices = &m_textured_model->vertices;
+
+    if (vertices->empty()) {
         m_center = {0.0f, 0.0f, 0.0f};
         m_extent = 1.0f;
         return;
@@ -467,16 +487,172 @@ void MulticolorModelPreviewCanvas::update_bounds()
         std::numeric_limits<float>::lowest(),
         std::numeric_limits<float>::lowest()
     };
-    for (const auto &v : m_model.vertices) {
-        for (int i = 0; i < 3; ++i) {
-            min_pt[i] = std::min(min_pt[i], v[i]);
-            max_pt[i] = std::max(max_pt[i], v[i]);
+    for (const auto &vertex : *vertices) {
+        for (int axis = 0; axis < 3; ++axis) {
+            min_pt[axis] = std::min(min_pt[axis], vertex[axis]);
+            max_pt[axis] = std::max(max_pt[axis], vertex[axis]);
         }
     }
 
-    for (int i = 0; i < 3; ++i)
-        m_center[i] = 0.5f * (min_pt[i] + max_pt[i]);
+    for (int axis = 0; axis < 3; ++axis)
+        m_center[axis] = 0.5f * (min_pt[axis] + max_pt[axis]);
     m_extent = std::max({max_pt[0] - min_pt[0], max_pt[1] - min_pt[1], max_pt[2] - min_pt[2], 1.0f});
+}
+
+void MulticolorModelPreviewCanvas::release_texture_objects()
+{
+    if (!m_texture_ids.empty())
+        glDeleteTextures(static_cast<GLsizei>(m_texture_ids.size()), m_texture_ids.data());
+    m_texture_ids.clear();
+    m_uploaded_texture_model = nullptr;
+}
+
+bool MulticolorModelPreviewCanvas::ensure_texture_objects()
+{
+    if (m_textured_model == nullptr || !m_textured_model->valid())
+        return false;
+    if (m_uploaded_texture_model == m_textured_model.get()
+        && m_texture_ids.size() == m_textured_model->source->textures.size()) {
+        return true;
+    }
+
+    release_texture_objects();
+    const auto &textures = m_textured_model->source->textures;
+    m_texture_ids.resize(textures.size(), 0);
+    if (!textures.empty())
+        glGenTextures(static_cast<GLsizei>(textures.size()), m_texture_ids.data());
+
+    auto gl_wrap = [](texture_wrap_type_t wrap) -> GLint {
+        switch (wrap) {
+        case TEX_WRAP_CLAMP_TO_EDGE:       return GL_CLAMP_TO_EDGE;
+        case TXT_WRAP_MIRRORED_REPEAT:     return GL_MIRRORED_REPEAT;
+        case TEX_WRAP_REPEAT:
+        default:                           return GL_REPEAT;
+        }
+    };
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    for (size_t texture_idx = 0; texture_idx < textures.size(); ++texture_idx) {
+        const FullColorTexture &texture = textures[texture_idx];
+        if (!texture.valid() || m_texture_ids[texture_idx] == 0) {
+            release_texture_objects();
+            return false;
+        }
+
+        const int channels = texture.channels >= 4 ? 4 : 3;
+        const size_t pixel_count = static_cast<size_t>(texture.width) * static_cast<size_t>(texture.height);
+        std::vector<uint8_t> packed(pixel_count * static_cast<size_t>(channels));
+        for (int row = 0; row < texture.height; ++row) {
+            const uint8_t *source_row = texture.pixels.data() + static_cast<size_t>(row) * texture.bytes_per_line;
+            uint8_t *target_row = packed.data() + static_cast<size_t>(row) * texture.width * channels;
+            for (int column = 0; column < texture.width; ++column) {
+                const uint8_t *source_pixel = source_row + static_cast<size_t>(column) * texture.channels;
+                uint8_t *target_pixel = target_row + static_cast<size_t>(column) * channels;
+                std::copy_n(source_pixel, channels, target_pixel);
+            }
+        }
+
+        const GLenum format = channels == 4 ? GL_RGBA : GL_RGB;
+        glBindTexture(GL_TEXTURE_2D, m_texture_ids[texture_idx]);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, gl_wrap(texture.wrap_u));
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, gl_wrap(texture.wrap_v));
+        glTexImage2D(GL_TEXTURE_2D, 0, format, texture.width, texture.height, 0, format, GL_UNSIGNED_BYTE, packed.data());
+    }
+    glBindTexture(GL_TEXTURE_2D, 0);
+    m_uploaded_texture_model = m_textured_model.get();
+    return true;
+}
+
+void MulticolorModelPreviewCanvas::render_colored_model() const
+{
+    glDisable(GL_TEXTURE_2D);
+    glBegin(GL_TRIANGLES);
+    for (const out_triangle_data_t &triangle : m_model.triangles) {
+        if (triangle.colorIndex < 0 || triangle.colorIndex >= static_cast<int>(m_model.colors.size()))
+            continue;
+
+        bool valid = true;
+        for (int vertex_idx : triangle.vertexIndices) {
+            if (vertex_idx < 0 || vertex_idx >= static_cast<int>(m_model.vertices.size())) {
+                valid = false;
+                break;
+            }
+        }
+        if (!valid)
+            continue;
+
+        const auto &color = m_model.colors[triangle.colorIndex];
+        glColor3f(color[0] / 255.0f, color[1] / 255.0f, color[2] / 255.0f);
+
+        const auto &a = m_model.vertices[triangle.vertexIndices[0]];
+        const auto &b = m_model.vertices[triangle.vertexIndices[1]];
+        const auto &c = m_model.vertices[triangle.vertexIndices[2]];
+        const auto normal = normal_of(a, b, c);
+        glNormal3f(normal[0], normal[1], normal[2]);
+        glVertex3f(a[0], a[1], a[2]);
+        glVertex3f(b[0], b[1], b[2]);
+        glVertex3f(c[0], c[1], c[2]);
+    }
+    glEnd();
+}
+
+void MulticolorModelPreviewCanvas::render_textured_model()
+{
+    if (!ensure_texture_objects())
+        return;
+
+    const FullColorModelSource &source = *m_textured_model->source;
+    int32_t active_material_idx = -1;
+    bool drawing = false;
+    for (size_t face_idx = 0; face_idx < source.triangles.size(); ++face_idx) {
+        const int32_t material_idx = source.face_material_ids[face_idx];
+        if (material_idx != active_material_idx) {
+            if (drawing)
+                glEnd();
+
+            const FullColorMaterial &material = source.materials[material_idx];
+            if (material.texture_index >= 0) {
+                glEnable(GL_TEXTURE_2D);
+                glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+                glBindTexture(GL_TEXTURE_2D, m_texture_ids[material.texture_index]);
+                glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+            } else {
+                glDisable(GL_TEXTURE_2D);
+                glColor4f(material.base_color[0] / 255.0f, material.base_color[1] / 255.0f,
+                    material.base_color[2] / 255.0f, material.base_color[3] / 255.0f);
+            }
+            glBegin(GL_TRIANGLES);
+            drawing = true;
+            active_material_idx = material_idx;
+        }
+
+        const FullColorModelSource::Triangle &triangle = source.triangles[face_idx];
+        const FullColorModelSource::Triangle &uv_triangle = source.tex_coord_indices[face_idx];
+        const FullColorMaterial &material = source.materials[material_idx];
+        const auto &a = m_textured_model->vertices[triangle[0]];
+        const auto &b = m_textured_model->vertices[triangle[1]];
+        const auto &c = m_textured_model->vertices[triangle[2]];
+        const auto normal = normal_of(a, b, c);
+        glNormal3f(normal[0], normal[1], normal[2]);
+
+        bool flip_y = false;
+        if (material.texture_index >= 0)
+            flip_y = source.textures[material.texture_index].flip_y;
+        for (size_t corner = 0; corner < 3; ++corner) {
+            FullColorModelSource::TextureCoord uv = source.texture_coords[uv_triangle[corner]];
+            if (flip_y)
+                uv[1] = 1.0f - uv[1];
+            glTexCoord2f(uv[0], uv[1]);
+            const auto &vertex = m_textured_model->vertices[triangle[corner]];
+            glVertex3f(vertex[0], vertex[1], vertex[2]);
+        }
+    }
+    if (drawing)
+        glEnd();
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glDisable(GL_TEXTURE_2D);
 }
 
 void MulticolorModelPreviewCanvas::render()
@@ -505,13 +681,6 @@ void MulticolorModelPreviewCanvas::render()
     glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
     glShadeModel(GL_SMOOTH);
 
-    const GLfloat light_pos[] = {0.2f, -0.4f, 1.0f, 0.0f};
-    const GLfloat light_ambient[] = {0.42f, 0.42f, 0.42f, 1.0f};
-    const GLfloat light_diffuse[] = {0.85f, 0.85f, 0.85f, 1.0f};
-    glLightfv(GL_LIGHT0, GL_POSITION, light_pos);
-    glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
-    glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
-
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     const float aspect = h > 0 ? static_cast<float>(w) / static_cast<float>(h) : 1.0f;
@@ -523,38 +692,27 @@ void MulticolorModelPreviewCanvas::render()
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
+
+    // OpenGL transforms a light position by the current model-view matrix when
+    // glLightfv() is called. Set the light with an identity matrix so the first
+    // and subsequent paints use the same camera-relative lighting.
+    const GLfloat light_model_ambient[] = {0.12f, 0.12f, 0.12f, 1.0f};
+    const GLfloat light_pos[] = {0.2f, -0.4f, 1.0f, 0.0f};
+    const GLfloat light_ambient[] = {0.22f, 0.22f, 0.22f, 1.0f};
+    const GLfloat light_diffuse[] = {0.65f, 0.65f, 0.65f, 1.0f};
+    glLightModelfv(GL_LIGHT_MODEL_AMBIENT, light_model_ambient);
+    glLightfv(GL_LIGHT0, GL_POSITION, light_pos);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
+
     glRotatef(m_rot_x, 1.0f, 0.0f, 0.0f);
     glRotatef(m_rot_y, 0.0f, 1.0f, 0.0f);
     glTranslatef(-m_center[0], -m_center[1], -m_center[2]);
 
-    glBegin(GL_TRIANGLES);
-    for (const out_triangle_data_t &triangle : m_model.triangles) {
-        if (triangle.colorIndex < 0 || triangle.colorIndex >= static_cast<int>(m_model.colors.size()))
-            continue;
-
-        bool valid = true;
-        for (int vertex_idx : triangle.vertexIndices) {
-            if (vertex_idx < 0 || vertex_idx >= static_cast<int>(m_model.vertices.size())) {
-                valid = false;
-                break;
-            }
-        }
-        if (!valid)
-            continue;
-
-        const auto &color = m_model.colors[triangle.colorIndex];
-        glColor3f(color[0] / 255.0f, color[1] / 255.0f, color[2] / 255.0f);
-
-        const auto &a = m_model.vertices[triangle.vertexIndices[0]];
-        const auto &b = m_model.vertices[triangle.vertexIndices[1]];
-        const auto &c = m_model.vertices[triangle.vertexIndices[2]];
-        const auto n = normal_of(a, b, c);
-        glNormal3f(n[0], n[1], n[2]);
-        glVertex3f(a[0], a[1], a[2]);
-        glVertex3f(b[0], b[1], b[2]);
-        glVertex3f(c[0], c[1], c[2]);
-    }
-    glEnd();
+    if (m_show_textured_model)
+        render_textured_model();
+    else
+        render_colored_model();
 
     glDisable(GL_LIGHTING);
     glFlush();
@@ -562,27 +720,25 @@ void MulticolorModelPreviewCanvas::render()
 }
 
 MulticolorModelDialog::MulticolorModelDialog(wxWindow *parent, ConvertModel &converter, convert_model_data_t &model_data,
-    int initial_color_count, int new_filament_start_index)
-    : DPIDialog(parent, wxID_ANY, _L("Import Model"), wxDefaultPosition, wxDefaultSize, wxCAPTION | wxCLOSE_BOX)
-    , m_converter(converter)
-    , m_model_data(model_data)
-    , m_new_filament_start_index(std::clamp(new_filament_start_index, 0, ImportFilamentLimit))
-    , m_max_new_filament_count(std::max(0, ImportFilamentLimit - m_new_filament_start_index))
-{
-    build_ui();
-    init_model_data(initial_color_count, nullptr);
-    Fit();
-    CenterOnParent();
-}
+    FullColorQuantizationBackend initial_backend, int initial_color_count, int new_filament_start_index)
+    : MulticolorModelDialog(parent, converter, model_data, initial_backend, initial_color_count, new_filament_start_index, nullptr)
+{}
 
 MulticolorModelDialog::MulticolorModelDialog(wxWindow *parent, ConvertModel &converter, convert_model_data_t &model_data,
-    int initial_color_count, int new_filament_start_index, const MulticolorModelPrecomputedData *precomputed_data)
+    FullColorQuantizationBackend initial_backend, int initial_color_count, int new_filament_start_index,
+    const MulticolorModelPrecomputedData *precomputed_data)
     : DPIDialog(parent, wxID_ANY, _L("Import Model"), wxDefaultPosition, wxDefaultSize, wxCAPTION | wxCLOSE_BOX)
     , m_converter(converter)
     , m_model_data(model_data)
+    , m_quantization_cache(16)
+    , m_active_backend(initial_backend)
     , m_new_filament_start_index(std::clamp(new_filament_start_index, 0, ImportFilamentLimit))
     , m_max_new_filament_count(std::max(0, ImportFilamentLimit - m_new_filament_start_index))
 {
+    m_pipelines[0] = std::make_unique<ClassicFullColorPipeline>();
+    m_pipelines[1] = std::make_unique<BambuFullColorPipeline>();
+    m_quantization_settings.conversion = m_model_data.conversionParams;
+
     build_ui();
     init_model_data(initial_color_count, precomputed_data);
     Fit();
@@ -627,6 +783,32 @@ void MulticolorModelDialog::build_ui()
     settings_panel->SetMinSize(wxSize(FromDIP(520), -1));
     auto *settings_sizer = new wxBoxSizer(wxVERTICAL);
 
+    auto *color_style_title = new wxStaticText(settings_panel, wxID_ANY, _L("Color Style"));
+    wxFont color_style_title_font = color_style_title->GetFont();
+    color_style_title_font.SetPointSize(color_style_title_font.GetPointSize() + 2);
+    color_style_title_font.SetWeight(wxFONTWEIGHT_BOLD);
+    color_style_title->SetFont(color_style_title_font);
+    color_style_title->SetForegroundColour(wxColour("#333333"));
+    settings_sizer->Add(color_style_title, 0, wxEXPAND | wxBOTTOM, FromDIP(14));
+
+    auto *backend_buttons_sizer = new wxBoxSizer(wxHORIZONTAL);
+    m_soft_color_btn = new FFButton(settings_panel, wxID_ANY, _L("Soft"), FromDIP(14), true);
+    m_vivid_color_btn = new FFButton(settings_panel, wxID_ANY, _L("Vivid"), FromDIP(14), true);
+    for (FFButton *button : {m_soft_color_btn, m_vivid_color_btn}) {
+        button->SetSize(wxSize(FromDIP(140), FromDIP(38)));
+        button->SetMinSize(wxSize(FromDIP(140), FromDIP(38)));
+        button->SetMaxSize(wxSize(FromDIP(140), FromDIP(38)));
+    }
+    m_soft_color_btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent &) {
+        switch_quantization_backend(FullColorQuantizationBackend::Classic);
+    });
+    m_vivid_color_btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent &) {
+        switch_quantization_backend(FullColorQuantizationBackend::Bambu);
+    });
+    backend_buttons_sizer->Add(m_soft_color_btn, 0, wxRIGHT, FromDIP(12));
+    backend_buttons_sizer->Add(m_vivid_color_btn, 0);
+    settings_sizer->Add(backend_buttons_sizer, 0, wxEXPAND | wxBOTTOM, FromDIP(24));
+    refresh_backend_buttons();
     auto *color_count_title = new wxStaticText(settings_panel, wxID_ANY, _L("Number of Colors"));
     wxFont color_count_title_font = color_count_title->GetFont();
     color_count_title_font.SetPointSize(color_count_title_font.GetPointSize() + 2);
@@ -816,6 +998,112 @@ void MulticolorModelDialog::on_dpi_changed(const wxRect &suggested_rect)
     Fit();
 }
 
+IFullColorQuantizationPipeline &MulticolorModelDialog::pipeline_for_backend(FullColorQuantizationBackend backend)
+{
+    const size_t index = backend == FullColorQuantizationBackend::Bambu ? 1 : 0;
+    return *m_pipelines[index];
+}
+
+QuantizationSettings MulticolorModelDialog::make_quantization_settings(int color_count) const
+{
+    QuantizationSettings settings = m_quantization_settings;
+    settings.color_count = clamp_color_count(color_count);
+    settings.conversion = m_model_data.conversionParams;
+    return settings;
+}
+
+std::shared_ptr<const QuantizationResult> MulticolorModelDialog::get_or_compute_quantization(
+    FullColorQuantizationBackend backend, int color_count)
+{
+    if (m_model_data.modelSource == nullptr)
+        return {};
+
+    const QuantizationSettings settings = make_quantization_settings(color_count);
+    const QuantizationCacheKey key = QuantizationCacheKey::from(*m_model_data.modelSource, backend, settings);
+    if (std::shared_ptr<const QuantizationResult> cached = m_quantization_cache.find(key))
+        return cached;
+
+    QuantizationResult quantization = pipeline_for_backend(backend).quantize(m_model_data.modelSource, settings);
+    if (!quantization.valid())
+        return {};
+
+    auto result = std::make_shared<QuantizationResult>(std::move(quantization));
+    m_quantization_cache.insert(key, result);
+    return result;
+}
+
+bool MulticolorModelDialog::adopt_quantization_result(std::shared_ptr<const QuantizationResult> result, int color_count)
+{
+    if (result == nullptr || !result->valid())
+        return false;
+
+    m_active_backend = result->backend;
+    m_quantization_result = std::move(result);
+    m_quantized_source_colors = m_quantization_result->source_palette;
+    m_result.quantization_result = m_quantization_result;
+    m_result.quantized_source_colors = m_quantized_source_colors;
+    m_result.selected_colors = m_quantized_source_colors;
+    m_result.selected_color_count = clamp_color_count(color_count);
+    m_result.quantized_model = m_quantization_result->quantized_preview;
+    return true;
+}
+
+void MulticolorModelDialog::save_current_view_state()
+{
+    if (m_quantization_result == nullptr || !m_quantization_result->valid() || m_quantization_result->source == nullptr)
+        return;
+
+    const QuantizationCacheKey key = QuantizationCacheKey::from(*m_quantization_result->source,
+        m_quantization_result->backend, m_quantization_result->settings);
+    QuantizationViewState state;
+    state.selected_colors = m_result.selected_colors;
+    state.filament_mappings = m_result.filament_mappings;
+    state.next_new_filament_index = m_next_new_filament_index;
+    state.mapping_dirty = m_mapping_dirty;
+    m_view_states[key] = std::move(state);
+}
+
+bool MulticolorModelDialog::restore_current_view_state()
+{
+    if (m_quantization_result == nullptr || !m_quantization_result->valid() || m_quantization_result->source == nullptr)
+        return false;
+
+    const QuantizationCacheKey key = QuantizationCacheKey::from(*m_quantization_result->source,
+        m_quantization_result->backend, m_quantization_result->settings);
+    const auto found = m_view_states.find(key);
+    if (found == m_view_states.end())
+        return false;
+
+    const QuantizationViewState &state = found->second;
+    if (state.selected_colors.size() != m_quantization_result->source_palette.size()
+        || state.filament_mappings.size() != m_quantization_result->source_palette.size()) {
+        m_view_states.erase(found);
+        return false;
+    }
+    for (size_t color_idx = 0; color_idx < m_quantization_result->source_palette.size(); ++color_idx) {
+        const std::string source_color = normalize_hex_color(color_to_hex(m_quantization_result->source_palette[color_idx]));
+        if (state.filament_mappings[color_idx].quantized_color != source_color) {
+            m_view_states.erase(found);
+            return false;
+        }
+    }
+
+    out_model_data_t mapped_preview;
+    if (!make_mapped_quantized_preview(state.selected_colors, mapped_preview)) {
+        m_view_states.erase(found);
+        return false;
+    }
+
+    m_result.selected_colors = state.selected_colors;
+    m_result.selected_color_count = static_cast<int>(state.selected_colors.size());
+    m_result.filament_mappings = state.filament_mappings;
+    m_result.quantized_model = std::move(mapped_preview);
+    m_next_new_filament_index = state.next_new_filament_index;
+    m_mapping_dirty = state.mapping_dirty;
+    update_filament_mapping_choices();
+    return true;
+}
+
 void MulticolorModelDialog::init_model_data(int initial_color_count, const MulticolorModelPrecomputedData *precomputed_data)
 {
     m_quantization_config.auto_count = m_quantization_config.default_count;
@@ -824,16 +1112,29 @@ void MulticolorModelDialog::init_model_data(int initial_color_count, const Multi
 
     bool has_quantized_preview = false;
     if (precomputed_data != nullptr) {
-        if (precomputed_data->has_original_model)
+        if (precomputed_data->has_original_texture_preview && precomputed_data->original_texture_preview != nullptr
+            && precomputed_data->original_texture_preview->valid()) {
+            m_original_texture_preview = precomputed_data->original_texture_preview;
+        } else if (precomputed_data->has_original_model) {
             m_result.original_model = precomputed_data->original_model;
-        else
+        } else {
             rebuild_original_preview();
+        }
 
-        if (precomputed_data->has_quantized_model &&
+        if (precomputed_data->has_quantized_model && precomputed_data->quantization_result != nullptr &&
+            precomputed_data->quantization_result->valid() &&
+            precomputed_data->quantization_result->backend == m_active_backend &&
             precomputed_data->selected_color_count == m_applied_color_count &&
             !precomputed_data->quantized_source_colors.empty()) {
-            m_quantized_source_colors = precomputed_data->quantized_source_colors;
-            m_result.quantized_source_colors = precomputed_data->quantized_source_colors;
+            m_quantization_result = precomputed_data->quantization_result;
+            if (m_model_data.modelSource != nullptr) {
+                const QuantizationCacheKey cache_key = QuantizationCacheKey::from(*m_model_data.modelSource,
+                    m_quantization_result->backend, m_quantization_result->settings);
+                m_quantization_cache.insert(cache_key, m_quantization_result);
+            }
+            m_result.quantization_result = m_quantization_result;
+            m_quantized_source_colors = m_quantization_result->source_palette;
+            m_result.quantized_source_colors = m_quantized_source_colors;
             m_result.selected_colors = precomputed_data->selected_colors.empty() ?
                 precomputed_data->quantized_source_colors : precomputed_data->selected_colors;
             m_result.selected_color_count = precomputed_data->selected_color_count;
@@ -855,6 +1156,7 @@ void MulticolorModelDialog::init_model_data(int initial_color_count, const Multi
     } else {
         rebuild_quantized_preview_from_mapping();
     }
+    save_current_view_state();
     switch_preview(PreviewMode::Quantized);
     refresh_quantization_controls();
 }
@@ -928,27 +1230,32 @@ void MulticolorModelDialog::switch_preview(PreviewMode mode)
 {
     m_preview_mode = mode;
     refresh_tab_style();
-    if (mode == PreviewMode::Quantized)
+    if (mode == PreviewMode::Quantized) {
         m_canvas->set_model(m_result.quantized_model);
-    else
+    } else if (m_original_texture_preview != nullptr && m_original_texture_preview->valid()) {
+        m_canvas->set_textured_model(m_original_texture_preview);
+    } else {
         m_canvas->set_model(m_result.original_model);
+    }
 }
 
 bool MulticolorModelDialog::rebuild_original_preview()
 {
+    auto texture_preview = std::make_shared<FullColorOriginalPreview>();
+    if (m_converter.makeOriginalTexturePreview(m_model_data, *texture_preview)) {
+        m_original_texture_preview = std::move(texture_preview);
+        return true;
+    }
+
+    m_original_texture_preview.reset();
     return m_converter.makePreviewModel(m_model_data, m_result.original_model);
 }
 
 bool MulticolorModelDialog::rebuild_quantized_preview(int color_count)
 {
     const int clamped_color_count = clamp_color_count(color_count);
-    m_quantized_source_colors = m_converter.clusterColors(m_model_data, clamped_color_count);
-    m_result.quantized_source_colors = m_quantized_source_colors;
-    m_result.selected_colors = m_quantized_source_colors;
-    m_result.selected_color_count = clamped_color_count;
-    if (m_result.selected_colors.empty())
-        return false;
-    return m_converter.makePreviewModel(m_model_data, m_result.quantized_model, m_result.selected_colors);
+    return adopt_quantization_result(
+        get_or_compute_quantization(m_active_backend, clamped_color_count), clamped_color_count);
 }
 
 int MulticolorModelDialog::clamp_color_count(int color_count) const
@@ -981,10 +1288,9 @@ void MulticolorModelDialog::apply_pending_color_count(bool force)
             return false;
 
         out_model_data_t mapped_model;
-        const cvt_colors_t source_colors = m_quantized_source_colors;
         const cvt_colors_t selected_colors = m_result.selected_colors;
         const bool mapped_preview_ready = run_multicolor_apply_task(progress_dlg, progress_message, [&]() {
-            return m_converter.makeMappedPreviewModel(m_model_data, mapped_model, source_colors, selected_colors);
+            return make_mapped_quantized_preview(selected_colors, mapped_model);
         });
         if (!mapped_preview_ready)
             return false;
@@ -994,33 +1300,34 @@ void MulticolorModelDialog::apply_pending_color_count(bool force)
     };
 
     if (color_count_changed) {
+        save_current_view_state();
         const int clamped_color_count = clamp_color_count(m_pending_color_count);
-        cvt_colors_t quantized_source_colors;
-        out_model_data_t quantized_model;
+        std::shared_ptr<const QuantizationResult> quantization_result;
         const bool quantized_preview_ready = run_multicolor_apply_task(progress_dlg, progress_message, [&]() {
-            quantized_source_colors = m_converter.clusterColors(m_model_data, clamped_color_count);
-            if (quantized_source_colors.empty())
-                return false;
-            return m_converter.makePreviewModel(m_model_data, quantized_model, quantized_source_colors);
+            quantization_result = get_or_compute_quantization(m_active_backend, clamped_color_count);
+            return quantization_result != nullptr;
         });
-        if (!quantized_preview_ready)
+        if (!quantized_preview_ready ||
+            !adopt_quantization_result(std::move(quantization_result), clamped_color_count)) {
             return;
+        }
 
-        m_quantized_source_colors = std::move(quantized_source_colors);
-        m_result.quantized_source_colors = m_quantized_source_colors;
-        m_result.selected_colors = m_quantized_source_colors;
-        m_result.selected_color_count = clamped_color_count;
-        m_result.quantized_model = std::move(quantized_model);
-        m_applied_color_count = m_pending_color_count;
-        rebuild_filament_mappings(true);
+        m_applied_color_count = clamped_color_count;
+        m_pending_color_count = clamped_color_count;
+        if (!restore_current_view_state()) {
+            m_mapping_dirty = false;
+            rebuild_filament_mappings(true);
+        }
 
         if (!rebuild_mapped_preview_with_progress())
             return;
-    } else if (!rebuild_mapped_preview_with_progress())
+    } else if (!rebuild_mapped_preview_with_progress()) {
         return;
+    }
 
     m_quantization_dirty = false;
     m_mapping_dirty = false;
+    save_current_view_state();
     if (m_preview_mode == PreviewMode::Quantized)
         m_canvas->set_model(m_result.quantized_model);
     refresh_quantization_controls();
@@ -1047,6 +1354,68 @@ void MulticolorModelDialog::style_color_count_button(FFButton *button, bool sele
         button->SetBorderUniformColor(wxColour("#BDBDBD"));
         button->SetBGUniformColor(*wxWHITE);
     }
+}
+
+void MulticolorModelDialog::style_backend_button(FFButton *button, bool selected)
+{
+    if (button == nullptr)
+        return;
+
+    if (selected) {
+        button->SetFontUniformColor(*wxWHITE);
+        button->SetBorderUniformColor(wxColour("#15AEE5"));
+        button->SetBGUniformColor(wxColour("#15AEE5"));
+    } else {
+        button->SetFontUniformColor(wxColour("#666666"));
+        button->SetBorderUniformColor(wxColour("#BDBDBD"));
+        button->SetBGUniformColor(*wxWHITE);
+    }
+}
+
+void MulticolorModelDialog::refresh_backend_buttons()
+{
+    style_backend_button(m_soft_color_btn, m_active_backend == FullColorQuantizationBackend::Classic);
+    style_backend_button(m_vivid_color_btn, m_active_backend == FullColorQuantizationBackend::Bambu);
+}
+
+void MulticolorModelDialog::switch_quantization_backend(FullColorQuantizationBackend backend)
+{
+    if (backend == m_active_backend)
+        return;
+
+    save_current_view_state();
+
+    const int color_count = clamp_color_count(m_pending_color_count);
+    std::shared_ptr<const QuantizationResult> quantization_result;
+    const auto loading = _L("Loading") + dots;
+    const wxString progress_message = _L("Generating preview...");
+    ProgressDialog progress_dlg(loading, "", 100, find_toplevel_parent(this), wxPD_AUTO_HIDE | wxPD_APP_MODAL);
+    const bool ready = run_multicolor_apply_task(progress_dlg, progress_message, [&]() {
+        quantization_result = get_or_compute_quantization(backend, color_count);
+        return quantization_result != nullptr;
+    });
+    if (!ready || !adopt_quantization_result(std::move(quantization_result), color_count)) {
+        GUI::show_error(this, _L("Full-color quantization failed."));
+        return;
+    }
+
+    m_applied_color_count = color_count;
+    m_pending_color_count = color_count;
+    m_quantization_dirty = false;
+    if (!restore_current_view_state()) {
+        m_mapping_dirty = false;
+        rebuild_filament_mappings(true);
+        if (!rebuild_quantized_preview_from_mapping()) {
+            GUI::show_error(this, _L("Failed to generate the quantized preview."));
+            return;
+        }
+    }
+
+    save_current_view_state();
+    refresh_backend_buttons();
+    if (m_preview_mode == PreviewMode::Quantized)
+        m_canvas->set_model(m_result.quantized_model);
+    refresh_quantization_controls();
 }
 
 void MulticolorModelDialog::rebuild_filament_mappings(bool reset_new_numbering, bool update_choice_items)
@@ -1216,13 +1585,42 @@ void MulticolorModelDialog::update_selected_colors_from_filament_mappings()
     m_result.selected_color_count = static_cast<int>(m_result.selected_colors.size());
 }
 
+bool MulticolorModelDialog::make_mapped_quantized_preview(const cvt_colors_t &target_colors, out_model_data_t &preview) const
+{
+    if (m_quantization_result == nullptr || !m_quantization_result->valid()
+        || target_colors.size() != m_quantization_result->source_palette.size()) {
+        return false;
+    }
+
+    preview = m_quantization_result->quantized_preview;
+    for (const out_triangle_data_t &triangle : preview.triangles) {
+        if (triangle.colorIndex < 0 || static_cast<size_t>(triangle.colorIndex) >= preview.colors.size())
+            return false;
+    }
+    if (target_colors == m_quantization_result->source_palette)
+        return true;
+
+    cvt_colors_t mapped_preview_colors;
+    mapped_preview_colors.reserve(preview.colors.size());
+    for (const cvt_color_t &preview_color : preview.colors) {
+        const auto source_it = std::find(m_quantization_result->source_palette.begin(),
+            m_quantization_result->source_palette.end(), preview_color);
+        if (source_it == m_quantization_result->source_palette.end())
+            return false;
+        const size_t source_idx = static_cast<size_t>(
+            std::distance(m_quantization_result->source_palette.begin(), source_it));
+        mapped_preview_colors.push_back(target_colors[source_idx]);
+    }
+    preview.colors = std::move(mapped_preview_colors);
+    return true;
+}
+
 bool MulticolorModelDialog::rebuild_quantized_preview_from_mapping()
 {
     update_selected_colors_from_filament_mappings();
     if (m_result.selected_colors.empty())
         return false;
-    return m_converter.makeMappedPreviewModel(m_model_data, m_result.quantized_model,
-        m_quantized_source_colors, m_result.selected_colors);
+    return make_mapped_quantized_preview(m_result.selected_colors, m_result.quantized_model);
 }
 
 void MulticolorModelDialog::rebuild_filament_mapping_rows()
@@ -1435,12 +1833,14 @@ void MulticolorModelDialog::finalize_skip_result()
     mapping.source = MulticolorFilamentMappingSource::AutoMatched;
     m_result.filament_mappings.push_back(mapping);
 
+    m_result.quantization_result = m_quantization_result;
     m_result.skipped = true;
     m_result.fallback_to_geometry_only = false;
 }
 
 void MulticolorModelDialog::finalize_result(bool accepted)
 {
+    m_result.quantization_result = m_quantization_result;
     m_result.skipped = !accepted;
     m_result.fallback_to_geometry_only = false;
     m_result.selected_color_count = m_applied_color_count;

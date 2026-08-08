@@ -13,7 +13,7 @@
 #include <wx/filename.h>
 #include <wx/platinfo.h>
 #include <wx/stdpaths.h>
-#include "libslic3r/Utils.hpp" 
+#include "libslic3r/Utils.hpp"
 #include "slic3r/GUI/GUI_App.hpp"
 #include "slic3r/GUI/MainFrame.hpp"
 #include "FreeInDestructor.h"
@@ -300,12 +300,6 @@ ComErrno MultiComMgr::addWanDev(const com_token_data_t &tokenData, bool isCheckV
     if (ret != COM_OK) {
         return ret;
     }
-    ret = tryDo([&]() {
-        return MultiComUtils::getMqttConfig(m_clientId, tokenData.accessToken, m_mqttConfig, ComTimeoutWanA);
-    });
-    if (ret != COM_OK) {
-        return ret;
-    }
     m_login = true;
     ++m_mqttGeneration;
     m_mqttReconnectAllowed = true;
@@ -322,17 +316,7 @@ ComErrno MultiComMgr::addWanDev(const com_token_data_t &tokenData, bool isCheckV
     setMaintainThdReqHeader(isCheckVersionOnTestServer);
     MultiComHelper::inst()->loginInit(m_clientId, addDevData.userProfile.uid);
     WanDevTokenMgr::inst()->initalize(tokenData, networkIntfc()); // initialize global token
-    //
-    ret = ComWanConn::inst()->createConn(networkIntfc(), m_clientId.c_str());
-    if (ret != COM_OK) {
-        m_login = false;
-        m_mqttReconnectAllowed = false;
-        m_mqttRecoveryInProgress = false;
-        m_httpOnline = false;
-        m_connOnline = false;
-        return ret;
-    }
-    WanDevTokenMgr::inst()->start();
+    initWanConnAsync(tokenData.accessToken);
     QueueEvent(new ComGetUserProfileEvent(COM_GET_USER_PROFILE_EVENT, addDevData.userProfile, ret));
     return ret;
 }
@@ -474,7 +458,14 @@ bool MultiComMgr::wanSendGcode(const std::vector<std::string> &devIds,
     for (size_t i = 0; i < devIds.size(); ++i) {
         devTopics[i] = getDevTopic(devIds[i]);
     }
-    return m_sendGcodeThd->startSendGcode(m_clientId, devIds, devSerialNumbers, devTopics, sendGocdeData);
+    bool isSend = false;
+    int  loop   = 3;
+    while (loop--) {
+        isSend = m_sendGcodeThd->startSendGcode(m_clientId, devIds, devSerialNumbers, devTopics, sendGocdeData);
+        if (isSend)
+            break;
+    }
+    return isSend;
 }
 
 bool MultiComMgr::abortWanSendGcode()
@@ -1296,6 +1287,60 @@ void MultiComMgr::maintianWanDev(ComErrno ret, bool needLogout)
         // Keep the last device states while the HTTP session recovers.
         QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, false, ret, WanServiceState::ApiUnavailable));
     }
+}
+
+void MultiComMgr::initWanConnAsync(const std::string &accessToken)
+{
+    if (!m_threadPool || networkIntfc() == nullptr) {
+        return;
+    }
+
+    const std::string clientId = m_clientId;
+    m_threadPool->post([this, clientId, accessToken]() {
+        if (m_threadExitEvent.get()) {
+            return;
+        }
+
+        com_mqtt_config_t mqttConfig;
+        ComErrno ret = MultiComUtils::getMqttConfig(clientId, accessToken, mqttConfig, ComTimeoutWanA);
+        if (ret != COM_OK) {
+            BOOST_LOG_TRIVIAL(warning) << "MultiComMgr::initWanConnAsync getMqttConfig failed: " << (int) ret;
+            if (ret == COM_UNAUTHORIZED) {
+                maintianWanDev(ret, false);
+            } else if (m_login && m_clientId == clientId) {
+                m_connOnline = false;
+                QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, false, ret));
+            }
+            return;
+        }
+
+        if (m_threadExitEvent.get() || !m_login || m_clientId != clientId) {
+            return;
+        }
+
+        m_mqttConfig = mqttConfig;
+        ret = ComWanConn::inst()->createConn(networkIntfc(), clientId.c_str());
+        if (ret != COM_OK) {
+            BOOST_LOG_TRIVIAL(warning) << "MultiComMgr::initWanConnAsync createConn failed: " << (int) ret;
+            if (m_login && m_clientId == clientId) {
+                m_connOnline = false;
+                QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, false, ret));
+            }
+            return;
+        }
+
+        if (m_threadExitEvent.get() || !m_login || m_clientId != clientId) {
+            if (!m_login && m_clientId == clientId) {
+                ComWanConn::inst()->freeConn();
+            }
+            return;
+        }
+
+        // createConn() is asynchronous. onWanConnStatus(CONNECTED) owns topic
+        // subscriptions, syncLogin and device refresh for both initial connect
+        // and reconnect, so none of them can race the connection here.
+        WanDevTokenMgr::inst()->start();
+    });
 }
 
 void MultiComMgr::setMaintainThdReqHeader(bool isCheckVersionOnTestServer)

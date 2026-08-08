@@ -12166,3 +12166,57 @@ msgstr ""
 
 #~ msgid "Orient the model"
 #~ msgstr "Oriënteer het model"
+
+
+msgid "Simple settings"
+msgstr "Eenvoudige instellingen"
+
+msgid "Local-Z pair split: requested F<a>/F<b> <percent>/<percent>."
+msgstr "Local-Z-paarsplitsing: aangevraagd F<a>/F<b> <percent>/<percent>."
+
+msgid "Cycle settings visibility"
+msgstr "Zichtbaarheid van instellingen wisselen"
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d."
+msgstr "Local-Z-paarsplitsing: aangevraagd F%u/F%u %d/%d."
+
+msgid "Local-Z breakdown: manual pattern rows do not use pair decomposition."
+msgstr "Local-Z-uitsplitsing: handmatige patroonrijen gebruiken geen paarontleding."
+
+
+msgid "Local-Z breakdown: same-layer mode does not use local-Z pair decomposition."
+msgstr "Local-Z-uitsplitsing: modus met dezelfde laag gebruikt geen Local-Z-paarontleding."
+
+msgid "Local-Z breakdown: unavailable."
+msgstr "Local-Z-uitsplitsing: niet beschikbaar."
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d, effective %d/%d over %d sublayers."
+msgstr "Local-Z-paarsplitsing: aangevraagd F%u/F%u %d/%d, effectief %d/%d over %d sublagen."
+
+
+msgid "Expert settings"
+msgstr "Expertinstellingen"
+
+msgid "Local-Z direct multicolor solver: %s"
+msgstr "Directe Local-Z meerkleurenoplosser: %s"
+
+msgid "Carry-over error is distributed directly across all %d components instead of collapsing them into pair cadence."
+msgstr "De overdrachtsfout wordt direct verdeeld over alle %d componenten in plaats van ze samen te vouwen tot een paarcadans."
+
+msgid "Effective Local-Z cap: up to %d sublayers per nominal layer."
+msgstr "Effectieve Local-Z limiet: tot %d sublagen per nominale laag."
+
+msgid "Local-Z layer cadence: %s."
+msgstr "Local-Z laagcadans: %s."
+
+msgid "Pair splits: %s."
+msgstr "Paarsplitsingen: %s."
+
+msgid "Saved row limit will apply when Local-Z dithering mode is enabled in print settings."
+msgstr "De opgeslagen rijlimiet wordt toegepast wanneer Local-Z dithering is ingeschakeld in de printinstellingen."
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers."
+msgstr "Effectieve Local-Z stapel: %d sublagen over %d paarlagen."
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers (uncapped %d)."
+msgstr "Effectieve Local-Z stapel: %d sublagen over %d paarlagen (ongelimiteerd %d)."
