@@ -1,6 +1,7 @@
 #ifndef slic3r_GUI_MultiComDef_hpp_
 #define slic3r_GUI_MultiComDef_hpp_
 
+#include <chrono>
 #include <cstdint>
 #include <ctime>
 #include <string>
@@ -40,6 +41,30 @@ enum ComErrno {
 enum ComConnectMode {
     COM_CONNECT_LAN,
     COM_CONNECT_WAN,
+};
+
+enum class WanDevicePresence {
+    Unknown,
+    Online,
+    Offline,
+};
+
+enum class WanServiceState {
+    Unknown,
+    Connected,
+    Reconnecting,
+    ApiUnavailable,
+    LoggedOut,
+};
+
+enum class WanDeviceStatusSource {
+    Initial,
+    HttpDeviceList,
+    SyncOnline,
+    SyncOffline,
+    DeviceDetail,
+    KeepAlive,
+    MessageActivity,
 };
 
 enum ComCloundJobErrno {
@@ -82,7 +107,7 @@ struct com_wan_dev_info_t {
     std::string name;
     std::string model;
     std::string imageUrl;
-    std::string status;
+    std::string status; // Operational state only: ready, printing, error, etc.
     std::string location;
     std::string serialNumber;
     std::string devTopic;
@@ -109,7 +134,28 @@ struct com_dev_data_t {
     com_gcode_list_t wanGcodeList;
     com_time_lapse_video_list_t wanTimeLapseVideoList;
     bool devDetailUpdated;
+    WanDevicePresence wanPresence { WanDevicePresence::Unknown };
+    WanDeviceStatusSource wanStatusSource { WanDeviceStatusSource::Initial };
+    std::chrono::steady_clock::time_point wanLastMessageTime {};
+    std::chrono::steady_clock::time_point wanLastDetailTime {};
+    std::chrono::steady_clock::time_point wanLastStateChangeTime {};
+    std::chrono::steady_clock::time_point wanLastDetailRefreshTime {};
 };
+
+inline bool is_wan_device_online(const com_dev_data_t &data)
+{
+    return data.connectMode == COM_CONNECT_WAN && data.wanPresence == WanDevicePresence::Online;
+}
+
+inline bool is_wan_device_offline(const com_dev_data_t &data)
+{
+    return data.connectMode == COM_CONNECT_WAN && data.wanPresence == WanDevicePresence::Offline;
+}
+
+inline std::string wan_device_display_status(const com_dev_data_t &data)
+{
+    return is_wan_device_online(data) && !data.wanDevInfo.status.empty() ? data.wanDevInfo.status : "offline";
+}
 
 struct com_material_mapping_t {
     int toolId;
