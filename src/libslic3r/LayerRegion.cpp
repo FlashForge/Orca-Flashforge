@@ -3,12 +3,15 @@
 #include "ClipperUtils.hpp"
 #include "Geometry.hpp"
 #include "PerimeterGenerator.hpp"
+#include "Point.hpp"
 #include "Print.hpp"
 #include "Surface.hpp"
 #include "BoundingBox.hpp"
 #include "SVG.hpp"
 #include "Algorithm/RegionExpansion.hpp"
 
+#include <algorithm>
+#include <cmath>
 #include <string>
 #include <map>
 
@@ -17,6 +20,153 @@
 
 namespace Slic3r {
 
+namespace {
+
+unsigned int effective_layer_filament_id(const Layer &layer, unsigned int filament_id)
+{
+    if (filament_id == 0)
+        return filament_id;
+
+    const PrintObject *object = layer.object();
+    const Print       *print  = object ? object->print() : nullptr;
+    if (print == nullptr)
+        return filament_id;
+
+    const size_t num_physical = print->config().filament_diameter.size();
+    if (num_physical == 0)
+        return filament_id;
+
+    // Geometry and flow are generated per layer, so use the physical filament
+    // selected for this layer instead of indexing printer settings with a
+    // virtual mixed-filament ID. Painted/manual modes intentionally preserve
+    // their virtual identity later in the pipeline; resolve those here only
+    // for the geometry/flow calculation.
+    const MixedFilamentManager &mixed_mgr = print->mixed_filament_manager();
+    const PrintConfig          &print_config = print->config();
+    const unsigned int effective = mixed_mgr.effective_painted_region_filament_id(filament_id,
+                                                                                   num_physical,
+                                                                                   int(layer.id()),
+                                                                                   float(layer.print_z),
+                                                                                   float(layer.height),
+                                                                                   print_config.mixed_color_layer_height_a.value,
+                                                                                   print_config.mixed_color_layer_height_b.value,
+                                                                                   float(object->config().layer_height.value));
+    return effective == filament_id && mixed_mgr.is_mixed(filament_id, num_physical) ?
+        mixed_mgr.resolve(filament_id, num_physical, int(layer.id()), float(layer.print_z), float(layer.height)) :
+        effective;
+}
+
+unsigned int effective_perimeter_filament_id(const Layer &layer,
+                                              unsigned int filament_id,
+                                              int          perimeter_index)
+{
+    if (filament_id == 0)
+        return filament_id;
+
+    const PrintObject *object = layer.object();
+    const Print       *print  = object ? object->print() : nullptr;
+    if (print == nullptr)
+        return filament_id;
+
+    const size_t num_physical = print->config().filament_diameter.size();
+    const MixedFilamentManager &mixed_mgr = print->mixed_filament_manager();
+    const MixedFilament *mixed_row = mixed_mgr.mixed_filament_from_id(filament_id, num_physical);
+    if (mixed_row != nullptr && mixed_row->ui_mode == 1 &&
+        !MixedFilamentManager::decode_manual_pattern_physical_ids(*mixed_row, num_physical).empty()) {
+        return mixed_mgr.resolve_perimeter(filament_id,
+                                           num_physical,
+                                           int(layer.id()),
+                                           perimeter_index,
+                                           float(layer.print_z),
+                                           float(layer.height));
+    }
+
+    return effective_layer_filament_id(layer, filament_id);
+}
+
+unsigned int effective_infill_filament_id(const Layer &layer, const PrintRegionConfig &config, unsigned int filament_id)
+{
+    if (filament_id == 0)
+        return filament_id;
+
+    const PrintObject *object = layer.object();
+    const Print       *print  = object ? object->print() : nullptr;
+    if (print == nullptr)
+        return filament_id;
+
+    const size_t num_physical = print->config().filament_diameter.size();
+    if (num_physical == 0)
+        return filament_id;
+
+    const MixedFilamentManager &mixed_mgr = print->mixed_filament_manager();
+    const MixedFilament *mixed_row = mixed_mgr.mixed_filament_from_id(filament_id, num_physical);
+    if (mixed_row != nullptr &&
+        !MixedFilamentManager::decode_manual_pattern_physical_ids(*mixed_row, num_physical).empty()) {
+        const int innermost_perimeter_index = std::max(0, config.wall_loops.value - 1);
+        return mixed_mgr.resolve_perimeter(filament_id,
+                                           num_physical,
+                                           int(layer.id()),
+                                           innermost_perimeter_index,
+                                           float(layer.print_z),
+                                           float(layer.height),
+                                           false);
+    }
+
+    return effective_layer_filament_id(layer, filament_id);
+}
+
+bool use_base_infill_filament(const Layer &layer, const PrintRegionConfig &config)
+{
+    if (!config.enable_infill_filament_override.value)
+        return true;
+
+    const PrintObject *object = layer.object();
+    if (object == nullptr || object->layers().empty())
+        return false;
+
+    const int first_layers = std::max(0, config.infill_filament_use_base_first_layers.value);
+    const int last_layers  = std::max(0, config.infill_filament_use_base_last_layers.value);
+    const int layer_index  = int(layer.id());
+    const int layer_count  = int(object->layers().size());
+    return layer_index < first_layers || layer_index >= layer_count - last_layers;
+}
+
+size_t nozzle_index_for_filament(const PrintConfig &config, unsigned int filament_id)
+{
+    const size_t filament_index = filament_id > 0 ? size_t(filament_id - 1) : 0;
+    if (filament_index < config.filament_map.values.size()) {
+        const int mapped_nozzle = config.filament_map.values[filament_index];
+        if (mapped_nozzle >= 1 && size_t(mapped_nozzle) <= config.nozzle_diameter.size())
+            return size_t(mapped_nozzle - 1);
+    }
+    return filament_index;
+}
+
+} // namespace
+
+unsigned int LayerRegion::extruder(FlowRole role) const
+{
+    const PrintRegionConfig &config = this->region().config();
+    unsigned int             filament_id = 0;
+    if (role == frInfill ||
+        (role == frSolidInfill && std::abs(config.sparse_infill_density.value - 100.) < EPSILON)) {
+        filament_id = use_base_infill_filament(*m_layer, config) ?
+            config.wall_filament.value : config.sparse_infill_filament.value;
+    }
+    else
+        filament_id = this->region().extruder(role);
+
+    if (role == frInfill || role == frSolidInfill || role == frTopSolidInfill)
+        return effective_infill_filament_id(*m_layer, config, filament_id);
+    if (role == frExternalPerimeter)
+        return effective_perimeter_filament_id(*m_layer, filament_id, 0);
+    if (role == frPerimeter) {
+        const int first_inner_perimeter = std::min(1, std::max(0, config.wall_loops.value - 1));
+        return effective_perimeter_filament_id(*m_layer, filament_id, first_inner_perimeter);
+    }
+    throw Slic3r::InvalidArgument("Unknown role");
+}
+
 Flow LayerRegion::flow(FlowRole role) const
 {
     return this->flow(role, m_layer->height);
@@ -24,7 +174,35 @@ Flow LayerRegion::flow(FlowRole role) const
 
 Flow LayerRegion::flow(FlowRole role, double layer_height) const
 {
-    return m_region->flow(*m_layer->object(), role, layer_height, m_layer->id() == 0);
+    return this->flow(role, layer_height, m_layer->id() == 0);
+}
+
+Flow LayerRegion::flow(FlowRole role, double layer_height, bool use_initial_layer_width) const
+{
+    const PrintConfig          &print_config = m_layer->object()->print()->config();
+    ConfigOptionFloatOrPercent config_width;
+    if (use_initial_layer_width && print_config.initial_layer_line_width.value > 0) {
+        config_width = print_config.initial_layer_line_width;
+    } else if (role == frExternalPerimeter) {
+        config_width = m_region->config().outer_wall_line_width;
+    } else if (role == frPerimeter) {
+        config_width = m_region->config().inner_wall_line_width;
+    } else if (role == frInfill) {
+        config_width = m_region->config().sparse_infill_line_width;
+    } else if (role == frSolidInfill) {
+        config_width = m_region->config().internal_solid_infill_line_width;
+    } else if (role == frTopSolidInfill) {
+        config_width = m_region->config().top_surface_line_width;
+    } else {
+        throw Slic3r::InvalidArgument("Unknown role");
+    }
+
+    if (config_width.value == 0)
+        config_width = m_layer->object()->config().line_width;
+
+    const auto nozzle_diameter = float(print_config.nozzle_diameter.get_at(
+        nozzle_index_for_filament(print_config, this->extruder(role))));
+    return Flow::new_from_config_width(role, config_width, nozzle_diameter, float(layer_height));
 }
 
 Flow LayerRegion::bridging_flow(FlowRole role, bool thick_bridge) const
@@ -33,7 +211,9 @@ Flow LayerRegion::bridging_flow(FlowRole role, bool thick_bridge) const
     const PrintRegionConfig &region_config  = region.config();
     const PrintObject       &print_object   = *this->layer()->object();
     Flow bridge_flow;
-    auto nozzle_diameter = float(print_object.print()->config().nozzle_diameter.get_at(region.extruder(role) - 1));
+    const PrintConfig &print_config = print_object.print()->config();
+    auto nozzle_diameter = float(print_config.nozzle_diameter.get_at(
+        nozzle_index_for_filament(print_config, this->extruder(role))));
     if (thick_bridge) {
         // The old Slic3r way (different from all other slicers): Use rounded extrusions.
         // Get the configured nozzle_diameter for the extruder associated to the flow role requested.
@@ -76,6 +256,13 @@ void LayerRegion::make_perimeters(const SurfaceCollection &slices, const LayerRe
     const PrintConfig       &print_config  = this->layer()->object()->print()->config();
     const PrintRegionConfig &region_config = this->region().config();
     const PrintObjectConfig& object_config = this->layer()->object()->config();
+    PrintRegionConfig        perimeter_config = region_config;
+    perimeter_config.wall_filament.value = int(nozzle_index_for_filament(
+        print_config, this->extruder(frPerimeter)) + 1);
+    perimeter_config.sparse_infill_filament.value = int(nozzle_index_for_filament(
+        print_config, this->extruder(frInfill)) + 1);
+    perimeter_config.solid_infill_filament.value = int(nozzle_index_for_filament(
+        print_config, this->extruder(frSolidInfill)) + 1);
     // This needs to be in sync with PrintObject::_slice() slicing_mode_normal_below_layer!
     bool spiral_mode = print_config.spiral_mode &&
         //FIXME account for raft layers.
@@ -89,7 +276,7 @@ void LayerRegion::make_perimeters(const SurfaceCollection &slices, const LayerRe
         this->layer()->height,
         this->layer()->slice_z,
         this->flow(frPerimeter),
-        &region_config,
+        &perimeter_config,
         &this->layer()->object()->config(),
         &print_config,
         spiral_mode,

@@ -12,7 +12,7 @@
 #include <wx/filename.h>
 #include <wx/platinfo.h>
 #include <wx/stdpaths.h>
-#include "libslic3r/Utils.hpp" 
+#include "libslic3r/Utils.hpp"
 #include "slic3r/GUI/GUI_App.hpp"
 #include "slic3r/GUI/MainFrame.hpp"
 #include "FreeInDestructor.h"
@@ -271,15 +271,9 @@ ComErrno MultiComMgr::addWanDev(const com_token_data_t &tokenData, bool isCheckV
     if (ret != COM_OK) {
         return ret;
     }
-    ret = tryDo([&]() {
-        return MultiComUtils::getMqttConfig(m_clientId, tokenData.accessToken, m_mqttConfig, ComTimeoutWanA);
-    });
-    if (ret != COM_OK) {
-        return ret;
-    }
     m_login = true;
     m_httpOnline = true;
-    m_connOnline = true;
+    m_connOnline = false;
     m_connFirstConnected = true;
     m_blockCommandFailedUpdate = false;
     m_commandFailedUpdateTime = std_precise_clock::time_point::min();
@@ -287,19 +281,7 @@ ComErrno MultiComMgr::addWanDev(const com_token_data_t &tokenData, bool isCheckV
     setMaintainThdReqHeader(isCheckVersionOnTestServer);
     MultiComHelper::inst()->loginInit(m_clientId, addDevData.userProfile.uid);
     WanDevTokenMgr::inst()->initalize(tokenData, networkIntfc()); // initialize global token
-    //
-    ret = ComWanConn::inst()->createConn(networkIntfc(), m_clientId.c_str());
-    if (ret != COM_OK) {
-        m_login = false;
-        m_httpOnline = false;
-        m_connOnline = false;
-        return ret;
-    }
-    ComWanConn::inst()->subscribe(std::vector<std::string>(1, m_mqttConfig.userTopic));
-    ComWanConn::inst()->subscribe(m_mqttConfig.commonTopics);
-    ComWanConn::inst()->syncLogin(m_mqttConfig.userTopic);
-    WanDevTokenMgr::inst()->start();
-    m_wanDevMaintainThd->setUpdateWanDev();
+    initWanConnAsync(tokenData.accessToken);
     QueueEvent(new ComGetUserProfileEvent(COM_GET_USER_PROFILE_EVENT, addDevData.userProfile, ret));
     return ret;
 }
@@ -435,7 +417,14 @@ bool MultiComMgr::wanSendGcode(const std::vector<std::string> &devIds,
     for (size_t i = 0; i < devIds.size(); ++i) {
         devTopics[i] = getDevTopic(devIds[i]);
     }
-    return m_sendGcodeThd->startSendGcode(m_clientId, devIds, devSerialNumbers, devTopics, sendGocdeData);
+    bool isSend = false;
+    int  loop   = 3;
+    while (loop--) {
+        isSend = m_sendGcodeThd->startSendGcode(m_clientId, devIds, devSerialNumbers, devTopics, sendGocdeData);
+        if (isSend)
+            break;
+    }
+    return isSend;
 }
 
 bool MultiComMgr::abortWanSendGcode()
@@ -998,6 +987,61 @@ void MultiComMgr::maintianWanDev(ComErrno ret, bool needLogout)
         setWanDevOffline();
         QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, false, ret));
     }
+}
+
+void MultiComMgr::initWanConnAsync(const std::string &accessToken)
+{
+    if (!m_threadPool || networkIntfc() == nullptr) {
+        return;
+    }
+
+    const std::string clientId = m_clientId;
+    m_threadPool->post([this, clientId, accessToken]() {
+        if (m_threadExitEvent.get()) {
+            return;
+        }
+
+        com_mqtt_config_t mqttConfig;
+        ComErrno ret = MultiComUtils::getMqttConfig(clientId, accessToken, mqttConfig, ComTimeoutWanA);
+        if (ret != COM_OK) {
+            BOOST_LOG_TRIVIAL(warning) << "MultiComMgr::initWanConnAsync getMqttConfig failed: " << (int) ret;
+            if (ret == COM_UNAUTHORIZED) {
+                maintianWanDev(ret, false);
+            } else if (m_login && m_clientId == clientId) {
+                m_connOnline = false;
+                QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, false, ret));
+            }
+            return;
+        }
+
+        if (m_threadExitEvent.get() || !m_login || m_clientId != clientId) {
+            return;
+        }
+
+        m_mqttConfig = mqttConfig;
+        ret = ComWanConn::inst()->createConn(networkIntfc(), clientId.c_str());
+        if (ret != COM_OK) {
+            BOOST_LOG_TRIVIAL(warning) << "MultiComMgr::initWanConnAsync createConn failed: " << (int) ret;
+            if (m_login && m_clientId == clientId) {
+                m_connOnline = false;
+                QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, false, ret));
+            }
+            return;
+        }
+
+        if (m_threadExitEvent.get() || !m_login || m_clientId != clientId) {
+            if (!m_login && m_clientId == clientId) {
+                ComWanConn::inst()->freeConn();
+            }
+            return;
+        }
+
+        ComWanConn::inst()->subscribe(std::vector<std::string>(1, m_mqttConfig.userTopic));
+        ComWanConn::inst()->subscribe(m_mqttConfig.commonTopics);
+        ComWanConn::inst()->syncLogin(m_mqttConfig.userTopic);
+        WanDevTokenMgr::inst()->start();
+        m_wanDevMaintainThd->setUpdateWanDev();
+    });
 }
 
 void MultiComMgr::setMaintainThdReqHeader(bool isCheckVersionOnTestServer)

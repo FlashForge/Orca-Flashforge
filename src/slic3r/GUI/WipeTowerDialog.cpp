@@ -11,6 +11,7 @@
 #include "libslic3r/Color.hpp"
 #include "Widgets/StaticLine.hpp"
 #include "Widgets/DialogButtons.hpp"
+#include "Widgets/WebView.hpp"
 #include "libslic3r/Config.hpp"
 #include "Widgets/Label.hpp"
 #include "MainFrame.hpp"
@@ -199,24 +200,71 @@ std::string RammingPanel::get_parameters()
 static const float g_min_flush_multiplier = 0.f;
 static const float g_max_flush_multiplier = 3.f;
 
+// Extract the num_phys×num_phys top-left block from a flat total×total matrix.
+// When there are no mixed filaments (total == num_phys) the function is a no-op
+// and returns the input unchanged.
+static std::vector<double> extract_physical_sub_matrix(
+    const std::vector<double>& full, size_t total, size_t num_phys)
+{
+    if (num_phys >= total || total == 0)
+        return full;
+    std::vector<double> phys(num_phys * num_phys, 0.0);
+    for (size_t row = 0; row < num_phys; ++row)
+        for (size_t col = 0; col < num_phys; ++col)
+            phys[row * num_phys + col] = full[row * total + col];
+    return phys;
+}
+
+// Write the edited num_phys×num_phys sub-matrix back into a copy of
+// original_full (total×total), preserving the mixed-slot rows and columns.
+static std::vector<double> expand_physical_to_full_matrix(
+    const std::vector<double>& phys, const std::vector<double>& original_full,
+    size_t total, size_t num_phys)
+{
+    if (num_phys >= total || total == 0)
+        return phys;
+    std::vector<double> result(original_full);  // preserve mixed rows/cols
+    for (size_t row = 0; row < num_phys; ++row)
+        for (size_t col = 0; col < num_phys; ++col)
+            result[row * total + col] = phys[row * num_phys + col];
+    return result;
+}
+
 bool is_flush_config_modified()
 {
     const auto                &project_config    = wxGetApp().preset_bundle->project_config;
     const std::vector<double> &config_matrix     = (project_config.option<ConfigOptionFloats>("flush_volumes_matrix"))->values;
     const std::vector<double> &config_multiplier = (project_config.option<ConfigOptionFloats>("flush_multiplier"))->values;
 
+    // Physical filament count (excludes mixed virtual slots).
+    const size_t num_phys = static_cast<size_t>(wxGetApp().filaments_cnt());
+    const size_t nozzle_num = config_multiplier.size();
+    // Total filament count stored per nozzle block.
+    const size_t total = (nozzle_num > 0 && !config_matrix.empty())
+                             ? static_cast<size_t>(std::round(std::sqrt(config_matrix.size() / nozzle_num)))
+                             : num_phys;
+
     bool has_modify = false;
-    for (int i = 0; i < config_multiplier.size(); i++) {
+    for (int i = 0; i < (int)nozzle_num; i++) {
         if (config_multiplier[i] != 1) {
             has_modify = true;
             break;
         }
+        // Extract the per-nozzle block from the flat full matrix.
+        std::vector<double> nozzle_full(config_matrix.begin() + i * (int)(total * total),
+                                        config_matrix.begin() + (i + 1) * (int)(total * total));
+        // Only compare the physical sub-matrix; mixed-slot rows/cols are computed.
+        const std::vector<double> phys_stored = extract_physical_sub_matrix(nozzle_full, total, num_phys);
+
         std::vector<std::vector<double>> default_matrix = WipingDialog::CalcFlushingVolumes(i);
-        int len = default_matrix.size();
-        for (int m = 0; m < len; m++) {
-            for (int n = 0; n < len; n++) {
-                int idx = i * len * len + m * len + n;
-                if (config_matrix[idx] != default_matrix[m][n] * config_multiplier[i]) {
+        // CalcFlushingVolumes also spans total×total; take physical sub-matrix.
+        int def_total = (int)default_matrix.size();
+        for (int m = 0; m < (int)num_phys; m++) {
+            for (int n = 0; n < (int)num_phys; n++) {
+                double def_val = (m < def_total && n < (int)default_matrix[m].size())
+                                     ? default_matrix[m][n] * config_multiplier[i]
+                                     : 0.0;
+                if (phys_stored[m * num_phys + n] != def_val) {
                     has_modify = true;
                     break;
                 }
@@ -265,24 +313,46 @@ wxString WipingDialog::BuildTableObjStr()
     auto raw_matrix_data = full_config.option<ConfigOptionFloats>("flush_volumes_matrix")->values;
     auto nozzle_flush_dataset = full_config.option<ConfigOptionIntsNullable>("nozzle_flush_dataset")->values;
 
-    std::vector<std::vector<double>> flush_matrixs;
+    // Physical filament count — the editor only shows the P×P physical block.
+    const size_t num_phys = static_cast<size_t>(wxGetApp().filaments_cnt());
+    const size_t total    = (num_phys > 0 && !filament_colors.empty())
+                                ? filament_colors.size()
+                                : num_phys;
+
+    // Per-nozzle full matrices (total×total), stored for expand-on-save.
+    std::vector<std::vector<double>> full_matrixs;
     for (int idx = 0; idx < nozzle_num; ++idx) {
-        flush_matrixs.emplace_back(get_flush_volumes_matrix(raw_matrix_data, idx, nozzle_num));
+        full_matrixs.emplace_back(get_flush_volumes_matrix(raw_matrix_data, idx, nozzle_num));
     }
     flush_multiplier.resize(nozzle_num, 1);
 
-    std::vector<std::vector<float>> default_matrixs;
+    // Physical sub-matrices sent to the web editor (num_phys×num_phys).
+    std::vector<std::vector<double>> flush_matrixs;
     for (int idx = 0; idx < nozzle_num; ++idx) {
-        default_matrixs.emplace_back(MatrixFlatten(CalcFlushingVolumes(idx)));
+        flush_matrixs.emplace_back(extract_physical_sub_matrix(full_matrixs[idx], total, num_phys));
     }
 
-    m_raw_matrixs = flush_matrixs;
+    // Default matrices for the auto-calc button — physical sub-matrix only.
+    std::vector<std::vector<float>> default_matrixs;
+    for (int idx = 0; idx < nozzle_num; ++idx) {
+        std::vector<float> def_flat = MatrixFlatten(CalcFlushingVolumes(idx));
+        std::vector<double> def_d(def_flat.begin(), def_flat.end());
+        std::vector<double> def_phys = extract_physical_sub_matrix(def_d, total, num_phys);
+        default_matrixs.emplace_back(def_phys.begin(), def_phys.end());
+    }
+
+    // Store full matrices so storeData can expand back when saving.
+    m_raw_matrixs = full_matrixs;
     m_flush_multipliers = flush_multiplier;
+
+    // Only send physical filament colours to the editor.
+    std::vector<std::string> phys_colors(filament_colors.begin(),
+                                          filament_colors.begin() + std::min(num_phys, filament_colors.size()));
 
     json obj;
     obj["flush_multiplier"] = flush_multiplier;
     obj["extruder_num"] = nozzle_num;
-    obj["filament_colors"] = filament_colors;
+    obj["filament_colors"] = phys_colors;
     obj["flush_volume_matrixs"] = json::array();
     obj["min_flush_volumes"] = json::array();
     obj["max_flush_volumes"] = json::array();
@@ -299,8 +369,12 @@ wxString WipingDialog::BuildTableObjStr()
     }
 
     for (int idx = 0; idx < nozzle_num; ++idx) {
+        // min_flush_volumes is indexed by physical slot; slice off at num_phys.
         const std::vector<int> &min_flush_volumes = get_min_flush_volumes(full_config, idx);
-        int min_flush_from_nozzle_volume = *min_element(min_flush_volumes.begin(), min_flush_volumes.end());
+        int min_flush_from_nozzle_volume = min_flush_volumes.empty()
+            ? 0
+            : *min_element(min_flush_volumes.begin(),
+                           min_flush_volumes.begin() + std::min(num_phys, min_flush_volumes.size()));
         GenericFlushPredictor pd(nozzle_flush_dataset[idx]);
         int min_flush_from_flush_data = pd.get_min_flush_volume();
         obj["min_flush_volumes"].push_back(std::min(min_flush_from_flush_data,min_flush_from_nozzle_volume));
@@ -366,45 +440,45 @@ wxString WipingDialog::BuildTextObjStr(bool multi_language)
 WipingDialog::WipingDialog(wxWindow* parent, const int max_flush_volume) :
     wxDialog(parent, wxID_ANY, _(L("Flushing volumes for filament change")),
     wxDefaultPosition, wxDefaultSize,
-    wxDEFAULT_DIALOG_STYLE ),
+    wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER ),
     m_max_flush_volume(max_flush_volume)
 {
     wxBoxSizer* main_sizer = new wxBoxSizer(wxVERTICAL);
     this->SetSizer(main_sizer);
     this->SetBackgroundColour(*wxWHITE);
-    auto filament_count= wxGetApp().preset_bundle->project_config.option<ConfigOptionStrings>("filament_colour")->values.size();
-    wxSize extra_size = { FromDIP(100),FromDIP(235) };
-    if (filament_count <= 2)
-        extra_size.y += FromDIP(16) * 3 + FromDIP(32);
-    else if (filament_count == 3)
-        extra_size.y += FromDIP(16) * 3;
-    else if (4 <= filament_count && filament_count <= 8)
-        extra_size.y += FromDIP(16) * 2;
-    else
-        extra_size.y += FromDIP(16);
+    auto filament_count = wxGetApp().preset_bundle->project_config.option<ConfigOptionStrings>("filament_colour")->values.size();
 
-    wxSize max_scroll_size = { FromDIP(1000),FromDIP(500) };
-    wxSize estimate_size = { (int)(filament_count + 1) * FromDIP(60),(int)(filament_count + 1) * FromDIP(30)+FromDIP(2)};
-    wxSize scroll_size ={ std::min(max_scroll_size.x,estimate_size.x),std::min(max_scroll_size.y,estimate_size.y) };
-    wxSize applied_size = scroll_size + extra_size;
+    // Estimate table scroll area size based on filament count
+    // Each table cell is ~60x25 DIP, plus headers and borders
+    wxSize max_scroll_size = { FromDIP(1000), FromDIP(500) };
+    wxSize table_size = { (int)(filament_count + 1) * FromDIP(60), (int)(filament_count + 1) * FromDIP(25) + FromDIP(2) };
+    wxSize scroll_size = { std::min(max_scroll_size.x, table_size.x), std::min(max_scroll_size.y, table_size.y) };
 
+    // Fixed overhead: padding (~30), tip panel (~70), controls row (~50),
+    // description/multiplier section (~130), button row (~45) = ~325 DIP
+    wxSize fixed_overhead = { FromDIP(100), FromDIP(325) };
+    wxSize applied_size = scroll_size + fixed_overhead;
+
+    // Clamp to screen size (leave some margin for window decorations)
     wxSize scaled_screen_size = wxGetDisplaySize();
     double scale_factor = wxDisplay().GetScaleFactor();
-    scaled_screen_size = { (int)(scaled_screen_size.x / scale_factor),(int)(scaled_screen_size.y / scale_factor) };
+    scaled_screen_size = { (int)(scaled_screen_size.x / scale_factor), (int)(scaled_screen_size.y / scale_factor) };
+    wxSize screen_margin = { FromDIP(40), FromDIP(60) };
+    scaled_screen_size -= screen_margin;
 
-    applied_size = { std::min(applied_size.x,scaled_screen_size.x),std::min(applied_size.y,scaled_screen_size.y) };
-    m_webview = wxWebView::New(this, wxID_ANY,
-        wxEmptyString,
-        wxDefaultPosition,
-        applied_size,
-        wxWebViewBackendDefault,
-        wxNO_BORDER);
+    applied_size = { std::min(applied_size.x, scaled_screen_size.x), std::min(applied_size.y, scaled_screen_size.y) };
+
+    // Ensure a reasonable minimum size so the dialog is usable even when clamped
+    applied_size.x = std::max(applied_size.x, FromDIP(350));
+    applied_size.y = std::max(applied_size.y, FromDIP(450));
+    m_webview = WebView::CreateWebView(this, wxEmptyString);
+    m_webview->SetMinSize(applied_size);
 
     m_webview->AddScriptMessageHandler("wipingDialog");
     main_sizer->Add(m_webview, 1, wxEXPAND);
 
     fs::path filepath = fs::path(resources_dir()) / "web/flush/WipingDialog.html";
-    wxString filepath_str = wxString::FromUTF8(filepath.string());
+    wxString filepath_str = from_path(filepath);
     wxFileName fn(filepath_str);
     if(fn.FileExists()) {
         wxString url = wxFileSystem::FileNameToURL(fn);
@@ -464,24 +538,40 @@ WipingDialog::WipingDialog(wxWindow* parent, const int max_flush_volume) :
             }
             else if (j["msg"].get<std::string>() == "storeData") {
                 int extruder_num = j["number_of_extruders"].get<int>();
-                std::vector<std::vector<double>> store_matrixs;
+                // The web editor works on the physical sub-matrix (P×P).
+                std::vector<std::vector<double>> phys_matrixs;
                 for (auto iter = j["raw_matrix"].begin(); iter != j["raw_matrix"].end(); ++iter) {
-                    store_matrixs.emplace_back((*iter).get<std::vector<double>>());
+                    phys_matrixs.emplace_back((*iter).get<std::vector<double>>());
                 }
                 std::vector<double>store_multipliers = j["flush_multiplier"].get<std::vector<double>>();
                 {// limit all matrix value before write to gcode, the limitation is depends on the multipliers
                     size_t cols_temp_matrix = 0;
-                    if (!store_matrixs.empty()) { cols_temp_matrix = store_matrixs[0].size(); }
-                    if (store_multipliers.size() == store_matrixs.size() && cols_temp_matrix>0) // nuzzles==nuzzles
+                    if (!phys_matrixs.empty()) { cols_temp_matrix = phys_matrixs[0].size(); }
+                    if (store_multipliers.size() == phys_matrixs.size() && cols_temp_matrix>0) // nuzzles==nuzzles
                     {
                         for (size_t idx = 0; idx < store_multipliers.size(); ++idx) {
                             double m_max_flush_volume_t = (double)m_max_flush_volume, m_store_multipliers=store_multipliers[idx];
-                            std::transform(store_matrixs[idx].begin(), store_matrixs[idx].end(),
-                                           store_matrixs[idx].begin(),
+                            std::transform(phys_matrixs[idx].begin(), phys_matrixs[idx].end(),
+                                           phys_matrixs[idx].begin(),
                                            [m_max_flush_volume_t, m_store_multipliers](double inputx) {
                                                return std::clamp(inputx, 0.0, m_max_flush_volume_t / m_store_multipliers);
                                            });
                         }
+                    }
+                }
+                // Expand physical sub-matrices back to full total×total,
+                // preserving the mixed-slot rows/cols from the snapshot taken
+                // in BuildTableObjStr.
+                const size_t num_phys = static_cast<size_t>(wxGetApp().filaments_cnt());
+                std::vector<std::vector<double>> store_matrixs;
+                for (size_t idx = 0; idx < phys_matrixs.size(); ++idx) {
+                    if (idx < m_raw_matrixs.size() && !m_raw_matrixs[idx].empty()) {
+                        const size_t total = static_cast<size_t>(
+                            std::round(std::sqrt(static_cast<double>(m_raw_matrixs[idx].size()))));
+                        store_matrixs.emplace_back(
+                            expand_physical_to_full_matrix(phys_matrixs[idx], m_raw_matrixs[idx], total, num_phys));
+                    } else {
+                        store_matrixs.emplace_back(phys_matrixs[idx]);
                     }
                 }
                 this->StoreFlushData(extruder_num, store_matrixs, store_multipliers);

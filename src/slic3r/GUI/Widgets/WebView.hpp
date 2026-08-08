@@ -8,6 +8,7 @@ class WebView
 public:
     static wxWebView *CreateWebView(wxWindow *parent, wxString const &url);
 #if wxUSE_WEBVIEW_EDGE
+    static void InitWebViewDataPath();
     static bool CheckWebViewRuntime();
     static bool DownloadAndInstallWebViewRuntime();
 #endif

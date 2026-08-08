@@ -218,6 +218,57 @@ msgstr ""
 "객체 간 거리 배치나 검증 시 최종 스커트 루프 수는 고려되지 않습니다.\n"
 "이 경우 루프 수를 늘려주세요."
 
+msgid "Expert settings"
+msgstr "전문가 설정"
+
+msgid "Simple settings"
+msgstr "간단 설정"
+
+msgid "Local-Z pair split: requested F<a>/F<b> <percent>/<percent>."
+msgstr "Local-Z 쌍 분할: 요청 F<a>/F<b> <percent>/<percent>."
+
+msgid "Cycle settings visibility"
+msgstr "설정 표시 수준 전환"
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d."
+msgstr "Local-Z 쌍 분할: 요청 F%u/F%u %d/%d."
+
+msgid "Local-Z breakdown: manual pattern rows do not use pair decomposition."
+msgstr "Local-Z 분석: 수동 패턴 행은 쌍 분해를 사용하지 않습니다."
+
+msgid "Local-Z breakdown: same-layer mode does not use local-Z pair decomposition."
+msgstr "Local-Z 분석: 동일 레이어 모드는 Local-Z 쌍 분해를 사용하지 않습니다."
+
+msgid "Local-Z breakdown: unavailable."
+msgstr "Local-Z 분석: 사용할 수 없습니다."
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d, effective %d/%d over %d sublayers."
+msgstr "Local-Z 쌍 분할: 요청 F%u/F%u %d/%d, 실제 %d/%d, %d개 하위 레이어."
+
+msgid "Local-Z direct multicolor solver: %s"
+msgstr "Local-Z 직접 다색 솔버: %s"
+
+msgid "Carry-over error is distributed directly across all %d components instead of collapsing them into pair cadence."
+msgstr "이월 오차는 쌍 주기로 접히지 않고 모든 %d개 구성 요소에 직접 분배됩니다."
+
+msgid "Effective Local-Z cap: up to %d sublayers per nominal layer."
+msgstr "유효 Local-Z 제한: 공칭 레이어당 최대 %d개 하위 레이어."
+
+msgid "Local-Z layer cadence: %s."
+msgstr "Local-Z 레이어 주기: %s."
+
+msgid "Pair splits: %s."
+msgstr "쌍 분할: %s."
+
+msgid "Saved row limit will apply when Local-Z dithering mode is enabled in print settings."
+msgstr "저장된 행 제한은 프린트 설정에서 Local-Z 디더링 모드를 활성화할 때 적용됩니다."
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers."
+msgstr "유효 Local-Z 스택: %d개 하위 레이어가 %d개 쌍 레이어에 걸쳐 적용됩니다."
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers (uncapped %d)."
+msgstr "유효 Local-Z 스택: %d개 하위 레이어가 %d개 쌍 레이어에 걸쳐 적용됩니다(제한 전 %d)."
+
 msgid "Associate files to OrcaSlicer"
 msgstr "파일을 Flash Studio에 연결"
 

@@ -9,6 +9,9 @@ namespace Slic3r {
 using LayerPrintSequence = std::pair<std::pair<int, int>, std::vector<int>>;
 std::vector<LayerPrintSequence> get_other_layers_print_sequence(int sequence_nums, const std::vector<int> &sequence);
 void get_other_layers_print_sequence(const std::vector<LayerPrintSequence> &customize_sequences, int &sequence_nums, std::vector<int> &sequence);
+bool remap_and_normalize_filament_sequence(std::vector<int> &sequence,
+                                           size_t total_filaments,
+                                           const std::vector<unsigned int> &filament_id_remap = {});
 
 extern int get_index_for_extruder_parameter(const DynamicPrintConfig &config, const std::string &opt_key, int cur_extruder_id, ExtruderType extruder_type, NozzleVolumeType nozzle_volume_type);
 } // namespace Slic3r

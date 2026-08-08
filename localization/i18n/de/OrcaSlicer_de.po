@@ -172,8 +172,8 @@ msgstr "Werkzeugtyp"
 msgid "Smart fill angle"
 msgstr "Intelligenter Füllwinkel"
 
-msgid "On overhangs only"
-msgstr "Nur an Überhängen"
+msgid "On highlighted overhangs only"
+msgstr "Nur an hervorgehobenen Überhängen"
 
 msgid "Auto support threshold angle: "
 msgstr "Winkel für automatische Supports: "
@@ -1622,7 +1622,7 @@ msgstr ""
 "erkannt."
 
 msgid "STEP files"
-msgstr "SETP Dateien"
+msgstr "STEP Dateien"
 
 msgid "STL files"
 msgstr "STL Dateien"
@@ -5214,6 +5214,9 @@ msgstr "Kosten"
 msgid "Filament change times"
 msgstr "Filamentwechselzeiten"
 
+msgid "Tool changes"
+msgstr "Werkzeugwechsel"
+
 msgid "Color change"
 msgstr "Farbwechsel"
 
@@ -7266,6 +7269,12 @@ msgstr "Export erfolgreich."
 
 msgid "Model file downloaded."
 msgstr "Modelldatei heruntergeladen."
+
+msgid "Shared profiles may be available for this printer."
+msgstr "Für diesen Drucker sind möglicherweise freigegebene Profile verfügbar."
+
+msgid "Browse shared profiles"
+msgstr "Freigegebene Profile durchsuchen"
 
 msgid "Serious warning:"
 msgstr "Wichtige Warnung:"
@@ -15206,6 +15215,18 @@ msgstr "Bewegung"
 
 msgid "Travel speed of the first layer."
 msgstr "Bewegungsgeschwindigkeit der ersten Schicht"
+
+msgid "First layer travel acceleration"
+msgstr "Eilgang Beschleunigung"
+
+msgid "Travel acceleration of first layer."
+msgstr "Eilgang Beschleunigung der ersten Schicht."
+
+msgid "First layer travel jerk"
+msgstr "Eilgang Ruck"
+
+msgid "Travel jerk of first layer."
+msgstr "Eilgang Ruck der ersten Schicht."
 
 msgid "Number of slow layers"
 msgstr "Anzahl der langsamen Schichten"

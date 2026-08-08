@@ -119,6 +119,8 @@ private:
 
     void setMaintainThdReqHeader(bool isCheckVersionTestServer);
 
+    void initWanConnAsync(const std::string &accessToken);
+
     void setWanDevOffline();
 
     void subscribeWanDevTopic();

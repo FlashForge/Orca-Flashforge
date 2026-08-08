@@ -1,4 +1,26 @@
 @REM Orca-Flashforge build script for Windows
+@REM
+@REM Usage:
+@REM   build_release_vs2022.bat
+@REM       Configure and build deps, then configure, build, and install the slicer in Release mode.
+@REM
+@REM   build_release_vs2022.bat slicer
+@REM       Skip deps. Configure, build, and install the slicer in Release mode.
+@REM
+@REM   build_release_vs2022.bat slicer buildonly
+@REM       Skip deps and skip CMake configure. Build and install the existing Release build directory.
+@REM       Aliases: compile, noconfigure
+@REM
+@REM   build_release_vs2022.bat slicer debuginfo buildonly
+@REM       Build and install the existing RelWithDebInfo build directory.
+@REM
+@REM   build_release_vs2022.bat slicer debug buildonly
+@REM       Build and install the existing Debug build directory.
+@REM
+@REM Build type options:
+@REM   debug      -> build-dbg, Debug
+@REM   debuginfo  -> build-dbginfo, RelWithDebInfo
+@REM   default    -> build, Release
 @echo off
 set WP=%CD%
 
@@ -15,10 +37,14 @@ if "%1"=="pack" (
 
 set debug=OFF
 set debuginfo=OFF
-if "%1"=="debug" set debug=ON
-if "%2"=="debug" set debug=ON
-if "%1"=="debuginfo" set debuginfo=ON
-if "%2"=="debuginfo" set debuginfo=ON
+set build_only=OFF
+for %%a in (%*) do (
+    if /I "%%~a"=="debug" set debug=ON
+    if /I "%%~a"=="debuginfo" set debuginfo=ON
+    if /I "%%~a"=="buildonly" set build_only=ON
+    if /I "%%~a"=="compile" set build_only=ON
+    if /I "%%~a"=="noconfigure" set build_only=ON
+)
 if "%debug%"=="ON" (
     set build_type=Debug
     set build_dir=build-dbg
@@ -48,7 +74,7 @@ echo "building deps.."
 echo on
 REM Set minimum CMake policy to avoid <3.5 errors
 set CMAKE_POLICY_VERSION_MINIMUM=3.5
-cmake ../ -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=%build_type%
+if not "%build_only%"=="ON" cmake ../ -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=%build_type%
 cmake --build . --config %build_type% --target deps -- -m
 @echo off
 
@@ -62,7 +88,7 @@ cd %build_dir%
 
 echo on
 set CMAKE_POLICY_VERSION_MINIMUM=3.5
-cmake .. -G "Visual Studio 17 2022" -A x64 -DORCA_TOOLS=ON %SIG_FLAG% -DCMAKE_BUILD_TYPE=%build_type%
+if not "%build_only%"=="ON" cmake .. -G "Visual Studio 17 2022" -A x64 -DORCA_TOOLS=ON %SIG_FLAG% -DCMAKE_BUILD_TYPE=%build_type%
 cmake --build . --config %build_type% --target ALL_BUILD -- -m
 @echo off
 cd ..

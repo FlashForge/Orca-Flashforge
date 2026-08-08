@@ -182,11 +182,12 @@ void TabButton::render(wxDC &dc)
         
 #ifdef __WIN32__
         pt.y = (size.y - showimg.GetHeight()) / 2;
-#else if __APPLE__
+#elif defined(__APPLE__)
         pt.y = (size.y - showimg.GetHeight()) / 2 + FromDIP(3);
 #endif
         dc.DrawBitmap(showimg, pt);
     }
+
 }
 
 void TabButton::messureSize()

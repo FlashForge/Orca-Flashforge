@@ -15,7 +15,7 @@
 #include <vector>
 
 #include "MultiComDef.hpp"
-#include "Slic3r/GUI/wxExtensions.hpp"
+#include "slic3r/GUI/wxExtensions.hpp"
 
 namespace Slic3r { namespace GUI {
 

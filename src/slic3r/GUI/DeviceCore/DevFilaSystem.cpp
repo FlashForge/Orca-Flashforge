@@ -28,14 +28,21 @@ wxColour DevAmsTray::decode_color(const std::string &color)
     return wxColour(ret[0], ret[1], ret[2], ret[3]);
 }
 
+DevAmsTray DevAmsTray::reported_virtual(std::string tray_id)
+{
+    DevAmsTray tray(tray_id);
+    tray.is_exists            = true;
+    tray.is_slot_placeholder = false;
+    return tray;
+}
+
 void DevAmsTray::UpdateColorFromStr(const std::string& color)
 {
-    if (color.empty()) return;
-    if (this->color != color)
-    {
-        wx_color = "#" + wxString::FromUTF8(color);
-        this->color = color;
-    }
+    if (this->color == color)
+        return;
+
+    this->color = color;
+    wx_color    = color.empty() ? wxNullColour : wxColour("#" + wxString::FromUTF8(color));
 }
 
 void DevAmsTray::reset()
@@ -245,11 +252,11 @@ int DevFilaSystem::GetExtruderIdByAmsId(const std::string& ams_id) const
     {
         return it->second->GetExtruderId();
     }
-    else if (stoi(ams_id) == VIRTUAL_TRAY_MAIN_ID)
+    else if (ams_id == VIRTUAL_AMS_MAIN_ID_STR)
     {
         return MAIN_EXTRUDER_ID;
     }
-    else if (stoi(ams_id) == VIRTUAL_TRAY_DEPUTY_ID)
+    else if (ams_id == VIRTUAL_AMS_DEPUTY_ID_STR)
     {
         return DEPUTY_EXTRUDER_ID;
     }
@@ -567,7 +574,7 @@ void DevFilaSystemParser::ParseV1_0(const json& jj, MachineObject* obj, DevFilaS
                             }
                             else
                             {
-                                curr_tray->color = "";
+                                curr_tray->UpdateColorFromStr("");
                             }
                             if (tray_it->contains("nozzle_temp_max"))
                             {
@@ -612,8 +619,17 @@ void DevFilaSystemParser::ParseV1_0(const json& jj, MachineObject* obj, DevFilaS
                             {
                                 curr_tray->remain = -1;
                             }
+                            curr_tray->is_slot_placeholder = false;
                             if (tray_it->contains("tray_slot_placeholder")) {
-                                curr_tray->is_slot_placeholder = true;
+                                const json &placeholder = (*tray_it)["tray_slot_placeholder"];
+                                if (placeholder.is_boolean())
+                                    curr_tray->is_slot_placeholder = placeholder.get<bool>();
+                                else if (placeholder.is_number_integer())
+                                    curr_tray->is_slot_placeholder = placeholder.get<int>() != 0;
+                                else if (placeholder.is_string()) {
+                                    const std::string value = placeholder.get<std::string>();
+                                    curr_tray->is_slot_placeholder = value == "1" || value == "true";
+                                }
                             }
                             int ams_id_int = 0;
                             int tray_id_int = 0;

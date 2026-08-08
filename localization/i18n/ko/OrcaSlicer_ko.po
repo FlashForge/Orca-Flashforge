@@ -173,8 +173,8 @@ msgstr "도구 유형"
 msgid "Smart fill angle"
 msgstr "스마트 채우기 각도"
 
-msgid "On overhangs only"
-msgstr "오버행에만 칠하기"
+msgid "On highlighted overhangs only"
+msgstr "강조된 오버행에만 칠하기"
 
 msgid "Auto support threshold angle: "
 msgstr "자동 서포트 임계값 각도: "
@@ -5005,6 +5005,9 @@ msgstr "비용"
 msgid "Filament change times"
 msgstr "필라멘트 변경 시간"
 
+msgid "Tool changes"
+msgstr "도구 교환 횟수"
+
 msgid "Color change"
 msgstr "색 변경"
 
@@ -6984,6 +6987,12 @@ msgstr "내보내기 성공."
 
 msgid "Model file downloaded."
 msgstr "모델 파일이 다운로드되었습니다."
+
+msgid "Shared profiles may be available for this printer."
+msgstr "이 프린터에 사용 가능한 공유 프로필이 있을 수 있습니다."
+
+msgid "Browse shared profiles"
+msgstr "공유 프로필 찾아보기"
 
 msgid "Serious warning:"
 msgstr "심각한 경고:"

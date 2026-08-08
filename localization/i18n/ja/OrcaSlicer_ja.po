@@ -171,8 +171,8 @@ msgstr "ツールタイプ"
 msgid "Smart fill angle"
 msgstr "自動充填角度"
 
-msgid "On overhangs only"
-msgstr "オーバーハングのみ"
+msgid "On highlighted overhangs only"
+msgstr "強調表示されたオーバーハングのみ"
 
 msgid "Auto support threshold angle: "
 msgstr "自動サポート角度閾値"
@@ -5032,6 +5032,9 @@ msgstr "コスト"
 msgid "Filament change times"
 msgstr "フィラメント交換回数"
 
+msgid "Tool changes"
+msgstr "ツール交換回数"
+
 msgid "Color change"
 msgstr "色変更"
 
@@ -7016,6 +7019,12 @@ msgstr "エクスポートが成功しました。"
 
 msgid "Model file downloaded."
 msgstr "モデルファイルがダウンロードされました。"
+
+msgid "Shared profiles may be available for this printer."
+msgstr "このプリンターでは共有プロファイルを利用できる場合があります。"
+
+msgid "Browse shared profiles"
+msgstr "共有プロファイルを参照"
 
 msgid "Serious warning:"
 msgstr "重大な警告:"

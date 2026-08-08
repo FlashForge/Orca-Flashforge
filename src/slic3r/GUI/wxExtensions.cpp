@@ -20,6 +20,7 @@
 #include "../Utils/WxFontUtils.hpp"
 #include "FilamentBitmapUtils.hpp"
 #include "../Utils/ColorSpaceConvert.hpp"
+#include "libslic3r/PresetBundle.hpp"
 #ifndef __linux__
 // msw_menuitem_bitmaps is used for MSW and OSX
 static std::map<int, std::string> msw_menuitem_bitmaps;
@@ -413,15 +414,6 @@ int em_unit(wxWindow* win)
     return Slic3r::GUI::wxGetApp().em_unit();
 }
 
-int mode_icon_px_size()
-{
-#ifdef __APPLE__
-    return 10;
-#else
-    return 12;
-#endif
-}
-
 wxBitmap create_menu_bitmap(const std::string& bmp_name)
 {
     return create_scaled_bitmap(bmp_name, nullptr, 16, false, "", true);
@@ -468,6 +460,10 @@ wxBitmap create_scaled_bitmap(  const std::string& bmp_name_in,
         throw Slic3r::RuntimeError("Could not load bitmap: " + bmp_name);
     }
 
+#ifdef __WXMSW__
+    // ORCA MSW needs to set scale factor for bitmaps loaded from cache because they arent auto scaled by wxBitmapBundle like bitmaps
+    bmp->SetScaleFactor(win ? win->GetDPIScaleFactor() : (wxWindow::FromDIP(100, nullptr) / 100.0));
+#endif
     return *bmp;
 }
 
@@ -487,6 +483,10 @@ wxBitmap create_scaled_bitmap2(const std::string& bmp_name_in, Slic3r::GUI::Bitm
         BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << "Could not load bitmap: " << bmp_name;
         throw Slic3r::RuntimeError("Could not load bitmap: " + bmp_name);
     }
+#ifdef __WXMSW__
+    // ORCA MSW needs to set scale factor for bitmaps loaded from cache because they arent auto scaled by wxBitmapBundle like bitmaps
+    bmp->SetScaleFactor(win ? win->GetDPIScaleFactor() : (wxWindow::FromDIP(100, nullptr) / 100.0));
+#endif
     return *bmp;
 }
 
@@ -500,7 +500,8 @@ wxBitmap* get_default_extruder_color_icon(bool thin_icon/* = false*/)
     const int icon_height = lround(2 * em);
     bool dark_mode = Slic3r::GUI::wxGetApp().dark_mode();
 
-    wxClientDC cdc((wxWindow*)Slic3r::GUI::wxGetApp().mainframe);
+    auto win = (wxWindow*)Slic3r::GUI::wxGetApp().mainframe;
+    wxClientDC cdc(win);
     wxMemoryDC dc(&cdc);
     dc.SetFont(::Label::Body_12);
 
@@ -525,6 +526,12 @@ wxBitmap* get_default_extruder_color_icon(bool thin_icon/* = false*/)
         dc.DrawText(label, (icon_width - size.x) / 2, (icon_height - size.y) / 2);
         dc.SelectObject(wxNullBitmap);
     }
+
+    #ifdef __WXMSW__
+    // ORCA MSW needs to set scale factor for bitmaps loaded from cache because they arent auto scaled by wxBitmapBundle like bitmaps
+    double scale = win ? win->GetDPIScaleFactor() : (wxWindow::FromDIP(100, nullptr) / 100.0);
+    bitmap->SetScaleFactor(scale);
+    #endif
 
     return bitmap;
 }
@@ -555,6 +562,17 @@ std::vector<wxBitmap*> get_extruder_color_icons(bool thin_icon/* = false*/)
             } else {
                 bmps.push_back(get_extruder_color_icon(colors, is_gradient, label, icon_width, icon_height));
             }
+        }
+        // Append virtual mixed-filament colours through Plater so icon lists
+        // keep the same ID-to-colour mapping as model rendering.
+        const std::vector<std::string> all_colors =
+            Slic3r::GUI::wxGetApp().plater()->get_extruder_colors_from_plater_config(nullptr, true);
+        for (size_t idx = readable_color_info.size(); idx < all_colors.size(); ++idx) {
+            index = int(idx + 1);
+            if (!all_colors[idx].empty())
+                bmps.push_back(get_extruder_color_icon(all_colors[idx], std::to_string(index), icon_width, icon_height));
+            else
+                bmps.push_back(nullptr);
         }
     } else {
         std::vector<std::string> colors = Slic3r::GUI::wxGetApp().plater()->get_extruder_colors_from_plater_config();
@@ -633,6 +651,9 @@ wxBitmap *get_extruder_color_icon(std::vector<std::string> colors, bool is_gradi
     bitmap_key += "h" + std::to_string(icon_height) + "-w" + std::to_string(icon_width) + "-i" + label;
 
     wxBitmap *bitmap = bmp_cache.find(bitmap_key);
+    #ifdef __WXMSW__
+        auto win = (wxWindow *) Slic3r::GUI::wxGetApp().mainframe;
+    #endif
     if (bitmap == nullptr) {
 
         std::vector<wxColour> wx_colors;
@@ -656,8 +677,11 @@ wxBitmap *get_extruder_color_icon(std::vector<std::string> colors, bool is_gradi
 #ifndef __WXMSW__
             wxMemoryDC dc(base_bitmap);
 #else
-            wxClientDC cdc((wxWindow *) Slic3r::GUI::wxGetApp().mainframe);
+            wxClientDC cdc(win);
             wxMemoryDC dc(&cdc);
+            // ORCA MSW needs to set scale factor for bitmaps loaded from cache because they arent auto scaled by wxBitmapBundle like bitmaps
+            double scale = win ? win->GetDPIScaleFactor() : (wxWindow::FromDIP(100, nullptr) / 100.0);
+            base_bitmap.SetScaleFactor(scale);
             dc.SelectObject(base_bitmap);
 #endif
 
@@ -694,6 +718,11 @@ wxBitmap *get_extruder_color_icon(std::vector<std::string> colors, bool is_gradi
         // cache result
         bitmap = bmp_cache.insert(bitmap_key, base_bitmap);
     }
+    #ifdef __WXMSW__
+        // ORCA MSW needs to set scale factor for bitmaps loaded from cache because they arent auto scaled by wxBitmapBundle like bitmaps
+        double scale = win ? win->GetDPIScaleFactor() : (wxWindow::FromDIP(100, nullptr) / 100.0);
+        bitmap->SetScaleFactor(scale);
+    #endif
     return bitmap;
 }
 
@@ -704,6 +733,9 @@ wxBitmap *get_extruder_color_icon(std::string color, std::string label, int icon
     std::string bitmap_key = color + "-h" + std::to_string(icon_height) + "-w" + std::to_string(icon_width) + "-i" + label;
 
     wxBitmap *bitmap = bmp_cache.find(bitmap_key);
+    #ifdef __WXMSW__
+        auto win = (wxWindow *) Slic3r::GUI::wxGetApp().mainframe;
+    #endif
     if (bitmap == nullptr) {
         // Paint the color icon.
         // Slic3r::GUI::BitmapCache::parse_color(color, rgb);
@@ -714,7 +746,7 @@ wxBitmap *get_extruder_color_icon(std::string color, std::string label, int icon
         bitmap->UseAlpha();
         wxMemoryDC dc(*bitmap);
 #elif defined(__WXMSW__)
-        wxClientDC cdc((wxWindow *) Slic3r::GUI::wxGetApp().mainframe);
+        wxClientDC cdc(win);
         wxMemoryDC dc(&cdc);
         dc.SelectObject(*bitmap);
 #else
@@ -748,6 +780,11 @@ wxBitmap *get_extruder_color_icon(std::string color, std::string label, int icon
         dc.DrawText(label, (icon_width - size.x) / 2, (icon_height - size.y) / 2);
         dc.SelectObject(wxNullBitmap);
     }
+    #ifdef __WXMSW__
+        // ORCA MSW needs to set scale factor for bitmaps loaded from cache because they arent auto scaled by wxBitmapBundle like bitmaps
+        double scale = win ? win->GetDPIScaleFactor() : (wxWindow::FromDIP(100, nullptr) / 100.0);
+        bitmap->SetScaleFactor(scale);
+    #endif
     return bitmap;
 }
 void apply_extruder_selector(Slic3r::GUI::BitmapComboBox** ctrl,
@@ -758,6 +795,24 @@ void apply_extruder_selector(Slic3r::GUI::BitmapComboBox** ctrl,
                              bool use_thin_icon/* = false*/)
 {
     std::vector<wxBitmap*> icons = get_extruder_color_icons(use_thin_icon);
+    if (dynamic_cast<Slic3r::GUI::ObjectList*>(parent) != nullptr && Slic3r::GUI::wxGetApp().plater() != nullptr) {
+        const std::vector<std::string> all_colors =
+            Slic3r::GUI::wxGetApp().plater()->get_extruder_colors_from_plater_config(nullptr, true);
+
+        if (all_colors.size() > icons.size()) {
+            const double em = Slic3r::GUI::wxGetApp().em_unit();
+            const int    icon_width  = int((use_thin_icon ? 2.0 : 4.4) * em + 0.5);
+            const int    icon_height = int(2.0 * em + 0.5);
+            for (size_t idx = icons.size(); idx < all_colors.size(); ++idx) {
+                if (all_colors[idx].empty()) {
+                    icons.push_back(nullptr);
+                    continue;
+                }
+
+                icons.push_back(get_extruder_color_icon(all_colors[idx], std::to_string(idx + 1), icon_width, icon_height));
+            }
+        }
+    }
 
     if (!*ctrl) {
         *ctrl = new Slic3r::GUI::BitmapComboBox(parent, wxID_ANY, wxEmptyString, pos, size, 0, nullptr, wxCB_READONLY);
@@ -786,13 +841,13 @@ void apply_extruder_selector(Slic3r::GUI::BitmapComboBox** ctrl,
     for (wxBitmap* bmp : icons) {
         if (i == 0) {
             if (!first_item.empty())
-                (*ctrl)->Append(_(first_item), *bmp);
+                (*ctrl)->Append(_(first_item), bmp ? *bmp : wxNullBitmap);
             ++i;
         }
 
         (*ctrl)->Append(use_full_item_name
                         ? Slic3r::GUI::from_u8((boost::format("%1% %2%") % str % i).str())
-                        : wxString::Format("%d", i), *bmp);
+                        : wxString::Format("%d", i), bmp ? *bmp : wxNullBitmap);
         ++i;
     }
     (*ctrl)->SetSelection(0);
@@ -860,141 +915,6 @@ void LockButton::update_button_bitmaps()
 }
 
 
-
-// ----------------------------------------------------------------------------
-// ModeButton
-// ----------------------------------------------------------------------------
-
-ModeButton::ModeButton( wxWindow *          parent,
-                        wxWindowID          id,
-                        const std::string&  icon_name   /* = ""*/,
-                        const wxString&     mode        /* = wxEmptyString*/,
-                        const wxSize&       size        /* = wxDefaultSize*/,
-                        const wxPoint&      pos         /* = wxDefaultPosition*/) :
-    ScalableButton(parent, id, icon_name, mode, size, pos, wxBU_EXACTFIT)
-{
-    Init(mode);
-}
-
-ModeButton::ModeButton( wxWindow*           parent,
-                        const wxString&     mode/* = wxEmptyString*/,
-                        const std::string&  icon_name/* = ""*/,
-                        int                 px_cnt/* = 16*/) :
-    ScalableButton(parent, wxID_ANY, ScalableBitmap(parent, icon_name, px_cnt), mode, wxBU_EXACTFIT)
-{
-    Init(mode);
-}
-
-void ModeButton::Init(const wxString &mode)
-{
-    std::string mode_str = std::string(mode.ToUTF8());
-    //m_tt_focused  = Slic3r::GUI::from_u8((boost::format(_utf8(L("Switch to the %s mode"))) % mode_str).str());
-    //m_tt_selected = Slic3r::GUI::from_u8((boost::format(_utf8(L("Current mode is %s"))) % mode_str).str());
-
-    SetBitmapMargins(3, 0);
-
-    //button events
-    Bind(wxEVT_BUTTON,          &ModeButton::OnButton, this);
-    Bind(wxEVT_ENTER_WINDOW,    &ModeButton::OnEnterBtn, this);
-    Bind(wxEVT_LEAVE_WINDOW,    &ModeButton::OnLeaveBtn, this);
-}
-
-void ModeButton::OnButton(wxCommandEvent& event)
-{
-    m_is_selected = true;
-    focus_button(m_is_selected);
-
-    event.Skip();
-}
-
-void ModeButton::SetState(const bool state)
-{
-    m_is_selected = state;
-    focus_button(m_is_selected);
-    SetToolTip(state ? m_tt_selected : m_tt_focused);
-}
-
-void ModeButton::focus_button(const bool focus)
-{
-    const wxFont& new_font = focus ?
-                             Slic3r::GUI::wxGetApp().bold_font() :
-                             Slic3r::GUI::wxGetApp().normal_font();
-
-    SetFont(new_font);
-#ifdef _WIN32
-    GetParent()->Refresh(); // force redraw a background of the selected mode button
-#else
-    SetForegroundColour(wxSystemSettings::GetColour(focus ? wxSYS_COLOUR_BTNTEXT :
-#if defined (__linux__) && defined (__WXGTK3__)
-        wxSYS_COLOUR_GRAYTEXT
-#elif defined (__linux__) && defined (__WXGTK2__)
-        wxSYS_COLOUR_BTNTEXT
-#else
-        wxSYS_COLOUR_BTNSHADOW
-#endif
-    ));
-#endif /* no _WIN32 */
-
-    Refresh();
-    Update();
-}
-
-
-// ----------------------------------------------------------------------------
-// ModeSizer
-// ----------------------------------------------------------------------------
-
-ModeSizer::ModeSizer(wxWindow *parent, int hgap/* = 0*/) :
-    wxFlexGridSizer(3, 0, hgap),
-    m_parent(parent),
-    m_hgap_unscaled((double)(hgap)/em_unit(parent))
-{
-    SetFlexibleDirection(wxHORIZONTAL);
-
-    std::vector < std::pair < wxString, std::string >> buttons = {
-        //{_(L("Simple")),    "mode_simple"},
-        //{_(L("Advanced")),  "mode_advanced"},
-        //{_CTX(L_CONTEXT("Advanced", "Mode"), "Mode"), "mode_advanced"}
-    };
-
-    auto modebtnfn = [](wxCommandEvent &event, int mode_id) {
-        Slic3r::GUI::wxGetApp().save_mode(mode_id);
-        event.Skip();
-    };
-
-    m_mode_btns.reserve(3);
-    for (const auto& button : buttons) {
-        m_mode_btns.push_back(new ModeButton(parent, button.first, button.second, mode_icon_px_size()));
-
-        m_mode_btns.back()->Bind(wxEVT_BUTTON, std::bind(modebtnfn, std::placeholders::_1, int(m_mode_btns.size() - 1)));
-        Add(m_mode_btns.back());
-    }
-}
-
-void ModeSizer::SetMode(const int mode)
-{
-    for (size_t m = 0; m < m_mode_btns.size(); m++)
-        m_mode_btns[m]->SetState(int(m) == mode);
-}
-
-void ModeSizer::set_items_flag(int flag)
-{
-    for (wxSizerItem* item : this->GetChildren())
-        item->SetFlag(flag);
-}
-
-void ModeSizer::set_items_border(int border)
-{
-    for (wxSizerItem* item : this->GetChildren())
-        item->SetBorder(border);
-}
-
-void ModeSizer::msw_rescale()
-{
-    this->SetHGap(std::lround(m_hgap_unscaled * em_unit(m_parent)));
-    for (size_t m = 0; m < m_mode_btns.size(); m++)
-        m_mode_btns[m]->msw_rescale();
-}
 
 // ----------------------------------------------------------------------------
 // MenuWithSeparators

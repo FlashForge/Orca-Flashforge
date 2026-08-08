@@ -161,8 +161,8 @@ msgstr "工具类型"
 msgid "Smart fill angle"
 msgstr "智能填充角度"
 
-msgid "On overhangs only"
-msgstr "仅对悬垂区生效"
+msgid "On highlighted overhangs only"
+msgstr "仅对高亮悬垂区生效"
 
 msgid "Auto support threshold angle: "
 msgstr "自动支撑角度阈值："
@@ -1727,7 +1727,7 @@ msgid "Choose one file (GCODE/3MF):"
 msgstr "选择一个文件（GCODE/3MF）："
 
 msgid "Ext"
-msgstr "分机"
+msgstr "Ext"
 
 msgid "Some presets are modified."
 msgstr "预设已被修改。"
@@ -2864,7 +2864,7 @@ msgstr "内环"
 
 #. TRN To be shown in the main menu View->Top
 msgid "Top"
-msgstr "上"
+msgstr "顶部"
 
 msgid ""
 "The fan controls the temperature during printing to improve print quality. "
@@ -4803,7 +4803,7 @@ msgid "Current grouping of slice result is not optimal."
 msgstr "当前切片结果的分组不是最佳的。"
 
 msgid "Increase %1%g filament and %2% changes compared to optimal grouping."
-msgstr "与最佳分组相比，增加 %1%g 细丝和 %2% 变化。"
+msgstr "与最佳分组相比，增加 %1%g 耗材丝和 %2% 变化。"
 
 msgid ""
 "Increase %1%g filament and save %2% changes compared to optimal grouping."
@@ -4889,6 +4889,9 @@ msgstr "成本"
 
 msgid "Filament change times"
 msgstr "换料次数"
+
+msgid "Tool changes"
+msgstr "换头次数"
 
 msgid "Color change"
 msgstr "颜色更换"
@@ -5241,7 +5244,7 @@ msgstr "只有正在编辑的对象是可见的。"
 
 #, c-format
 msgid "Filaments %s cannot be printed directly on the surface of this plate."
-msgstr "细丝 %s 不能直接打印在该板的表面上。"
+msgstr "耗材 %s 不能直接打印在该板的表面上。"
 
 msgid ""
 "PLA and PETG filaments detected in the mixture. Adjust parameters according "
@@ -5508,13 +5511,13 @@ msgstr "顶部视图"
 
 #. TRN To be shown in the main menu View->Bottom
 msgid "Bottom"
-msgstr "下"
+msgstr "底部"
 
 msgid "Bottom View"
 msgstr "底部视图"
 
 msgid "Front"
-msgstr "前"
+msgstr "前面"
 
 msgid "Front View"
 msgstr "前视图"
@@ -5759,13 +5762,13 @@ msgid "Pass 1"
 msgstr "粗调"
 
 msgid "Flow ratio test - Pass 1"
-msgstr "流量比例测试 - 通过 1"
+msgstr "流量比例测试 - 粗调"
 
 msgid "Pass 2"
-msgstr "细调"
+msgstr "微调"
 
 msgid "Flow ratio test - Pass 2"
-msgstr "流量比例测试 - 通过 2"
+msgstr "流量比例测试 - 微调"
 
 msgid "YOLO (Recommended)"
 msgstr "YOLO（推荐）"
@@ -5904,7 +5907,7 @@ msgid "The project is no longer available."
 msgstr "此项目不可用。"
 
 msgid "Filament Settings"
-msgstr "打印丝设置"
+msgstr "材料设置"
 
 msgid ""
 "Do you want to synchronize your personal data from Bambu Cloud?\n"
@@ -5956,7 +5959,7 @@ msgid "Initializing..."
 msgstr "正在初始化……"
 
 msgid "Connection Failed. Please check the network and try again"
-msgstr "链接失败。请检查网络后重试"
+msgstr "连接失败。请检查网络后重试"
 
 msgid ""
 "Please check the network and try again. You can restart or update the "
@@ -6419,7 +6422,7 @@ msgid "Debug Info"
 msgstr "调试信息"
 
 msgid "Filament loading..."
-msgstr "耗材丝进料..."
+msgstr "耗材丝进料中..."
 
 msgid "No Storage"
 msgstr "无存储"
@@ -6816,6 +6819,12 @@ msgstr "导出成功."
 msgid "Model file downloaded."
 msgstr "已下载模型文件。"
 
+msgid "Shared profiles may be available for this printer."
+msgstr "该打印机可能有可用的共享配置文件。"
+
+msgid "Browse shared profiles"
+msgstr "浏览共享配置文件"
+
 msgid "Serious warning:"
 msgstr "严重警告："
 
@@ -6917,7 +6926,7 @@ msgid "Nozzle Clumping Detection"
 msgstr "裹头检测"
 
 msgid "Check if the nozzle is clumping by filaments or other foreign objects."
-msgstr "检查喷嘴是否被细丝或其他异物堵塞。"
+msgstr "检查喷嘴是否被耗材或其他异物堵塞。"
 
 msgid "Detects air printing caused by nozzle clogging or filament grinding."
 msgstr "检测由于喷嘴堵塞或耗材丝研磨造成的空打。"
@@ -7768,10 +7777,10 @@ msgid "The current project has unsaved changes, save it before continue?"
 msgstr "当前项目包含未保存的修改，是否先保存？"
 
 msgid "Number of copies:"
-msgstr "克隆数量："
+msgstr "复制数量："
 
 msgid "Copies of the selected object"
-msgstr "所选对象的克隆数量"
+msgstr "所选对象的复制数量"
 
 msgid "Save G-code file as:"
 msgstr "G-code文件另存为："
@@ -7897,7 +7906,7 @@ msgid "Object name: %1%\n"
 msgstr "对象名字：%1%\n"
 
 msgid "Size: %1% x %2% x %3% in\n"
-msgstr "大小：%1% x %2% x %3% 英寸\n"
+msgstr "大小：%1% x %2% x %3% in\n"
 
 msgid "Size: %1% x %2% x %3% mm\n"
 msgstr "大小：%1% x %2% x %3% mm\n"
@@ -7954,7 +7963,7 @@ msgid "rear"
 msgstr "后部"
 
 msgid "Switching the language requires application restart.\n"
-msgstr "切换语言要求重启应用程序。\n"
+msgstr "切换语言需要重启应用程序。\n"
 
 msgid "Do you want to continue?"
 msgstr "是否继续？"
@@ -7993,7 +8002,7 @@ msgid "The period of backup in seconds."
 msgstr "备份的周期"
 
 msgid "Bed Temperature Difference Warning"
-msgstr "床温差警告"
+msgstr "热床温度不同警告"
 
 msgid ""
 "Using filaments with significantly different temperatures may cause:\n"
@@ -8036,10 +8045,10 @@ msgid "General"
 msgstr "常规"
 
 msgid "Metric"
-msgstr "公制"
+msgstr "公制（Metric）"
 
 msgid "Imperial"
-msgstr "英制"
+msgstr "英制（Imperial）"
 
 msgid "Units"
 msgstr "单位"
@@ -8169,7 +8178,7 @@ msgid "Optimizes filament area maximum height by chosen filament count."
 msgstr "根据选定的耗材丝数量优化耗材区域最大高度"
 
 msgid "Features"
-msgstr "特征"
+msgstr "特性"
 
 msgid "Multi device management"
 msgstr "多设备管理"
@@ -8559,13 +8568,13 @@ msgid "My Printer"
 msgstr "我的打印机"
 
 msgid "Left filaments"
-msgstr "左细丝"
+msgstr "左耗材"
 
 msgid "AMS filaments"
 msgstr "AMS 打印丝"
 
 msgid "Right filaments"
-msgstr "右细丝"
+msgstr "右耗材"
 
 msgid "Click to select filament color"
 msgstr "点击设置材料颜色"
@@ -8781,10 +8790,10 @@ msgid "Send print job"
 msgstr "发送打印作业"
 
 msgid "On"
-msgstr "在"
+msgstr "开"
 
 msgid "Not satisfied with the grouping of filaments? Regroup and slice ->"
-msgstr "对细丝的分组不满意？重组并切片 ->"
+msgstr "对耗材丝的分组不满意？重组并切片 ->"
 
 msgid "Manually change external spool during printing for multi-color printing"
 msgstr "在打印过程中手动更换外部线轴以进行多色打印"
@@ -8937,7 +8946,7 @@ msgstr "名称长度超过限制。"
 
 #, c-format
 msgid "Cost %dg filament and %d changes more than optimal grouping."
-msgstr "成本 %dg 细丝和 %d 的变化超过最佳分组。"
+msgstr "成本 %dg 耗材和 %d 的变化超过最佳分组。"
 
 msgid "nozzle"
 msgstr "喷嘴"
@@ -10175,7 +10184,7 @@ msgid "Append"
 msgstr "追加"
 
 msgid "Append to existing filaments"
-msgstr "附加到现有细丝"
+msgstr "附加到现有耗材"
 
 msgid "Reset mapped extruders."
 msgstr "重置匹配的耗材丝。"
@@ -10292,7 +10301,7 @@ msgid ""
 msgstr "仅同步耗材丝类型和颜色，不包括插槽信息。"
 
 msgid "Ext spool"
-msgstr "外线轴"
+msgstr "外置耗材盘"
 
 msgid ""
 "Please check whether the nozzle type of the device is the same as the preset "
@@ -10369,16 +10378,16 @@ msgid "For constant flow rate, hold %1% while dragging."
 msgstr "为保持恒定流量，拖动时按住%1%"
 
 msgid "ms"
-msgstr "多发性硬化症"
+msgstr "ms"
 
 msgid "Total ramming"
-msgstr "总顶压"
+msgstr "总冲刷量"
 
 msgid "Volume"
 msgstr "体积"
 
 msgid "Ramming line"
-msgstr "顶压线"
+msgstr "预冲刷线"
 
 msgid ""
 "Orca would re-calculate your flushing volumes everytime the filaments color "
@@ -12024,7 +12033,7 @@ msgstr ""
 "以及对象的流量比（如果已设置）来计算的。"
 
 msgid "Support flow ratio"
-msgstr "支持流量比"
+msgstr "支撑流量比"
 
 msgid ""
 "This factor affects the amount of material for support.\n"
@@ -12036,7 +12045,7 @@ msgstr ""
 "象的流量比（如果已设置）来计算的。"
 
 msgid "Support interface flow ratio"
-msgstr "支持接口流量比例"
+msgstr "支撑面流量比例"
 
 msgid ""
 "This factor affects the amount of material for the support interface.\n"
@@ -13099,10 +13108,10 @@ msgid ""
 msgstr "打印此材料的所需的最小喷嘴硬度。零值表示不检查喷嘴硬度。"
 
 msgid "Filament map to extruder"
-msgstr "耗材图至挤出机"
+msgstr "耗材映射到挤出机"
 
 msgid "Filament map to extruder."
-msgstr "耗材图到挤出机。"
+msgstr "耗材映射到挤出机。"
 
 msgid "Auto For Flush"
 msgstr "自动冲洗"
@@ -13998,7 +14007,7 @@ msgid ""
 "displayed, and the model will not be sliced. You can choose this number "
 "until this error is repeated."
 msgstr ""
-"模糊皮肤生成模式。仅适用于阿拉克尼！\n"
+"模糊皮肤生成模式。仅适用于Arachne！\n"
 "位移：经典模式，通过将喷嘴从原始路径向侧面移动来形成图案。\n"
 "挤出：通过挤出塑料量而形成图案的模式。这是一种快速而直接的算法，没有不必要的"
 "喷嘴抖动，可以产生平滑的图案。但它对于在整个阵列中形成松散的墙壁更有用。\n"
@@ -15807,7 +15816,7 @@ msgstr ""
 "不使用该值。"
 
 msgid "∆℃"
-msgstr "℃"
+msgstr "∆℃"
 
 msgid "Preheat time"
 msgstr "预热时间"
@@ -15899,7 +15908,7 @@ msgid "Enable filament ramming"
 msgstr "启用耗材尖端成型"
 
 msgid "No sparse layers (beta)"
-msgstr "无稀疏层 （实验）"
+msgstr "无稀疏层 （实验功能）"
 
 msgid ""
 "If enabled, the wipe tower will not be printed on layers with no tool "
@@ -19907,7 +19916,7 @@ msgid "The number of printers in use simultaneously cannot be equal to 0."
 msgstr "同时使用的打印机数量不能等于0。"
 
 msgid "Use External Spool"
-msgstr "使用外置线卷"
+msgstr "使用外置耗材盘"
 
 msgid "Select Printers"
 msgstr "选择打印机"

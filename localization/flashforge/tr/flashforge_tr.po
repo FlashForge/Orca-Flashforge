@@ -1080,3 +1080,23 @@ msgstr "Onarılan ağ sonlandırılıyor"
 
 msgid "Remapping repaired mesh colors"
 msgstr "Onarılan ağ renkleri yeniden eşleniyor"
+
+#, c-format
+msgid "%lld minutes"
+msgstr "%lld dakika"
+
+#, c-format
+msgid "%lld hours %lld minutes"
+msgstr "%lld saat %lld dakika"
+
+msgid "Click to edit"
+msgstr "Düzenlemek için tıklayın"
+
+msgid "Gradient Mix Weights"
+msgstr "Gradyan karışım ağırlıkları"
+
+msgid "Pick a point in the gradient map to control multi-filament mix."
+msgstr "Çoklu filament karışımını kontrol etmek için gradyan haritasında bir nokta seçin."
+
+msgid "The multicolor filament limit has been reached. Reopen the project and try again."
+msgstr "Çok renkli filament sınırına ulaşıldı. Projeyi yeniden açıp tekrar deneyin."

@@ -179,8 +179,8 @@ msgstr "Тип инструмента"
 msgid "Smart fill angle"
 msgstr "Угол для умной заливки"
 
-msgid "On overhangs only"
-msgstr "Только на свесах"
+msgid "On highlighted overhangs only"
+msgstr "Только на подсвеченных нависаниях"
 
 msgid "Auto support threshold angle: "
 msgstr "Пороговый угол автоподдержки: "
@@ -7245,6 +7245,12 @@ msgstr "Экспорт выполнен успешно"
 
 msgid "Model file downloaded."
 msgstr "Файл модели скачан."
+
+msgid "Shared profiles may be available for this printer."
+msgstr "Для этого принтера могут быть доступны общие профили."
+
+msgid "Browse shared profiles"
+msgstr "Просмотреть общие профили"
 
 msgid "Serious warning:"
 msgstr "Серьезное предупреждение:"

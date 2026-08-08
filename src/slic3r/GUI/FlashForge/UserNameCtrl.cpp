@@ -58,7 +58,7 @@ void UserNameCtrl::render(wxDC& dc)
     dc.SetBrush(wxBrush(wxColour(255, 255, 255)));
 #ifdef _WIN32
     dc.DrawRoundedRectangle(0, 0, size.x, size.y, m_radius);
-#else ifdef __APPLE__
+#elif defined(__APPLE__)
     dc.DrawRoundedRectangle(1, 1, size.x - 1, size.y - 1, m_radius);
 #endif
 

@@ -29,15 +29,13 @@ void open_folder(const std::string& path)
 	// Code taken from NotificationManager.cpp
 
 	// Execute command to open a file explorer, platform dependent.
-	// FIXME: The const_casts aren't needed in wxWidgets 3.1, remove them when we upgrade.
-
 #ifdef _WIN32
 	const wxString widepath = from_u8(path);
 	const wchar_t* argv[] = { L"explorer", widepath.GetData(), nullptr };
-	::wxExecute(const_cast<wchar_t**>(argv), wxEXEC_ASYNC, nullptr);
+	::wxExecute(argv, wxEXEC_ASYNC, nullptr);
 #elif __APPLE__
 	const char* argv[] = { "open", path.data(), nullptr };
-	::wxExecute(const_cast<char**>(argv), wxEXEC_ASYNC, nullptr);
+	::wxExecute(argv, wxEXEC_ASYNC, nullptr);
 #else
 	const char* argv[] = { "xdg-open", path.data(), nullptr };
 
@@ -65,11 +63,11 @@ void open_folder(const std::string& path)
 			exec_env.cwd = std::move(owd);
 		}
 
-		::wxExecute(const_cast<char**>(argv), wxEXEC_ASYNC, nullptr, &exec_env);
+		::wxExecute(argv, wxEXEC_ASYNC, nullptr, &exec_env);
 	}
 	else {
 		// Looks like we're NOT running from AppImage, we'll make no changes to the environment.
-		::wxExecute(const_cast<char**>(argv), wxEXEC_ASYNC, nullptr, nullptr);
+		::wxExecute(argv, wxEXEC_ASYNC, nullptr, nullptr);
 	}
 #endif
 }
@@ -459,7 +457,7 @@ void Downloader::start_download(const std::string& full_url, const std::string& 
     // Orca: Replace PS workaround for "mysterious slash" with a more dynamic approach
     // Windows seems to have fixed the issue and this provides backwards compatability for those it still affects
 	boost::regex re(R"(^(orcaflashforge|orcaslicer|prusaslicer|bambustudio|cura):\/\/open[\/]?\?file=)", boost::regbase::icase);
-	boost::regex re2(R"(^(bambustudioopen):\/\/)", boost::regex::icase);
+	boost::regex re2(R"(^(orcaflashforgeopen|bambustudioopen):\/\/)", boost::regex::icase);
     boost::smatch results;
 
 	if (!boost::regex_search(full_url, results, re) && !boost::regex_search(full_url, results, re2)) {

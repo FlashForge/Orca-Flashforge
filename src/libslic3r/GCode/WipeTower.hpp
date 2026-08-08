@@ -543,6 +543,7 @@ private:
 		};
 		float z;		// z position of the layer
 		float height;	// layer height
+		size_t start_tool; // active tool before this layer's planned toolchanges
 		float depth;	// depth of the layer based on all layers above
 		float extra_spacing;
         bool  extruder_fill{true};
@@ -550,8 +551,8 @@ private:
 
 		std::vector<ToolChange> tool_changes;
 
-		WipeTowerInfo(float z_par, float layer_height_par)
-			: z{z_par}, height{layer_height_par}, depth{0}, extra_spacing{1.f} {}
+		WipeTowerInfo(float z_par, float layer_height_par, size_t start_tool_par)
+			: z{z_par}, height{layer_height_par}, start_tool{start_tool_par}, depth{0}, extra_spacing{1.f} {}
 	};
 
 	std::vector<WipeTowerInfo> m_plan; 	// Stores information about all layers and toolchanges for the future wipe tower (filled by plan_toolchange(...))

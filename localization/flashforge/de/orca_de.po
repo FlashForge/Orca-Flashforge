@@ -231,6 +231,57 @@ msgstr ""
 "Die endgültige Anzahl der Skirt-Schleifen wird bei der Platzierung oder Prüfung der Objektabstände nicht berücksichtigt.\n"
 "Erhöhen Sie in diesem Fall die Anzahl der Schleifen."
 
+msgid "Expert settings"
+msgstr "Experteneinstellungen"
+
+msgid "Simple settings"
+msgstr "Einfache Einstellungen"
+
+msgid "Local-Z pair split: requested F<a>/F<b> <percent>/<percent>."
+msgstr "Local-Z-Paaraufteilung: angefordert F<a>/F<b> <percent>/<percent>."
+
+msgid "Cycle settings visibility"
+msgstr "Sichtbarkeit der Einstellungen umschalten"
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d."
+msgstr "Local-Z-Paaraufteilung: angefordert F%u/F%u %d/%d."
+
+msgid "Local-Z breakdown: manual pattern rows do not use pair decomposition."
+msgstr "Local-Z-Aufschlüsselung: manuelle Musterzeilen verwenden keine Paarzerlegung."
+
+msgid "Local-Z breakdown: same-layer mode does not use local-Z pair decomposition."
+msgstr "Local-Z-Aufschlüsselung: Der Gleichschichtmodus verwendet keine Local-Z-Paarzerlegung."
+
+msgid "Local-Z breakdown: unavailable."
+msgstr "Local-Z-Aufschlüsselung: nicht verfügbar."
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d, effective %d/%d over %d sublayers."
+msgstr "Local-Z-Paaraufteilung: angefordert F%u/F%u %d/%d, effektiv %d/%d über %d Unterschichten."
+
+msgid "Local-Z direct multicolor solver: %s"
+msgstr "Direkter Mehrfarben-Local-Z-Löser: %s"
+
+msgid "Carry-over error is distributed directly across all %d components instead of collapsing them into pair cadence."
+msgstr "Der Fehlerübertrag wird direkt über alle %d Komponenten verteilt, statt in eine Paar-Kadenz reduziert zu werden."
+
+msgid "Effective Local-Z cap: up to %d sublayers per nominal layer."
+msgstr "Effektive Local-Z-Grenze: bis zu %d Unterschichten pro nomineller Schicht."
+
+msgid "Local-Z layer cadence: %s."
+msgstr "Local-Z-Schichtkadenz: %s."
+
+msgid "Pair splits: %s."
+msgstr "Paaraufteilungen: %s."
+
+msgid "Saved row limit will apply when Local-Z dithering mode is enabled in print settings."
+msgstr "Das gespeicherte Zeilenlimit gilt, wenn der Local-Z-Dithering-Modus in den Druckeinstellungen aktiviert ist."
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers."
+msgstr "Effektiver Local-Z-Stapel: %d Unterschichten über %d Paarschichten."
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers (uncapped %d)."
+msgstr "Effektiver Local-Z-Stapel: %d Unterschichten über %d Paarschichten (unbegrenzt %d)."
+
 msgid "Associate files to OrcaSlicer"
 msgstr "Dateien mit Flash Studio verknüpfen"
 

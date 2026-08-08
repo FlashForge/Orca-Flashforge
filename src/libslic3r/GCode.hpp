@@ -81,17 +81,23 @@ public:
         const Vec3d                                                  plate_origin,
         const std::vector<WipeTower::ToolChangeResult>              &priming,
         const std::vector<std::vector<WipeTower::ToolChangeResult>> &tool_changes,
+        const std::vector<std::vector<WipeTower::ToolChangeResult>> &local_z_tool_changes,
         const WipeTower::ToolChangeResult                           &final_purge,
-        const std::vector<unsigned int>                             &slice_used_filaments) :
+        const std::vector<unsigned int>                             &slice_used_filaments,
+        const std::vector<std::vector<WipeTower::box_coordinates>>  &local_z_reserve_boxes = {}) :
         m_left(/*float(print_config.wipe_tower_x.value)*/ 0.f),
         m_right(float(/*print_config.wipe_tower_x.value +*/ print_config.prime_tower_width.value)),
         m_wipe_tower_pos(float(print_config.wipe_tower_x.get_at(plate_idx)), float(print_config.wipe_tower_y.get_at(plate_idx))),
         m_wipe_tower_rotation(float(print_config.wipe_tower_rotation_angle)),
         m_priming(priming),
         m_tool_changes(tool_changes),
+        m_local_z_tool_changes(local_z_tool_changes),
+        m_local_z_reserve_boxes(local_z_reserve_boxes),
         m_final_purge(final_purge),
         m_layer_idx(-1),
         m_tool_change_idx(0),
+        m_local_z_tool_change_idx(local_z_tool_changes.size(), 0),
+        m_local_z_reserve_slot_idx(local_z_reserve_boxes.size(), 0),
         m_plate_origin(plate_origin),
         m_single_extruder_multi_material(print_config.single_extruder_multi_material),
         m_enable_timelapse_print(print_config.timelapse_type.value == TimelapseType::tlSmooth),
@@ -108,8 +114,18 @@ public:
     }
 
     std::string prime(GCode &gcodegen);
-    void next_layer() { ++ m_layer_idx; m_tool_change_idx = 0; }
-    std::string tool_change(GCode &gcodegen, int extruder_id, bool finish_layer);
+    void next_layer() {
+        ++ m_layer_idx;
+        m_tool_change_idx = 0;
+        if (m_layer_idx >= 0 && size_t(m_layer_idx) < m_local_z_tool_change_idx.size())
+            m_local_z_tool_change_idx[size_t(m_layer_idx)] = 0;
+        if (m_layer_idx >= 0 && size_t(m_layer_idx) < m_local_z_reserve_slot_idx.size())
+            m_local_z_reserve_slot_idx[size_t(m_layer_idx)] = 0;
+    }
+    // If local_z_unplanned is true, emit a wipe/toolchange without consuming the preplanned
+    // per-layer wipe-tower sequence (used by Local-Z phase-b extra toolchanges).
+    std::string tool_change(GCode &gcodegen, int extruder_id, bool finish_layer, bool local_z_unplanned = false,
+                            double local_z_nominal_layer_z = -1.);
     bool is_empty_wipe_tower_gcode(GCode &gcodegen, int extruder_id, bool finish_layer);
     std::string finalize(GCode &gcodegen);
     std::vector<float> used_filament_length() const;
@@ -140,10 +156,15 @@ private:
     // Reference to cached values at the Printer class.
     const std::vector<WipeTower::ToolChangeResult>              &m_priming;
     const std::vector<std::vector<WipeTower::ToolChangeResult>> &m_tool_changes;
+    const std::vector<std::vector<WipeTower::ToolChangeResult>> &m_local_z_tool_changes;
+    const std::vector<std::vector<WipeTower::box_coordinates>>   m_local_z_reserve_boxes;
     const WipeTower::ToolChangeResult                           &m_final_purge;
     // Current layer index.
     int                                                          m_layer_idx;
     int                                                          m_tool_change_idx;
+    std::vector<size_t>                                          m_local_z_tool_change_idx;
+    // Per-layer next-available slot index for Local-Z unplanned toolchanges.
+    std::vector<size_t>                                          m_local_z_reserve_slot_idx;
     double                                                       m_last_wipe_tower_print_z;
 
     // BBS
@@ -221,10 +242,12 @@ public:
     const Vec2d&    origin() const { return m_origin; }
     void            set_origin(const Vec2d &pointf);
     void            set_origin(const coordf_t x, const coordf_t y) { this->set_origin(Vec2d(x, y)); }
-    const Point&    last_pos() const { return m_last_pos; }
+    Point           last_pos() const { return m_last_pos.to_point(); }
     Vec2d           point_to_gcode(const Point &point) const;
+    Vec3d                    point_to_gcode(const Point3& point) const;
     Point           gcode_to_point(const Vec2d &point) const;
     Vec2d point_to_gcode_quantized(const Point& point) const;
+    Vec3d                    point_to_gcode_quantized(const Point3& point) const;
     const FullPrintConfig &config() const { return m_config; }
     const Layer*    layer() const { return m_layer; }
     GCodeWriter&    writer() { return m_writer; }
@@ -237,8 +260,10 @@ public:
     bool            enable_cooling_markers() const { return m_enable_cooling_markers; }
     std::string     extrusion_role_to_string_for_parser(const ExtrusionRole &);
 
-    // Calculate the interpolated value for the current layer between start_value and end_value
-    float interpolate_value_across_layers(float start_value, float end_value) const;
+    // Calculate the interpolated value for the current layer between start_value and end_value.
+    // Step will create equal layers steps from first to last value.
+    // Step = 0 means gradual interpolation finishing at last value.
+    float interpolate_value_across_layers(float start_value, float end_value, float step = 0.0f) const;
 
     // For Perl bindings, to be used exclusively by unit tests.
     unsigned int    layer_count() const { return m_layer_count; }
@@ -388,7 +413,18 @@ private:
     void check_placeholder_parser_failed();
     size_t get_extruder_id(unsigned int filament_id) const;
 
-    void            set_last_pos(const Point &pos) { m_last_pos = pos; m_last_pos_defined = true; }
+    // Mixed-filament resolution: convert a virtual 1-based filament ID to a zero-based
+    // physical extruder ID ready to pass to set_extruder(). When mixed_mgr is null or
+    // the ID is not a mixed slot the call is a no-op (returns virtual_id_1based - 1).
+    unsigned int resolve_extruder_for_layer(unsigned int virtual_id_1based,
+                                            const LayerTools &layer_tools) const
+    {
+        const unsigned int resolved_1based = layer_tools.resolve_mixed_1based(virtual_id_1based);
+        return resolved_1based == 0 ? 0 : resolved_1based - 1;
+    }
+
+    void            set_last_pos(const Point &pos) { m_last_pos = Point3(pos, 0); m_last_pos_defined = true; }
+    void            set_last_pos(const Point3 &pos) { m_last_pos = pos; m_last_pos_defined = true; }
     bool            last_pos_defined() const { return m_last_pos_defined; }
     void            set_extruders(const std::vector<unsigned int> &extruder_ids);
     std::string     preamble();
@@ -396,12 +432,19 @@ private:
     std::string     change_layer(coordf_t print_z);
     // Orca: pass the complete collection of region perimeters to the extrude loop to check whether the wipe before external loop
     // should be executed
-    std::string     extrude_entity(const ExtrusionEntity &entity, std::string description = "", double speed = -1., const ExtrusionEntitiesPtr& region_perimeters = ExtrusionEntitiesPtr());
+    std::string extrude_entity(const ExtrusionEntity&      entity,
+                               const std::string&          description       = "",
+                               double                      speed             = -1.,
+                               const ExtrusionEntitiesPtr& region_perimeters = ExtrusionEntitiesPtr());
     // Orca: pass the complete collection of region perimeters to the extrude loop to check whether the wipe before external loop
     // should be executed
-    std::string     extrude_loop(ExtrusionLoop loop, std::string description, double speed = -1., const ExtrusionEntitiesPtr& region_perimeters = ExtrusionEntitiesPtr(), const Point* start_point = nullptr);
-    std::string     extrude_multi_path(ExtrusionMultiPath multipath, std::string description = "", double speed = -1.);
-    std::string     extrude_path(ExtrusionPath path, std::string description = "", double speed = -1.);
+    std::string extrude_loop(const ExtrusionLoop&        loop,
+                             const std::string&          description,
+                             double                      speed             = -1.,
+                             const ExtrusionEntitiesPtr& region_perimeters = ExtrusionEntitiesPtr(),
+                             const Point*                start_point       = nullptr);
+    std::string extrude_multi_path(const ExtrusionMultiPath& multipath, const std::string& description = "", double speed = -1.);
+    std::string extrude_path(const ExtrusionPath& path, const std::string& description = "", double speed = -1.);
     
     // Orca: Adaptive PA variables
     // Used for adaptive PA when extruding paths with multiple, varying flow segments.
@@ -554,6 +597,7 @@ private:
     std::string _encode_label_ids_to_base64(std::vector<size_t> ids);
     // ORCA: Add support for role based fan speed control
     std::array<bool, ExtrusionRole::erCount> m_is_role_based_fan_on;
+    std::array<int, ExtrusionRole::erCount>  m_role_based_fan_marker_layer;
     // Markers for the Pressure Equalizer to recognize the extrusion type.
     // The Pressure Equalizer removes the markers from the final G-code.
     bool                                m_enable_extrusion_role_markers;
@@ -589,7 +633,7 @@ private:
     std::map<std::string, std::vector<std::string>> m_placeholder_error_messages;
 #endif
 
-    Point                               m_last_pos;
+    Point3                              m_last_pos;
     bool                                m_last_pos_defined;
 
     std::unique_ptr<CoolingBuffer>      m_cooling_buffer;

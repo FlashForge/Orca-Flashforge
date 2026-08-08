@@ -145,18 +145,27 @@ void HttpServer::IOServer::stop_all()
 
 HttpServer::HttpServer(boost::asio::ip::port_type port) : port(port) {}
 
+HttpServer::~HttpServer()
+{
+    stop();
+}
+
 void HttpServer::start()
 {
+    if (start_http_server)
+        return;
+
     BOOST_LOG_TRIVIAL(info) << "start_http_service...";
-    start_http_server    = true;
-    m_http_server_thread = create_thread([this] {
+    server_             = std::make_unique<IOServer>(*this);
+    IOServer* io_server = server_.get();
+    start_http_server   = true;
+    m_http_server_thread = create_thread([io_server] {
         set_current_thread_name("http_server");
-        server_ = std::make_unique<IOServer>(*this);
-        server_->acceptor.listen();
+        io_server->acceptor.listen();
 
-        server_->do_accept();
+        io_server->do_accept();
 
-        server_->io_service.run();
+        io_server->io_service.run();
     });
 }
 
@@ -164,9 +173,14 @@ void HttpServer::stop()
 {
     start_http_server = false;
     if (server_) {
-        server_->acceptor.close();
-        server_->stop_all();
-        server_->io_service.stop();
+        IOServer* io_server = server_.get();
+        boost::asio::post(io_server->io_service, [io_server] {
+            boost::system::error_code ec;
+            io_server->acceptor.cancel(ec);
+            io_server->acceptor.close(ec);
+            io_server->stop_all();
+            io_server->io_service.stop();
+        });
     }
     if (m_http_server_thread.joinable())
         m_http_server_thread.join();
