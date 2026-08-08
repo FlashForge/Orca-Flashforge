@@ -6645,6 +6645,15 @@ msgstr "Modelo original"
 msgid "Number of Colors"
 msgstr "Número de colores"
 
+msgid "Color Style"
+msgstr "Estilo de color"
+
+msgid "Soft"
+msgstr "Suave"
+
+msgid "Vivid"
+msgstr "Vívido"
+
 msgid "Parameters have changed, please click Apply to take effect"
 msgstr "Los parámetros han cambiado, haga clic en Aplicar para que surtan efecto"
 
@@ -7803,7 +7812,9 @@ msgstr "Solo se puede añadir un archivo a todo color a la vez"
 msgid ""
 "Only one OBJ or GLB file can be imported at a time. Please select the file "
 "you want to use this time."
-msgstr "Solo se puede importar un archivo OBJ o GLB a la vez. Seleccione el archivo que desea usar esta vez."
+msgstr ""
+"Solo se puede importar un archivo OBJ o GLB a la vez. Seleccione el archivo "
+"que desea usar esta vez."
 
 msgid "Please import model files with the same file extension each time"
 msgstr "Importe solo archivos de modelo con la misma extensión cada vez"
@@ -22588,6 +22599,9 @@ msgstr "Vídeo en pausa"
 
 msgid "Printer disconnected"
 msgstr "Impresora desconectada"
+
+msgid "No camera detected"
+msgstr "No se detectó ninguna cámara"
 
 #~ msgid "每次只可添加一个全彩文件"
 #~ msgstr "Solo se puede añadir un archivo a todo color a la vez"

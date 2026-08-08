@@ -653,3 +653,6 @@ msgstr "現在のフィラメントリスト"
 
 msgid "New filament"
 msgstr "新規フィラメント"
+
+msgid "No camera detected"
+msgstr "カメラが検出されませんでした"

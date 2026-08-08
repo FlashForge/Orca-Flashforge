@@ -6233,6 +6233,15 @@ msgstr "Orijinal Model"
 msgid "Number of Colors"
 msgstr "Renk sayısı"
 
+msgid "Color Style"
+msgstr "Renk Stili"
+
+msgid "Soft"
+msgstr "Yumuşak"
+
+msgid "Vivid"
+msgstr "Canlı"
+
 msgid "Parameters have changed, please click Apply to take effect"
 msgstr "Parametreler değişti, etkili olması için Uygula'ya tıklayın"
 
@@ -7321,7 +7330,9 @@ msgstr "Tek seferde yalnızca bir tam renkli dosya eklenebilir"
 msgid ""
 "Only one OBJ or GLB file can be imported at a time. Please select the file "
 "you want to use this time."
-msgstr "Tek seferde yalnızca bir OBJ veya GLB dosyası içe aktarılabilir. Lütfen bu sefer kullanmak istediğiniz dosyayı seçin."
+msgstr ""
+"Tek seferde yalnızca bir OBJ veya GLB dosyası içe aktarılabilir. Lütfen bu "
+"sefer kullanmak istediğiniz dosyayı seçin."
 
 msgid "Please import model files with the same file extension each time"
 msgstr ""
@@ -19737,6 +19748,9 @@ msgstr "Video duraklatıldı"
 msgid "Printer disconnected"
 msgstr "Yazıcı bağlantısı kesildi"
 
+msgid "No camera detected"
+msgstr "Kamera algılanmadı"
+
 #~ msgid "每次只可添加一个全彩文件"
 #~ msgstr "Tek seferde yalnızca bir tam renkli dosya eklenebilir"
 
@@ -21599,9 +21613,6 @@ msgstr "Plaka"
 msgctxt "Flashforge"
 msgid "Original"
 msgstr "Orijinal"
-
-msgid "No camera detected"
-msgstr "Kamera algılanmadı"
 
 #: resources/data/hints.ini: [hint:Chamber temperature]
 msgid ""

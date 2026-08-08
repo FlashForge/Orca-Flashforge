@@ -648,3 +648,6 @@ msgstr "视频已暂停"
 
 msgid "Printer disconnected"
 msgstr "打印机断开连接"
+
+msgid "No camera detected"
+msgstr "未检测到摄像头"

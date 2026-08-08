@@ -73,6 +73,8 @@ set(lisbslic3r_sources
     ArcFitter.hpp
     Arrange.cpp
     Arrange.hpp
+    BambuTexturePainting.cpp
+    BambuTexturePainting.hpp
     BlacklistedLibraryCheck.cpp
     BlacklistedLibraryCheck.hpp
     BoundingBox.cpp
@@ -97,6 +99,14 @@ set(lisbslic3r_sources
     ClipperZUtils.hpp
     Color.cpp
     Color.hpp
+    TextureToColor/Callbacks.hpp
+    TextureToColor/CgalUtils.hpp
+    TextureToColor/ColorUtils.cpp
+    TextureToColor/ColorUtils.hpp
+    TextureToColor/Repair.hpp
+    TextureToColor/TextureToColor.cpp
+    TextureToColor/TextureToColor.hpp
+    TextureToColor/TriMesh.hpp
     CommonDefs.hpp
     Config.cpp
     Config.hpp
@@ -187,6 +197,9 @@ set(lisbslic3r_sources
     Format/3mf.hpp
     Format/AMF.cpp
     Format/AMF.hpp
+    Format/AssimpImport.cpp
+    Format/AssimpImport.hpp
+    Format/ResourcePathUtils.hpp
     Format/DRC.cpp
     Format/DRC.hpp
     Format/bbs_3mf.cpp
@@ -504,6 +517,7 @@ cmake_policy(PUSH)
 cmake_policy(SET CMP0011 NEW)
 find_package(CGAL REQUIRED)
 find_package(OpenCV REQUIRED core)
+find_package(assimp REQUIRED)
 cmake_policy(POP)
 
 add_library(libslic3r_cgal STATIC
@@ -589,6 +603,7 @@ target_link_libraries(libslic3r
         miniz
         opencv_world
     PRIVATE
+        assimp::assimp
         ${CMAKE_DL_LIBS}
         ${EXPAT_LIBRARIES}
         ${OCCT_LIBS}
@@ -609,6 +624,7 @@ target_link_libraries(libslic3r
         TBB::tbbmalloc
         ZLIB::ZLIB
         OpenSSL::Crypto
+        ${_cgal_tgt}
     )
 
 if(NOT WIN32)

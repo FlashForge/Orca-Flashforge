@@ -359,6 +359,7 @@ include(NLopt/NLopt.cmake)
 include(libnoise/libnoise.cmake)
 
 include(Draco/Draco.cmake)
+include(Assimp/Assimp.cmake)
 
 
 # I *think* 1.1 is used for *just* md5 hashing?
@@ -429,6 +430,7 @@ set(_dep_list
     ${WXWIDGETS_PKG}
     dep_Cereal
     dep_Draco
+    dep_Assimp
     dep_NLopt
     dep_OpenVDB
     dep_OpenCSG
