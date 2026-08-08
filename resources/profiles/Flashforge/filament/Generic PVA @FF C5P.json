@@ -38,7 +38,7 @@
         "Direct Drive Standard"
     ],
     "filament_flow_ratio": [
-        "0.98"
+        "1"
     ],
     "filament_max_volumetric_speed": [
         "3.2"
@@ -60,7 +60,7 @@
         "240"
     ],
     "pressure_advance": [
-        "0.0225"
+        "0.035"
     ],
     "slow_down_layer_time": [
         "8"

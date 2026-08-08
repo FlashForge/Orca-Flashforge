@@ -41,7 +41,7 @@
         "40"
     ],
     "filament_flow_ratio": [
-        "0.98"
+        "1"
     ],
     "filament_settings_id": [
         "Flashforge PETG Transparent @FF C5P"
@@ -70,7 +70,7 @@
         "10%"
     ],
     "pressure_advance": [
-        "0.0325"
+        "0.07"
     ],
     "slow_down_min_speed": [
         "15"
@@ -93,5 +93,8 @@
     "textured_plate_temp_initial_layer": [
         "85"
     ],
-    "version": "2.3.0.3"
+    "version": "2.3.0.3",
+    "filament_extruder_variant": [
+        "Direct Drive Standard"
+    ]
 }

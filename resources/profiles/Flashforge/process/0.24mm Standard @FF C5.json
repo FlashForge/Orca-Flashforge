@@ -59,5 +59,7 @@
     "support_top_z_distance": "0.2",
     "support_type": "tree(auto)",
     "wipe_tower_cone_angle": "12",
-    "wipe_tower_extra_spacing": "120%"
+    "wipe_tower_extra_spacing": "120%",
+    "slowdown_for_curled_perimeters": "0",
+    "support_base_pattern": "default"
 }
