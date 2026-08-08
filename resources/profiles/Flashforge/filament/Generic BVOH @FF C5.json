@@ -54,6 +54,7 @@
         "60"
     ],
     "inherits": "Generic BVOH @System",
+    "setting_id": "fTnS5cbxHv8cctBa",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Generic BVOH @FF C5",

@@ -57,6 +57,7 @@
         "85"
     ],
     "inherits": "Generic PETG-CF @System",
+    "setting_id": "m9S4NMymXLirVQnV",
     "instantiation": "true",
     "name": "Generic PETG-CF @FF C5",
     "nozzle_temperature": [

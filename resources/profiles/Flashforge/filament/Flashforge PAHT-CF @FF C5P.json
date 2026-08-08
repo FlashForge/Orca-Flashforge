@@ -63,6 +63,7 @@
         "80"
     ],
     "inherits": "Generic PA-CF @System",
+    "setting_id": "FSfGFl7FCutxXN2l",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PAHT-CF @FF C5P",

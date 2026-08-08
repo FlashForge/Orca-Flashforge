@@ -66,6 +66,7 @@
         "40"
     ],
     "inherits": "Generic TPU @System",
+    "setting_id": "Lis7BZ3lMkoX5KQt",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge TPU-90A @FF C5",

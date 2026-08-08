@@ -37,6 +37,7 @@
     ],
     "from": "system",
     "inherits": "FusRock Generic S-PAHT @G3U 0.6 Nozzle",
+    "setting_id": "2JQjReK012FHpHIt",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "FusRock PAHT @FF G4 0.6 HF nozzle",

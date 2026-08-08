@@ -66,6 +66,7 @@
         "40"
     ],
     "inherits": "Generic TPU @System",
+    "setting_id": "ZGmi7NF6Rn4idKjT",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Generic TPU-90A @FF C5",

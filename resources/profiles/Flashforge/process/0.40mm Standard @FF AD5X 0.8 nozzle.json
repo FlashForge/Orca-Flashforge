@@ -13,6 +13,7 @@
     "enable_prime_tower": "1",
     "exclude_object": "1",
     "from": "system",
+    "setting_id": "zkhLAIpGeFPwnYMf",
     "instantiation": "true",
     "compatible_printers": [
         "Flashforge AD5X 0.8 nozzle"

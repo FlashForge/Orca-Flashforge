@@ -51,6 +51,7 @@
         "110"
     ],
     "inherits": "Generic ABS @System",
+    "setting_id": "941E5MaAyFY3iv4V",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge ASA-GF @FF C5",

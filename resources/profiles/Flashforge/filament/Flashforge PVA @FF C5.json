@@ -60,6 +60,7 @@
         "60"
     ],
     "inherits": "Generic PVA @System",
+    "setting_id": "rSYGG2ni41NDVw6l",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PVA @FF C5",

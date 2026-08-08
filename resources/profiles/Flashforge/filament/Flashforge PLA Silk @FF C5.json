@@ -63,6 +63,7 @@
         "65"
     ],
     "inherits": "Generic PLA Silk @System",
+    "setting_id": "OIsfpi49wEoF0ekO",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PLA Silk @FF C5",

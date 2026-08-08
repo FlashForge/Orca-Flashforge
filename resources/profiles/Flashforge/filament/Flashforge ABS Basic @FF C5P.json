@@ -51,6 +51,7 @@
         "110"
     ],
     "inherits": "Generic ABS @System",
+    "setting_id": "UTWbwTYuXYbBx3uw",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge ABS Basic @FF C5P",

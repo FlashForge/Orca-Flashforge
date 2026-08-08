@@ -476,11 +476,15 @@ PresetsConfigSubstitutions PresetBundle::load_presets(AppConfig &config, Forward
     // BBS load preset from user's folder, load system default if
     // BBS: change directories by design
     std::string dir_user_presets = config.get("preset_folder");
+    const std::string user_preset_folder = data_dir() + "/" + PRESET_USER_DIR + "/" +
+                                           (dir_user_presets.empty() ? DEFAULT_USER_FOLDER_NAME : dir_user_presets);
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " user preset folder: " << user_preset_folder;
     if (dir_user_presets.empty()) {
         load_user_presets(DEFAULT_USER_FOLDER_NAME, substitution_rule);
     } else {
         load_user_presets(dir_user_presets, substitution_rule);
     }
+
 
     this->update_multi_material_filament_presets();
     this->update_compatible(PresetSelectCompatibleType::Never);

@@ -2,7 +2,7 @@
   "type": "machine",
   "name": "Flashforge Guider 3 Ultra 0.6 Nozzle",
   "inherits": "fdm_guider3_common",
-  "setting_id": "GM001",
+  "setting_id": "VKlxYdoMbSJ54J6s",
   "from": "system",
   "instantiation": "true",
   "printer_variant": "0.6",

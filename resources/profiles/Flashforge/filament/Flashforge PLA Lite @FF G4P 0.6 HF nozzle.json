@@ -67,6 +67,7 @@
         "55"
     ],
     "inherits": "Flashforge Generic PETG @G3U 0.6 Nozzle",
+    "setting_id": "VSoPa0ilpxlVJy7V",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PLA Lite @FF G4P 0.6 HF nozzle",

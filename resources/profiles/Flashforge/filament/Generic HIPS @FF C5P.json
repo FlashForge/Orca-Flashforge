@@ -51,6 +51,7 @@
         "110"
     ],
     "inherits": "Generic HIPS @System",
+    "setting_id": "BFudgxH9qBrvSLkE",
     "instantiation": "true",
     "name": "Generic HIPS @FF C5P",
     "nozzle_temperature": [

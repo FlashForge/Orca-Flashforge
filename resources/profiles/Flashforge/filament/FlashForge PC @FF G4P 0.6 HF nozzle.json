@@ -55,6 +55,7 @@
         "110"
     ],
     "inherits": "FusRock Generic S-PAHT @G3U 0.6 Nozzle",
+    "setting_id": "vvLLPvSeb5PYbT1R",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "FlashForge PC @FF G4P 0.6 HF nozzle",

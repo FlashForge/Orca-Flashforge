@@ -52,6 +52,7 @@
         "55"
     ],
     "inherits": "FusRock Generic S-PAHT @G3U 0.6 Nozzle",
+    "setting_id": "lALS0WwvUo5AYOq3",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Polymaker CoPA @FF G4 0.6 HF nozzle",

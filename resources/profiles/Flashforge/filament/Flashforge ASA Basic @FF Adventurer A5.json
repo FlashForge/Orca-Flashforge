@@ -24,6 +24,7 @@
     ],
     "from": "system",
     "inherits": "Flashforge Generic ASA",
+    "setting_id": "FY9mcqOyuu1Gqq1m",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge ASA Basic @FF Adventurer A5",

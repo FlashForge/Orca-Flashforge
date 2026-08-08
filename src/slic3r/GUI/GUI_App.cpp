@@ -1766,7 +1766,7 @@ void GUI_App::restart_networking()
 
 // Network plugin hot reload timeout constants (in milliseconds)
 namespace {
-    constexpr bool FLASH_PRESET_SYNC_LOG_ENABLED = true;
+    constexpr bool FLASH_PRESET_SYNC_LOG_ENABLED = false;
 
     void log_flash_preset_sync(const std::string &message)
     {
@@ -5843,6 +5843,7 @@ void GUI_App::get_usr_profile(ComGetUserProfileEvent &event)
 
         // FlashForge login owns the preset-sync lifecycle in the current single-agent architecture.
         if (m_agent && preset_bundle && mainframe && m_agent->is_user_login()) {
+            log_flash_preset_sync("create dir");
             const std::string user_id = m_agent->get_user_id();
             if (!user_id.empty() && app_config->get("preset_folder") != user_id) {
                 remove_user_presets();

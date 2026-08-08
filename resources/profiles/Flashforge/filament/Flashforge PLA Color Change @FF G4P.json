@@ -37,6 +37,7 @@
         "55"
     ],
     "inherits": "Flashforge Generic HS PLA",
+    "setting_id": "girTMkusNTfY04rz",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PLA Color Change @FF G4P",

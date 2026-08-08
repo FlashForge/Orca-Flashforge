@@ -58,6 +58,7 @@
         "100"
     ],
     "inherits": "Flashforge Generic ABS @G3U",
+    "setting_id": "7xmWlHHNMvXBKdYS",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge ASA Basic @FF G4 HF",

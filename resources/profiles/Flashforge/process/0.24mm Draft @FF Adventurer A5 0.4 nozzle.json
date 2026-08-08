@@ -2,6 +2,7 @@
     "enable_arc_fitting": "1",
     "filename_format": "{input_filename_base}_{filament_type[initial_tool]}_{print_time}.gcode",
     "from": "system",
+    "setting_id": "nniAHPVQxmVlEZqp",
     "instantiation": "true",
     "compatible_printers": [
         "Flashforge Adventurer A5 0.4 nozzle"

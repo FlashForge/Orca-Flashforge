@@ -529,10 +529,13 @@ void AppConfig::set_defaults()
 
     set_version_check_url();
 
-	if(get("installed_networking").empty()) {
-        set_bool("installed_networking", false);
-    }
-	
+	// if(get("installed_networking").empty()) {
+    //     set_bool("installed_networking", false);
+    // }
+
+    // flashforge的云不走网络插件
+    set_bool("installed_networking", true);
+    
     // Remove legacy window positions/sizes
     erase("app", "main_frame_maximized");
     erase("app", "main_frame_pos");

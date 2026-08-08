@@ -54,6 +54,7 @@
         "60"
     ],
     "inherits": "Generic PVA @System",
+    "setting_id": "vmza1STzeagaMYbX",
     "instantiation": "true",
     "name": "Generic PVA @FF C5",
     "nozzle_temperature": [

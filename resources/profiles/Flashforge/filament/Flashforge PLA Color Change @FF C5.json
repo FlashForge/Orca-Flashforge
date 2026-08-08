@@ -57,6 +57,7 @@
         "65"
     ],
     "inherits": "Generic PLA @System",
+    "setting_id": "xZmQdh487UMtvBRu",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PLA Color Change @FF C5",

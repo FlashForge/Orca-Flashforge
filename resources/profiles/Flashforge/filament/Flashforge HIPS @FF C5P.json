@@ -54,6 +54,7 @@
         "110"
     ],
     "inherits": "Generic HIPS @System",
+    "setting_id": "AEQYrT7e4Q5J2G6C",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge HIPS @FF C5P",

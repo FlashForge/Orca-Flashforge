@@ -58,6 +58,7 @@
         "80"
     ],
     "inherits": "Flashforge Generic TPU",
+    "setting_id": "JXf7KCy4KY65xuzO",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "FusRock PET-CF @FF G4P",

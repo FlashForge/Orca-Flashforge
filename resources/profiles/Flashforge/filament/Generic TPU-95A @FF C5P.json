@@ -66,6 +66,7 @@
     ],
     "from": "system",
     "inherits": "Generic TPU @System",
+    "setting_id": "EQzyVOtOJjpKyRMM",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Generic TPU-95A @FF C5P",

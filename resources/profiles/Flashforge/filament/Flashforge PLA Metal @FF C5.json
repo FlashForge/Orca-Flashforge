@@ -57,6 +57,7 @@
         "65"
     ],
     "inherits": "Generic PLA @System",
+    "setting_id": "AdjRSTc9RZG6mJ1e",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PLA Metal @FF C5",

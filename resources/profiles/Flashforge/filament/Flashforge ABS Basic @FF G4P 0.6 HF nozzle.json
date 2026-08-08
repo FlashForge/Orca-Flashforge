@@ -61,6 +61,7 @@
         "110"
     ],
     "inherits": "Flashforge Generic ABS @G3U 0.6 Nozzle",
+    "setting_id": "vCsjC0UnKenzIR0O",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge ABS Basic @FF G4P 0.6 HF nozzle",

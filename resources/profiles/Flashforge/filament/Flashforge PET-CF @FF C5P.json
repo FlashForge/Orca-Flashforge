@@ -69,6 +69,7 @@
         "100"
     ],
     "inherits": "Generic PETG-CF @System",
+    "setting_id": "W6i9E22BVo11TeCm",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PET-CF @FF C5P",

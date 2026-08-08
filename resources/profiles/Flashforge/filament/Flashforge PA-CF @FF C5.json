@@ -27,6 +27,7 @@
     ],
     "from": "system",
     "inherits": "Generic PA-CF @System",
+    "setting_id": "e58C9MdOWikIbbVR",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PA-CF @FF C5",

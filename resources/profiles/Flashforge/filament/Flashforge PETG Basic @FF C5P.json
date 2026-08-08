@@ -60,6 +60,7 @@
         "85"
     ],
     "inherits": "Generic PETG @System",
+    "setting_id": "ZEX1N9eaEJkpr8D0",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PETG Basic @FF C5P",

@@ -70,6 +70,7 @@
         "50"
     ],
     "inherits": "Flashforge Generic PETG @G3U 0.6 Nozzle",
+    "setting_id": "j1XfOgjmKvT2w17c",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Kexcelled TPU 64D @FF G4P 0.6 HF nozzle",

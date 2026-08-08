@@ -3,7 +3,7 @@
     "name": "0.20mm Standard for engineering plastic @Flashforge G3U 0.4 Nozzle",
     "inherits": "0.20mm Standard @Flashforge G3U 0.4 Nozzle",
     "from": "system",
-    "setting_id": "GP003",
+    "setting_id": "lybQ6bsvvxCY3l1p",
     "instantiation": "true",
     "bottom_shell_layers": "4",
     "bridge_flow": "0.96",

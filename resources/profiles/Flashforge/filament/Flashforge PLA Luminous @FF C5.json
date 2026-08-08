@@ -57,6 +57,7 @@
         "65"
     ],
     "inherits": "Generic PLA @System",
+    "setting_id": "4sE1LTVVuRglRbpD",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PLA Luminous @FF C5",

@@ -54,6 +54,7 @@
         "85"
     ],
     "inherits": "Generic PETG @System",
+    "setting_id": "N9k2veipYzeiYIGk",
     "instantiation": "true",
     "name": "Generic PETG @FF C5",
     "overhang_fan_speed": [

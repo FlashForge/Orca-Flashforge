@@ -1722,7 +1722,9 @@ int PresetCollection::get_user_presets(PresetBundle *preset_bundle, std::vector<
     result_presets.clear();
 
     lock();
+    int idx = 0;
     for (Preset &preset : m_presets) {
+        idx += 1;
         if (!preset.is_user()) continue;
         if (preset.base_id.empty() && preset.inherits() != "") continue;
         if (!preset.setting_id.empty() && preset.sync_info.empty()) continue;

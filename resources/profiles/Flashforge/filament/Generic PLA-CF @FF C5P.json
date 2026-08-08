@@ -54,6 +54,7 @@
         "Generic"
     ],
     "inherits": "Generic PLA-CF @System",
+    "setting_id": "esJUXpV3apYIe1wF",
     "instantiation": "true",
     "name": "Generic PLA-CF @FF C5P",
     "pressure_advance": [

@@ -48,6 +48,7 @@
         "110"
     ],
     "inherits": "Generic ASA @System",
+    "setting_id": "OzN87qGUgMPxxD6D",
     "instantiation": "true",
     "name": "Generic ASA @FF C5",
     "nozzle_temperature": [

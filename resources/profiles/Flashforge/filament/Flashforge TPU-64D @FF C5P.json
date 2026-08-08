@@ -66,6 +66,7 @@
     ],
     "from": "system",
     "inherits": "Generic TPU @System",
+    "setting_id": "hrcELA2qEMkZ6Wvj",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge TPU-64D @FF C5P",

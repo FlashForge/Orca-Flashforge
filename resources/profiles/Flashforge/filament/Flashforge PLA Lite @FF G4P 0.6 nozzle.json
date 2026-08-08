@@ -58,6 +58,7 @@
         "55"
     ],
     "inherits": "Flashforge Generic PLA-CF @G3U 0.6 Nozzle",
+    "setting_id": "eisOsDKyjp5HbofH",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PLA Lite @FF G4P 0.6 nozzle",

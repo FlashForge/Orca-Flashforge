@@ -70,6 +70,7 @@
         "105"
     ],
     "inherits": "Flashforge Generic PLA @G3U 0.6 Nozzle",
+    "setting_id": "u7rolQaTQz9U6veH",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PA @FF G4 0.6 HF nozzle",
