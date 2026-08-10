@@ -1362,13 +1362,9 @@ void MulticolorModelDialog::style_backend_button(FFButton *button, bool selected
         return;
 
     if (selected) {
-        button->SetFontUniformColor(*wxWHITE);
-        button->SetBorderUniformColor(wxColour("#15AEE5"));
-        button->SetBGUniformColor(wxColour("#15AEE5"));
+        button->SetUniformColors(*wxWHITE, wxColour("#15AEE5"), wxColour("#15AEE5"));
     } else {
-        button->SetFontUniformColor(wxColour("#666666"));
-        button->SetBorderUniformColor(wxColour("#BDBDBD"));
-        button->SetBGUniformColor(*wxWHITE);
+        button->SetUniformColors(wxColour("#666666"), wxColour("#BDBDBD"), *wxWHITE);
     }
 }
 
