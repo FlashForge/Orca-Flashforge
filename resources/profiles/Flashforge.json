@@ -536,6 +536,14 @@
         "sub_path": "process/0.14mm Standard @FF C5 0.25 nozzle.json"
     },
     {
+        "name": "0.08mm Standard @FF C5",
+        "sub_path": "process/0.08mm Standard @FF C5.json"
+    },
+    {
+        "name": "0.10mm Standard @FF C5",
+        "sub_path": "process/0.10mm Standard @FF C5.json"
+    },
+    {
         "name": "0.12mm Standard @FF C5",
         "sub_path": "process/0.12mm Standard @FF C5.json"
     },

@@ -72,5 +72,7 @@
     "top_surface_line_width": "0.82",
     "top_surface_speed": "150",
     "wipe_tower_cone_angle": "12",
-    "wipe_tower_extra_spacing": "120%"
+    "wipe_tower_extra_spacing": "120%",
+    "slowdown_for_curled_perimeters": "0",
+    "support_base_pattern": "default"
 }
