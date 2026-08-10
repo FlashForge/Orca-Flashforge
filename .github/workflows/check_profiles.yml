@@ -5,6 +5,7 @@ on:
     - main
     paths:
     - 'resources/profiles/**'
+    - 'scripts/orca_extra_profile_check.py'
     - ".github/workflows/check_profiles.yml"
 
   workflow_dispatch:
