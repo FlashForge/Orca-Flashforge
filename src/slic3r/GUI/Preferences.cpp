@@ -1538,7 +1538,7 @@ void PreferencesDialog::create_items()
     g_sizer->Add(item_stable_updates);
 
     auto item_user_sync = create_item_checkbox(_L("Auto sync user presets (Printer/Filament/Process)"),
-                                                  _L("Synchronize user presets with FlashForge Cloud after login."),
+                                                  _L("Synchronize user presets with FlashForge Cloud after login"),
                                                   "sync_user_preset");
     g_sizer->Add(item_user_sync);
 

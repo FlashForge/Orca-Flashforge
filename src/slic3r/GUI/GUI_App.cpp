@@ -1766,7 +1766,7 @@ void GUI_App::restart_networking()
 
 // Network plugin hot reload timeout constants (in milliseconds)
 namespace {
-    constexpr bool FLASH_PRESET_SYNC_LOG_ENABLED = false;
+    constexpr bool FLASH_PRESET_SYNC_LOG_ENABLED = true;
 
     void log_flash_preset_sync(const std::string &message)
     {
@@ -2125,13 +2125,7 @@ void GUI_App::init_networking_callbacks()
             return;
             }
             if (return_code == 5) {
-                GUI::wxGetApp().CallAfter([this] {
-                    this->request_user_logout();
-                    MessageDialog msg_dlg(nullptr, _L("Login information expired. Please login again."), "", wxAPPLY | wxOK);
-                    if (msg_dlg.ShowModal() == wxOK) {
-                        return;
-                    }
-                });
+                GUI::wxGetApp().CallAfter([this] { handle_http_error(401, "{}"); });
                 return;
             }
             GUI::wxGetApp().CallAfter([this] {
@@ -5088,24 +5082,51 @@ void GUI_App::request_user_login(int online_login)
 
 void GUI_App::request_user_logout()
 {
-    if (m_agent && m_agent->is_user_login()) {
-        // Update data first before showing dialogs
-        m_agent->user_logout(true);
-        m_agent->set_user_selected_machine("");
-        /* delete old user settings */
-        bool     transfer_preset_changes = false;
-        wxString header = _L("Some presets are modified.") + "\n" +
-            _L("You can keep the modified presets to the new project, discard or save changes as new presets.");
-        wxGetApp().check_and_keep_current_preset_changes(_L("User logged out"), header, ActionButtons::KEEP | ActionButtons::SAVE, &transfer_preset_changes);
+    if (!m_agent || !m_agent->is_user_login())
+        return;
 
+    stop_sync_user_preset();
+
+    bool     transfer_preset_changes = false;
+    wxString header = _L("Some presets are modified.") + "\n" +
+                      _L("You can keep the modified presets to the new project, discard or save changes as new presets.");
+    check_and_keep_current_preset_changes(
+        _L("User logged out"), header, ActionButtons::KEEP | ActionButtons::SAVE, &transfer_preset_changes);
+
+    if (m_device_manager)
         m_device_manager->clean_user_info();
-        remove_user_presets();
-        enable_user_preset_folder(false);
-        preset_bundle->load_user_presets(DEFAULT_USER_FOLDER_NAME, ForwardCompatibilitySubstitutionRule::Enable);
-        mainframe->update_side_preset_ui();
 
-        GUI::wxGetApp().stop_sync_user_preset();
+    // Remove account presets before preset_folder and usr_uid are cleared.
+    remove_user_presets();
+    enable_user_preset_folder(false);
+    preset_bundle->load_user_presets(DEFAULT_USER_FOLDER_NAME, ForwardCompatibilitySubstitutionRule::Enable);
+    mainframe->update_side_preset_ui();
+
+    const auto cloud_agent = m_agent->get_cloud_agent();
+    if (dynamic_cast<FlashCloudServiceAgent *>(cloud_agent.get()) != nullptr || MultiComMgr::inst()->isLoggedIn()) {
+        const ComErrno logout_result = MultiComHelper::inst()->singOut(ComTimeoutWanA);
+        if (logout_result != ComErrno::COM_OK)
+            BOOST_LOG_TRIVIAL(warning) << "MultiComHelper::singOut failed, result=" << static_cast<int>(logout_result);
+    } else {
+        m_agent->user_logout(true);
     }
+
+    m_agent->set_user_selected_machine("");
+
+    if (app_config) {
+        app_config->set("access_token", "");
+        app_config->set("refresh_token", "");
+        app_config->set("token_expire_time", "");
+        app_config->set("token_start_time", "");
+        app_config->set("usr_uid", "");
+        app_config->set("usr_email", "");
+        app_config->set("usr_name", "");
+        app_config->set("usr_pic", "");
+        app_config->set("show_user_points", "");
+    }
+
+    MultiComMgr::inst()->removeWanDev();
+    handle_login_out();
 }
 
 int GUI_App::request_user_unbind(std::string dev_id)
@@ -5211,45 +5232,79 @@ std::string GUI_App::handle_web_request(std::string cmd, const std::vector<std::
             }
             else if (command_str.compare("homepage_logout") == 0) {
                 CallAfter([this] {
-                    //Slic3r::GUI::MultiComMgr::inst()->removeWanDev();
-                    //wxGetApp().handle_login_out();
                     MessageDialog dlg(nullptr, _L("Are you sure to log out?"), _L("Confirm"), wxOK | wxCANCEL);
                     if (dlg.ShowModal() == wxID_OK) {
+                        stop_sync_user_preset();
+
+                        bool     transfer_preset_changes = false;
+                        wxString header = _L("Some presets are modified.") + "\n" +
+                                          _L("You can keep the modified presets to the new project, discard or save changes as new presets.");
+                        check_and_keep_current_preset_changes(
+                            _L("User logged out"), header, ActionButtons::KEEP | ActionButtons::SAVE, &transfer_preset_changes);
+
+                        if (m_device_manager)
+                            m_device_manager->clean_user_info();
+                        remove_user_presets();
+                        enable_user_preset_folder(false);
+                        preset_bundle->load_user_presets(DEFAULT_USER_FOLDER_NAME, ForwardCompatibilitySubstitutionRule::Enable);
+                        mainframe->update_side_preset_ui();
+                        if (m_agent)
+                            m_agent->set_user_selected_machine("");
                         wxGetApp().handle_login_out();
                         AppConfig* app_config = wxGetApp().app_config;
                         if (app_config) {
                             ComErrno login_out_result = MultiComHelper::inst()->singOut(ComTimeoutWanA);
-                            if (login_out_result != ComErrno::COM_OK) {
-                                BOOST_LOG_TRIVIAL(warning) << boost::format("MultiComHelper::inst()->singOut Failed!");
-                            }
+                            if (login_out_result != ComErrno::COM_OK)
+                                BOOST_LOG_TRIVIAL(warning) << "MultiComHelper::singOut failed, result="
+                                                           << static_cast<int>(login_out_result);
                             app_config->set("access_token", "");
                             app_config->set("refresh_token", "");
                             app_config->set("token_expire_time", "");
                             app_config->set("token_start_time", "");
+                            app_config->set("usr_uid", "");
+                            app_config->set("usr_email", "");
                             app_config->set("usr_name", "");
                             app_config->set("usr_pic", "");
-                            Slic3r::GUI::MultiComMgr::inst()->removeWanDev();
+                            app_config->set("show_user_points", "");
+                            MultiComMgr::inst()->removeWanDev();
                         }
                     }
                 });
             } else if (command_str.compare("homepage_userlogout") == 0) {
                 CallAfter([this] {
-                    // Slic3r::GUI::MultiComMgr::inst()->removeWanDev();
-                    // wxGetApp().handle_login_out();
+                    stop_sync_user_preset();
+
+                    bool     transfer_preset_changes = false;
+                    wxString header = _L("Some presets are modified.") + "\n" +
+                                      _L("You can keep the modified presets to the new project, discard or save changes as new presets.");
+                    check_and_keep_current_preset_changes(
+                        _L("User logged out"), header, ActionButtons::KEEP | ActionButtons::SAVE, &transfer_preset_changes);
+
+                    if (m_device_manager)
+                        m_device_manager->clean_user_info();
+                    remove_user_presets();
+                    enable_user_preset_folder(false);
+                    preset_bundle->load_user_presets(DEFAULT_USER_FOLDER_NAME, ForwardCompatibilitySubstitutionRule::Enable);
+                    mainframe->update_side_preset_ui();
+                    if (m_agent)
+                        m_agent->set_user_selected_machine("");
                     wxGetApp().handle_login_out();
                     AppConfig* app_config = wxGetApp().app_config;
                     if (app_config) {
                         ComErrno login_out_result = MultiComHelper::inst()->singOut(ComTimeoutWanA);
-                        if (login_out_result != ComErrno::COM_OK) {
-                            BOOST_LOG_TRIVIAL(warning) << boost::format("MultiComHelper::inst()->singOut Failed!");
-                        }
+                        if (login_out_result != ComErrno::COM_OK)
+                            BOOST_LOG_TRIVIAL(warning) << "MultiComHelper::singOut failed, result="
+                                                       << static_cast<int>(login_out_result);
                         app_config->set("access_token", "");
                         app_config->set("refresh_token", "");
                         app_config->set("token_expire_time", "");
                         app_config->set("token_start_time", "");
+                        app_config->set("usr_uid", "");
+                        app_config->set("usr_email", "");
                         app_config->set("usr_name", "");
                         app_config->set("usr_pic", "");
-                        Slic3r::GUI::MultiComMgr::inst()->removeWanDev();
+                        app_config->set("show_user_points", "");
+                        MultiComMgr::inst()->removeWanDev();
                     }
                 });
             }
@@ -5776,19 +5831,53 @@ void GUI_App::on_http_error(wxCommandEvent &evt)
 
     // request login
     if (status == 401) {
-        if (m_agent) {
-            if (m_agent->is_user_login()) {
-                this->request_user_logout();
+        const bool has_user_state = m_login_success ||
+                                    (app_config && !app_config->get("preset_folder").empty()) ||
+                                    (m_agent && m_agent->is_user_login());
+        if (has_user_state) {
+            stop_sync_user_preset();
 
-                if (!m_show_http_errpr_msgdlg) {
-                    MessageDialog msg_dlg(nullptr, _L("Login information expired. Please login again."), "", wxAPPLY | wxOK);
-                    m_show_http_errpr_msgdlg = true;
-                    auto modal_result = msg_dlg.ShowModal();
-                    if (modal_result == wxOK || modal_result == wxCLOSE) {
-                        m_show_http_errpr_msgdlg = false;
-                        return;
-                    }
-                }
+            bool     transfer_preset_changes = false;
+            wxString header = _L("Some presets are modified.") + "\n" +
+                              _L("You can keep the modified presets to the new project, discard or save changes as new presets.");
+            check_and_keep_current_preset_changes(
+                _L("User logged out"), header, ActionButtons::KEEP | ActionButtons::SAVE, &transfer_preset_changes);
+
+            if (m_device_manager)
+                m_device_manager->clean_user_info();
+            remove_user_presets();
+            enable_user_preset_folder(false);
+            preset_bundle->load_user_presets(DEFAULT_USER_FOLDER_NAME, ForwardCompatibilitySubstitutionRule::Enable);
+            mainframe->update_side_preset_ui();
+
+            // The token is already invalid. Clear the local agent session without
+            // sending another logout request to the server.
+            if (m_agent) {
+                m_agent->user_logout(false);
+                m_agent->set_user_selected_machine("");
+            }
+
+            if (app_config) {
+                app_config->set("access_token", "");
+                app_config->set("refresh_token", "");
+                app_config->set("token_expire_time", "");
+                app_config->set("token_start_time", "");
+                app_config->set("usr_uid", "");
+                app_config->set("usr_email", "");
+                app_config->set("usr_name", "");
+                app_config->set("usr_pic", "");
+                app_config->set("show_user_points", "");
+            }
+
+            MultiComMgr::inst()->removeWanDev();
+            handle_login_out();
+
+            if (!m_show_http_errpr_msgdlg) {
+                MessageDialog msg_dlg(nullptr, _L("Login information expired. Please login again."), "", wxAPPLY | wxOK);
+                m_show_http_errpr_msgdlg = true;
+                auto modal_result = msg_dlg.ShowModal();
+                if (modal_result == wxOK || modal_result == wxCLOSE)
+                    m_show_http_errpr_msgdlg = false;
             }
         }
         return;
@@ -5994,10 +6083,26 @@ void GUI_App::wan_dev_maintain(ComWanDevMaintainEvent& event)
                                                  (mainframe->m_tabpanel->GetSelection() == MainFrame::tp3DEditor ||
                                                   mainframe->m_tabpanel->GetSelection() == MainFrame::tpPreview);
 #endif
-        // Stop cloud work before FlashForge clears the token and account state.
         stop_sync_user_preset();
-        // login out
-        handle_login_out();
+
+        bool     transfer_preset_changes = false;
+        wxString header = _L("Some presets are modified.") + "\n" +
+                          _L("You can keep the modified presets to the new project, discard or save changes as new presets.");
+        check_and_keep_current_preset_changes(
+            _L("User logged out"), header, ActionButtons::KEEP | ActionButtons::SAVE, &transfer_preset_changes);
+
+        if (m_device_manager)
+            m_device_manager->clean_user_info();
+
+        // This is a server-side logout. Do not call singOut() here.
+        remove_user_presets();
+        enable_user_preset_folder(false);
+        preset_bundle->load_user_presets(DEFAULT_USER_FOLDER_NAME, ForwardCompatibilitySubstitutionRule::Enable);
+        mainframe->update_side_preset_ui();
+
+        if (m_agent)
+            m_agent->set_user_selected_machine("");
+
         if (app_config) {
             app_config->set("access_token", "");
             app_config->set("refresh_token", "");
@@ -6009,6 +6114,10 @@ void GUI_App::wan_dev_maintain(ComWanDevMaintainEvent& event)
             app_config->set("usr_pic", "");
             app_config->set("usr_uid", "");
         }
+
+        MultiComMgr::inst()->removeWanDev();
+        handle_login_out();
+
         if (!m_logout_tip) {
             m_logout_tip = new ShowTip(_L("The current account has been logged out!"));
         } else {
@@ -6973,11 +7082,40 @@ void GUI_App::show_check_privacy_dlg(wxCommandEvent& evt)
         request_user_handle(online_login);
         });
     privacy_dlg.Bind(EVT_PRIVACY_UPDATE_CANCEL, [this](wxCommandEvent &e) {
-            app_config->set_bool("privacy_update_checked", false);
-            if (m_agent) {
-                m_agent->user_logout();
-            }
-        });
+        app_config->set_bool("privacy_update_checked", false);
+        stop_sync_user_preset();
+
+        if (m_device_manager)
+            m_device_manager->clean_user_info();
+
+        // Privacy is rejected during the login flow, so there is no need to
+        // prompt for preset modifications. Still switch back to local presets.
+        remove_user_presets();
+        enable_user_preset_folder(false);
+        preset_bundle->load_user_presets(DEFAULT_USER_FOLDER_NAME, ForwardCompatibilitySubstitutionRule::Enable);
+        mainframe->update_side_preset_ui();
+
+        if (m_agent)
+            m_agent->set_user_selected_machine("");
+
+        const ComErrno logout_result = MultiComHelper::inst()->singOut(ComTimeoutWanA);
+        if (logout_result != ComErrno::COM_OK)
+            BOOST_LOG_TRIVIAL(warning) << "MultiComHelper::singOut failed after privacy rejection, result="
+                                       << static_cast<int>(logout_result);
+
+        app_config->set("access_token", "");
+        app_config->set("refresh_token", "");
+        app_config->set("token_expire_time", "");
+        app_config->set("token_start_time", "");
+        app_config->set("usr_uid", "");
+        app_config->set("usr_email", "");
+        app_config->set("usr_name", "");
+        app_config->set("usr_pic", "");
+        app_config->set("show_user_points", "");
+
+        MultiComMgr::inst()->removeWanDev();
+        handle_login_out();
+    });
 
     privacy_dlg.set_text(privacy_version_info.description);
     privacy_dlg.on_show();

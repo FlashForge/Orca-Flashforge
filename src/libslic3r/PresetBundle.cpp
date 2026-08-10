@@ -479,12 +479,14 @@ PresetsConfigSubstitutions PresetBundle::load_presets(AppConfig &config, Forward
     const std::string user_preset_folder = data_dir() + "/" + PRESET_USER_DIR + "/" +
                                            (dir_user_presets.empty() ? DEFAULT_USER_FOLDER_NAME : dir_user_presets);
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " user preset folder: " << user_preset_folder;
-    if (dir_user_presets.empty()) {
-        load_user_presets(DEFAULT_USER_FOLDER_NAME, substitution_rule);
-    } else {
-        load_user_presets(dir_user_presets, substitution_rule);
-    }
+    // if (dir_user_presets.empty()) {
+    //     load_user_presets(DEFAULT_USER_FOLDER_NAME, substitution_rule);
+    // } else {
+    //     load_user_presets(dir_user_presets, substitution_rule);
+    // }
 
+    // 加载用户文件夹，未登录时加载default文件夹
+    load_user_presets(dir_user_presets, substitution_rule);
 
     this->update_multi_material_filament_presets();
     this->update_compatible(PresetSelectCompatibleType::Never);
