@@ -8615,6 +8615,9 @@ msgstr "安定版アップデートのみ確認"
 msgid "Auto sync user presets (Printer/Filament/Process)"
 msgstr "ユーザープリセットの自動同期 (プリンター/フィラメント/プロセス)"
 
+msgid "Synchronize user presets with FlashForge Cloud after login"
+msgstr "ログイン後にユーザープリセットをFlashForge Cloudと同期します"
+
 msgid "Update built-in Presets automatically."
 msgstr "組み込みプリセットを自動更新します。"
 

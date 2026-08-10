@@ -8761,6 +8761,9 @@ msgstr "Yalnızca kararlı güncellemeleri kontrol edin"
 msgid "Auto sync user presets (Printer/Filament/Process)"
 msgstr "Kullanıcı ön ayarları otomatik senkronizasyon (Yazıcı/Filament/İşlem)"
 
+msgid "Synchronize user presets with FlashForge Cloud after login"
+msgstr "Oturum açtıktan sonra kullanıcı ön ayarlarını FlashForge Cloud ile senkronize edin"
+
 msgid "Update built-in Presets automatically."
 msgstr "Yerleşik Ön Ayarları otomatik olarak güncelleyin."
 

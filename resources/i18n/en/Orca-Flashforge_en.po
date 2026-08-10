@@ -8233,7 +8233,10 @@ msgid "Check for stable updates only"
 msgstr ""
 
 msgid "Auto sync user presets (Printer/Filament/Process)"
-msgstr ""
+msgstr "Auto sync user presets (Printer/Filament/Process)"
+
+msgid "Synchronize user presets with FlashForge Cloud after login"
+msgstr "Synchronize user presets with FlashForge Cloud after login"
 
 msgid "Update built-in Presets automatically."
 msgstr "Update built-in presets automatically."

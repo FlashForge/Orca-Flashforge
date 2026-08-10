@@ -8119,6 +8119,9 @@ msgstr ""
 msgid "Auto sync user presets (Printer/Filament/Process)"
 msgstr ""
 
+msgid "Synchronize user presets with FlashForge Cloud after login"
+msgstr ""
+
 msgid "Update built-in Presets automatically."
 msgstr ""
 

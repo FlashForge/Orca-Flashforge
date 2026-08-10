@@ -8324,6 +8324,9 @@ msgstr "仅检测正式版的更新"
 msgid "Auto sync user presets (Printer/Filament/Process)"
 msgstr "同步用户预设（打印机/耗材丝/工艺）"
 
+msgid "Synchronize user presets with FlashForge Cloud after login"
+msgstr "登录后与 FlashForge 云端同步用户预设"
+
 msgid "Update built-in Presets automatically."
 msgstr "自动更新系统预设"
 

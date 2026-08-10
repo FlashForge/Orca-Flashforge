@@ -8944,7 +8944,10 @@ msgid "Check for stable updates only"
 msgstr "Nur nach stabilen Updates suchen"
 
 msgid "Auto sync user presets (Printer/Filament/Process)"
-msgstr ""
+msgstr "Benutzervoreinstellungen automatisch synchronisieren (Drucker/Filament/Prozess)"
+
+msgid "Synchronize user presets with FlashForge Cloud after login"
+msgstr "Benutzervoreinstellungen nach der Anmeldung mit der FlashForge Cloud synchronisieren"
 
 msgid "Update built-in Presets automatically."
 msgstr "Aktualisiere integrierte Profile automatisch."
