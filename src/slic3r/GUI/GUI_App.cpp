@@ -5638,6 +5638,7 @@ void GUI_App::handle_login_out()
         return;
     }
     m_login_success = false;
+    m_sync_prompted_user_id.clear();
     m_usr_pic_image.Destroy();
     LoginDialog::SetUsrLogin(false);
 
@@ -5851,8 +5852,7 @@ void GUI_App::get_usr_profile(ComGetUserProfileEvent &event)
                 preset_bundle->load_user_presets(user_id, ForwardCompatibilitySubstitutionRule::Enable);
                 mainframe->update_side_preset_ui();
             }
-            if (app_config->get("sync_user_preset") == "true")
-                start_sync_user_preset();
+            handle_user_preset_sync_on_login(user_id);
         }
         wxImage image;
         if (image.LoadFile(Slic3r::GUI::from_u8(Slic3r::var("login_default_usr_pic.png")), wxBITMAP_TYPE_PNG)) {
@@ -5960,7 +5960,7 @@ void GUI_App::on_user_login_handle(wxCommandEvent &evt)
         preset_bundle->load_user_presets(m_agent->get_user_id(), ForwardCompatibilitySubstitutionRule::Enable);
         mainframe->update_side_preset_ui();
 
-        GUI::wxGetApp().mainframe->show_sync_dialog();
+        handle_user_preset_sync_on_login(m_agent->get_user_id());
     }
 }
 
@@ -7157,6 +7157,23 @@ void GUI_App::reload_settings()
     } else {
         log_flash_preset_sync("CACHE_READ_END status=skipped reason=missing_preset_bundle_or_agent");
     }
+}
+
+void GUI_App::handle_user_preset_sync_on_login(const std::string& user_id)
+{
+    if (user_id.empty() || !m_agent || !m_agent->is_user_login() || !app_config || !mainframe)
+        return;
+
+    if (app_config->get_bool("sync_user_preset")) {
+        start_sync_user_preset();
+        return;
+    }
+
+    if (m_sync_prompted_user_id == user_id)
+        return;
+
+    m_sync_prompted_user_id = user_id;
+    mainframe->show_sync_dialog(user_id);
 }
 
 //BBS reload when logout

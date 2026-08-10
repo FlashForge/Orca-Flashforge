@@ -277,7 +277,7 @@ static wxIcon main_frame_icon(GUI_App::EAppMode app_mode)
 #define BORDERLESS_FRAME_STYLE (wxMINIMIZE_BOX | wxMAXIMIZE_BOX | wxCLOSE_BOX)
 #endif
 
-wxDEFINE_EVENT(EVT_SYNC_CLOUD_PRESET,     SimpleEvent);
+wxDEFINE_EVENT(EVT_SYNC_CLOUD_PRESET,     wxCommandEvent);
 
 #ifdef __APPLE__
 static const wxString ctrl = ("Ctrl+");
@@ -4480,9 +4480,10 @@ void MainFrame::update_ui_from_settings()
 }
 
 
-void MainFrame::show_sync_dialog()
+void MainFrame::show_sync_dialog(const std::string& user_id)
 {
-    SimpleEvent* evt = new SimpleEvent(EVT_SYNC_CLOUD_PRESET);
+    auto* evt = new wxCommandEvent(EVT_SYNC_CLOUD_PRESET);
+    evt->SetString(from_u8(user_id));
     wxQueueEvent(this, evt);
 }
 
@@ -4502,10 +4503,19 @@ void MainFrame::update_side_preset_ui()
     if(m_multi_machine){m_multi_machine->clear_page();}
 }
 
-void MainFrame::on_select_default_preset(SimpleEvent& evt)
+void MainFrame::on_select_default_preset(wxCommandEvent& evt)
 {
+    const std::string user_id = evt.GetString().ToUTF8().data();
+    NetworkAgent* agent = wxGetApp().getAgent();
+    if (!agent || !agent->is_user_login())
+        return;
+    if (agent->get_user_id() != user_id)
+        return;
+    if (wxGetApp().app_config->get_bool("sync_user_preset"))
+        return;
+
     MessageDialog dialog(this,
-                    _L("Do you want to synchronize your personal data from Bambu Cloud?\n"
+                    _L("Do you want to synchronize your personal presets with FlashForge Cloud?\n"
                         "It contains the following information:\n"
                         "1. The Process presets\n"
                         "2. The Filament presets\n"
@@ -4515,18 +4525,18 @@ void MainFrame::on_select_default_preset(SimpleEvent& evt)
                     wxYES_DEFAULT | wxYES_NO |
                     wxICON_INFORMATION);
 
-    /* get setting list */
-    NetworkAgent* agent = wxGetApp().getAgent();
     switch ( dialog.ShowModal() )
     {
         case wxID_YES: {
             wxGetApp().app_config->set_bool("sync_user_preset", true);
+            wxGetApp().app_config->save();
             wxGetApp().start_sync_user_preset(true);
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " sync_user_preset: true";
             break;
         }
         case wxID_NO:
             wxGetApp().app_config->set_bool("sync_user_preset", false);
+            wxGetApp().app_config->save();
             wxGetApp().stop_sync_user_preset();
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " sync_user_preset: false";
             break;
