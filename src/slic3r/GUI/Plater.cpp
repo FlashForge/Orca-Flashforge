@@ -9053,7 +9053,7 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                             find_first_multicolor_printer_preset(wxGetApp().preset_bundle);
 
                         if (!prepare_page_multicolor_preset.empty()) {
-                            SwitchMulticolorPrinterDialog msg_dlg(q);
+                            SwitchMulticolorPrinterDialog msg_dlg(&dlg);
                             if (msg_dlg.ShowModal() == wxID_YES) {
                                 if (install_printer_preset_if_needed(wxGetApp().preset_bundle, prepare_page_multicolor_preset)) {
                                     full_color_import_choice = FullColorImportChoice::SwitchToMulticolorPrinter;
@@ -9065,7 +9065,7 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                                 full_color_import_choice = FullColorImportChoice::ImportDirectlyAsMono;
                             }
                         } else {
-                            AddMulticolorPrinterDialog add_printer_dlg(q);
+                            AddMulticolorPrinterDialog add_printer_dlg(&dlg);
                             if (add_printer_dlg.ShowModal() == wxID_OK) {
                                 const std::string selected_preset = find_first_multicolor_printer_preset(
                                     wxGetApp().preset_bundle, add_printer_dlg.selected_key(), false);
@@ -9274,7 +9274,7 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                         }
 
                         MulticolorModelDialog multicolor_dlg(
-                            q, cm, convert_model_data, quantization_pipeline->backend(), color_count,
+                            &dlg, cm, convert_model_data, quantization_pipeline->backend(), color_count,
                             new_filament_start_index, &prepared_data.preview_data);
                         if (multicolor_dlg.ShowModal() != wxID_OK) {
                             is_user_cancel = true;
