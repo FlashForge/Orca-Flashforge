@@ -50,7 +50,7 @@ namespace GUI {
      "DSM",                    "Duramic",                "ELEGOO",                 "Eryone",                 "Essentium",
      "eSUN",                   "Extrudr",                "Fiberforce",             "Fiberlogy",              "FilaCube",
      "Filamentive",            "Fillamentum",            "FLASHFORGE",            "Formfutura",             "Francofil",
-     "FusRock",                "FilamentOne",            "Fil X",                  "GEEETECH",               "Giantarm",
+     "FilamentOne",            "Fil X",                  "GEEETECH",               "Giantarm",
      "Gizmo Dorks",            "GreenGate3D",            "HATCHBOX",               "Hello3D",                "IC3D",
      "IEMAI",                  "IIID Max",               "INLAND",                 "iProspect",              "iSANMATE",
      "Justmaker",             "Keene Village Plastics",  "Kexcelled",              "LDO",                    "MakerBot",

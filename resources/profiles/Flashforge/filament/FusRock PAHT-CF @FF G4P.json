@@ -64,7 +64,7 @@
         "100"
     ],
     "inherits": "Flashforge Generic PLA-CF10",
-    "instantiation": "true",
+    "instantiation": "false",
     "is_custom_defined": "0",
     "name": "FusRock PAHT-CF @FF G4P",
     "nozzle_temperature": [

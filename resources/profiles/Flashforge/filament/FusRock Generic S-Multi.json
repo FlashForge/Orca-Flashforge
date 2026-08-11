@@ -198,7 +198,7 @@
         "75"
     ],
     "inherits": "Flashforge Generic PETG",
-    "instantiation": "true",
+    "instantiation": "false",
     "name": "FusRock Generic S-Multi",
     "nozzle_temperature": [
         "270"
