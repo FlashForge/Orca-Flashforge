@@ -94,9 +94,9 @@ public:
 
 	static wxWebView *CreateWebView(wxWindow *parent);
 
-	static std::unordered_map<std::string, FFPrinterSimpleData> getDevListForModelId(std::string modelId);
+	static std::unordered_map<std::string, FFPrinterSimpleData> getDevListForModelId(std::string modelId, bool include_printing = false);
 
-    static std::unordered_map<std::string, FFPrinterSimpleData> getSelectPresetDevList();
+    static std::unordered_map<std::string, FFPrinterSimpleData> getSelectPresetDevList(bool include_printing = false);
 
     static bool                                                 isLikeFilament(const wxString& str);
 

@@ -29,7 +29,7 @@
         "Direct Drive Standard"
     ],
     "filament_flow_ratio": [
-        "0.95"
+        "0.98"
     ],
     "filament_settings_id": [
         "Generic ABS @FF C5"
@@ -72,5 +72,8 @@
     "textured_plate_temp_initial_layer": [
         "110"
     ],
-    "version": "2.3.0.3"
+    "version": "2.3.0.3",
+    "pressure_advance": [
+        "0.035"
+    ]
 }

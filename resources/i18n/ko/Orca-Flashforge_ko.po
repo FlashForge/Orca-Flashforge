@@ -173,8 +173,8 @@ msgstr "도구 유형"
 msgid "Smart fill angle"
 msgstr "스마트 채우기 각도"
 
-msgid "On overhangs only"
-msgstr "오버행에만 칠하기"
+msgid "On highlighted overhangs only"
+msgstr "강조된 오버행에만 칠하기"
 
 msgid "Auto support threshold angle: "
 msgstr "자동 서포트 임계값 각도: "
@@ -5005,6 +5005,9 @@ msgstr "비용"
 msgid "Filament change times"
 msgstr "필라멘트 변경 시간"
 
+msgid "Tool changes"
+msgstr "도구 교환 횟수"
+
 msgid "Color change"
 msgstr "색 변경"
 
@@ -6395,6 +6398,15 @@ msgstr "원본 모델"
 msgid "Number of Colors"
 msgstr "색상 수"
 
+msgid "Color Style"
+msgstr "색상 스타일"
+
+msgid "Soft"
+msgstr "부드럽게"
+
+msgid "Vivid"
+msgstr "선명하게"
+
 msgid "Parameters have changed, please click Apply to take effect"
 msgstr "매개변수가 변경되었습니다. 적용을 클릭해야 반영됩니다"
 
@@ -6976,6 +6988,12 @@ msgstr "내보내기 성공."
 msgid "Model file downloaded."
 msgstr "모델 파일이 다운로드되었습니다."
 
+msgid "Shared profiles may be available for this printer."
+msgstr "이 프린터에 사용 가능한 공유 프로필이 있을 수 있습니다."
+
+msgid "Browse shared profiles"
+msgstr "공유 프로필 찾아보기"
+
 msgid "Serious warning:"
 msgstr "심각한 경고:"
 
@@ -7496,7 +7514,9 @@ msgstr "한 번에 하나의 풀컬러 파일만 추가할 수 있습니다"
 msgid ""
 "Only one OBJ or GLB file can be imported at a time. Please select the file "
 "you want to use this time."
-msgstr "한 번에 하나의 OBJ 또는 GLB 파일만 가져올 수 있습니다. 이번에 사용할 파일을 선택하세요."
+msgstr ""
+"한 번에 하나의 OBJ 또는 GLB 파일만 가져올 수 있습니다. 이번에 사용할 파일을 "
+"선택하세요."
 
 msgid "Please import model files with the same file extension each time"
 msgstr "한 번에 같은 확장자의 모델 파일만 가져오세요"
@@ -20832,6 +20852,9 @@ msgstr "일시정지됨"
 msgid "Printer disconnected"
 msgstr "프린터 연결 끊김"
 
+msgid "No camera detected"
+msgstr "카메라가 감지되지 않았습니다"
+
 #~ msgid "每次只可添加一个全彩文件"
 #~ msgstr "한 번에 하나의 풀컬러 파일만 추가할 수 있습니다"
 
@@ -22491,9 +22514,6 @@ msgctxt "Flashforge"
 msgid "Original"
 msgstr "원본"
 
-msgid "No camera detected"
-msgstr "카메라가 감지되지 않았습니다"
-
 #: resources/data/hints.ini: [hint:Chamber temperature]
 msgid ""
 "Chamber temperature\n"
@@ -22535,6 +22555,507 @@ msgid ""
 msgstr ""
 "키보드 단축키 사용방법\n"
 "Flashforge Studio가 광범위한 키보드 단축키와 3D 장면 작업을 제공한다는 것을 아셨습니까?"
+
+msgid "Dithering cadence height A"
+msgstr "디더링 주기 높이 A"
+
+msgid ""
+"Layer height contribution of component A for dithering virtual filaments. Set to 0 to use normal 1-layer A / 1-layer B alternation.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"디더링 가상 필라멘트에서 구성 요소 A가 차지하는 레이어 높이입니다. 0으로 설정하면 일반적인 1레이어 A / 1레이어 B 교대를 사용합니다.\n"
+"\n"
+"프로젝트 Wiki가 제공되면 혼합 필라멘트 설정에 대한 자세한 설명이 공개됩니다."
+
+msgid "Dithering cadence height B"
+msgstr "디더링 주기 높이 B"
+
+msgid ""
+"Layer height contribution of component B for dithering virtual filaments. Set to 0 to use normal 1-layer A / 1-layer B alternation.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"디더링 가상 필라멘트에서 구성 요소 B가 차지하는 레이어 높이입니다. 0으로 설정하면 일반적인 1레이어 A / 1레이어 B 교대를 사용합니다.\n"
+"\n"
+"프로젝트 Wiki가 제공되면 혼합 필라멘트 설정에 대한 자세한 설명이 공개됩니다."
+
+msgid "Height-weighted cadence"
+msgstr "높이 가중 주기"
+
+msgid ""
+"Enable height-weighted cadence for mixed filaments. Limitation: only one height-weighted mixed color should be present at a given Z plane, because independent per-color layer heights are not supported and the resulting layer height applies to the whole plane. When disabled, layer-cycle cadence is used.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"혼합 필라멘트에 높이 가중 주기를 사용합니다. 제한 사항: 색상별 독립 레이어 높이를 지원하지 않고 결과 레이어 높이가 전체 평면에 적용되므로, 같은 Z 평면에는 높이 가중 혼합 색상이 하나만 있어야 합니다. 비활성화하면 레이어 순환 주기를 사용합니다.\n"
+"\n"
+"프로젝트 Wiki가 제공되면 혼합 필라멘트 설정에 대한 자세한 설명이 공개됩니다."
+
+msgid "Local-Z lower height bound"
+msgstr "Local-Z 하한 높이"
+
+msgid ""
+"Lower bound used when Local-Z mixed-filament dithering chooses per-color sublayer heights.\n"
+"\n"
+"Smaller values let Local-Z use thinner sublayers for a color when needed.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"Local-Z 혼합 필라멘트 디더링이 색상별 하위 레이어 높이를 선택할 때 사용하는 하한입니다.\n"
+"\n"
+"값이 작을수록 필요 시 Local-Z가 해당 색상에 더 얇은 하위 레이어를 사용할 수 있습니다.\n"
+"\n"
+"프로젝트 Wiki가 제공되면 혼합 필라멘트 설정에 대한 자세한 설명이 공개됩니다."
+
+msgid "Local-Z upper height bound"
+msgstr "Local-Z 상한 높이"
+
+msgid ""
+"Upper bound used when Local-Z mixed-filament dithering chooses per-color sublayer heights.\n"
+"\n"
+"Larger values let Local-Z use thicker sublayers for a color when needed.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"Local-Z 혼합 필라멘트 디더링이 색상별 하위 레이어 높이를 선택할 때 사용하는 상한입니다.\n"
+"\n"
+"값이 클수록 필요 시 Local-Z가 해당 색상에 더 두꺼운 하위 레이어를 사용할 수 있습니다.\n"
+"\n"
+"프로젝트 Wiki가 제공되면 혼합 필라멘트 설정에 대한 자세한 설명이 공개됩니다."
+
+msgid "Advanced dithering"
+msgstr "고급 디더링"
+
+msgid ""
+"Distribute mixed filament layer-cycle cadence using an advanced ordered dithering pattern instead of a simple contiguous A-then-B run. This can reduce visible striping for some hues.\n"
+"\n"
+"This is an even more experimental mode and the perceived color may differ from normal dithering for the same filament pair and ratio.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"단순한 연속 A-후-B 배열 대신 고급 순서 디더링 패턴으로 혼합 필라멘트 레이어 순환 주기를 분산합니다. 일부 색상에서 눈에 보이는 줄무늬를 줄일 수 있습니다.\n"
+"\n"
+"이 모드는 더욱 실험적이며, 같은 필라멘트 쌍과 비율에서도 일반 디더링과 체감 색상이 다를 수 있습니다.\n"
+"\n"
+"프로젝트 Wiki가 제공되면 혼합 필라멘트 설정에 대한 자세한 설명이 공개됩니다."
+
+msgid "Enable mixed filament bias"
+msgstr "혼합 필라멘트 바이어스 활성화"
+
+msgid ""
+"Show and apply the per-row mixed filament Bias control.\n"
+"\n"
+"When enabled, the selected filament in a mixed pair is recessed slightly so the other component becomes more visible.\n"
+"\n"
+"Bias is ignored for grouped wall patterns, same-layer pointillisme, and Local Z dithering."
+msgstr ""
+"행별 혼합 필라멘트 바이어스 컨트롤을 표시하고 적용합니다.\n"
+"\n"
+"활성화하면 혼합 쌍에서 선택한 필라멘트를 약간 안쪽으로 넣어 다른 구성 요소가 더 잘 보이게 합니다.\n"
+"\n"
+"그룹화된 벽 패턴, 동일 레이어 점묘, Local Z 디더링에서는 바이어스가 무시됩니다."
+
+msgid "Selective Expansion contraction"
+msgstr "선택적 확장/수축"
+
+msgid ""
+"XY offset applied to mixed-filament painted regions before region assignment.\n"
+"\n"
+"Positive values contract the mixed zone inward. Negative values expand it outward.\n"
+"\n"
+"This applies to mixed filament usage in layer cadence, height cadence, same-layer pointillisme, and local Z dithering."
+msgstr ""
+"영역 할당 전에 혼합 필라멘트로 칠해진 영역에 적용되는 XY 오프셋입니다.\n"
+"\n"
+"양수 값은 혼합 영역을 안쪽으로 수축시키고, 음수 값은 바깥쪽으로 확장합니다.\n"
+"\n"
+"레이어 주기, 높이 주기, 동일 레이어 점묘, Local Z 디더링의 혼합 필라멘트 사용에 적용됩니다."
+
+msgid "Collapse same-color mixed regions"
+msgstr "같은 색 혼합 영역 접기"
+
+msgid ""
+"Merge ordinary mixed-filament painted regions into a single area when they resolve to the same physical filament on a layer.\n"
+"\n"
+"This improves continuity for adjacent same-color areas. Local Z dithering turns this off automatically when enabled, but you may turn it back on manually.\n"
+"\n"
+"Experimental with Local Z dithering."
+msgstr ""
+"일반 혼합 필라멘트 칠하기 영역이 한 레이어에서 같은 물리 필라멘트로 해석될 때 하나의 영역으로 병합합니다.\n"
+"\n"
+"인접한 같은 색 영역의 연속성을 개선합니다. Local Z 디더링을 활성화하면 이 옵션은 자동으로 꺼지지만 수동으로 다시 켤 수 있습니다.\n"
+"\n"
+"Local Z 디더링과 함께 사용할 때는 실험적입니다."
+
+msgid "Mixed filament custom definitions"
+msgstr "혼합 필라멘트 사용자 정의"
+
+msgid ""
+"Serialized custom mixed filament rows.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"직렬화된 사용자 지정 혼합 필라멘트 행입니다.\n"
+"\n"
+"프로젝트 Wiki가 제공되면 혼합 필라멘트 설정에 대한 자세한 설명이 공개됩니다."
+
+msgid "Pointillisme pixel size"
+msgstr "점묘 픽셀 크기"
+
+msgid ""
+"Length of one pointillisme segment along an extrusion path for same-layer pointillisme mode. Set to 0 to use automatic nozzle-based sizing.\n"
+"\n"
+"Warning: Same-layer pointillisme is extremely experimental and may produce unusable results."
+msgstr ""
+"동일 레이어 점묘 모드에서 압출 경로를 따라 한 점묘 세그먼트의 길이입니다. 0으로 설정하면 노즐 기반 자동 크기를 사용합니다.\n"
+"\n"
+"경고: 동일 레이어 점묘 모드는 매우 실험적인 기능이며 사용할 수 없는 결과가 나올 수 있습니다."
+
+msgid "Pointillisme line gap"
+msgstr "점묘 선 간격"
+
+msgid ""
+"Optional non-extruded spacing between adjacent pointillisme segments. Increase carefully to improve separation and print quality.\n"
+"\n"
+"Warning: Same-layer pointillisme is extremely experimental and may produce unusable results."
+msgstr ""
+"인접한 점묘 세그먼트 사이의 선택적 비압출 간격입니다. 분리와 출력 품질을 개선하려면 신중하게 늘리십시오.\n"
+"\n"
+"경고: 동일 레이어 점묘 모드는 매우 실험적인 기능이며 사용할 수 없는 결과가 나올 수 있습니다."
+
+msgid "Dithering Z step size"
+msgstr "디더링 Z 단계 크기"
+
+msgid ""
+"Layer height used in Z zones painted with dithering (mixed virtual filaments). Set to 0 to keep normal layer height in those zones.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"디더링(혼합 가상 필라멘트)으로 칠한 Z 영역에서 사용하는 레이어 높이입니다. 0으로 설정하면 해당 영역의 일반 레이어 높이를 유지합니다.\n"
+"\n"
+"프로젝트 Wiki가 제공되면 혼합 필라멘트 설정에 대한 자세한 설명이 공개됩니다."
+
+msgid "Local Z dithering mode"
+msgstr "Local Z 디더링 모드"
+
+msgid ""
+"Use Variable Layers for Color Blending\n"
+"\n"
+"Blend colors by varying layer heights instead of using a fixed ratio of equal-height layers. This only affects blended color zones; non-blended areas keep their nominal layer height and cadence when possible.\n"
+"\n"
+"This setting increases color blending smoothness by splitting each blended layer according to the blend ratio. For example, a 66/33 blend at 0.12 mm layer height will print as one 0.08 mm layer and one 0.04 mm layer. At 0.20 mm layer height, a 75/25 blend will print as one 0.15 mm layer and one 0.05 mm layer."
+msgstr ""
+"색상 혼합에 가변 레이어 사용\n"
+"\n"
+"동일 높이 레이어의 고정 비율 대신 레이어 높이를 변경하여 색상을 혼합합니다. 이는 혼합 색상 영역에만 영향을 주며, 혼합되지 않은 영역은 가능한 경우 공칭 레이어 높이와 주기를 유지합니다.\n"
+"\n"
+"이 설정은 혼합 비율에 따라 각 혼합 레이어를 나누어 색상 혼합을 더 부드럽게 합니다. 예를 들어 0.12 mm 레이어 높이에서 66/33 혼합은 0.08 mm 레이어 하나와 0.04 mm 레이어 하나로 출력됩니다. 0.20 mm 레이어 높이에서 75/25 혼합은 0.15 mm 레이어 하나와 0.05 mm 레이어 하나로 출력됩니다."
+
+msgid "Apply Local-Z to whole mixed objects"
+msgstr "전체 혼합 객체에 Local-Z 적용"
+
+msgid ""
+"Experimental. Extend Local-Z dithering beyond painted mixed zones so mixed wall regions can use Local-Z across the whole object.\n"
+"\n"
+"This also lets Local-Z continue through default mixed walls around painted areas instead of limiting the effect strictly to painted masks."
+msgstr ""
+"실험적 기능입니다. Local-Z 디더링을 칠해진 혼합 영역 밖으로 확장하여 혼합 벽 영역이 전체 객체에서 Local-Z를 사용할 수 있게 합니다.\n"
+"\n"
+"또한 효과를 칠하기 마스크로만 엄격히 제한하지 않고, 칠해진 영역 주변의 기본 혼합 벽을 통해 Local-Z가 계속 적용되도록 합니다."
+
+msgid "Use direct multicolor Local-Z solver"
+msgstr "직접 다색 Local-Z 솔버 사용"
+
+msgid ""
+"Experimental. For mixed rows with 3 or more physical filaments, allocate Local-Z sublayers directly across all components with carry-over error between layers instead of collapsing them into pair cadence.\n"
+"\n"
+"This can reduce visible banding in multicolor Local-Z blends at the cost of more toolchanges. It is ignored when explicit Local-Z A/B heights are set."
+msgstr ""
+"실험적 기능입니다. 물리 필라멘트가 3개 이상인 혼합 행에서는 이를 쌍 주기로 접지 않고, 레이어 간 이월 오차를 사용해 모든 구성 요소에 Local-Z 하위 레이어를 직접 배분합니다.\n"
+"\n"
+"툴 체인지가 늘어나는 대신 다색 Local-Z 혼합의 눈에 보이는 밴딩을 줄일 수 있습니다. 명시적인 Local-Z A/B 높이가 설정된 경우 무시됩니다."
+
+msgid "Use step size in painted zones only"
+msgstr "칠해진 영역에만 단계 크기 사용"
+
+msgid ""
+"When enabled, dithering Z step size is applied only where mixed filament is painted. Unpainted zones keep their original layer height.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"활성화하면 디더링 Z 단계 크기가 혼합 필라멘트가 칠해진 곳에만 적용됩니다. 칠해지지 않은 영역은 원래 레이어 높이를 유지합니다.\n"
+"\n"
+"프로젝트 Wiki가 제공되면 혼합 필라멘트 설정에 대한 자세한 설명이 공개됩니다."
+
+msgid "Local-Z mini wipe lines"
+msgstr "Local-Z 미니 와이프 라인"
+
+msgid "Mixed filaments are unreliable on a single-extruder printer."
+msgstr "단일 압출기 프린터에서는 혼합 필라멘트가 안정적이지 않습니다."
+
+msgid "Mixed Filament %d"
+msgstr "혼합 필라멘트 %d"
+
+msgid "Add Color"
+msgstr "색상 추가"
+
+msgid "Hex"
+msgstr "16진수"
+
+msgid "Requested"
+msgstr "요청됨"
+
+msgid "Creates"
+msgstr "생성"
+
+msgid "Exact preset mixes"
+msgstr "정확한 프리셋 혼합"
+
+msgid "Matching closest supported mix..."
+msgstr "가장 가까운 지원 혼합을 찾는 중..."
+
+msgid "Calculating closest supported mix..."
+msgstr "가장 가까운 지원 혼합을 계산하는 중..."
+
+msgid "%d%% min"
+msgstr "최소 %d%%"
+
+msgid "Use a valid hex color like #00FF88."
+msgstr "#00FF88 같은 올바른 16진수 색상을 사용하십시오."
+
+msgid "No supported 2-color, 3-color, or 4-color recipe found."
+msgstr "지원되는 2색, 3색 또는 4색 레시피를 찾을 수 없습니다."
+
+msgid "Matching %s..."
+msgstr "%s 일치 중..."
+
+msgid "Requested %s, closest recipe delta: %.2f"
+msgstr "요청 %s, 가장 가까운 레시피 델타: %.2f"
+
+msgid "Unable to create a color mix from the current physical filament colors within the selected range."
+msgstr "선택한 범위 내에서 현재 물리 필라멘트 색상으로 색상 혼합을 만들 수 없습니다."
+
+msgid "Local-Z breakdown: manual pattern rows do not use pair decomposition."
+msgstr "Local-Z 분석: 수동 패턴 행은 쌍 분해를 사용하지 않습니다."
+
+msgid "Local-Z breakdown: same-layer mode does not use local-Z pair decomposition."
+msgstr "Local-Z 분석: 동일 레이어 모드는 Local-Z 쌍 분해를 사용하지 않습니다."
+
+msgid "Local-Z direct multicolor solver: %s"
+msgstr "Local-Z 직접 다색 솔버: %s"
+
+msgid "Local-Z direct multicolor solver: F<n> <percent>%, ..."
+msgstr "Local-Z 직접 다색 솔버: F<n> <percent>%, ..."
+
+msgid ""
+"Carry-over error is distributed directly across all %d components instead of collapsing them into pair cadence."
+msgstr "이월 오차는 쌍 주기로 접히지 않고 모든 %d개 구성 요소에 직접 분배됩니다."
+
+msgid ""
+"Carry-over error is distributed directly across all <count> components instead of collapsing them into pair cadence."
+msgstr "이월 오차는 쌍 주기로 접히지 않고 모든 <count>개 구성 요소에 직접 분배됩니다."
+
+msgid "Effective Local-Z cap: up to %d sublayers per nominal layer."
+msgstr "유효 Local-Z 제한: 공칭 레이어당 최대 %d개 하위 레이어."
+
+msgid "Effective Local-Z cap: up to <count> sublayers per nominal layer."
+msgstr "유효 Local-Z 제한: 공칭 레이어당 최대 <count>개 하위 레이어."
+
+msgid "Local-Z layer cadence: %s."
+msgstr "Local-Z 레이어 주기: %s."
+
+msgid "Local-Z layer cadence: <pair cadence summary>."
+msgstr "Local-Z 레이어 주기: <pair cadence summary>."
+
+msgid "Pair splits: %s."
+msgstr "쌍 분할: %s."
+
+msgid "Pair splits: <pair split summary>."
+msgstr "쌍 분할: <pair split summary>."
+
+msgid "Saved row limit will apply when Local-Z dithering mode is enabled in print settings."
+msgstr "저장된 행 제한은 프린트 설정에서 Local-Z 디더링 모드를 활성화할 때 적용됩니다."
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers."
+msgstr "유효 Local-Z 스택: %d개 하위 레이어가 %d개 쌍 레이어에 걸쳐 적용됩니다."
+
+msgid "Effective Local-Z stack: <count> sublayers over <count> pair layers."
+msgstr "유효 Local-Z 스택: <count>개 하위 레이어가 <count>개 쌍 레이어에 걸쳐 적용됩니다."
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers (uncapped %d)."
+msgstr "유효 Local-Z 스택: %d개 하위 레이어가 %d개 쌍 레이어에 걸쳐 적용됩니다(제한 전 %d)."
+
+msgid "Effective Local-Z stack: <count> sublayers over <count> pair layers (uncapped <count>)."
+msgstr "유효 Local-Z 스택: <count>개 하위 레이어가 <count>개 쌍 레이어에 걸쳐 적용됩니다(제한 전 <count>)."
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d."
+msgstr "Local-Z 쌍 분할: 요청 F%u/F%u %d/%d."
+
+msgid "Local-Z pair split: requested F<a>/F<b> <percent>/<percent>."
+msgstr "Local-Z 쌍 분할: 요청 F<a>/F<b> <percent>/<percent>."
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d, effective %d/%d over %d sublayers."
+msgstr "Local-Z 쌍 분할: 요청 F%u/F%u %d/%d, 유효 %d/%d, %d개 하위 레이어."
+
+msgid ""
+"Local-Z pair split: requested F<a>/F<b> <percent>/<percent>, effective <percent>/<percent> over <count> sublayers."
+msgstr "Local-Z 쌍 분할: 요청 F<a>/F<b> <percent>/<percent>, 유효 <percent>/<percent>, <count>개 하위 레이어."
+
+msgid "Local-Z breakdown: unavailable."
+msgstr "Local-Z 분석: 사용할 수 없습니다."
+
+msgid "Click to choose a physical filament color"
+msgstr "물리 필라멘트 색상을 선택하려면 클릭"
+
+msgid "Append filament %d to pattern"
+msgstr "필라멘트 %d을(를) 패턴에 추가"
+
+msgid "Bias"
+msgstr "바이어스"
+
+msgid "Limit Local-Z"
+msgstr "Local-Z 제한"
+
+msgid "Max sublayers"
+msgstr "최대 하위 레이어 수"
+
+msgid ""
+"No other consumables of the same type are available for mixing. Please add consumables of the same type."
+msgstr "혼합에 사용할 같은 유형의 다른 소모품이 없습니다. 같은 유형의 소모품을 추가하십시오."
+
+msgid "Consumable types are inconsistent. Please add consumables of the same type."
+msgstr "소모품 유형이 일치하지 않습니다. 같은 유형의 소모품을 추가하십시오."
+
+msgid "%d-color layer cycle"
+msgstr "%d색 레이어 순환"
+
+msgid "%d%%/%d%%"
+msgstr "%d%%/%d%%"
+
+msgid "Simple %d%%/%d%%"
+msgstr "단순 %d%%/%d%%"
+
+msgid "None (Selected)"
+msgstr "없음(선택됨)"
+
+msgid "F%d (Selected)"
+msgstr "F%d(선택됨)"
+
+msgid "F<n> (Selected)"
+msgstr "F<n>(선택됨)"
+
+msgid "Click to edit"
+msgstr "클릭하여 편집"
+
+msgid "Gradient Mix Weights"
+msgstr "그라디언트 혼합 가중치"
+
+msgid "Mixed Filaments"
+msgstr "혼합 필라멘트"
+
+msgid "Add Pattern"
+msgstr "패턴 추가"
+
+msgid "Remove last mixed filament"
+msgstr "마지막 혼합 필라멘트 제거"
+
+msgid "Add mixed filament"
+msgstr "혼합 필라멘트 추가"
+
+msgid "Confirm merge"
+msgstr "병합 확인"
+
+msgid "No mixed filaments yet. Use Add to create one."
+msgstr "아직 혼합 필라멘트가 없습니다. 추가를 사용하여 만드십시오."
+
+msgid "(Pattern)"
+msgstr "(패턴)"
+
+msgid "Drag to reorder mixed filaments in this panel."
+msgstr "이 패널에서 혼합 필라멘트 순서를 바꾸려면 드래그하십시오."
+
+msgid "Edit mixed filament"
+msgstr "혼합 필라멘트 편집"
+
+msgid ""
+"Number of purge lines reserved for each runtime Local-Z wipe tower toolchange. Higher values improve cleanup but increase tower depth. Only used when Local-Z dithering and the prime tower are enabled."
+msgstr ""
+"런타임 Local-Z 와이프 타워 툴 체인지마다 예약되는 퍼지 라인 수입니다. 값이 높을수록 청소 효과가 좋아지지만 타워 깊이가 증가합니다. Local-Z 디더링과 프라임 타워가 활성화된 경우에만 사용됩니다."
+
+msgid "Using variable layer height together with Local-Z dithering may result in poor color mixing quality."
+msgstr "가변 레이어 높이와 Local-Z 디더링을 함께 사용하면 색상 혼합 품질이 낮아질 수 있습니다."
+
+msgid ""
+"Pick from the current filament gamut. The dialog previews the closest 2-color, 3-color, or 4-color FilamentMixer recipe before it is added."
+msgstr "현재 필라멘트 색역에서 선택합니다. 추가하기 전에 이 대화상자는 가장 가까운 2색, 3색 또는 4색 FilamentMixer 레시피를 미리 봅니다."
+
+msgid "Enter a hex color like #00FF88. The picker will snap to the closest supported FilamentMixer color."
+msgstr "#00FF88 같은 16진수 색상을 입력하십시오. 선택기는 가장 가까운 지원 FilamentMixer 색상으로 맞춰집니다."
+
+msgid "Classic color picker. The result will snap to the closest supported FilamentMixer color."
+msgstr "클래식 색상 선택기입니다. 결과는 가장 가까운 지원 FilamentMixer 색상으로 맞춰집니다."
+
+msgid "Minimum percent for each participating color. Higher values block highly skewed mixes."
+msgstr "참여하는 각 색상의 최소 비율입니다. 값이 높을수록 한쪽으로 크게 치우친 혼합을 차단합니다."
+
+msgid "Consumable types in the current mixing scheme are inconsistent. Please select another mixing scheme."
+msgstr "현재 혼합 방식의 소모품 유형이 일치하지 않습니다. 다른 혼합 방식을 선택하십시오."
+
+msgid ""
+"Manual repeating pattern. Use physical filament IDs 1..9. Use commas to define deeper perimeter patterns, for example 12,21. Example: 1/1/1/1/2/2/2/2, 12,21, or 1/2/3/4."
+msgstr ""
+"수동 반복 패턴입니다. 물리 필라멘트 ID 1..9를 사용합니다. 더 깊은 외벽 패턴을 정의하려면 쉼표를 사용하십시오(예: 12,21). 예: 1/1/1/1/2/2/2/2, 12,21 또는 1/2/3/4."
+
+msgid ""
+"Positive bias recesses the second filament in the pair; negative bias recesses the first filament.\n"
+"\n"
+"The color chip shows which filament the current value affects.\n"
+"\n"
+"Grouped wall patterns and Local-Z dithering ignore it."
+msgstr ""
+"양수 바이어스는 쌍의 두 번째 필라멘트를 안쪽으로 넣고, 음수 바이어스는 첫 번째 필라멘트를 안쪽으로 넣습니다.\n"
+"\n"
+"색상 칩은 현재 값이 어떤 필라멘트에 영향을 주는지 표시합니다.\n"
+"\n"
+"그룹화된 벽 패턴과 Local-Z 디더링은 이 값을 무시합니다."
+
+msgid ""
+"Store a per-color Local-Z cadence cap. It applies when Local-Z dithering mode is enabled in print settings."
+msgstr "색상별 Local-Z 주기 제한을 저장합니다. 프린트 설정에서 Local-Z 디더링 모드를 활성화하면 적용됩니다."
+
+msgid "Maximum number of Local-Z sublayers this color may use before its cadence repeats."
+msgstr "이 색상이 주기를 반복하기 전에 사용할 수 있는 최대 Local-Z 하위 레이어 수입니다."
+
+msgid "Pick a point in the gradient map to control multi-filament mix."
+msgstr "다중 필라멘트 혼합을 제어하려면 그라디언트 맵에서 한 점을 선택하십시오."
+
+msgid "Unable to create a color match from the current physical filament colors."
+msgstr "현재 물리 필라멘트 색상으로 색상 일치를 만들 수 없습니다."
+
+msgid "Merging will remove this physical filament and may invalidate the mixed filament. Continue?"
+msgstr "병합하면 이 물리 필라멘트가 제거되고 혼합 필라멘트가 무효화될 수 있습니다. 계속하시겠습니까?"
+
+msgid "(Filament %u + Filament %u)"
+msgstr "(필라멘트 %u + 필라멘트 %u)"
+
+msgid "(Filament <a> + Filament <b>)"
+msgstr "(필라멘트 <a> + 필라멘트 <b>)"
+
+msgid "(F%u + F%u)"
+msgstr "(F%u + F%u)"
+
+msgid "(F<a> + F<b>)"
+msgstr "(F<a> + F<b>)"
+
+msgid "Expert settings"
+msgstr "전문가 설정"
+
+msgid "Simple settings"
+msgstr "간단 설정"
+
+msgid "Cycle settings visibility"
+msgstr "설정 표시 수준 전환"
 
 msgid "C5 or C5P Not Connected"
 msgstr "C5 또는 C5P가 연결되지 않았습니다"
@@ -22583,3 +23104,14 @@ msgstr "복구된 메시를 마무리하는 중"
 
 msgid "Remapping repaired mesh colors"
 msgstr "복구된 메시 색상을 다시 매핑하는 중"
+
+#, c-format
+msgid "%lld minutes"
+msgstr "%lld분"
+
+#, c-format
+msgid "%lld hours %lld minutes"
+msgstr "%lld시간 %lld분"
+
+msgid "The multicolor filament limit has been reached. Reopen the project and try again."
+msgstr "멀티컬러 필라멘트 한도에 도달했습니다. 프로젝트를 다시 연 후 다시 시도하십시오."

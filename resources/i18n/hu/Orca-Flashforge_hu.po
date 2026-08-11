@@ -12038,3 +12038,57 @@ msgstr ""
 
 #~ msgid "Orient the model"
 #~ msgstr "Modell orientációja"
+
+
+msgid "Simple settings"
+msgstr "Egyszerű beállítások"
+
+msgid "Local-Z pair split: requested F<a>/F<b> <percent>/<percent>."
+msgstr "Local-Z pár felosztása: kért F<a>/F<b> <percent>/<percent>."
+
+msgid "Cycle settings visibility"
+msgstr "Beállítások láthatóságának váltása"
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d."
+msgstr "Local-Z pár felosztása: kért F%u/F%u %d/%d."
+
+msgid "Local-Z breakdown: manual pattern rows do not use pair decomposition."
+msgstr "Local-Z felbontás: a kézi mintasorok nem használnak páros felbontást."
+
+
+msgid "Local-Z breakdown: same-layer mode does not use local-Z pair decomposition."
+msgstr "Local-Z felbontás: az azonos réteg mód nem használ Local-Z páros felbontást."
+
+msgid "Local-Z breakdown: unavailable."
+msgstr "Local-Z felbontás: nem érhető el."
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d, effective %d/%d over %d sublayers."
+msgstr "Local-Z pár felosztása: kért F%u/F%u %d/%d, tényleges %d/%d %d alrétegen."
+
+
+msgid "Expert settings"
+msgstr "Szakértői beállítások"
+
+msgid "Local-Z direct multicolor solver: %s"
+msgstr "Local-Z k?zvetlen t?bbsz?n? megold?: %s"
+
+msgid "Carry-over error is distributed directly across all %d components instead of collapsing them into pair cadence."
+msgstr "Az ?tvitt hiba k?zvetlen?l mind a(z) %d komponens k?z?tt oszlik el, ahelyett hogy p?ros ?temez?sbe omlana ?ssze."
+
+msgid "Effective Local-Z cap: up to %d sublayers per nominal layer."
+msgstr "Hat?kony Local-Z korl?t: legfeljebb %d alr?teg n?vleges r?tegenk?nt."
+
+msgid "Local-Z layer cadence: %s."
+msgstr "Local-Z r?teg?temez?s: %s."
+
+msgid "Pair splits: %s."
+msgstr "P?ros feloszt?sok: %s."
+
+msgid "Saved row limit will apply when Local-Z dithering mode is enabled in print settings."
+msgstr "A mentett sorkorl?t akkor l?p ?letbe, amikor a Local-Z dithering m?d enged?lyezve van a nyomtat?si be?ll?t?sokban."
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers."
+msgstr "Hat?kony Local-Z verem: %d alr?teg %d p?ros r?tegen."
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers (uncapped %d)."
+msgstr "Hat?kony Local-Z verem: %d alr?teg %d p?ros r?tegen (korl?t n?lk?l %d)."

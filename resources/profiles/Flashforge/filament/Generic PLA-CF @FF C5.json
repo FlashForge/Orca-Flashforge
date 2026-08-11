@@ -41,7 +41,7 @@
         "Direct Drive Standard"
     ],
     "filament_flow_ratio": [
-        "0.98"
+        "1"
     ],
     "filament_settings_id": [
         "Generic PLA-CF @FF C5"
@@ -61,7 +61,7 @@
     "instantiation": "true",
     "name": "Generic PLA-CF @FF C5",
     "pressure_advance": [
-        "0.0225"
+        "0.035"
     ],
     "slow_down_layer_time": [
         "8"

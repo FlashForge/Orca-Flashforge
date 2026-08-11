@@ -155,12 +155,12 @@ std::unique_ptr<NetworkAgent> create_agent_from_config(const std::string& log_di
         return std::make_unique<NetworkAgent>(nullptr, nullptr);
 
     // Determine cloud provider from config
-    bool use_orca_cloud = app_config->get_bool("use_orca_cloud");
+    // bool use_orca_cloud = app_config->get_bool("use_orca_cloud");
 
     // Create cloud agent
     std::shared_ptr<ICloudServiceAgent> cloud_agent;
-    if (use_orca_cloud || app_config->get_bool("installed_networking")) {
-        CloudAgentProvider provider = use_orca_cloud ? CloudAgentProvider::Orca : CloudAgentProvider::FlashForge;
+    if (app_config->get_bool("installed_networking")) {
+        CloudAgentProvider provider = CloudAgentProvider::FlashForge;
         cloud_agent                 = NetworkAgentFactory::create_cloud_agent(provider, log_dir);
         if (!cloud_agent) {
             BOOST_LOG_TRIVIAL(error) << "Failed to create cloud agent";

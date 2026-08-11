@@ -101,7 +101,7 @@
         "210"
     ],
     "pressure_advance": [
-        "0.025"
+        "0.035"
     ],
     "slow_down_layer_time": [
         "8"
@@ -121,5 +121,11 @@
     "textured_plate_temp_initial_layer": [
         "65"
     ],
-    "version": "2.3.0.3"
+    "version": "2.3.0.3",
+    "filament_extruder_variant": [
+        "Direct Drive Standard"
+    ],
+    "filament_flow_ratio": [
+        "1"
+    ]
 }

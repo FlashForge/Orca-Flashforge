@@ -14036,3 +14036,57 @@ msgstr ""
 
 msgid "Print File"
 msgstr ""
+
+
+msgid "Expert settings"
+msgstr "Eksperto nustatymai"
+
+
+msgid "Simple settings"
+msgstr "Paprasti nustatymai"
+
+msgid "Local-Z pair split: requested F<a>/F<b> <percent>/<percent>."
+msgstr "Local-Z poros padalijimas: prašoma F<a>/F<b> <percent>/<percent>."
+
+msgid "Cycle settings visibility"
+msgstr "Perjungti nustatymų matomumą"
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d."
+msgstr "Local-Z poros padalijimas: prašoma F%u/F%u %d/%d."
+
+msgid "Local-Z breakdown: manual pattern rows do not use pair decomposition."
+msgstr "Local-Z skaidymas: rankinio rašto eilutės nenaudoja porų skaidymo."
+
+
+msgid "Local-Z breakdown: same-layer mode does not use local-Z pair decomposition."
+msgstr "Local-Z skaidymas: to paties sluoksnio režimas nenaudoja Local-Z porų skaidymo."
+
+msgid "Local-Z breakdown: unavailable."
+msgstr "Local-Z skaidymas: nepasiekiamas."
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d, effective %d/%d over %d sublayers."
+msgstr "Local-Z poros padalijimas: prašoma F%u/F%u %d/%d, efektyvu %d/%d per %d posluoksnius."
+
+msgid "Local-Z direct multicolor solver: %s"
+msgstr "Tiesioginis Local-Z daugiaspalvis sprendiklis: %s"
+
+msgid "Carry-over error is distributed directly across all %d components instead of collapsing them into pair cadence."
+msgstr "Perdavimo paklaida tiesiogiai paskirstoma visiems %d komponentams, o ne suvedama ? por? kadencij?."
+
+msgid "Effective Local-Z cap: up to %d sublayers per nominal layer."
+msgstr "Efektyvi Local-Z riba: iki %d posluoksni? vienam nominaliam sluoksniui."
+
+msgid "Local-Z layer cadence: %s."
+msgstr "Local-Z sluoksni? kadencija: %s."
+
+msgid "Pair splits: %s."
+msgstr "Por? padalijimai: %s."
+
+msgid "Saved row limit will apply when Local-Z dithering mode is enabled in print settings."
+msgstr "I?saugota eilu?i? riba bus taikoma, kai spausdinimo nustatymuose ?jungtas Local-Z dithering re?imas."
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers."
+msgstr "Efektyvus Local-Z stekas: %d posluoksniai per %d porinius sluoksnius."
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers (uncapped %d)."
+msgstr "Efektyvus Local-Z stekas: %d posluoksniai per %d porinius sluoksnius (be ribos %d)."

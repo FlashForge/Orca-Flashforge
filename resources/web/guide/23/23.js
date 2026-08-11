@@ -112,7 +112,7 @@ function SortUI()
 		let fType=OneFila['type'];
 		let fSelect=OneFila['selected'];
 		let fModel=OneFila['models']
-		
+
         let bFind=false;		
 		//let bCheck=$("#MachineList input:first").prop("checked");
 		if( fModel=='')

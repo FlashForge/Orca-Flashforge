@@ -21,6 +21,7 @@ public:
 	void SetFontPressColor(const wxColour& color);
 	void SetFontDisableColor(const wxColour& color);
 	void SetFontUniformColor(const wxColour& color);
+	void SetUniformColors(const wxColour& fontColor, const wxColour& borderColor, const wxColour& bgColor);
 	void SetBorderColor(const wxColour& color);
 	void SetBorderHoverColor(const wxColour& color);
 	void SetBorderPressColor(const wxColour& color);
@@ -41,7 +42,7 @@ public:
 
 protected:
 	void OnPaint(wxPaintEvent& event);	
-    void render(wxPaintDC &dc);
+    void render(wxDC &dc);
 
 private:
 	void updateState();

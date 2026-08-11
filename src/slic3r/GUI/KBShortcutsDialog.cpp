@@ -180,7 +180,7 @@ void KBShortcutsDialog::fill_shortcuts()
             { ctrl + "S", L("Save Project") },
             { ctrl + shift + "S", L("Save Project as")},
             // File>Import
-            { ctrl + "I", L("Import geometry data from STL/STEP/3MF/OBJ/GLB/AMF files") },
+            { ctrl + "I", L("Import geometry data from STL/STEP/3MF/OBJ/GLB/GLTF/FBX/AMF files") },
             // File>Export
             { ctrl + "G", L("Export plate sliced file")},
             // Slice plate
@@ -212,13 +212,19 @@ void KBShortcutsDialog::fill_shortcuts()
             { "?", L("Show keyboard shortcuts list") }
         };
         m_full_shortcuts.push_back({{_L("Global shortcuts"), ""}, global_shortcuts});
+
         
-        bool swap_mouse_buttons = wxGetApp().app_config->get_bool("swap_mouse_buttons");
+        // Retrieve mouse actions from config and map to MouseAction
+        std::map<std::string, std::string> mouse_actions;
+        mouse_actions["0"] = L("None");
+        mouse_actions["1"] = L("Pan View");
+        mouse_actions["2"] = L("Rotate View");
 
         Shortcuts plater_shortcuts = {
-            { L("Left mouse button"), swap_mouse_buttons ? L("Pan view") : L("Rotate view") },
-            { L("Right mouse button"), swap_mouse_buttons ? L("Rotate view") : L("Pan view") },
-            { L("Mouse wheel"), L("Zoom view") },
+            { L("Left mouse button"), mouse_actions[wxGetApp().app_config->get("left_mouse_drag_action").c_str()]},
+            { L("Middle mouse button"), mouse_actions[wxGetApp().app_config->get("middle_mouse_drag_action").c_str()]},
+            { L("Right mouse button"), mouse_actions[wxGetApp().app_config->get("right_mouse_drag_action").c_str()]},
+            { L("Mouse wheel"), L("Zoom View") },
             { "A", L("Arrange all objects") },
             { shift + "A", L("Arrange objects on selected plates") },
 
@@ -264,6 +270,7 @@ void KBShortcutsDialog::fill_shortcuts()
             { "E", L("Gizmo brim ears") },
             { "I", L("Zoom in") },
             { "O", L("Zoom out") },
+            { "V", L("Toggle printable for object/part") },
             { L("Tab"), L("Switch between Prepare/Preview") },
 
         };

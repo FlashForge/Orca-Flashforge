@@ -80,16 +80,29 @@ void PrintRegion::collect_object_printing_extruders(const PrintConfig &print_con
 
 void PrintRegion::collect_object_printing_extruders(const Print &print, std::vector<unsigned int> &object_extruders) const
 {
+    const size_t num_physical = print.config().filament_diameter.size();
+
     // PrintRegion, if used by some PrintObject, shall have all the extruders set to an existing printer extruder.
     // If not, then there must be something wrong with the Print::apply() function.
 #ifndef NDEBUG
     // BBS
-    auto num_extruders = int(print.config().filament_diameter.size());
-    assert(this->config().wall_filament    <= num_extruders);
-    assert(this->config().sparse_infill_filament       <= num_extruders);
-    assert(this->config().solid_infill_filament <= num_extruders);
+    const size_t num_total = print.mixed_filament_manager().total_filaments(num_physical);
+    assert(size_t(this->config().wall_filament.value) <= num_total);
+    assert(size_t(this->config().sparse_infill_filament.value) <= num_total);
+    assert(size_t(this->config().solid_infill_filament.value) <= num_total);
 #endif
-    collect_object_printing_extruders(print.config(), this->config(), print.has_brim(), object_extruders);
+    auto append_physical_extruders = [&print, num_physical, &object_extruders](unsigned int filament_id) {
+        const std::vector<unsigned int> physical_extruders =
+            print.mixed_filament_manager().physical_extruder_indices_for_filament(filament_id, num_physical);
+        object_extruders.insert(object_extruders.end(), physical_extruders.begin(), physical_extruders.end());
+    };
+
+    if (this->config().wall_loops.value > 0 || print.has_brim())
+        append_physical_extruders(this->config().wall_filament.value);
+    if (this->config().sparse_infill_density.value > 0)
+        append_physical_extruders(this->config().sparse_infill_filament.value);
+    if (this->config().top_shell_layers.value > 0 || this->config().bottom_shell_layers.value > 0)
+        append_physical_extruders(this->config().solid_infill_filament.value);
 }
 
 }

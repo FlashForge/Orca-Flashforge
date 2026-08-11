@@ -48,5 +48,8 @@
     "textured_cool_plate_temp_initial_layer": [
         "0"
     ],
-    "version": "2.3.0.3"
+    "version": "2.3.0.3",
+    "pressure_advance": [
+        "0.035"
+    ]
 }

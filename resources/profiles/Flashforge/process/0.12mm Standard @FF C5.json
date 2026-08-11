@@ -57,5 +57,7 @@
     "support_type": "tree(auto)",
     "wipe_tower_cone_angle": "12",
     "wipe_tower_extra_flow": "105%",
-    "wipe_tower_extra_spacing": "110%"
+    "wipe_tower_extra_spacing": "110%",
+    "slowdown_for_curled_perimeters": "0",
+    "support_base_pattern": "default"
 }

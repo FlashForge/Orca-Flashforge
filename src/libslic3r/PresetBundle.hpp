@@ -4,12 +4,15 @@
 #include "Preset.hpp"
 #include "AppConfig.hpp"
 #include "enum_bitmask.hpp"
+#include "MixedFilament.hpp"
 
 #include <memory>
+#include <shared_mutex>
 #include <unordered_map>
 #include <optional>
 #include <array>
 #include <boost/filesystem/path.hpp>
+#include <unordered_set>
 
 #define DEFAULT_USER_FOLDER_NAME "default"
 #define BUNDLE_STRUCTURE_JSON_NAME "bundle_structure.json"
@@ -72,6 +75,79 @@ struct FilamentBaseInfo
     int  filament_printable = 3;
 };
 
+enum BundleType{
+    Default = 0,
+    Local,
+    Subscribed,
+};
+
+// Orca: Bundle metadata structure for imported preset bundles
+struct BundleMetadata
+{
+    std::string                     id;         // Bundle ID: UUID (OrcaCloud) or name+timestamp (external)
+    std::string                     name;       // Display name
+    std::string                     version;    // Bundle version
+    std::string                     description;
+    std::string                     author;
+    long long                       imported_time{0};
+    long long                       updated_time{0};
+
+    BundleType                      bundle_type{Default};
+    std::string                     path;
+
+    // Cached preset names by type (populated on load)
+    std::vector<std::string>        print_presets;
+    std::vector<std::string>        filament_presets;
+    std::vector<std::string>        printer_presets;
+
+    // Runtime-only flags
+    bool                            is_subscribed{false};
+    bool                            update_available{false};
+    bool                            not_found{false};
+    bool                            unauthorized{false};
+
+    bool load_from_json(const std::string& path);
+    bool save_to_json(const std::string& path) const;
+};
+
+struct PresetBundleMetadata
+{
+    // To make sure write locks take precedent, pausereads needs to be true for when Orca needs to read or manipulate the container
+    // We only need to explicitly pause reads when entering a region in Orca which we deem necessary to quickly acquire write locks.
+    std::unordered_map<std::string, BundleMetadata> m_bundles;
+    std::shared_mutex RWMtx;
+    std::atomic<bool> pauseReads{false};
+
+    void PauseRead()
+    {
+        pauseReads.store(true);
+    }
+
+    void UnpauseRead()
+    {
+        pauseReads.store(false);
+    }
+
+    void ReadLock()
+    {
+        RWMtx.lock_shared();
+    }
+    void ReadUnlock()
+    {
+        RWMtx.unlock_shared();
+    }
+
+    void WriteLock()
+    {
+        RWMtx.lock();
+    }
+
+    void WriteUnlock()
+    {
+        RWMtx.unlock();
+    }
+};
+
 // Bundle of Print + Filament + Printer presets.
 class PresetBundle
 {
@@ -82,6 +158,10 @@ public:
                                                     std::vector<Preset>            &in_filament_presets,
                                                     bool                            apply_extruder,
                                                     std::optional<std::vector<int>> filament_maps_new);
+
+    // ORCA: utility function to find the vendor for a given preset name
+    static std::string find_preset_vendor(const std::string& preset_name, Preset::Type type);
+
     PresetBundle();
     PresetBundle(const PresetBundle &rhs);
     PresetBundle& operator=(const PresetBundle &rhs);
@@ -116,18 +196,52 @@ public:
     // Cloud preset maps use setting_id as the outer key. The display name is
     // carried separately in each value map under BBL_JSON_KEY_NAME.
     PresetsConfigSubstitutions load_user_presets(AppConfig &config, std::map<std::string, std::map<std::string, std::string>>& my_presets, ForwardCompatibilitySubstitutionRule rule);
-    PresetsConfigSubstitutions import_presets(std::vector<std::string> &files, std::function<int(std::string const &)> override_confirm, ForwardCompatibilitySubstitutionRule rule);
+    // Orca: Import subscribed bundle presets (load and save to disk in one operation), handles one bundle at a time
+    PresetsConfigSubstitutions update_subscribed_presets(AppConfig& config,
+                                                         const std::map<std::string, std::map<std::string, std::string>>& bundle_presets,
+                                                         const BundleMetadata& remote_metadata,
+                                                         ForwardCompatibilitySubstitutionRule rule);
+
+    PresetsConfigSubstitutions import_presets(std::vector<std::string>& files,
+                                              std::function<int(std::string const&)> override_confirm,
+                                              ForwardCompatibilitySubstitutionRule rule,
+                                              AppConfig& config);
+
     bool                       import_json_presets(PresetsConfigSubstitutions &            substitutions,
                                                    std::string &                           file,
                                                    std::function<int(std::string const &)> override_confirm,
                                                    ForwardCompatibilitySubstitutionRule    rule,
                                                    int &                                   overwrite,
-                                                   std::vector<std::string> &              result);
+                                                   std::vector<std::string>& result,
+                                                   const std::string&       bundle_dir = "");
+
     void save_user_presets(AppConfig& config, std::map<std::string, std::string>& need_to_delete_list);
+    void check_and_fix_user_presets_syncinfo(const std::string& user_id);
     void remove_users_preset(AppConfig &config, std::map<std::string, std::map<std::string, std::string>> * my_presets = nullptr);
     void update_user_presets_directory(const std::string preset_folder);
     void remove_user_presets_directory(const std::string preset_folder);
     void update_system_preset_setting_ids(std::map<std::string, std::map<std::string, std::string>>& system_presets);
+
+    // Apply vendor configuration changes (Core library version, no GUI dependencies)
+    // This function installs vendors from resources and loads them into the preset bundle
+    //
+    // Parameters:
+    //   new_vendors: Map of vendor names to their enabled printer models and variants
+    //   new_filaments: Map of filament names to their settings
+    //   app_config: Pointer to AppConfig to update with new vendor/filament selections
+    //   preferred_printer_model: Optional preferred printer model to select
+    //   preferred_printer_variant: Optional preferred printer variant to select
+    //   preferred_filament: Optional preferred filament to select
+    //
+    // Returns: true if successful, false otherwise
+    bool apply_vendor_config(
+        const std::map<std::string, std::map<std::string, std::set<std::string>>>& new_vendors,
+        const std::map<std::string, std::string>& new_filaments,
+        AppConfig* app_config,
+        bool overwrite = true,
+        const std::string& preferred_printer_model = std::string(),
+        const std::string& preferred_printer_variant = std::string(),
+        const std::string& preferred_filament = std::string());
 
     //BBS: add API to get previous machine
     int validate_presets(const std::string &file_name, DynamicPrintConfig& config, std::set<std::string>& different_gcodes);
@@ -180,6 +294,24 @@ public:
     //BBS: check whether this is the only edited filament
     bool is_the_only_edited_filament(unsigned int filament_index);
 
+    // Mixed filament helpers — query virtual slot info
+    bool is_mixed_filament(size_t idx) const {
+        return mixed_filaments.is_mixed(static_cast<unsigned int>(idx + 1),
+                                        filament_presets.size());
+    }
+    size_t total_filament_count() const {
+        return mixed_filaments.total_filaments(filament_presets.size());
+    }
+
+    // Sync the MixedFilamentManager to/from the project_config string key.
+    void sync_mixed_filaments_from_config();
+    void sync_mixed_filaments_to_config();
+    // Explicit project-boundary operation: load the selected print preset's
+    // mixed-filament settings into project_config, then rebuild the manager.
+    // Session startup keeps the separately persisted custom definitions while
+    // restoring the remaining options from the selected print preset.
+    void apply_current_print_mixed_filament_settings(bool preserve_project_definitions = false);
+
     void reset_default_nozzle_volume_type();
 
     std::vector<int> get_used_tpu_filaments(const std::vector<int> &used_filaments);
@@ -219,6 +351,10 @@ public:
     std::map<int, DynamicPrintConfig> filament_ams_list;
     std::vector<std::vector<std::string>> ams_multi_color_filment;
 
+    // Mixed (virtual) filaments for layer-based colour mixing.
+    // This is the canonical instance; Print::m_mixed_filament_mgr is a slicing-time copy.
+    MixedFilamentManager mixed_filaments;
+
     std::vector<std::map<int, int>> extruder_ams_counts;
 
     // Calibrate
@@ -237,6 +373,12 @@ public:
     // Orca: for OrcaFilamentLibrary
     std::map<std::string, DynamicPrintConfig> m_config_maps;
     std::map<std::string, std::string> m_filament_id_maps;
+
+    // Orca: Bundle metadata and cached preset names
+    // std::map<std::string, BundleMetadata>  m_bundles;
+    fs::path dir_user_presets_local;
+    fs::path dir_user_presets_subscribed;
+    PresetBundleMetadata bundles;
 
         struct ObsoletePresets
     {
@@ -258,6 +400,12 @@ public:
     //BBS: add some functions for multiple extruders
     int get_printer_extruder_count() const;
     bool support_different_extruders();
+
+    // Orca: Ensure filament_presets has at least one slot per nozzle on FFF printers.
+    // Called from (load|update)_selections before the parallel project_config arrays
+    // (filament_colour/colour_type/map) are sized off filament_presets.size(), so a
+    // short saved filament list doesn't truncate the loaded colors.
+    void update_filament_count();
 
     // Load user configuration and store it into the user profiles.
     // This method is called by the configuration wizard.
@@ -315,9 +463,26 @@ public:
     // an optional "(modified)" suffix will be removed from the filament name.
     void                        set_filament_preset(size_t idx, const std::string &name);
 
-    // Read out the number of extruders from an active printer preset,
-    // update size and content of filament_presets.
-    void                        update_multi_material_filament_presets(size_t to_delete_filament_id = size_t(-1));
+    // Update multi-material dependent state for the current physical filament list.
+    // This must not change filament_presets; physical filament count is owned by set_num_filaments/update_num_filaments.
+    // old_num_filaments: physical filament count before any add/delete (size_t(-1) = auto-detect).
+    void                        update_multi_material_filament_presets(size_t to_delete_filament_id = size_t(-1),
+                                                                       size_t old_num_filaments = size_t(-1));
+    // Rebuild old->new virtual filament mapping after mixed-row enable/delete
+    // changes when the physical filament count itself did not change.
+    void                        update_mixed_filament_id_remap(const std::vector<MixedFilament> &old_mixed,
+                                                               size_t old_num_filaments,
+                                                               size_t new_num_filaments,
+                                                               size_t deleted_mixed_idx = size_t(-1));
+    // Mapping generated during the latest filament count change.
+    // Index is old 1-based filament ID, value is new 1-based filament ID (0 = removed).
+    const std::vector<unsigned int>& last_filament_id_remap() const { return m_last_filament_id_remap; }
+    std::vector<unsigned int> consume_last_filament_id_remap()
+    {
+        std::vector<unsigned int> out = std::move(m_last_filament_id_remap);
+        m_last_filament_id_remap.clear();
+        return out;
+    }
 
     void                        on_extruders_count_changed(int extruder_count);
 
@@ -352,6 +517,7 @@ public:
 	static const char *ORCA_DEFAULT_PRINTER_VARIANT;
 	static const char *ORCA_DEFAULT_FILAMENT;
     static const char *ORCA_FILAMENT_LIBRARY;
+    static const char *ORCA_DEFAULT_FILAMENT_PLACEHOLDER;
 
 
     static std::array<Preset::Type, 3>  types_list(PrinterTechnology pt) {
@@ -373,6 +539,13 @@ private:
     void update_filament_multi_color();
     // Update renamed_from and alias maps of system profiles.
     void 						update_system_maps();
+    // Build old->new filament ID remap for painted facet data normalization.
+    void                        build_filament_id_remap(const std::vector<MixedFilament> &old_mixed,
+                                                        size_t old_num_filaments,
+                                                        size_t new_num_filaments,
+                                                        bool deleting_filament,
+                                                        unsigned int deleted_1based,
+                                                        size_t deleted_mixed_idx = size_t(-1));
 
     // Set the is_visible flag for filaments and sla materials,
     // apply defaults based on enabled printers when no filaments/materials are installed.
@@ -393,6 +566,12 @@ private:
     bool validation_mode = false;
     std::string vendor_to_validate = ""; 
     int m_errors = 0;
+    std::vector<unsigned int> m_last_filament_id_remap;
+
+    // Helper function: save preset to bundle directory with common logic
+    bool save_preset_to_bundle_dir(Preset& preset, PresetCollection* collection,
+                                   const std::string& bundle_id, const std::string& type_subdir,
+                                   const std::string& bundle_base_dir);
 
 };
 

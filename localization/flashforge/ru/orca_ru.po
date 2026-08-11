@@ -367,3 +367,6 @@ msgstr "Текущий список филаментов"
 
 msgid "New filament"
 msgstr "Новый филамент"
+
+msgid "No camera detected"
+msgstr "Камера не обнаружена"

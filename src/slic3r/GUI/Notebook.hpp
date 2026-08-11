@@ -6,7 +6,6 @@
 #include <wx/bookctrl.h>
 #include <wx/sizer.h>
 
-class ModeSizer;
 class ScalableButton;
 class Button;
 

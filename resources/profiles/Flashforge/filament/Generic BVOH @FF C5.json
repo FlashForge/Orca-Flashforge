@@ -59,7 +59,7 @@
     "is_custom_defined": "0",
     "name": "Generic BVOH @FF C5",
     "pressure_advance": [
-        "0.0225"
+        "0.035"
     ],
     "slow_down_min_speed": [
         "20"
@@ -76,5 +76,8 @@
     "textured_plate_temp_initial_layer": [
         "60"
     ],
-    "version": "2.3.0.3"
+    "version": "2.3.0.3",
+    "filament_extruder_variant": [
+        "Direct Drive Standard"
+    ]
 }

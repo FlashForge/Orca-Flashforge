@@ -58,7 +58,7 @@
     "instantiation": "true",
     "name": "Generic HS PLA @FF C5P",
     "pressure_advance": [
-        "0.025"
+        "0.035"
     ],
     "slow_down_layer_time": [
         "8"
@@ -72,5 +72,8 @@
     "supertack_plate_temp_initial_layer": [
         "40"
     ],
-    "version": "2.3.0.3"
+    "version": "2.3.0.3",
+    "filament_flow_ratio": [
+        "1"
+    ]
 }

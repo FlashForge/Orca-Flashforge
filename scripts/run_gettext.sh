@@ -4,6 +4,51 @@
 #  Created by SoftFever on 27/5/23.
 #
 
+list_file="./localization/i18n/list.txt"
+pot_file="./localization/i18n/OrcaSlicer.pot"
+filtered_list=""
+missing_list=""
+generated_root_dir=""
+
+report_missing_files()
+{
+    if [ -n "$missing_list" ] && [ -s "$missing_list" ]; then
+        echo
+        echo "Skipped missing source files listed in ${list_file}:"
+        while IFS= read -r missing || [ -n "$missing" ]; do
+            echo "  - $missing"
+        done < "$missing_list"
+    fi
+}
+
+cleanup_temp_files()
+{
+    [ -n "$filtered_list" ] && rm -f "$filtered_list"
+    [ -n "$missing_list" ] && rm -f "$missing_list"
+    [ -n "$generated_root_dir" ] && rm -rf "$generated_root_dir"
+}
+
+files_equal_ignoring_pot_date()
+{
+    file_a=$1
+    file_b=$2
+    norm_a=$(mktemp)
+    norm_b=$(mktemp)
+
+    sed '/^"POT-Creation-Date: /d' "$file_a" > "$norm_a"
+    sed '/^"POT-Creation-Date: /d' "$file_b" > "$norm_b"
+
+    if cmp -s "$norm_a" "$norm_b"; then
+        rm -f "$norm_a" "$norm_b"
+        return 0
+    fi
+
+    rm -f "$norm_a" "$norm_b"
+    return 1
+}
+
+trap 'report_missing_files; cleanup_temp_files' EXIT
+
 # Check for --full argument
 FULL_MODE=false
 for arg in "$@"

@@ -1873,8 +1873,8 @@ wxSizer* NewTempInputPanel::createNozzlesSizer(wxPanel* panel, int cnt, int min_
     return u1_panel_up_sizer;
 }
 
-void NewTempInputPanel::updateNozzleCount(int cnt) 
-{ 
+void NewTempInputPanel::updateNozzleCount(int cnt)
+{
     StateColor tempinput_text_colour(std::make_pair(wxColour(51, 51, 51), (int) StateColor::Disabled),
                                      std::make_pair(wxColour(48, 58, 60), (int) StateColor::Normal));
     StateColor tempinput_border_colour(std::make_pair(*wxWHITE, (int) StateColor::Disabled),
@@ -1918,8 +1918,8 @@ void NewTempInputPanel::updateNozzleCount(int cnt)
     Layout();
 }
 
-void NewTempInputPanel::updateNozzleSlotId(std::vector<int>& slotIds) 
-{ 
+void NewTempInputPanel::updateNozzleSlotId(std::vector<int>& slotIds)
+{
     /*if (slotIds.size() != m_count) {
         return;
     }
@@ -1993,7 +1993,7 @@ void NewTempInputPanel::ReInitTempature(int curId)
         auto u1_panel_up_sizer = createNozzlesSizer(m_main_panel, 4, 0, 320);
         auto bottom_temp = new NewTempInput(m_main_panel, wxString("device_bottom_temperature"));
         bottom_temp->SetMinTemp(0);
-        bottom_temp->SetMaxTemp(65);
+        bottom_temp->SetMaxTemp(120);
         m_tempInputs["bottom"] = bottom_temp;
 
         m_main_panel_sizer->AddSpacer(FromDIP(16));
@@ -2345,7 +2345,7 @@ void DeviceInfoPanel::setupLayoutDeviceInfo(wxBoxSizer* deviceInfoSizer, wxPanel
     bSizer_device_data->Add(m_ipAddr, 0, wxALL | wxEXPAND, 0);
 #ifdef __WIN32__
     bSizer_device_data->AddSpacer(FromDIP(12));
-#else if __APPLE__
+#elif defined(__APPLE__)
     bSizer_device_data->AddSpacer(FromDIP(24));
 #endif
 

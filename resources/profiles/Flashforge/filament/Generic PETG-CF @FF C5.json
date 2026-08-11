@@ -35,7 +35,7 @@
         "Direct Drive Standard"
     ],
     "filament_flow_ratio": [
-        "0.97"
+        "0.98"
     ],
     "filament_max_volumetric_speed": [
         "12"
@@ -70,7 +70,7 @@
         "10%"
     ],
     "pressure_advance": [
-        "0.03"
+        "0.06"
     ],
     "supertack_plate_temp": [
         "0"

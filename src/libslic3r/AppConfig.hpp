@@ -29,6 +29,11 @@ using namespace nlohmann;
 #define SETTING_NETWORK_PLUGIN_UPDATE_DISABLED "network_plugin_update_prompts_disabled"
 #define SETTING_NETWORK_PLUGIN_REMIND_LATER "network_plugin_remind_later"
 #define SETTING_USE_ENCRYPTED_TOKEN_FILE "use_encrypted_token_file"
+#define SETTING_CLOUD_PROVIDERS "cloud_providers"
+#define SETTING_OPENGL_AA_SAMPLES "opengl_antialiasing_samples"
+#define SETTING_OPENGL_FXAA_ENABLED "opengl_fxaa_enabled"
+#define SETTING_OPENGL_FPS_CAP "opengl_fps_cap"
+#define SETTING_OPENGL_SHOW_FPS_OVERLAY "opengl_show_fps_overlay"
 
 #if defined(_WIN32) || defined(_WIN64)
 #define BAMBU_NETWORK_AGENT_VERSION_LEGACY "01.10.01.09"
@@ -50,10 +55,13 @@ struct BBLocalMachine
     std::string dev_ip;
     std::string dev_id; /* serial number */
     std::string printer_type; /* model_id */
+    std::string dev_placement;
+    std::string dev_pid;
 
     bool operator==(const BBLocalMachine& other) const
     {
-        return dev_name == other.dev_name && dev_ip == other.dev_ip && dev_id == other.dev_id && printer_type == other.printer_type;
+        return dev_name == other.dev_name && dev_ip == other.dev_ip && dev_id == other.dev_id && printer_type == other.printer_type &&
+            dev_placement == other.dev_placement && dev_pid == other.dev_pid;
     }
     bool operator!=(const BBLocalMachine& other) const { return !operator==(other); }
 };
@@ -85,6 +93,7 @@ public:
 	std::string get_language_code();
 	std::string get_hms_host();
 	bool get_stealth_mode();
+	bool get_hide_login_side_panel();
 
 	// Clear and reset to defaults.
 	void 			   	reset();
@@ -251,11 +260,20 @@ public:
     }
     void update_local_machine(const BBLocalMachine& machine)
     {
+        if (machine.dev_id.empty())
+            return;
+
         auto it = m_local_machines.find(machine.dev_id);
         if (it != m_local_machines.end()) {
-            const auto& current = it->second;
-            if (machine != current) {
-                m_local_machines[machine.dev_id] = machine;
+            BBLocalMachine updated = machine;
+            const BBLocalMachine& current = it->second;
+            if (updated.dev_placement.empty())
+                updated.dev_placement = current.dev_placement;
+            if (updated.dev_pid.empty())
+                updated.dev_pid = current.dev_pid;
+
+            if (updated != current) {
+                m_local_machines[machine.dev_id] = updated;
                 m_dirty = true;
             }
         } else {
@@ -387,6 +405,13 @@ public:
     bool should_remind_network_update_later() const;
     void set_remind_network_update_later(bool remind);
     void clear_remind_network_update_later();
+
+    // Cloud providers (semicolon-delimited, e.g. "orca;bambu")
+    std::vector<std::string> get_cloud_providers() const;
+    void set_cloud_providers(const std::vector<std::string>& providers);
+    bool has_cloud_provider(const std::string& provider) const;
+    void add_cloud_provider(const std::string& provider);
+    void remove_cloud_provider(const std::string& provider);
 
 private:
 	template<typename T>

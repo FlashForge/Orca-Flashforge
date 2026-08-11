@@ -17,7 +17,6 @@
 #include <wx/dcgraph.h>
 #include <chrono>
 #include <functional>
-#include <iomanip>
 #include <sstream>
 using namespace std::literals;
 using json   = nlohmann::json;
@@ -123,6 +122,24 @@ wxString format_cumulative_filament(double cumulative_filament, ComConnectMode c
 {
     const double filament_cm = connect_mode == COM_CONNECT_WAN ? cumulative_filament * 100.0 : cumulative_filament / 10.0;
     return wxString::Format("%.0fcm", filament_cm);
+}
+
+wxString format_cumulative_print_time(const fnet_dev_detail_t &detail, ComConnectMode connect_mode)
+{
+    if (detail.hasCumulativePrintTimeSecond != 0) {
+        const double cumulative_seconds = detail.cumulativePrintTimeSecond > 0.0 ? detail.cumulativePrintTimeSecond : 0.0;
+        const long long total_minutes   = static_cast<long long>(cumulative_seconds / 60.0);
+        if (total_minutes < 60) {
+            return wxString::Format(_L("%lld minutes"), total_minutes);
+        }
+
+        const long long hours   = total_minutes / 60;
+        const long long minutes = total_minutes % 60;
+        return wxString::Format(_L("%lld hours %lld minutes"), hours, minutes);
+    }
+
+    const double old_hours = connect_mode == COM_CONNECT_LAN ? detail.cumulativePrintTime / 60.0 : detail.cumulativePrintTime;
+    return wxString::Format("%.2f hours", old_hours);
 }
 
 } // namespace
@@ -569,7 +586,7 @@ void DeviceDetail::create_panel(wxWindow* parent)
     sizer->Add(m_panel_rows, 0, wxLEFT | wxRIGHT | wxALIGN_CENTER | wxEXPAND, FromDIP(36));
 #ifdef __WIN32__
     sizer->AddSpacer(FromDIP(34));
-#else if __APPLE__
+#elif defined(__APPLE__)
     sizer->AddSpacer(FromDIP(36));
 #endif
     parent->SetSizer(sizer);
@@ -844,7 +861,7 @@ void G3UDetail::create_panel(wxWindow* parent)
     m_panel_separotor10->SetBackgroundColour(wxColour(255, 255, 255));
 #ifdef __WIN32__
     m_panel_separotor10->SetMinSize(wxSize(-1, FromDIP(10)));
-#else if __APPLE__
+#elif defined(__APPLE__)
     m_panel_separotor10->SetMinSize(wxSize(-1, FromDIP(10)));
 #endif
 
@@ -871,7 +888,7 @@ void G3UDetail::create_panel(wxWindow* parent)
     bSizer_first_row->Add(b1Sizer_h);
 #ifdef __WIN32__
     bSizer_first_row->AddSpacer(FromDIP(14));
-#else if __APPLE__
+#elif defined(__APPLE__)
     bSizer_first_row->AddSpacer(FromDIP(12));
 #endif
 
@@ -941,7 +958,7 @@ void G3UDetail::create_panel(wxWindow* parent)
     sizer->Add(bSizer_h, 0, wxALL, 0);
 #ifdef __WIN32__
     sizer->AddSpacer(FromDIP(43));
-#else if __APPLE__
+#elif defined(__APPLE__)
     sizer->AddSpacer(FromDIP(46));
 #endif
 
@@ -2215,7 +2232,7 @@ void SingleDeviceState::setupLayoutBusyInfoPage(wxBoxSizer* busySizer, wxPanel* 
     hbox->AddSpacer(FromDIP(4));
     hbox->Add(m_material_weight_label, wxALIGN_CENTER | wxALL, 0);
 
-    //显示云切片帮助文�?
+    //显示云切片帮助文本
     m_staticText_cloud_text = new Label(m_panel_control_file_info, Label::sysFont(22, false), _L("Cloud slicing queued..."));
     m_staticText_cloud_text->Wrap(-1);
     m_staticText_cloud_text->SetForegroundColour(wxColour(50, 141, 251));
@@ -3135,7 +3152,7 @@ void SingleDeviceState::onConnectWanDevInfoUpdate(ComWanDevInfoUpdateEvent &even
         //当前选中的设备，获取相应数据，更新界面显�?
         const com_dev_data_t &data = MultiComMgr::inst()->devData(event.id);
         // 离线判断
-        std::string status = data.wanDevInfo.status;
+        std::string status = wan_device_display_status(data);
         camdbg_log("onConnectWanDevInfoUpdate wanStatus=" + status);
         if (status.compare("offline") == 0) {
             setPageOffline();
@@ -3147,7 +3164,7 @@ void SingleDeviceState::onConnectWanDevInfoUpdate(ComWanDevInfoUpdateEvent &even
     
     if (-1 == m_cur_id) {
         const com_dev_data_t &data = MultiComMgr::inst()->devData(event.id);
-        if (data.wanDevInfo.serialNumber.compare(m_cur_serial_number) == 0 && data.wanDevInfo.status.compare("offline") != 0) {
+        if (data.wanDevInfo.serialNumber.compare(m_cur_serial_number) == 0 && is_wan_device_online(data)) {
             m_cur_id = event.id;
             setCurId(m_cur_id);
         }
@@ -3289,6 +3306,14 @@ void SingleDeviceState::onComWanDevMaintain(ComWanDevMaintainEvent &event)
 {
     event.Skip();
     if (m_camera_panel) m_camera_panel->logPanelState("onComWanDevMaintain enter");
+    if (event.serviceState == WanServiceState::Reconnecting) {
+        camdbg_log("WAN service reconnecting; keep device page and last device state");
+        return;
+    }
+    if (event.serviceState == WanServiceState::ApiUnavailable) {
+        camdbg_log("WAN API unavailable; keep device page and distinguish from printer offline");
+        return;
+    }
     // 账号登出（login=false）：�?WAN)设备全部被移除�?
     if (!event.login) {
         // 刷新并清空设备页到离线态：仅当当前页展示的正是云设备（或该设备已被移除）时才清页；
@@ -3744,7 +3769,7 @@ void SingleDeviceState::onFileListClicked(wxMouseEvent& event)
          m_timeLapseVideoPnl->Hide();
          m_scrolledWindow->Scroll(0, 0);
          m_scrolledWindow->Refresh();
-         m_scrolledWindow->Show();     
+         m_scrolledWindow->Show();
          m_panel_print_btn->Show();
          m_FileList_split_line->Show();
     }
@@ -4005,13 +4030,7 @@ void SingleDeviceState::updateDeviceInfoPanel(const com_dev_data_t& data)
     const std::string serial_number = data.connectMode == COM_CONNECT_LAN
                                           ? data.lanDevInfo.serialNumber
                                           : data.wanDevInfo.serialNumber;
-    const double print_time = data.connectMode == COM_CONNECT_LAN
-                                  ? data.devDetail->cumulativePrintTime / 60.0
-                                  : data.devDetail->cumulativePrintTime;
-
-    std::ostringstream time_stream;
-    time_stream << std::fixed << std::setprecision(2) << print_time;
-    const std::string cumulative_print_time = time_stream.str() + " hours";
+    const wxString cumulative_print_time = format_cumulative_print_time(*data.devDetail, data.connectMode);
     const wxString cumulative_filament = format_cumulative_filament(data.devDetail->cumulativeFilament, data.connectMode);
 
     m_busy_device_info->SetDeviceInfo(machine_type, nozzle_model, measure, firmware_version, serial_number,
@@ -4028,7 +4047,7 @@ void SingleDeviceState::fillValue(const com_dev_data_t& data,bool wanDev)
     updateDeviceInfoPanel(data);
     std::string state = data.devDetail->status; // 状�?
     if (wanDev) {
-        state = data.wanDevInfo.status;
+        state = wan_device_display_status(data);
     }
     onDevStateChanged(state, data);
     if (state.compare("printing") == 0 && !m_isCloudState) {
@@ -4193,15 +4212,7 @@ void SingleDeviceState::fillValue(const com_dev_data_t& data,bool wanDev)
         measure.append("mm");
         std::string firmwareVersion    = data.devDetail->firmwareVersion; // 固件版本
         std::string serialNubmer       = data.connectMode == 0 ? data.lanDevInfo.serialNumber : data.wanDevInfo.serialNumber; // 序列�?
-        double      time               = 0;
-        if (data.connectMode == 0) {//内网数据以分钟为单位
-            time = data.devDetail->cumulativePrintTime / 60;
-        } else if (data.connectMode == 1) {//外网小时为单�?
-            time = data.devDetail->cumulativePrintTime;
-        }    
-        std::ostringstream oss;
-        oss << std::fixed << std::setprecision(2) << time;
-        std::string cumulativePrintTime   = oss.str() + " hours";
+        wxString cumulativePrintTime = format_cumulative_print_time(*data.devDetail, data.connectMode);
         wxString strCumulativeFilament = format_cumulative_filament(data.devDetail->cumulativeFilament, data.connectMode);
         std::string ipAddr = data.devDetail->ipAddr; // ip地址
         m_idle_tempMixDevice->modifyDeviceInfo(machineType, nozzleModel, measure, firmwareVersion, serialNubmer, cumulativePrintTime,
@@ -4455,7 +4466,7 @@ void SingleDeviceState::refreshCameraStream()
         + " cameraAvailable=" + std::string(camera_available ? "true" : "false")
         + " streamUrlPresent=" + std::string(stream_url_present ? "true" : "false")
         + " streamUrl=" + (camera_stream_url != nullptr ? camera_stream_url : "<null>"));
-    
+
     m_camera_panel->setCameraAvailable(camera_available);
     if (!camera_available) {
         m_camera_stream_url.clear();
@@ -4812,7 +4823,7 @@ void LampToolBar::SetCameraVisible(bool visible)
 
 void LampToolBar::SetCameraState(bool isOffline) 
 { 
-    /*m_camera_btn->Enable(!isOffline); 
+    /*m_camera_btn->Enable(!isOffline);
     if (isOffline) {
         m_camera_btn->SetIcon("camera_button_offline");
     } else {

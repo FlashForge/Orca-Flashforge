@@ -110,6 +110,7 @@ public:
     };
 
     HttpServer(boost::asio::ip::port_type port = LOCALHOST_PORT);
+    ~HttpServer();
 
     boost::thread m_http_server_thread;
     bool          start_http_server = false;
