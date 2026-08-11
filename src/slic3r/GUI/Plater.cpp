@@ -4069,32 +4069,29 @@ std::vector<int> Sidebar::apply_multicolor_import_filaments(const std::vector<Mu
     const int preset_filament_count = static_cast<int>(preset_bundle->filament_presets.size());
     const int current_filament_count = static_cast<int>(combos_filament().size());
 
-    // The import dialog tracks its own logical slots. Rebase every newly allocated
-    // slot to the physical filament tail: inserting in the middle would require a
-    // full remap of mixed-filament recipes, painted facets, custom G-code and flush
-    // matrices, while appending keeps all existing physical IDs stable.
+    // The import dialog and the preparation page maintain independent filament numbering.
+    // If the first logical new-filament slot is beyond the end of the current filament list,
+    // compact the new slots so they are appended without creating placeholder filaments.
     std::vector<MulticolorFilamentMapping> effective_mappings = mappings;
     std::set<int> logical_new_filament_indices;
     for (const MulticolorFilamentMapping& mapping : effective_mappings) {
         if (mapping.allocated_new_filament_index >= 0)
             logical_new_filament_indices.insert(mapping.allocated_new_filament_index);
     }
-    if (!logical_new_filament_indices.empty()) {
-        std::map<int, int> rebased_new_filament_indices;
+    if (!logical_new_filament_indices.empty() && preset_filament_count < *logical_new_filament_indices.begin()) {
+        std::map<int, int> compacted_new_filament_indices;
         int actual_filament_index = preset_filament_count;
         for (int logical_filament_index : logical_new_filament_indices)
-            rebased_new_filament_indices.emplace(logical_filament_index, actual_filament_index++);
+            compacted_new_filament_indices.emplace(logical_filament_index, actual_filament_index++);
 
         for (MulticolorFilamentMapping& mapping : effective_mappings) {
-            if (auto allocated_it = rebased_new_filament_indices.find(mapping.allocated_new_filament_index);
-                allocated_it != rebased_new_filament_indices.end()) {
+            if (auto allocated_it = compacted_new_filament_indices.find(mapping.allocated_new_filament_index);
+                allocated_it != compacted_new_filament_indices.end()) {
                 mapping.allocated_new_filament_index = allocated_it->second;
             }
-            if (mapping.create_new) {
-                if (auto target_it = rebased_new_filament_indices.find(mapping.target_filament_index);
-                    target_it != rebased_new_filament_indices.end()) {
-                    mapping.target_filament_index = target_it->second;
-                }
+            if (auto target_it = compacted_new_filament_indices.find(mapping.target_filament_index);
+                target_it != compacted_new_filament_indices.end()) {
+                mapping.target_filament_index = target_it->second;
             }
         }
     }
@@ -4219,6 +4216,23 @@ std::vector<int> Sidebar::apply_multicolor_import_filaments(const std::vector<Mu
             updated_filament_indices.insert(inserted.index);
         }
 
+        auto shift_config_filament_index = [insert_start, inserted_count](auto& config, const char *key) {
+            if (!config.has(key))
+                return;
+            const int value = config.opt_int(key);
+            if (value > insert_start)
+                config.set_key_value(key, new ConfigOptionInt(value + inserted_count));
+        };
+
+        static const char *filament_index_keys[] = {"extruder", "support_filament", "support_interface_filament"};
+        for (ModelObject *object : wxGetApp().model().objects) {
+            for (const char *key : filament_index_keys)
+                shift_config_filament_index(object->config, key);
+            for (ModelVolume *volume : object->volumes) {
+                for (const char *key : filament_index_keys)
+                    shift_config_filament_index(volume->config, key);
+            }
+        }
     }
 
     if (filament_color != nullptr) {
@@ -4274,6 +4288,7 @@ std::vector<int> Sidebar::apply_multicolor_import_filaments(const std::vector<Mu
                 updated_filament_indices.insert(mapping.target_filament_index);
             }
         }
+        preset_bundle->update_multi_material_filament_presets();
     }
 
     if (target_filament_count > current_filament_count) {
@@ -9239,17 +9254,21 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                                 }
                             }
                         }
+                        const int remaining_multicolor_slots = wxGetApp().sidebar().remaining_multicolor_import_filament_slots();
+                        int new_filament_start_index = wxGetApp().sidebar().next_multicolor_import_filament_slot();
                         const PresetBundle *preset_bundle = wxGetApp().preset_bundle;
                         const int current_filament_count = preset_bundle != nullptr ?
                             static_cast<int>(preset_bundle->filament_presets.size()) :
                             static_cast<int>(MULTICOLOR_IMPORT_FILAMENT_LIMIT);
-                        const int new_filament_start_index = current_filament_count;
-                        const size_t minimum_projected_filament_states = preset_bundle != nullptr ?
-                            preset_bundle->mixed_filaments.total_filaments(static_cast<size_t>(current_filament_count + 1)) :
-                            static_cast<size_t>(EnforcerBlockerType::ExtruderMax) + 1;
-                        if (current_filament_count >= static_cast<int>(MULTICOLOR_IMPORT_FILAMENT_LIMIT) ||
-                            minimum_projected_filament_states > static_cast<size_t>(EnforcerBlockerType::ExtruderMax)) {
-                            GUI::show_error(q, _L("The multicolor filament limit has been reached. Reopen the project and try again."));
+                        const bool can_reuse_preparation_slots =
+                            current_filament_count + color_count <= static_cast<int>(MULTICOLOR_IMPORT_FILAMENT_LIMIT);
+                        if (color_count > remaining_multicolor_slots && can_reuse_preparation_slots) {
+                            // The logical import slots are exhausted, but the preparation page still has
+                            // enough actual slots. Reuse its free tail for this import without changing the
+                            // global logical counter until the user confirms.
+                            new_filament_start_index = current_filament_count;
+                        } else if (color_count > remaining_multicolor_slots) {
+                            GUI::show_error(q, _L("多色耗材颜色已满，无法新增，请重新开启项目"));
                             is_user_cancel = true;
                             continue;
                         }
@@ -9271,22 +9290,6 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                                 quantization_pipeline = std::make_unique<BambuFullColorPipeline>();
                             else
                                 quantization_pipeline = std::make_unique<ClassicFullColorPipeline>();
-                        }
-                        std::set<int> allocated_filament_indices;
-                        for (const MulticolorFilamentMapping &mapping : import_result.filament_mappings) {
-                            if (mapping.allocated_new_filament_index >= 0)
-                                allocated_filament_indices.insert(mapping.allocated_new_filament_index);
-                        }
-                        const size_t imported_filament_count = allocated_filament_indices.size();
-                        const size_t projected_physical_count = static_cast<size_t>(current_filament_count) + imported_filament_count;
-                        const size_t exact_projected_filament_states = preset_bundle != nullptr ?
-                            preset_bundle->mixed_filaments.total_filaments(projected_physical_count) :
-                            static_cast<size_t>(EnforcerBlockerType::ExtruderMax) + 1;
-                        if (projected_physical_count > MULTICOLOR_IMPORT_FILAMENT_LIMIT ||
-                            exact_projected_filament_states > static_cast<size_t>(EnforcerBlockerType::ExtruderMax)) {
-                            GUI::show_error(q, _L("The multicolor filament limit has been reached. Reopen the project and try again."));
-                            is_user_cancel = true;
-                            continue;
                         }
                         cvt_colors_t colors = import_result.selected_colors;
                         if (colors.empty() && import_result.quantization_result != nullptr)
