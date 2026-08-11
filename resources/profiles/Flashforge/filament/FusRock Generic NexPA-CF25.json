@@ -198,7 +198,7 @@
         "80"
     ],
     "inherits": "Flashforge Generic PETG",
-    "instantiation": "true",
+    "instantiation": "false",
     "name": "FusRock Generic NexPA-CF25",
     "nozzle_temperature": [
         "295"

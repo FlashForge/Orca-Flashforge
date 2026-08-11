@@ -18,7 +18,7 @@
     ],
     "from": "system",
     "inherits": "FusRock Generic PET-CF",
-    "instantiation": "true",
+    "instantiation": "false",
     "is_custom_defined": "0",
     "name": "FusRock Generic PET-GF",
     "setting_id": "GFSA04",

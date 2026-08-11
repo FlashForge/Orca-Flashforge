@@ -61,7 +61,7 @@
         "80"
     ],
     "inherits": "Generic PA-CF @System",
-    "instantiation": "true",
+    "instantiation": "false",
     "is_custom_defined": "0",
     "name": "FusRock S-PAHT @FF C5",
     "nozzle_temperature_range_high": [
