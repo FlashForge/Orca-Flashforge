@@ -221,6 +221,19 @@ wxDEFINE_EVENT(EVT_LOGIN_OUT, wxCommandEvent);
 wxDEFINE_EVENT(EVT_USER_HEAD_IMAGE_UPDATED, wxCommandEvent);
 wxDEFINE_EVENT(EVT_BANNER_UPDATE, wxCommandEvent);
 
+namespace {
+
+bool uses_flash_cloud_agent(const NetworkAgent* agent)
+{
+    if (agent == nullptr)
+        return false;
+
+    const auto cloud_agent = agent->get_cloud_agent();
+    return dynamic_cast<FlashCloudServiceAgent*>(cloud_agent.get()) != nullptr;
+}
+
+} // namespace
+
 
 class MainFrame;
 
@@ -1096,9 +1109,11 @@ void GUI_App::post_init()
                     });
             }
         );
-        m_agent->set_on_http_error_fn([this](unsigned int status, std::string body) {
-            this->handle_http_error(status, body);
-        });
+        if (!uses_flash_cloud_agent(m_agent)) {
+            m_agent->set_on_http_error_fn([this](unsigned int status, std::string body) {
+                this->handle_http_error(status, body);
+            });
+        }
         m_agent->start_discovery(true, false);
     }
 
@@ -1738,9 +1753,11 @@ void GUI_App::restart_networking()
                     });
             }
         );
-        m_agent->set_on_http_error_fn([this](unsigned int status, std::string body) {
-            this->handle_http_error(status, body);
-        });
+        if (!uses_flash_cloud_agent(m_agent)) {
+            m_agent->set_on_http_error_fn([this](unsigned int status, std::string body) {
+                this->handle_http_error(status, body);
+            });
+        }
         m_agent->start_discovery(true, false);
         if (mainframe)
             mainframe->refresh_plugin_tips();
@@ -2120,19 +2137,20 @@ void GUI_App::init_networking_callbacks()
         });
 
 
-        m_agent->set_on_server_connected_fn([this](int return_code, int reason_code) {
-            if (is_closing()) {
-            return;
-            }
-            if (return_code == 5) {
-                GUI::wxGetApp().CallAfter([this] { handle_http_error(401, "{}"); });
-                return;
-            }
-            GUI::wxGetApp().CallAfter([this] {
-                if (is_closing())
+        if (!uses_flash_cloud_agent(m_agent)) {
+            m_agent->set_on_server_connected_fn([this](int return_code, int reason_code) {
+                if (is_closing()) {
                     return;
-                BOOST_LOG_TRIVIAL(trace) << "static: server connected";
-                m_agent->set_user_selected_machine(m_agent->get_user_selected_machine());
+                }
+                if (return_code == 5) {
+                    GUI::wxGetApp().CallAfter([this] { handle_http_error(401, "{}"); });
+                    return;
+                }
+                GUI::wxGetApp().CallAfter([this] {
+                    if (is_closing())
+                        return;
+                    BOOST_LOG_TRIVIAL(trace) << "static: server connected";
+                    m_agent->set_user_selected_machine(m_agent->get_user_selected_machine());
                     if (this->is_enable_multi_machine()) {
                         auto evt = new wxCommandEvent(EVT_UPDATE_MACHINE_LIST);
                         wxQueueEvent(this, evt);
@@ -2143,21 +2161,21 @@ void GUI_App::init_networking_callbacks()
 
                         /*disconnect lan*/
                         DeviceManager* dev = this->getDeviceManager();
-                        if (!dev) return;
+                        if (!dev)
+                            return;
 
-                        MachineObject *obj = dev->get_selected_machine();
-                        if (!obj) return;
+                        MachineObject* obj = dev->get_selected_machine();
+                        if (!obj)
+                            return;
 
                         /* resubscribe the cache dev list */
-                        if (this->is_enable_multi_machine()) {
-
-                            if (!dev->subscribe_list_cache.empty()) {
-                                dev->subscribe_device_list(dev->subscribe_list_cache);
-                            }
+                        if (this->is_enable_multi_machine() && !dev->subscribe_list_cache.empty()) {
+                            dev->subscribe_device_list(dev->subscribe_list_cache);
                         }
                     }
                 });
             });
+        }
 
         m_agent->set_on_printer_connected_fn([this](std::string dev_id) {
             if (is_closing()) {
@@ -2181,12 +2199,13 @@ void GUI_App::init_networking_callbacks()
                 });
             });
 
-        m_agent->set_get_country_code_fn([this]() {
-            if (app_config)
-                return app_config->get_country_code();
-            return std::string();
-            }
-        );
+        if (!uses_flash_cloud_agent(m_agent)) {
+            m_agent->set_get_country_code_fn([this]() {
+                if (app_config)
+                    return app_config->get_country_code();
+                return std::string();
+            });
+        }
 
         m_agent->set_on_subscribe_failure_fn([this](std::string dev_id) {
             CallAfter([this, dev_id] {
@@ -5717,9 +5736,14 @@ void GUI_App::handle_script_message(std::string msg)
             wxString cmd = j["command"];
             if (cmd == "user_login") {
                 if (m_agent) {
-                    m_agent->change_user(j.dump());
-                    if (m_agent->is_user_login()) {
-                        request_user_login(1);
+                    if (uses_flash_cloud_agent(m_agent)) {
+                        BOOST_LOG_TRIVIAL(warning)
+                            << "Ignore generic user_login for FlashCloudServiceAgent; FlashForge login requires homepage_get_token";
+                    } else {
+                        m_agent->change_user(j.dump());
+                        if (m_agent->is_user_login()) {
+                            request_user_login(1);
+                        }
                     }
                 }
             }
@@ -6034,7 +6058,9 @@ void GUI_App::on_user_login_handle(wxCommandEvent &evt)
     if (!m_agent) { return; }
 
     int online_login = evt.GetInt();
-    m_agent->connect_server();
+    // FlashForge establishes and maintains its account connection in MultiComMgr::addWanDev().
+    if (!uses_flash_cloud_agent(m_agent))
+        m_agent->connect_server();
     // get machine list
     DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
     if (!dev) return;

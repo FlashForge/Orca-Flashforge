@@ -3,9 +3,23 @@
 #include "GUI_App.hpp"
 #include "slic3r/Utils/Http.hpp"
 #include "slic3r/Utils/NetworkAgent.hpp"
+#include "slic3r/Utils/FlashCloudServiceAgent.hpp"
 
 namespace Slic3r {
 namespace GUI {
+
+namespace {
+
+bool uses_flash_cloud_agent(const NetworkAgent* agent)
+{
+    if (agent == nullptr)
+        return false;
+
+    const auto cloud_agent = agent->get_cloud_agent();
+    return dynamic_cast<FlashCloudServiceAgent*>(cloud_agent.get()) != nullptr;
+}
+
+} // namespace
 
 std::string url_get_param(const std::string& url, const std::string& key)
 {
@@ -186,7 +200,8 @@ std::shared_ptr<HttpServer::Response> HttpServer::bbl_auth_handle_request(const 
     if (!auth_code.empty()) {
         std::string state = url_get_param(url, "state");
         NetworkAgent* agent = wxGetApp().getAgent();
-        if (!agent) {
+        if (!agent || uses_flash_cloud_agent(agent)) {
+            BOOST_LOG_TRIVIAL(warning) << "Reject BBL auth callback for FlashCloudServiceAgent";
             return std::make_shared<ResponseNotFound>();
         }
 
@@ -225,6 +240,10 @@ std::shared_ptr<HttpServer::Response> HttpServer::bbl_auth_handle_request(const 
         std::string   expires_in_str         = url_get_param(url, "expires_in");
         std::string   refresh_expires_in_str = url_get_param(url, "refresh_expires_in");
         NetworkAgent* agent                  = wxGetApp().getAgent();
+        if (!agent || uses_flash_cloud_agent(agent)) {
+            BOOST_LOG_TRIVIAL(warning) << "Reject token auth callback for FlashCloudServiceAgent";
+            return std::make_shared<ResponseNotFound>();
+        }
 
         unsigned int http_code;
         std::string  http_body;

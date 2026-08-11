@@ -555,6 +555,9 @@ void Preset::remove_files(bool cloud_already_deleted)
     //BBS: add project embedded preset logic
     if (this->is_project_embedded)
         return;
+    // Back up the preset and its cloud metadata before deleting the local files.
+    if (!PresetBundle::backup_user_preset_before_delete(this->file))
+        BOOST_LOG_TRIVIAL(error) << "Deleting preset without a refreshed user_back_up copy: " << this->file;
     // Erase the preset file.
     boost::nowide::remove(this->file.c_str());
     fs::path idx_path(this->file);

@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <set>
+#include <mutex>
 #include <fstream>
 #include <unordered_set>
 #include <boost/filesystem.hpp>
@@ -479,14 +480,11 @@ PresetsConfigSubstitutions PresetBundle::load_presets(AppConfig &config, Forward
     const std::string user_preset_folder = data_dir() + "/" + PRESET_USER_DIR + "/" +
                                            (dir_user_presets.empty() ? DEFAULT_USER_FOLDER_NAME : dir_user_presets);
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " user preset folder: " << user_preset_folder;
-    // if (dir_user_presets.empty()) {
-    //     load_user_presets(DEFAULT_USER_FOLDER_NAME, substitution_rule);
-    // } else {
-    //     load_user_presets(dir_user_presets, substitution_rule);
-    // }
-
-    // 加载用户文件夹，未登录时加载default文件夹
-    load_user_presets(dir_user_presets, substitution_rule);
+    if (dir_user_presets.empty()) {
+        load_user_presets(DEFAULT_USER_FOLDER_NAME, substitution_rule);
+    } else {
+        load_user_presets(dir_user_presets, substitution_rule);
+    }
 
     this->update_multi_material_filament_presets();
     this->update_compatible(PresetSelectCompatibleType::Never);
@@ -640,6 +638,48 @@ bool PresetBundle::backup_user_folder() const
         // Try to clean up partially copied backup folder
         if (boost::filesystem::exists(boost::filesystem::path(backup_folderpath)))
             boost::filesystem::remove_all(boost::filesystem::path(backup_folderpath));
+        return false;
+    }
+}
+
+bool PresetBundle::backup_user_preset_before_delete(const std::string &preset_file_path)
+{
+    static std::mutex backup_mutex;
+    const std::scoped_lock lock(backup_mutex);
+
+    const fs::path user_folder   = fs::path(data_dir()) / PRESET_USER_DIR;
+    const fs::path backup_folder = fs::path(data_dir()) / "user_back_up";
+    const fs::path preset_file   = fs::absolute(fs::path(preset_file_path)).make_preferred();
+
+    if (!fs::exists(user_folder) || !fs::exists(preset_file)) {
+        BOOST_LOG_TRIVIAL(info) << "Skip user preset backup before delete because source does not exist: " << preset_file.string();
+        return true;
+    }
+
+    try {
+        const fs::path relative_path = fs::relative(preset_file, fs::absolute(user_folder));
+        if (relative_path.empty() || *relative_path.begin() == "..") {
+            BOOST_LOG_TRIVIAL(info) << "Skip backing up preset outside the user directory: " << preset_file.string();
+            return true;
+        }
+
+        const fs::path backup_preset_file = backup_folder / relative_path;
+        fs::create_directories(backup_preset_file.parent_path());
+        fs::copy_file(preset_file, backup_preset_file, fs::copy_options::overwrite_existing);
+
+        fs::path preset_info_file = preset_file;
+        preset_info_file.replace_extension(".info");
+        if (fs::exists(preset_info_file)) {
+            fs::path backup_info_file = backup_preset_file;
+            backup_info_file.replace_extension(".info");
+            fs::copy_file(preset_info_file, backup_info_file, fs::copy_options::overwrite_existing);
+        }
+
+        BOOST_LOG_TRIVIAL(info) << "User preset backup before delete completed successfully: " << preset_file.string() << " -> "
+                                << backup_preset_file.string();
+        return true;
+    } catch (const std::exception &ex) {
+        BOOST_LOG_TRIVIAL(error) << "Failed to back up user preset before deleting it: " << preset_file.string() << ", " << ex.what();
         return false;
     }
 }

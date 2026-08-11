@@ -135,6 +135,10 @@ int FlashCloudServiceAgent::user_logout(bool request)
 
 std::string FlashCloudServiceAgent::get_access_token() const
 {
+    auto* mgr = GUI::MultiComMgr::inst();
+    if (!mgr || !mgr->isLoggedIn())
+        return {};
+
     auto token = GUI::WanDevTokenMgr::inst()->getScopedToken();
     return token.accessToken();
 }
@@ -142,6 +146,10 @@ std::string FlashCloudServiceAgent::get_access_token() const
 bool FlashCloudServiceAgent::ensure_token_fresh(const std::string& reason)
 {
     (void) reason;
+    auto* mgr = GUI::MultiComMgr::inst();
+    if (!mgr || !mgr->isLoggedIn())
+        return false;
+
     auto token = GUI::WanDevTokenMgr::inst()->getScopedToken();
     if (token.accessToken().empty())
         return false;

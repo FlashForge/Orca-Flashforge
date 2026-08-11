@@ -155,6 +155,7 @@ public:
     bool is_flashforge_vendor();
 
     bool backup_user_folder() const;
+    static bool backup_user_preset_before_delete(const std::string &preset_file_path);
 
     //BBS: project embedded preset logic
     PresetsConfigSubstitutions load_project_embedded_presets(std::vector<Preset*> project_presets, ForwardCompatibilitySubstitutionRule substitution_rule);
