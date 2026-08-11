@@ -1,5 +1,6 @@
 {
     "compatible_printers": [
+        "Flashforge Creator 5 0.25 nozzle",
         "Flashforge Creator 5 0.4 nozzle",
         "Flashforge Creator 5 0.6 nozzle",
         "Flashforge Creator 5 0.8 nozzle"
@@ -23,7 +24,7 @@
         "110"
     ],
     "filament_flow_ratio": [
-        "0.95"
+        "0.98"
     ],
     "filament_is_support": [
         "1"
@@ -48,6 +49,7 @@
         "110"
     ],
     "inherits": "Generic HIPS @System",
+    "setting_id": "ckwc7U0Q2eKHmCxY",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge HIPS @FF C5",
@@ -75,5 +77,11 @@
     "textured_plate_temp_initial_layer": [
         "110"
     ],
-    "version": "2.3.0.3"
+    "version": "2.3.0.3",
+    "filament_extruder_variant": [
+        "Direct Drive Standard"
+    ],
+    "pressure_advance": [
+        "0.035"
+    ]
 }

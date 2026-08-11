@@ -25,6 +25,7 @@
         "60"
     ],
     "inherits": "Flashforge PLA Basic @FF AD5M 0.25 nozzle",
+    "setting_id": "e8JkrQPgHO1ekM7Q",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PLA Basic @FF Adventurer A5 0.25 nozzle",

@@ -180,7 +180,6 @@ src/slic3r/GUI/KBShortcutsDialog.cpp
 src/slic3r/GUI/ReleaseNote.cpp
 src/slic3r/GUI/ReleaseNote.hpp
 src/slic3r/GUI/UpgradePanel.cpp
-src/slic3r/Utils/FixModelByWin10.cpp
 src/slic3r/Utils/PresetUpdater.cpp
 src/slic3r/Utils/Http.cpp
 src/slic3r/Utils/Process.cpp
@@ -250,5 +249,11 @@ src/slic3r/GUI/RammingChart.cpp
 src/slic3r/GUI/StepMeshDialog.cpp
 src/slic3r/GUI/FilamentPickerDialog.hpp
 src/libslic3r/PresetBundle.cpp
+src/slic3r/GUI/MixedFilamentColorMatchDialog.cpp
+src/slic3r/GUI/MixedFilamentColorMatchDialog.hpp
+src/slic3r/GUI/MixedFilamentConfigPanel.cpp
+src/slic3r/GUI/MixedFilamentConfigPanel.hpp
+src/slic3r/GUI/MixedGradientSelector.cpp
+src/slic3r/GUI/MixedGradientWeightsDialog.cpp
 src/slic3r/GUI/FlashForge/FFRTMPVideoCtrl.cpp
 src/slic3r/GUI/FlashForge/FeedbackLogDialog.cpp

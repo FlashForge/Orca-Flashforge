@@ -1,5 +1,6 @@
 {
     "compatible_printers": [
+        "Flashforge Creator 5 0.25 nozzle",
         "Flashforge Creator 5 0.4 nozzle",
         "Flashforge Creator 5 0.6 nozzle",
         "Flashforge Creator 5 0.8 nozzle"
@@ -26,7 +27,7 @@
         "40"
     ],
     "filament_flow_ratio": [
-        "0.95"
+        "0.98"
     ],
     "filament_settings_id": [
         "Flashforge ASA Basic @FF C5"
@@ -48,6 +49,7 @@
         "110"
     ],
     "inherits": "Generic ABS @System",
+    "setting_id": "UUSDyOetXSOuBIUd",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge ASA Basic @FF C5",
@@ -75,5 +77,11 @@
     "textured_plate_temp_initial_layer": [
         "110"
     ],
-    "version": "2.3.0.3"
+    "version": "2.3.0.3",
+    "filament_extruder_variant": [
+        "Direct Drive Standard"
+    ],
+    "pressure_advance": [
+        "0.035"
+    ]
 }

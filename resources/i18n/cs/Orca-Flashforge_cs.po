@@ -12616,3 +12616,57 @@ msgstr ""
 #~ "Zadejte prosím platné hodnoty:\n"
 #~ "start > 10 kroků >= 0\n"
 #~ "konec > začátek + krok)"
+
+
+msgid "Simple settings"
+msgstr "Jednoduchá nastavení"
+
+msgid "Local-Z pair split: requested F<a>/F<b> <percent>/<percent>."
+msgstr "Dělení páru Local-Z: požadováno F<a>/F<b> <percent>/<percent>."
+
+msgid "Cycle settings visibility"
+msgstr "Přepnout viditelnost nastavení"
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d."
+msgstr "Dělení páru Local-Z: požadováno F%u/F%u %d/%d."
+
+msgid "Local-Z breakdown: manual pattern rows do not use pair decomposition."
+msgstr "Rozklad Local-Z: řádky ručního vzoru nepoužívají párový rozklad."
+
+
+msgid "Local-Z breakdown: same-layer mode does not use local-Z pair decomposition."
+msgstr "Rozklad Local-Z: režim stejné vrstvy nepoužívá párový rozklad Local-Z."
+
+msgid "Local-Z breakdown: unavailable."
+msgstr "Rozklad Local-Z: nedostupný."
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d, effective %d/%d over %d sublayers."
+msgstr "Dělení páru Local-Z: požadováno F%u/F%u %d/%d, efektivně %d/%d přes %d podvrstev."
+
+
+msgid "Expert settings"
+msgstr "Expertní nastavení"
+
+msgid "Local-Z direct multicolor solver: %s"
+msgstr "P??m? v?cebarevn? ?e?i? Local-Z: %s"
+
+msgid "Carry-over error is distributed directly across all %d components instead of collapsing them into pair cadence."
+msgstr "Chyba p?enosu se rozd?luje p??mo mezi v?ech %d komponent nam?sto jejich slou?en? do p?rov? kadence."
+
+msgid "Effective Local-Z cap: up to %d sublayers per nominal layer."
+msgstr "Efektivn? limit Local-Z: a? %d podvrstev na nomin?ln? vrstvu."
+
+msgid "Local-Z layer cadence: %s."
+msgstr "Kadence vrstev Local-Z: %s."
+
+msgid "Pair splits: %s."
+msgstr "P?rov? rozd?len?: %s."
+
+msgid "Saved row limit will apply when Local-Z dithering mode is enabled in print settings."
+msgstr "Ulo?en? limit ??dk? se pou?ije, kdy? je v nastaven? tisku zapnut re?im ditheringu Local-Z."
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers."
+msgstr "Efektivn? z?sobn?k Local-Z: %d podvrstev p?es %d p?rov?ch vrstev."
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers (uncapped %d)."
+msgstr "Efektivn? z?sobn?k Local-Z: %d podvrstev p?es %d p?rov?ch vrstev (bez limitu %d)."

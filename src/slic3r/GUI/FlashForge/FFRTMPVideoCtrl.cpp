@@ -1277,6 +1277,10 @@ void FFRTMPVideoCtrl::setCurComId(com_id_t comId)
 void FFRTMPVideoCtrl::setCameraAvailable(bool available)
 {
     const bool was_available = m_camera_available.exchange(available);
+    if (was_available != available) {
+        BOOST_LOG_TRIVIAL(error) << "[CAMERA_CAPABILITY] comId=" << m_curComId
+                                << ", available: " << was_available << " -> " << available;
+    }
     if (!available) {
         if (was_available) StopStream();
         m_url.clear();

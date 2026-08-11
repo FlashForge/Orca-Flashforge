@@ -35,7 +35,7 @@
         "20"
     ],
     "filament_flow_ratio": [
-        "0.97"
+        "0.98"
     ],
     "filament_max_volumetric_speed": [
         "12"
@@ -60,6 +60,7 @@
         "85"
     ],
     "inherits": "Generic PETG-CF @System",
+    "setting_id": "8Ns75F5n2fdQ8sDk",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PETG-CF @FF C5P",
@@ -73,7 +74,7 @@
         "10%"
     ],
     "pressure_advance": [
-        "0.03"
+        "0.06"
     ],
     "supertack_plate_temp": [
         "0"
@@ -93,5 +94,8 @@
     "textured_plate_temp_initial_layer": [
         "85"
     ],
-    "version": "2.3.0.3"
+    "version": "2.3.0.3",
+    "filament_extruder_variant": [
+        "Direct Drive Standard"
+    ]
 }

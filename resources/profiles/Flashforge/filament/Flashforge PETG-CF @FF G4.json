@@ -43,6 +43,7 @@
         "80"
     ],
     "inherits": "Flashforge Generic PETG",
+    "setting_id": "K9ME1F4oJkPi8jRu",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PETG-CF @FF G4",

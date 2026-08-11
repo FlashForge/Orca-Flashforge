@@ -38,7 +38,7 @@
         "Direct Drive Standard"
     ],
     "filament_flow_ratio": [
-        "0.95"
+        "0.98"
     ],
     "filament_settings_id": [
         "Generic ASA @FF C5P"
@@ -54,6 +54,7 @@
         "110"
     ],
     "inherits": "Generic ASA @System",
+    "setting_id": "778sygcg893ZoHck",
     "instantiation": "true",
     "name": "Generic ASA @FF C5P",
     "nozzle_temperature": [
@@ -80,5 +81,8 @@
     "textured_plate_temp_initial_layer": [
         "110"
     ],
-    "version": "2.3.0.3"
+    "version": "2.3.0.3",
+    "pressure_advance": [
+        "0.035"
+    ]
 }

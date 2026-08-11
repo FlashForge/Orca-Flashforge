@@ -70,7 +70,7 @@ namespace {
 
 constexpr auto FF_DEVICE_PAGE_PRIMARY_TEXT = "#333333";
 
-enum class CameraStreamProtocol { Source, Hls, Rtmp };
+enum class CameraStreamProtocol { Source, Rtmp };
 
 // Change this single value to compare the device's fixed HLS and RTMP URLs.
 static constexpr CameraStreamProtocol g_camera_stream_protocol = CameraStreamProtocol::Rtmp;
@@ -86,21 +86,11 @@ std::string switch_camera_stream_url(const std::string& source, CameraStreamProt
         else if (result.rfind("http://", 0) == 0)
             result.replace(0, 7, "rtmp://");
 
-        // RTMP uses the same fixed host/path without the HLS playlist suffix.
         const size_t suffix = result.find(".m3u8");
         if (suffix != std::string::npos) result.erase(suffix, 5);
-    } else if (protocol == CameraStreamProtocol::Hls) {
-        if (result.rfind("rtmps://", 0) == 0)
-            result.replace(0, 8, "https://");
-        else if (result.rfind("rtmp://", 0) == 0)
-            result.replace(0, 7, "http://");
-
-        const size_t query = result.find('?');
-        const std::string path = result.substr(0, query);
-        if (path.size() < 5 || path.substr(path.size() - 5) != ".m3u8")
-            result.insert(query == std::string::npos ? result.size() : query, ".m3u8");
+        const size_t suffix2 = result.find(".flv");
+        if (suffix2 != std::string::npos) result.erase(suffix2, 4);
     } else if (protocol == CameraStreamProtocol::Source) {
-    
     }
     return result;
 }
@@ -596,7 +586,7 @@ void DeviceDetail::create_panel(wxWindow* parent)
     sizer->Add(m_panel_rows, 0, wxLEFT | wxRIGHT | wxALIGN_CENTER | wxEXPAND, FromDIP(36));
 #ifdef __WIN32__
     sizer->AddSpacer(FromDIP(34));
-#else if __APPLE__
+#elif defined(__APPLE__)
     sizer->AddSpacer(FromDIP(36));
 #endif
     parent->SetSizer(sizer);
@@ -871,7 +861,7 @@ void G3UDetail::create_panel(wxWindow* parent)
     m_panel_separotor10->SetBackgroundColour(wxColour(255, 255, 255));
 #ifdef __WIN32__
     m_panel_separotor10->SetMinSize(wxSize(-1, FromDIP(10)));
-#else if __APPLE__
+#elif defined(__APPLE__)
     m_panel_separotor10->SetMinSize(wxSize(-1, FromDIP(10)));
 #endif
 
@@ -898,7 +888,7 @@ void G3UDetail::create_panel(wxWindow* parent)
     bSizer_first_row->Add(b1Sizer_h);
 #ifdef __WIN32__
     bSizer_first_row->AddSpacer(FromDIP(14));
-#else if __APPLE__
+#elif defined(__APPLE__)
     bSizer_first_row->AddSpacer(FromDIP(12));
 #endif
 
@@ -968,7 +958,7 @@ void G3UDetail::create_panel(wxWindow* parent)
     sizer->Add(bSizer_h, 0, wxALL, 0);
 #ifdef __WIN32__
     sizer->AddSpacer(FromDIP(43));
-#else if __APPLE__
+#elif defined(__APPLE__)
     sizer->AddSpacer(FromDIP(46));
 #endif
 
@@ -2242,7 +2232,7 @@ void SingleDeviceState::setupLayoutBusyInfoPage(wxBoxSizer* busySizer, wxPanel* 
     hbox->AddSpacer(FromDIP(4));
     hbox->Add(m_material_weight_label, wxALIGN_CENTER | wxALL, 0);
 
-    //显示云切片帮助文�?
+    //显示云切片帮助文本
     m_staticText_cloud_text = new Label(m_panel_control_file_info, Label::sysFont(22, false), _L("Cloud slicing queued..."));
     m_staticText_cloud_text->Wrap(-1);
     m_staticText_cloud_text->SetForegroundColour(wxColour(50, 141, 251));
@@ -3162,7 +3152,7 @@ void SingleDeviceState::onConnectWanDevInfoUpdate(ComWanDevInfoUpdateEvent &even
         //当前选中的设备，获取相应数据，更新界面显�?
         const com_dev_data_t &data = MultiComMgr::inst()->devData(event.id);
         // 离线判断
-        std::string status = data.wanDevInfo.status;
+        std::string status = wan_device_display_status(data);
         camdbg_log("onConnectWanDevInfoUpdate wanStatus=" + status);
         if (status.compare("offline") == 0) {
             setPageOffline();
@@ -3174,7 +3164,7 @@ void SingleDeviceState::onConnectWanDevInfoUpdate(ComWanDevInfoUpdateEvent &even
     
     if (-1 == m_cur_id) {
         const com_dev_data_t &data = MultiComMgr::inst()->devData(event.id);
-        if (data.wanDevInfo.serialNumber.compare(m_cur_serial_number) == 0 && data.wanDevInfo.status.compare("offline") != 0) {
+        if (data.wanDevInfo.serialNumber.compare(m_cur_serial_number) == 0 && is_wan_device_online(data)) {
             m_cur_id = event.id;
             setCurId(m_cur_id);
         }
@@ -3316,6 +3306,14 @@ void SingleDeviceState::onComWanDevMaintain(ComWanDevMaintainEvent &event)
 {
     event.Skip();
     if (m_camera_panel) m_camera_panel->logPanelState("onComWanDevMaintain enter");
+    if (event.serviceState == WanServiceState::Reconnecting) {
+        camdbg_log("WAN service reconnecting; keep device page and last device state");
+        return;
+    }
+    if (event.serviceState == WanServiceState::ApiUnavailable) {
+        camdbg_log("WAN API unavailable; keep device page and distinguish from printer offline");
+        return;
+    }
     // 账号登出（login=false）：�?WAN)设备全部被移除�?
     if (!event.login) {
         // 刷新并清空设备页到离线态：仅当当前页展示的正是云设备（或该设备已被移除）时才清页；
@@ -3771,7 +3769,7 @@ void SingleDeviceState::onFileListClicked(wxMouseEvent& event)
          m_timeLapseVideoPnl->Hide();
          m_scrolledWindow->Scroll(0, 0);
          m_scrolledWindow->Refresh();
-         m_scrolledWindow->Show();     
+         m_scrolledWindow->Show();
          m_panel_print_btn->Show();
          m_FileList_split_line->Show();
     }
@@ -4049,7 +4047,7 @@ void SingleDeviceState::fillValue(const com_dev_data_t& data,bool wanDev)
     updateDeviceInfoPanel(data);
     std::string state = data.devDetail->status; // 状�?
     if (wanDev) {
-        state = data.wanDevInfo.status;
+        state = wan_device_display_status(data);
     }
     onDevStateChanged(state, data);
     if (state.compare("printing") == 0 && !m_isCloudState) {
@@ -4458,7 +4456,6 @@ void SingleDeviceState::refreshCameraStream()
     // signal in LAN mode. All other cases use the explicit camera field.
     const bool camera_available = uses_stream_url_capability ? stream_url_present : data.devDetail->camera == 1;
 
-    BOOST_LOG_TRIVIAL(error) << "camera_available: " << camera_available;
     camera_capability_log(
         "refresh: cameraComId=" + std::to_string(m_camera_cur_id)
         + " currentComId=" + std::to_string(m_cur_id)
@@ -4469,7 +4466,7 @@ void SingleDeviceState::refreshCameraStream()
         + " cameraAvailable=" + std::string(camera_available ? "true" : "false")
         + " streamUrlPresent=" + std::string(stream_url_present ? "true" : "false")
         + " streamUrl=" + (camera_stream_url != nullptr ? camera_stream_url : "<null>"));
-    
+
     m_camera_panel->setCameraAvailable(camera_available);
     if (!camera_available) {
         m_camera_stream_url.clear();
@@ -4826,7 +4823,7 @@ void LampToolBar::SetCameraVisible(bool visible)
 
 void LampToolBar::SetCameraState(bool isOffline) 
 { 
-    /*m_camera_btn->Enable(!isOffline); 
+    /*m_camera_btn->Enable(!isOffline);
     if (isOffline) {
         m_camera_btn->SetIcon("camera_button_offline");
     } else {

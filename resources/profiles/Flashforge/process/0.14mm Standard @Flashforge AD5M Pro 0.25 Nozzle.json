@@ -1,7 +1,7 @@
 {
   "type": "process",
   "from": "system",
-  "setting_id": "GP001",
+  "setting_id": "JHGAxS2EeRDgi1tZ",
   "instantiation": "true",
   "compatible_printers": [
     "Flashforge Adventurer 5M Pro 0.25 Nozzle"

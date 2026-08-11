@@ -6,6 +6,7 @@
 #include "NetworkAgent.hpp"
 #include "OrcaCloudServiceAgent.hpp"
 #include "BBLCloudServiceAgent.hpp"
+#include "FlashCloudServiceAgent.hpp"
 #include "BBLNetworkPlugin.hpp"
 #include "libslic3r/AppConfig.hpp"
 #include <memory>
@@ -20,8 +21,9 @@ namespace Slic3r {
  *
  * - Orca: Native Orca cloud implementations (OrcaCloudServiceAgent)
  * - BBL: BBL DLL wrapper implementations (BBLCloudServiceAgent)
+ * - FlashForge: FlashForge account-backed preset service (FlashCloudServiceAgent)
  */
-enum class CloudAgentProvider { Orca, BBL };
+enum class CloudAgentProvider { Orca, BBL, FlashForge };
 
 static constexpr char ORCA_PRINTER_AGENT_ID[] = "orca";
 static constexpr char BBL_PRINTER_AGENT_ID[] = "bbl";
@@ -141,6 +143,7 @@ public:
     {
         switch (provider) {
         case CloudAgentProvider::Orca: return std::make_shared<OrcaCloudServiceAgent>(log_dir);
+        case CloudAgentProvider::FlashForge: return std::make_shared<FlashCloudServiceAgent>();
         case CloudAgentProvider::BBL: {
             auto& plugin = BBLNetworkPlugin::instance();
             if (!plugin.is_loaded()) {
@@ -172,9 +175,9 @@ private:
  * Creates a NetworkAgent with cloud agent only. The printer agent is created
  * separately when a printer is selected, via create_printer_agent_by_id().
  *
- * Cloud provider selection:
- *   - use_orca_cloud=true  → OrcaCloudServiceAgent (default)
- *   - use_orca_cloud=false → BBLCloudServiceAgent (requires plugin)
+ * Cloud provider: Always creates OrcaCloudServiceAgent as the primary provider.
+ * Third-party cloud agents (e.g., Bambu) are created from the cloud_providers
+ * AppConfig setting and added via NetworkAgent::add_cloud_agent().
  *
  * @param log_dir Directory for log files
  * @param app_config Application configuration object

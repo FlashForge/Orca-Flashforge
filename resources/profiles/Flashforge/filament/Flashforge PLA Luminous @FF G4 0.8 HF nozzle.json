@@ -43,6 +43,7 @@
     ],
     "from": "system",
     "inherits": "Flashforge Generic PLA @G3U 0.6 Nozzle",
+    "setting_id": "aWVXIk1xVa9URR1D",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PLA Luminous @FF G4 0.8 HF nozzle",

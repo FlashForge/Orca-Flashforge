@@ -12470,3 +12470,57 @@ msgstr ""
 
 #~ msgid "Orient the model"
 #~ msgstr "旋轉模型"
+
+
+msgid "Simple settings"
+msgstr "簡易設定"
+
+msgid "Local-Z pair split: requested F<a>/F<b> <percent>/<percent>."
+msgstr "Local-Z 成對拆分：請求 F<a>/F<b> <percent>/<percent>。"
+
+msgid "Cycle settings visibility"
+msgstr "切換設定可見性"
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d."
+msgstr "Local-Z 成對拆分：請求 F%u/F%u %d/%d。"
+
+msgid "Local-Z breakdown: manual pattern rows do not use pair decomposition."
+msgstr "Local-Z 分解：手動圖案列不使用成對分解。"
+
+
+msgid "Local-Z breakdown: same-layer mode does not use local-Z pair decomposition."
+msgstr "Local-Z 分解：同層模式不使用 Local-Z 成對分解。"
+
+msgid "Local-Z breakdown: unavailable."
+msgstr "Local-Z 分解：不可用。"
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d, effective %d/%d over %d sublayers."
+msgstr "Local-Z 成對拆分：請求 F%u/F%u %d/%d，實際 %d/%d，共 %d 個子層。"
+
+
+msgid "Expert settings"
+msgstr "專家設定"
+
+msgid "Local-Z direct multicolor solver: %s"
+msgstr "Local-Z ????????%s"
+
+msgid "Carry-over error is distributed directly across all %d components instead of collapsing them into pair cadence."
+msgstr "???????????? %d ???????????????"
+
+msgid "Effective Local-Z cap: up to %d sublayers per nominal layer."
+msgstr "?? Local-Z ?????????? %d ????"
+
+msgid "Local-Z layer cadence: %s."
+msgstr "Local-Z ????%s?"
+
+msgid "Pair splits: %s."
+msgstr "?????%s?"
+
+msgid "Saved row limit will apply when Local-Z dithering mode is enabled in print settings."
+msgstr "???????? Local-Z ??????????????????"
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers."
+msgstr "?? Local-Z ???%d ????? %d ?????"
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers (uncapped %d)."
+msgstr "?? Local-Z ???%d ????? %d ???????? %d??"

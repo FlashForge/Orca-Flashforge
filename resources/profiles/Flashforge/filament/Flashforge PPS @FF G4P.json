@@ -70,6 +70,7 @@
         "100"
     ],
     "inherits": "Flashforge Generic PLA-CF10",
+    "setting_id": "vFMKqNjQjlNxwvDI",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PPS @FF G4P",

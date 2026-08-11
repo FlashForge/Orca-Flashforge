@@ -33,6 +33,7 @@
     ],
     "from": "system",
     "inherits": "Flashforge Generic PETG",
+    "setting_id": "ZpNEEHTtvhMJS8Kv",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge HS PETG @FF Adventurer A5",

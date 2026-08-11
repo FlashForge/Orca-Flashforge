@@ -43,7 +43,7 @@ void AboutDialogLogo::onRepaint(wxEvent &event)
 // -----------------------------------------
 CopyrightsDialog::CopyrightsDialog()
     : DPIDialog(static_cast<wxWindow*>(wxGetApp().mainframe), wxID_ANY, from_u8((boost::format("%1% - %2%")
-        % (wxGetApp().is_editor() ? SLIC3R_APP_FULL_NAME : GCODEVIEWER_APP_NAME)
+        % (wxGetApp().is_editor() ? get_app_display_name() : wxString(GCODEVIEWER_APP_NAME)).ToStdString()
         % _utf8(L("Portions copyright"))).str()),
         wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
 {
@@ -97,7 +97,7 @@ void CopyrightsDialog::fill_entries()
         { "Eigen3",                                         "",      "http://eigen.tuxfamily.org" },
         { "Expat",                                          "",      "http://www.libexpat.org" },
         { "fast_float",                                     "",      "https://github.com/fastfloat/fast_float" },
-        { "GLEW (The OpenGL Extension Wrangler Library)",   "",      "http://glew.sourceforge.net" },
+        { "GLAD (Multi-Language GL Loader-Generator)",       "",      "https://github.com/Dav1dde/glad" },
         { "GLFW",                                           "",      "https://www.glfw.org" },
         { "GNU gettext",                                    "",      "https://www.gnu.org/software/gettext" },
         { "ImGUI",                                          "",      "https://github.com/ocornut/imgui" },
@@ -212,7 +212,7 @@ void CopyrightsDialog::onCloseDialog(wxEvent &)
 
 AboutDialog::AboutDialog()
     : wxDialog(static_cast<wxWindow *>(wxGetApp().mainframe), wxID_ANY,
-        from_u8((boost::format(_utf8(L("About %s"))) % SLIC3R_APP_FULL_NAME).str()))
+        from_u8((boost::format(_utf8(L("About %s"))) % get_app_display_name().ToStdString()).str()))
     , m_backgorundBmp(this, "Orca-Flashforge_about", 400)
 {
     SetClientSize(m_backgorundBmp.GetBmpSize());

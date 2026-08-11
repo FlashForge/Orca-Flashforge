@@ -27,6 +27,7 @@
     ],
     "from": "system",
     "inherits": "Flashforge Generic PETG-CF10",
+    "setting_id": "aDSOS4PWssYHk8Fh",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PETG-CF @FF Adventurer A5",

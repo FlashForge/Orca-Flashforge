@@ -73,6 +73,7 @@
         "55"
     ],
     "inherits": "Flashforge Generic ABS @G3U",
+    "setting_id": "E0LeJwSxaniDkB0b",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PLA Silk @FF G4 HF",

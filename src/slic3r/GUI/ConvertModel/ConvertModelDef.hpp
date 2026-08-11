@@ -25,13 +25,15 @@ struct in_cvt_params_t {
 };
 
 struct in_texture_data_t {
-    const uint8_t *bits;
-    int32_t width;
-    int32_t height;
-    int32_t channels;
-    int32_t bytePerLine;
-    texture_wrap_type_t wraps[2];
-    bool flipY;
+    const uint8_t         *bits{ nullptr };
+    int32_t                width{ 0 };
+    int32_t                height{ 0 };
+    int32_t                channels{ 0 };
+    int32_t                bytePerLine{ 0 };
+    texture_wrap_type_t    wraps[2]{ TEX_WRAP_REPEAT, TEX_WRAP_REPEAT };
+    bool                   flipY{ false };
+    bool                   isSolidColor{ false };
+    std::array<uint8_t, 4> solidColor{ 255, 255, 255, 255 };
 };
 
 struct in_material_data_t {

@@ -24,6 +24,7 @@
     ],
     "from": "system",
     "inherits": "Flashforge Generic TPU",
+    "setting_id": "OB4I8nwZn8sCcCcF",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Kexcelled TPU 64D @FF Adventurer A5",

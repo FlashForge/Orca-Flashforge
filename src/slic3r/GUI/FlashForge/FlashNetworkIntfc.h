@@ -122,6 +122,12 @@ public:
     decltype(&fnet_freeJobInfo)freeJobInfo;
     decltype(&fnet_doBusGetRequest) doBusGetRequest;
     decltype(&fnet_doBusPostRequest) doBusPostRequest;
+    decltype(&fnet_getSettingList2) getSettingList2;
+    decltype(&fnet_getSettingList) getSettingList;
+    decltype(&fnet_getUserPresets) getUserPresets;
+    decltype(&fnet_requestSettingId) requestSettingId;
+    decltype(&fnet_putSetting) putSetting;
+    decltype(&fnet_deleteSetting) deleteSetting;
     decltype(&fnet_getMqttConfig) getMqttConfig;
     decltype(&fnet_freeMqttConfig) freeMqttConfig;
     decltype(&fnet_createConnection) createConnection;

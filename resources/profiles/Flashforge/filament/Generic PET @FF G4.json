@@ -58,6 +58,7 @@
         "80"
     ],
     "inherits": "Flashforge Generic TPU",
+    "setting_id": "JvdxJyy7xCm3F0xH",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Generic PET @FF G4",

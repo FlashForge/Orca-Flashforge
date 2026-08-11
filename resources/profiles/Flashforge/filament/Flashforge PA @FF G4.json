@@ -55,6 +55,7 @@
         "100"
     ],
     "inherits": "Flashforge Generic TPU",
+    "setting_id": "wAkuJRTLWxGyBU0b",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PA @FF G4",

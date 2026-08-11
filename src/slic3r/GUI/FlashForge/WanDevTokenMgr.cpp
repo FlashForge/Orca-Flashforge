@@ -14,6 +14,10 @@ void WanDevTokenMgr::initalize(const com_token_data_t &tokenData, fnet::FlashNet
 
 void WanDevTokenMgr::start()
 {
+    if (m_thread) {
+        return;
+    }
+    m_exitThread = false;
     m_thread.reset(new boost::thread(boost::bind(&WanDevTokenMgr::run, this)));
 }
 
@@ -21,8 +25,10 @@ void WanDevTokenMgr::exit()
 {
     m_exitThread = true;
     m_loopWaitEvent.set(true);
-    m_thread->join();
-    m_thread.reset(nullptr);
+    if (m_thread) {
+        m_thread->join();
+        m_thread.reset(nullptr);
+    }
 }
 
 ScopedWanDevToken WanDevTokenMgr::getScopedToken()

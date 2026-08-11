@@ -37,7 +37,7 @@ typedef std::pair<coordf_t, coordf_t>               t_layer_height_range;
 typedef std::map<t_layer_height_range, ModelConfig> t_layer_config_ranges;
 
 // Manifold mesh may contain self-intersections, so we want to always allow fixing the mesh.
-#define FIX_THROUGH_NETFABB_ALWAYS 1
+#define FIX_THROUGH_CGAL_ALWAYS 1
 
 namespace GUI {
 struct ObjectVolumeID {
@@ -192,6 +192,13 @@ private:
     int 	    m_last_selected_column = -1;
 #endif /* __MSW__ */
 
+#ifdef __WXOSX__
+    bool m_starting_filament_editor = false;
+    wxDataViewItem m_filament_editor_item { nullptr };
+    bool is_live_model_item(wxDataViewItem item) const;
+    void start_filament_editor(wxDataViewItem item);
+#endif // __WXOSX__
+
 #if 0
     SettingsFactory::Bundle m_freq_settings_fff;
     SettingsFactory::Bundle m_freq_settings_sla;
@@ -221,8 +228,10 @@ public:
 
     void                create_objects_ctrl();
     // BBS
-    void                update_objects_list_filament_column(size_t filaments_count);
-    void                update_objects_list_filament_column_when_delete_filament(size_t filament_id, size_t filaments_count, int replace_filament_id = -1);
+    void                update_objects_list_filament_column(size_t filaments_count,
+                                                            const std::vector<unsigned int>& filament_id_remap = {});
+    void                update_objects_list_filament_column_when_delete_filament(size_t filament_id, size_t filaments_count, int replace_filament_id = -1,
+                                                                                 const std::vector<unsigned int>& filament_id_remap = {});
     void                update_filament_colors();
     // show/hide "Extruder" column for Objects List
     void                set_filament_column_hidden(const bool hide) const;
@@ -239,7 +248,9 @@ public:
     void                update_name_in_model(const wxDataViewItem& item) const;
     void                update_name_in_list(int obj_idx, int vol_idx) const;
     void                update_filament_values_for_items(const size_t filaments_count);
-    void                update_filament_values_for_items_when_delete_filament(const size_t filament_id, const int replace_id = -1);
+    void                update_filament_values_for_items_with_remap(const std::vector<unsigned int>& filament_id_remap);
+    void                update_filament_values_for_items_when_delete_filament(const size_t filament_id, const int replace_id = -1,
+                                                                              const std::vector<unsigned int>& filament_id_remap = {});
 
     //BBS: update plate
     void                update_plate_values_for_items();
@@ -413,7 +424,11 @@ public:
     bool fix_cut_selection(wxDataViewItemArray &sels);
 
     ModelVolume* get_selected_model_volume();
+#if 0 // ORCA: disabled alongside definition in GUI_ObjectList.cpp (see #if 0 block there)
     void change_part_type();
+#endif
+	void set_volume_type(ModelVolumeType new_type);
+    ModelVolumeType get_selected_volume_type();
 
     void last_volume_is_deleted(const int obj_idx);
     void update_and_show_object_settings_item();
@@ -426,7 +441,7 @@ public:
     void instances_to_separated_objects(const int obj_idx);
     void split_instances();
     void rename_item();
-    void fix_through_netfabb();
+    void fix_through_cgal();
     void simplify();
     void smooth_mesh();
     void update_item_error_icon(const int obj_idx, int vol_idx) const ;
@@ -447,6 +462,7 @@ public:
     //update printable state for item from objects model
     void update_printable_state(int obj_idx, int instance_idx);
     void toggle_printable_state();
+    void toggle_auto_drop();
     void enable_layers_editing();
 
     //BBS: remove const qualifier
@@ -461,6 +477,7 @@ public:
     void on_plate_selected(int plate_index);
     void notify_instance_updated(int obj_idx);
     void object_config_options_changed(const ObjectVolumeID& ov_id);
+    void printable_state_changed(const std::vector<ModelObject*> model_objects);
     void printable_state_changed(const std::vector<ObjectVolumeID>& ov_ids);
 
     // search objectlist

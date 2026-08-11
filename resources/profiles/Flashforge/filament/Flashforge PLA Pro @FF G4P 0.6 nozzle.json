@@ -43,6 +43,7 @@
     ],
     "from": "system",
     "inherits": "Flashforge Generic PLA @G3U 0.6 Nozzle",
+    "setting_id": "4W4a7c9ugUVwvvmn",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PLA Pro @FF G4P 0.6 nozzle",

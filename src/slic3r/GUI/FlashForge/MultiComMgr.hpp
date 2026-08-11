@@ -38,6 +38,10 @@ public:
 
     fnet::FlashNetworkIntfc *networkIntfc();
 
+    const std::string &clientId() const { return m_clientId; }
+    bool isLoggedIn() const { return m_login; }
+    const std::string &userId() const { return m_userId; }
+
     std::string homePageUrl();
     
     com_id_t addLanDev(const fnet_lan_dev_info_t &devInfo, const std::string &checkCode);
@@ -72,8 +76,6 @@ public:
 private:
     using std_precise_clock = std::chrono::high_resolution_clock;
 
-    typedef std::map<com_id_t, std_precise_clock::time_point> dev_alive_time_map_t;
-
     typedef std::shared_ptr<ComConnection> com_ptr_t;
 
     typedef boost::bimap<com_id_t, ComConnection*> com_ptr_map_t;
@@ -106,7 +108,17 @@ private:
 
     void onWanConnRead(const WanConnReadEvent &event);
 
+    void onWanConnUnauthorized(wxCommandEvent &event);
+
     void onRefreshToken(const ComRefreshTokenEvent &event);
+
+    void onMqttConfigRefresh(const ComMqttConfigRefreshEvent &event);
+
+    void requestMqttConfigRefresh();
+
+    void scheduleMqttConfigRefreshRetry();
+
+    void clearRejectedMqttConnection(ComErrno ret);
 
     std::string generateClientId();
 
@@ -114,12 +126,16 @@ private:
 
     com_dev_data_t makeWanDevData(const fnet_wan_dev_info_t *wanDevInfo);
 
+    bool updateWanDeviceState(com_id_t id, WanDevicePresence presence, WanDeviceStatusSource source,
+        const std::string *workStatus = nullptr, bool notify = true, bool forceNotify = false);
+
+    bool mergeWanDeviceInfo(com_id_t id, const fnet_wan_dev_info_t &wanDevInfo);
+
     void maintianWanDev(ComErrno ret, bool needLogout);
 
     void setMaintainThdReqHeader(bool isCheckVersionTestServer);
 
-    void setWanDevOffline();
-
+    void initWanConnAsync(const std::string &accessToken);
     void subscribeWanDevTopic();
 
     void updateWanDevDetail();
@@ -135,8 +151,14 @@ private:
     bool                                                      m_login;
     bool                                                      m_httpOnline;
     bool                                                      m_connOnline;
-    bool                                                      m_connFirstConnected;
+    std::atomic<uint64_t>                                     m_mqttGeneration { 0 };
+    std::atomic_bool                                          m_mqttConfigRefreshInFlight { false };
+    bool                                                      m_mqttReconnectAllowed { false };
+    bool                                                      m_mqttRecoveryInProgress { false };
+    unsigned int                                              m_mqttConfigRefreshRetryCount { 0 };
+    std::chrono::steady_clock::time_point                     m_nextMqttConfigRefreshTime {};
     std::string                                               m_clientId;
+    std::string                                               m_userId;
     std::string                                               m_dataDir;
     com_mqtt_config_t                                         m_mqttConfig;
     std::list<com_ptr_t>                                      m_comPtrs;
@@ -150,8 +172,7 @@ private:
     std::deque<std::string>                                   m_feedbackLogHistory;
     std::mutex                                                m_feedbackLogMutex;
     std::shared_ptr<WaitEvent>                                m_feedbackLogCancelEvent;
-    std::uint64_t                                             m_feedbackLogSessionGeneration{0};
-    dev_alive_time_map_t                                      m_devAliveTimeMap;
+    std::uint64_t                                             m_feedbackLogSessionGeneration { 0 };
     std::list<com_dev_data_t>                                 m_pendingWanDevDatas;
     wxTimer                                                   m_loopCheckTimer;
     std::atomic_bool                                          m_blockCommandFailedUpdate;

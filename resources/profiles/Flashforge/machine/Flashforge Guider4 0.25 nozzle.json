@@ -57,6 +57,7 @@
     "fan_speedup_overhangs": "1",
     "fan_speedup_time": "0",
     "from": "system",
+    "setting_id": "7CkhY1WmcYAzSUG1",
     "instantiation": "true",
     "file_start_gcode": "",
     "gcode_flavor": "klipper",

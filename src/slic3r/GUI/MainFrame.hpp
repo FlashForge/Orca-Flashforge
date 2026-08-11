@@ -240,7 +240,7 @@ protected:
     virtual void on_dpi_changed(const wxRect &suggested_rect) override;
     virtual void on_sys_color_changed() override;
 
-#ifdef __WIN32__
+#ifdef __WXMSW__
     WXLRESULT MSWWindowProc(WXUINT nMsg, WXWPARAM wParam, WXLPARAM lParam) override;
 #endif
 
@@ -333,9 +333,9 @@ public:
 
     void        update_ui_from_settings();
     //BBS
-    void        show_sync_dialog();
+    void        show_sync_dialog(const std::string& user_id);
     void        update_side_preset_ui();
-    void        on_select_default_preset(SimpleEvent& evt);
+    void        on_select_default_preset(wxCommandEvent& evt);
 
     void        resetFirstGotoMonitor() { m_firstGotoMonitor = true; }
     bool        is_loaded() const { return m_loaded; }
@@ -408,6 +408,7 @@ public:
 	void fit_tab_labels(); // ORCA
 
     PA_Calibration_Dlg* m_pa_calib_dlg{ nullptr };
+    FlowRateCalibrationDialog* m_flow_rate_calib_dlg{ nullptr };
     Temp_Calibration_Dlg* m_temp_calib_dlg{ nullptr };
     MaxVolumetricSpeed_Test_Dlg* m_vol_test_dlg { nullptr };
     VFA_Test_Dlg* m_vfa_test_dlg { nullptr };

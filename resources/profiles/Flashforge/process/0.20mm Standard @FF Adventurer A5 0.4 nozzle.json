@@ -1,6 +1,7 @@
 {
     "enable_arc_fitting": "1",
     "from": "system",
+    "setting_id": "ZrWC7sW8I5eH0nI0",
     "instantiation": "true",
     "compatible_printers": [
         "Flashforge Adventurer A5 0.4 nozzle"

@@ -669,7 +669,12 @@ void DeviceListPanel::build()
     m_default_filter_item = new DeviceFilterItem(m_filter_popup, _L("All"), true);
     m_default_filter_item->Bind(EVT_DEVICE_FILTER_ITEM_CLICKED, &DeviceListPanel::onFilterItemClicked, this);
     m_default_filter_item->Show(false);
+#ifdef __APPLE__
+    const wxColour device_page_bg("#EDEDED");
+    SetBackgroundColour(device_page_bg);
+#else
     SetBackgroundColour(wxColour("#F0F0F0"));
+#endif
     m_placement_btn = new DropDownButton(this, _L("All"), create_scaled_bitmap("device_dropdown", this, 8));
     m_status_btn  = new DropDownButton(this, _L("Status"), create_scaled_bitmap("device_dropdown", this, 8));
     m_type_btn = new DropDownButton(this, _L("Machine Type"), create_scaled_bitmap("device_dropdown", this, 8));
@@ -750,8 +755,14 @@ void DeviceListPanel::build()
     });
 
     m_simple_book = new wxSimplebook(this);
+#ifdef __APPLE__
+    m_simple_book->SetBackgroundColour(device_page_bg);
+#endif
     // no device panel
     m_no_device_panel = new wxPanel(m_simple_book);
+#ifdef __APPLE__
+    m_no_device_panel->SetBackgroundColour(device_page_bg);
+#endif
     m_no_device_bitmap = new wxStaticBitmap(m_no_device_panel, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxDefaultSize, 0);
     m_no_device_bitmap->SetBitmap(create_scaled_bitmap("monitor_device_empty", nullptr, 250));
     m_no_device_staticText = new wxStaticText(m_no_device_panel, wxID_ANY, wxT("No Device"));
@@ -772,8 +783,14 @@ void DeviceListPanel::build()
     m_simple_book->AddPage(m_no_device_panel, wxEmptyString, true);
 
     m_device_scrolled_window = new wxScrolledWindow(m_simple_book, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHSCROLL | wxVSCROLL);
+#ifdef __APPLE__
+    m_device_scrolled_window->SetBackgroundColour(device_page_bg);
+#endif
     m_device_scrolled_window->SetScrollRate(50, 50);
     m_device_panel = new wxPanel(m_device_scrolled_window);
+#ifdef __APPLE__
+    m_device_panel->SetBackgroundColour(device_page_bg);
+#endif
     wxBoxSizer* scroll_sizer = new wxBoxSizer(wxVERTICAL);
     scroll_sizer->AddSpacer(FromDIP(30));
     scroll_sizer->Add(m_device_panel, 1, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
@@ -1528,7 +1545,7 @@ bool DeviceListPanel::getDeviceInfo(DeviceInfoItemPanel::DeviceInfo& info, int c
             info.name = data.wanDevInfo.name;        
             info.pid = data.devDetail->pid;
             info.placement = data.wanDevInfo.location;
-            info.status = data.wanDevInfo.status;
+            info.status = wan_device_display_status(data);
             if (data.devDetail) {
                 info.errorCode = data.devDetail->errorCode;
                 info.progress = data.devDetail->printProgress * 100;
@@ -1636,7 +1653,7 @@ void DeviceListPanel::onComWanDeviceInfoUpdate(ComWanDevInfoUpdateEvent& event)
         info.conn_id = conn_id;
         info.name = data.wanDevInfo.name;
         info.placement = data.wanDevInfo.location;
-        info.status = data.wanDevInfo.status;
+        info.status = wan_device_display_status(data);
         if (data.devDetail) {
             info.pid = data.devDetail->pid;
             info.errorCode = data.devDetail->errorCode;

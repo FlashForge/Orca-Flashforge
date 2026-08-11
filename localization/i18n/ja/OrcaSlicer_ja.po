@@ -171,8 +171,8 @@ msgstr "ツールタイプ"
 msgid "Smart fill angle"
 msgstr "自動充填角度"
 
-msgid "On overhangs only"
-msgstr "オーバーハングのみ"
+msgid "On highlighted overhangs only"
+msgstr "強調表示されたオーバーハングのみ"
 
 msgid "Auto support threshold angle: "
 msgstr "自動サポート角度閾値"
@@ -5032,6 +5032,9 @@ msgstr "コスト"
 msgid "Filament change times"
 msgstr "フィラメント交換回数"
 
+msgid "Tool changes"
+msgstr "ツール交換回数"
+
 msgid "Color change"
 msgstr "色変更"
 
@@ -6430,6 +6433,15 @@ msgstr "オリジナルモデル"
 msgid "Number of Colors"
 msgstr "色数"
 
+msgid "Color Style"
+msgstr "カラースタイル"
+
+msgid "Soft"
+msgstr "ソフト"
+
+msgid "Vivid"
+msgstr "ビビッド"
+
 msgid "Parameters have changed, please click Apply to take effect"
 msgstr "パラメータが変更されました。有効にするには「適用」をクリックしてください"
 
@@ -7008,6 +7020,12 @@ msgstr "エクスポートが成功しました。"
 msgid "Model file downloaded."
 msgstr "モデルファイルがダウンロードされました。"
 
+msgid "Shared profiles may be available for this printer."
+msgstr "このプリンターでは共有プロファイルを利用できる場合があります。"
+
+msgid "Browse shared profiles"
+msgstr "共有プロファイルを参照"
+
 msgid "Serious warning:"
 msgstr "重大な警告:"
 
@@ -7539,7 +7557,9 @@ msgstr "一度に追加できるフルカラーファイルは1つだけです"
 msgid ""
 "Only one OBJ or GLB file can be imported at a time. Please select the file "
 "you want to use this time."
-msgstr "一度にインポートできるOBJまたはGLBファイルは1つだけです。今回使用するファイルを選択してください。"
+msgstr ""
+"一度にインポートできるOBJまたはGLBファイルは1つだけです。今回使用するファイル"
+"を選択してください。"
 
 msgid "Please import model files with the same file extension each time"
 msgstr "一度にインポートするモデルファイルは同じ拡張子にしてください"
@@ -8614,6 +8634,9 @@ msgstr "安定版アップデートのみ確認"
 
 msgid "Auto sync user presets (Printer/Filament/Process)"
 msgstr "ユーザープリセットの自動同期 (プリンター/フィラメント/プロセス)"
+
+msgid "Synchronize user presets with FlashForge Cloud after login"
+msgstr "ログイン後にユーザープリセットをFlashForge Cloudと同期します"
 
 msgid "Update built-in Presets automatically."
 msgstr "組み込みプリセットを自動更新します。"
@@ -20175,6 +20198,9 @@ msgstr "一時停止中"
 
 msgid "Printer disconnected"
 msgstr "プリンターが切断されました"
+
+msgid "No camera detected"
+msgstr "カメラが検出されませんでした"
 
 #~ msgid "每次只可添加一个全彩文件"
 #~ msgstr "一度に追加できるフルカラーファイルは1つだけです"

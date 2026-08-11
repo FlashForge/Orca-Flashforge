@@ -283,6 +283,56 @@ def check_name_consistency(profiles_dir, vendor_name):
     
     return error_count, 0
 
+
+def check_inheritance_order(profiles_dir, vendor_name):
+    """Ensure locally inherited process presets are declared after their parents.
+
+    Process presets are loaded in manifest order. If a child appears before a
+    parent from the same process list, loading that vendor bundle fails.
+    """
+    vendor_dir = profiles_dir / vendor_name
+    vendor_file = profiles_dir / (vendor_name + ".json")
+
+    try:
+        with open(vendor_file, "r", encoding="UTF-8") as fp:
+            data = json.load(fp)
+    except Exception:
+        # The existing consistency check reports missing or malformed manifests.
+        return 0
+
+    profiles = data.get("process_list", [])
+    positions = {
+        profile.get("name"): index
+        for index, profile in enumerate(profiles)
+        if isinstance(profile, dict) and profile.get("name")
+    }
+
+    error_count = 0
+    for child_index, profile in enumerate(profiles):
+        if not isinstance(profile, dict) or "sub_path" not in profile:
+            continue
+
+        sub_file = vendor_dir / profile["sub_path"]
+        try:
+            with open(sub_file, "r", encoding="UTF-8") as fp:
+                sub_data = json.load(fp)
+        except Exception:
+            # The existing consistency check reports missing or malformed sub-profiles.
+            continue
+
+        parent_name = sub_data.get("inherits")
+        parent_index = positions.get(parent_name)
+        if parent_index is not None and parent_index >= child_index:
+            print_error(
+                f"process_list inheritance order invalid in {vendor_file.relative_to(profiles_dir)}: "
+                f"parent '{parent_name}' must appear before child '{profile.get('name')}' "
+                f"({sub_file.relative_to(profiles_dir)})"
+            )
+            error_count += 1
+
+    return error_count
+
+
 def check_filament_id(vendor, vendor_folder):
     """
     Make sure filament_id is not longer than 8 characters, otherwise AMS won't work properly
@@ -359,6 +409,50 @@ def check_obsolete_keys(profiles_dir, vendor_name):
 CONFLICT_KEYS = [
     ['extruder_clearance_radius', 'extruder_clearance_max_radius'],
 ]
+
+VECTOR_KEYS = {
+    "filament_type",
+}
+
+def check_vector_type_keys(profiles_dir, vendor_name):
+    """
+    Check that properties expected to be vectors (JSON arrays) are not stored as scalars.
+    For example, `filament_type` must be a list like ["PA-CF"], not a string "PA-CF".
+
+    Parameters:
+        profiles_dir (Path): Base profiles directory
+        vendor_name (str): Vendor name
+
+    Returns:
+        int: Number of errors found
+    """
+    error_count = 0
+    vendor_path = profiles_dir / vendor_name
+
+    if not vendor_path.exists():
+        return 0
+
+    for file_path in vendor_path.rglob("*.json"):
+        try:
+            with open(file_path, "r", encoding="UTF-8") as fp:
+                data = json.load(fp)
+        except Exception as e:
+            print_error(f"Error processing {file_path.relative_to(profiles_dir)}: {e}")
+            error_count += 1
+            continue
+
+        if not isinstance(data, dict):
+            continue
+
+        for key in VECTOR_KEYS:
+            if key in data and not isinstance(data[key], list):
+                print_error(
+                    f"'{key}' must be an array in {file_path.relative_to(profiles_dir)}, "
+                    f"got {type(data[key]).__name__}: {data[key]!r}"
+                )
+                error_count += 1
+
+    return error_count
 
 def check_conflict_keys(profiles_dir, vendor_name):
     """
@@ -444,9 +538,13 @@ def main():
         errors_found += new_errors
         warnings_found += new_warnings
 
+        errors_found += check_inheritance_order(profiles_dir, vendor_name)
+
         new_errors, new_warnings = check_conflict_keys(profiles_dir, vendor_name)
         errors_found += new_errors
         warnings_found += new_warnings
+
+        errors_found += check_vector_type_keys(profiles_dir, vendor_name)
 
         errors_found += check_filament_id(vendor_name, vendor_path / "filament")
         checked_vendor_count += 1

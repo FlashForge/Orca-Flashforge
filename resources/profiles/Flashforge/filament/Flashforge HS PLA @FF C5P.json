@@ -54,6 +54,7 @@
     ],
     "from": "system",
     "inherits": "Generic PLA @System",
+    "setting_id": "xdFZUsj1cNLXdvT6",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge HS PLA @FF C5P",
@@ -61,7 +62,7 @@
         "210"
     ],
     "pressure_advance": [
-        "0.025"
+        "0.035"
     ],
     "slow_down_layer_time": [
         "8"
@@ -75,5 +76,11 @@
     "supertack_plate_temp_initial_layer": [
         "40"
     ],
-    "version": "2.3.0.3"
+    "version": "2.3.0.3",
+    "filament_extruder_variant": [
+        "Direct Drive Standard"
+    ],
+    "filament_flow_ratio": [
+        "1"
+    ]
 }

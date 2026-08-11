@@ -1,7 +1,7 @@
 {
   "type": "process",
   "from": "system",
-  "setting_id": "GP001",
+  "setting_id": "XRInSfrQCATmZl6F",
   "instantiation": "true",
   "compatible_printers": [
     "Flashforge Guider 3 Ultra 0.4 Nozzle"
