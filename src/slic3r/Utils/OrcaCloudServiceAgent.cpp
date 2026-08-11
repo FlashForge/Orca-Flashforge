@@ -878,34 +878,12 @@ int OrcaCloudServiceAgent::get_user_presets(std::map<std::string, std::map<std::
         std::string current_user_id = get_user_id();
 
         for (const auto& upsert : resp.upserts) {
-            if (upsert.id.empty() || !upsert.content.is_object()) {
-                BOOST_LOG_TRIVIAL(warning) << "OrcaCloudServiceAgent: ignoring cloud preset without setting_id or object content";
-                continue;
+            std::string preset_type = IOT_PRINT_TYPE_STRING;
+            if (upsert.content.contains("type") && upsert.content["type"].is_string()) {
+                preset_type = upsert.content["type"].get<std::string>();
             }
 
-            std::map<std::string, std::string> values;
-            for (const auto& [key, value] : upsert.content.items())
-                values[key] = value.is_string() ? value.get<std::string>() : value.dump();
-
-            values[IOT_JSON_KEY_SETTING_ID] = upsert.id;
-            if (!values.count(IOT_JSON_KEY_NAME) && !upsert.name.empty())
-                values[IOT_JSON_KEY_NAME] = upsert.name;
-            if (!values.count(IOT_JSON_KEY_TYPE))
-                values[IOT_JSON_KEY_TYPE] = IOT_PRINT_TYPE_STRING;
-            if (!upsert.updated_at.empty())
-                values[IOT_JSON_KEY_UPDATED_TIME] = upsert.updated_at;
-
-            if (!values.count(IOT_JSON_KEY_NAME) || values[IOT_JSON_KEY_NAME].empty()) {
-                BOOST_LOG_TRIVIAL(warning) << "OrcaCloudServiceAgent: ignoring cloud preset " << upsert.id << " without a name";
-                continue;
-            }
-
-            const auto [unused, inserted] = user_presets->emplace(upsert.id, std::move(values));
-            if (!inserted) {
-                BOOST_LOG_TRIVIAL(error) << "OrcaCloudServiceAgent: duplicate setting_id " << upsert.id;
-                success = false;
-                return;
-            }
+            (*user_presets)[preset_type][upsert.id] = upsert.content.dump();
         }
 
         if (resp.next_cursor != 0) {
