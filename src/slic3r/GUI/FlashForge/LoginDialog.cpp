@@ -1054,7 +1054,7 @@ void LoginDialog::onPage1Login(wxMouseEvent& event)
 #ifdef _WIN32
              //Hide();
              Close();
-#else if __APPLE__
+#elif defined(__APPLE__)
              Close();
 #endif
              if (app_config) {
@@ -1219,7 +1219,7 @@ void LoginDialog::onPage2Login(wxMouseEvent& event)
             //Hide();
             Close();
             BOOST_LOG_TRIVIAL(info) << "usr login succeed , hide window!";
-#else if __APPLE__
+#elif defined(__APPLE__)
             Close();
 #endif
             if (app_config) {

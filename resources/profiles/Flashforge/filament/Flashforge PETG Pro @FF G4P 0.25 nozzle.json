@@ -43,6 +43,7 @@
         "80"
     ],
     "inherits": "Flashforge PETG @FF AD5M 0.25 Nozzle",
+    "setting_id": "8Jc4eedkknqNB87s",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PETG Pro @FF G4P 0.25 nozzle",

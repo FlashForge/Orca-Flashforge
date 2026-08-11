@@ -3,6 +3,7 @@
         "40"
     ],
     "compatible_printers": [
+        "Flashforge Creator 5 0.25 nozzle",
         "Flashforge Creator 5 0.4 nozzle",
         "Flashforge Creator 5 0.6 nozzle",
         "Flashforge Creator 5 0.8 nozzle"
@@ -57,10 +58,11 @@
         "65"
     ],
     "inherits": "Generic PLA High Speed @System",
+    "setting_id": "eWi9gwIhz2FPuzut",
     "instantiation": "true",
     "name": "Generic HS PLA @FF C5",
     "pressure_advance": [
-        "0.025"
+        "0.035"
     ],
     "slow_down_layer_time": [
         "8"
@@ -80,5 +82,8 @@
     "textured_plate_temp_initial_layer": [
         "65"
     ],
-    "version": "2.3.0.3"
+    "version": "2.3.0.3",
+    "filament_flow_ratio": [
+        "1"
+    ]
 }

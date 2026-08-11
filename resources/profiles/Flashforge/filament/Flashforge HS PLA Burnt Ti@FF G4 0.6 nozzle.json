@@ -43,6 +43,7 @@
     ],
     "from": "system",
     "inherits": "Flashforge Generic PLA @G3U 0.6 Nozzle",
+    "setting_id": "It2NI6OFhNEUvulz",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge HS PLA Burnt Ti@FF G4 0.6 nozzle",

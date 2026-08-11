@@ -49,6 +49,7 @@
         "80"
     ],
     "inherits": "FusRock Generic PET-CF @G3U 0.6 Nozzle",
+    "setting_id": "wguPruY9M7GcMt6q",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Generic PET @FF G4 0.6 nozzle",

@@ -176,8 +176,8 @@ msgstr "Type d'outil"
 msgid "Smart fill angle"
 msgstr "Angle de remplissage intelligent"
 
-msgid "On overhangs only"
-msgstr "Sur les surplombs uniquement"
+msgid "On highlighted overhangs only"
+msgstr "Uniquement sur les surplombs mis en évidence"
 
 msgid "Auto support threshold angle: "
 msgstr "Angle de seuil de support automatique : "
@@ -5216,6 +5216,9 @@ msgstr "Coût"
 msgid "Filament change times"
 msgstr "Temps de changement de filament"
 
+msgid "Tool changes"
+msgstr "Changements d'outil"
+
 msgid "Color change"
 msgstr "Changement de couleur"
 
@@ -6662,6 +6665,15 @@ msgstr "Modèle original"
 msgid "Number of Colors"
 msgstr "Nombre de couleurs"
 
+msgid "Color Style"
+msgstr "Style de couleur"
+
+msgid "Soft"
+msgstr "Doux"
+
+msgid "Vivid"
+msgstr "Vif"
+
 msgid "Parameters have changed, please click Apply to take effect"
 msgstr "Les paramètres ont été modifiés, cliquez sur Appliquer pour les prendre en compte"
 
@@ -7256,6 +7268,12 @@ msgstr "Exportation réussie."
 msgid "Model file downloaded."
 msgstr "Modèle téléchargé."
 
+msgid "Shared profiles may be available for this printer."
+msgstr "Des profils partagés peuvent être disponibles pour cette imprimante."
+
+msgid "Browse shared profiles"
+msgstr "Parcourir les profils partagés"
+
 msgid "Serious warning:"
 msgstr "Avertissement sérieux :"
 
@@ -7821,7 +7839,9 @@ msgstr "Un seul fichier en couleur peut être ajouté à la fois"
 msgid ""
 "Only one OBJ or GLB file can be imported at a time. Please select the file "
 "you want to use this time."
-msgstr "Un seul fichier OBJ ou GLB peut être importé à la fois. Veuillez sélectionner le fichier que vous souhaitez utiliser cette fois-ci."
+msgstr ""
+"Un seul fichier OBJ ou GLB peut être importé à la fois. Veuillez "
+"sélectionner le fichier que vous souhaitez utiliser cette fois-ci."
 
 msgid "Please import model files with the same file extension each time"
 msgstr ""
@@ -8964,7 +8984,10 @@ msgid "Check for stable updates only"
 msgstr "Vérifier les mises à jour stables uniquement"
 
 msgid "Auto sync user presets (Printer/Filament/Process)"
-msgstr ""
+msgstr "Synchroniser automatiquement les préréglages utilisateur (Imprimante/Filament/Processus)"
+
+msgid "Synchronize user presets with FlashForge Cloud after login"
+msgstr "Synchroniser les préréglages utilisateur avec FlashForge Cloud après la connexion"
 
 msgid "Update built-in Presets automatically."
 msgstr "Mettre à jour automatiquement les préréglages intégrés."
@@ -22789,6 +22812,9 @@ msgstr "Vidéo en pause"
 
 msgid "Printer disconnected"
 msgstr "Imprimante déconnectée"
+
+msgid "No camera detected"
+msgstr "Aucune caméra détectée"
 
 #~ msgid "每次只可添加一个全彩文件"
 #~ msgstr "Un seul fichier en couleur peut être ajouté à la fois"

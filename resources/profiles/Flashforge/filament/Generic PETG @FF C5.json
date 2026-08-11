@@ -1,5 +1,6 @@
 {
     "compatible_printers": [
+        "Flashforge Creator 5 0.25 nozzle",
         "Flashforge Creator 5 0.4 nozzle",
         "Flashforge Creator 5 0.6 nozzle",
         "Flashforge Creator 5 0.8 nozzle"
@@ -38,7 +39,7 @@
         "Direct Drive Standard"
     ],
     "filament_flow_ratio": [
-        "0.98"
+        "1"
     ],
     "filament_settings_id": [
         "Generic PETG @FF C5"
@@ -54,6 +55,7 @@
         "85"
     ],
     "inherits": "Generic PETG @System",
+    "setting_id": "N9k2veipYzeiYIGk",
     "instantiation": "true",
     "name": "Generic PETG @FF C5",
     "overhang_fan_speed": [
@@ -63,7 +65,7 @@
         "10%"
     ],
     "pressure_advance": [
-        "0.0325"
+        "0.07"
     ],
     "slow_down_min_speed": [
         "15"

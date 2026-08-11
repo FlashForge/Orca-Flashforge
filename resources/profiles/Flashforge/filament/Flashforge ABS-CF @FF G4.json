@@ -46,6 +46,7 @@
         "100"
     ],
     "inherits": "Flashforge Generic ABS",
+    "setting_id": "d4EGsmMeEDCOUBF2",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge ABS-CF @FF G4",

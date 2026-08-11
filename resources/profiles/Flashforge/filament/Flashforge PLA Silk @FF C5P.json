@@ -60,6 +60,7 @@
     ],
     "from": "system",
     "inherits": "Generic PLA Silk @System",
+    "setting_id": "xxeZ6VPjRFevxDnK",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PLA Silk @FF C5P",
@@ -78,5 +79,14 @@
     "supertack_plate_temp_initial_layer": [
         "40"
     ],
-    "version": "2.3.0.3"
+    "version": "2.3.0.3",
+    "filament_extruder_variant": [
+        "Direct Drive Standard"
+    ],
+    "filament_flow_ratio": [
+        "1"
+    ],
+    "pressure_advance": [
+        "0.0375"
+    ]
 }

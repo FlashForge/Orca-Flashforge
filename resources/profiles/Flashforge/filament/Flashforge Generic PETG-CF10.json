@@ -167,7 +167,6 @@
     "required_nozzle_HRC": [
         "0"
     ],
-    "setting_id": "GFSA04",
     "slow_down_for_layer_cooling": [
         "1"
     ],

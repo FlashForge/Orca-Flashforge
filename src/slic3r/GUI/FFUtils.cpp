@@ -4,6 +4,8 @@
 #include <chrono>
 #include <memory>
 #include <utility>
+#include <boost/algorithm/string/predicate.hpp>
+#include <wx/webview.h>
 #include <curl/curl.h>
 #include "slic3r/GUI/GUI_App.hpp"
 #include "slic3r/GUI/I18N.hpp"
@@ -550,11 +552,33 @@ wxWebView *FFUtils::CreateWebView(wxWindow *parent)
     return WebView::CreateWebView(parent, wxEmptyString);
 }
 
-std::unordered_map<std::string, FFPrinterSimpleData> FFUtils::getDevListForModelId(std::string modelId)
+std::unordered_map<std::string, FFPrinterSimpleData> FFUtils::getDevListForModelId(std::string modelId, bool include_printing)
 {
     std::unordered_map<std::string, FFPrinterSimpleData> list;
     bool                                       valid = false;
     com_id_list_t                              idList = MultiComMgr::inst()->getReadyDevList();
+    auto can_sync_from_status = [include_printing](const std::string &status) {
+        if (status.empty())
+            return false;
+        if (boost::algorithm::iequals(status, "ready"))
+            return true;
+        return include_printing &&
+               (boost::algorithm::iequals(status, "printing") ||
+                boost::algorithm::iequals(status, "running") ||
+                boost::algorithm::iequals(status, "prepare") ||
+                boost::algorithm::iequals(status, "slicing") ||
+                boost::algorithm::iequals(status, "pausing") ||
+                boost::algorithm::iequals(status, "pause") ||
+                boost::algorithm::iequals(status, "canceling") ||
+                boost::algorithm::iequals(status, "busy") ||
+                boost::algorithm::iequals(status, "calibrate_doing") ||
+                boost::algorithm::iequals(status, "heating") ||
+                boost::algorithm::iequals(status, "loading") ||
+                boost::algorithm::iequals(status, "cloud_slicing") ||
+                boost::algorithm::iequals(status, "downloading") ||
+                boost::algorithm::iequals(status, "unzipping") ||
+                boost::algorithm::iequals(status, "sending"));
+    };
     for (auto id : idList) {
         auto data = MultiComMgr::inst()->devData(id, &valid);
         if (valid) {
@@ -576,7 +600,7 @@ std::unordered_map<std::string, FFPrinterSimpleData> FFUtils::getDevListForModel
             if (modelId != getPrinterModelId(mdata.pid)) {
                 continue;
             }
-            if (!status.empty() && status == "ready") {
+            if (can_sync_from_status(status)) {
                 auto iter = list.find(dev_id);
                 if (iter == list.end()) {
                     list.emplace(dev_id, mdata);
@@ -591,27 +615,70 @@ std::unordered_map<std::string, FFPrinterSimpleData> FFUtils::getDevListForModel
     return list;
 }
 
-std::unordered_map<std::string, FFPrinterSimpleData> FFUtils::getSelectPresetDevList()
-{ 
+std::unordered_map<std::string, FFPrinterSimpleData> FFUtils::getSelectPresetDevList(bool include_printing)
+{
     PresetBundle* preset_bundle = wxGetApp().preset_bundle;
     if (preset_bundle == nullptr) {
         return {};
     }
     std::string model_id = preset_bundle->printers.get_edited_preset().get_printer_type(preset_bundle);
-    return getDevListForModelId(model_id);
+    return getDevListForModelId(model_id, include_printing);
 }
 
-bool FFUtils::isLikeFilament(const wxString& str) { 
-    return str == "TPU"; 
+bool FFUtils::isLikeFilament(const wxString& str) {
+    return str == "TPU";
 }
+
+namespace {
+
+std::string compact_material_text(const wxString &str)
+{
+    std::string raw = std::string(str.utf8_string());
+    std::string compact;
+    compact.reserve(raw.size());
+    for (unsigned char ch : raw) {
+        if (std::isalnum(ch))
+            compact.push_back(char(std::toupper(ch)));
+    }
+    return compact;
+}
+
+std::string canonical_material_name(const wxString &str)
+{
+    const std::string compact = compact_material_text(str);
+    if (compact.empty())
+        return {};
+
+    static constexpr const char *known_materials[] = {
+        "SUPPORT", "BVOH", "PETG", "PCTG", "HIPS", "PLA", "ABS", "ASA",
+        "TPU", "PVA", "PET", "PPS", "PA", "PC", "PP", "PE"
+    };
+
+    for (const char *material : known_materials) {
+        if (compact.find(material) != std::string::npos)
+            return material;
+    }
+    return {};
+}
+
+} // namespace
 
 bool FFUtils::matchMaterialName(const wxString& str, const wxString& originStr)
 {
-    if (isLikeFilament(originStr)) {
-        return str.StartsWith(originStr);
-    } else {
-        return str.IsSameAs(originStr, false);
-    }
+    const wxString material = str.Strip(wxString::both);
+    const wxString origin   = originStr.Strip(wxString::both);
+    if (material.empty() || origin.empty())
+        return false;
+
+    if (material.IsSameAs(origin, false))
+        return true;
+
+    const std::string material_name = canonical_material_name(material);
+    const std::string origin_name   = canonical_material_name(origin);
+    if (!material_name.empty() && !origin_name.empty())
+        return material_name == origin_name;
+
+    return compact_material_text(material) == compact_material_text(origin);
 }
 
 } // end namespace

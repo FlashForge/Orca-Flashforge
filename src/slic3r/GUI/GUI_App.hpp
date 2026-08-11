@@ -6,12 +6,14 @@
 #include "ImGuiWrapper.hpp"
 #include "ConfigWizard.hpp"
 #include "OpenGLManager.hpp"
+#include "PresetBundleDialog.hpp"
 #include "libslic3r/Preset.hpp"
 #include "libslic3r/PresetBundle.hpp"
 #include "slic3r/GUI/DeviceManager.hpp"
 #include "slic3r/GUI/UserNotification.hpp"
 #include "slic3r/GUI/Widgets/NewTempInput.hpp"
 #include "slic3r/Utils/NetworkAgent.hpp"
+#include "slic3r/Utils/BBLCloudServiceAgent.hpp"
 #include "slic3r/GUI/WebViewDialog.hpp"
 #include "slic3r/GUI/MsgDialog.hpp"
 #include "slic3r/GUI/WebUserLoginDialog.hpp"
@@ -168,7 +170,7 @@ class GizmoObjectManipulation;
 static wxString dots("...", wxConvUTF8);
 
 // Does our wxWidgets version support markup?
-#if wxUSE_MARKUP && wxCHECK_VERSION(3, 1, 1)
+#if wxUSE_MARKUP
     #define SUPPORTS_MARKUP
 #endif
 
@@ -315,12 +317,20 @@ private:
     Slic3r::UserManager* m_user_manager { nullptr };
     Slic3r::TaskManager* m_task_manager { nullptr };
     NetworkAgent* m_agent { nullptr };
-    std::vector<std::string> need_delete_presets;   // store setting ids of preset
+    std::map<std::string, std::string> need_delete_presets; // setting_id -> retained .info path
     std::vector<bool> m_create_preset_blocked { false, false, false, false, false, false }; // excceed limit
     bool m_networking_compatible { false };
     bool m_networking_need_update { false };
     bool m_networking_cancel_update { false };
     std::shared_ptr<UpgradeNetworkJob> m_upgrade_network_job;
+
+    // ORCA: for installing vendors on the main thread when presets to be synced requires it
+    // vendor structure is:
+    // [vendor_name]: { model: variants, model: variants, ... }
+    // filaments structure is:
+    // [filament_name]: true/false, ...
+    std::map<std::string, std::map<std::string, std::set<std::string>>> need_add_vendors;
+    std::map<std::string, std::string> need_add_filaments;
 
     // login widget
     ZUserLogin*     login_dlg { nullptr };
@@ -341,6 +351,7 @@ private:
 
     boost::thread    m_sync_update_thread;
     std::shared_ptr<int> m_user_sync_token;
+    std::string      m_sync_prompted_user_id;
     bool             m_is_dark_mode{ false };
     bool             m_adding_script_handler { false };
     bool             m_side_popup_status{false};
@@ -504,6 +515,7 @@ private:
     void            check_printer_presets();
 
     void            recreate_GUI(const wxString& message);
+    bool            restart_application();
     void            system_info();
     void            keyboard_shortcuts();
     void            load_project(wxWindow *parent, wxString& input_file) const;
@@ -587,9 +599,19 @@ private:
     void            push_notification(const MachineObject* obj, wxString msg, wxString title = wxEmptyString, UserNotificationStyle style = UserNotificationStyle::UNS_NORMAL);
     void            reload_settings();
     void            remove_user_presets();
+    void            handle_user_preset_sync_on_login(const std::string& user_id);
     void            sync_preset(Preset* preset);
     void            start_sync_user_preset(bool with_progress_dlg = false);
     void            stop_sync_user_preset();
+
+    // Bundle subscription sync
+    void            check_bundle_updates();
+    void            sync_bundle(std::string bundle_id, std::string version);
+    bool            unsubscribe_bundle(const std::string& id);
+    void            update_single_bundle(wxCommandEvent& evt);
+
+    PresetBundleDialog* m_preset_bundle_dlg{nullptr};
+
     void            start_http_server();
     void            start_http_server(int port);
     void            stop_http_server();
@@ -614,7 +636,9 @@ private:
     Tab*            get_plate_tab();
     Tab*            get_model_tab(bool part = false);
     Tab*            get_layer_tab();
+    ConfigOptionMode get_saved_mode();
     ConfigOptionMode get_mode();
+    std::string     get_saved_mode_str();
     std::string     get_mode_str();
     void            save_mode(const /*ConfigOptionMode*/int mode) ;
     void            update_mode();
@@ -638,10 +662,13 @@ private:
     bool            checked_tab(Tab* tab);
     //BBS: add preset combox re-active logic
     void            load_current_presets(bool active_preset_combox = false, bool check_printer_presets = true);
-    std::vector<std::string> &get_delete_cache_presets();
-    std::vector<std::string> get_delete_cache_presets_lock();
-    void            delete_preset_from_cloud(std::string setting_id);
+    std::map<std::string, std::string> &get_delete_cache_presets();
+    std::map<std::string, std::string> get_delete_cache_presets_lock();
+    void            process_delete_presets();
+    void            delete_preset_from_cloud(std::string setting_id, std::string preset_file_path);
     void            preset_deleted_from_cloud(std::string setting_id);
+    void            scan_orphaned_info_files();
+    static std::string extract_setting_id_from_info(const std::string &info_file_path);
 
     wxString        filter_string(wxString str);
 	wxString        current_language_code() const { return m_active_language_code.empty() && m_wxLocale ? m_wxLocale->GetCanonicalName() : m_active_language_code; }
@@ -650,7 +677,8 @@ private:
     bool            is_localized() const { return m_wxLocale->GetLocale() != "English"; }
 
     void            open_preferences(size_t open_on_tab = 0, const std::string& highlight_option = std::string());
-
+    void            open_presetbundledialog(size_t open_on_tab = 0, const std::string& highlight_option = std::string());
+    void            open_exportpresetbundledialog(size_t open_on_tab = 0, const std::string& highlight_option = std::string());
     virtual bool OnExceptionInMainLoop() override;
     // Calls wxLaunchDefaultBrowser if user confirms in dialog.
     bool            open_browser_with_warning_dialog(const wxString& url, int flags = 0);
@@ -661,6 +689,8 @@ private:
     void            MacOpenURL(const wxString& url) override;
 #endif /* __APPLE */
 
+    Sidebar*             sidebar_ptr();
+    const Sidebar*       sidebar_ptr() const;
     Sidebar&             sidebar();
     GizmoObjectManipulation *obj_manipul();
     ObjectSettings*      obj_settings();
@@ -786,6 +816,10 @@ private:
     bool            hot_reload_network_plugin();
     std::string     get_latest_network_version() const;
     bool            has_network_update_available() const;
+    // Orca: return the client version to report to Bambu servers. Pinned to
+    // 01.10.01.50 when the legacy network plugin lacks get_my_token support
+    // so the auth server stays on the ?access_token= redirect path.
+    std::string     get_bbl_client_version();
 
 private:
 #ifdef __WXGTK__
@@ -802,6 +836,12 @@ private:
     bool            on_init_network(bool try_backup = false);
     void            init_networking_callbacks();
     void            init_app_config();
+    // For pre-release (alpha/beta) builds that use an isolated data directory:
+    // mirror the stable release's slicer_uuid (so the cloud treats both as the same
+    // device and they don't log each other out) and seed the saved login once, by
+    // reading the stable release's config file. No-op for stable builds or when the
+    // stable config is absent.
+    void            seed_prerelease_config_from_stable();
     void            remove_old_networking_plugins();
     void            drain_pending_events(int timeout_ms);
     bool            wait_for_network_idle(int timeout_ms);
@@ -834,11 +874,21 @@ private:
 
 DECLARE_APP(GUI_App)
 wxDECLARE_EVENT(EVT_CONNECT_LAN_MODE_PRINT, wxCommandEvent);
+wxDECLARE_EVENT(EVT_UPDATE_PRESET_BUNDLE, wxCommandEvent);
+wxDECLARE_EVENT(EVT_UPDATE_BUNDLE_COMPLETE, wxCommandEvent);
+
 
 bool is_support_filament(int extruder_id, bool strict_check = true);
 bool is_soluble_filament(int extruder_id);
 // check if the filament for model is in the list
 bool has_filaments(const std::vector<string>& model_filaments);
+
+// Pre-release tag derived from the build version (Orca_Flashforge_VERSION):
+// "Beta" / "Alpha" for pre-release builds, empty for stable releases.
+wxString get_app_release_tag();
+// User-facing application name, e.g. "Flash Studio" or "Flash Studio Beta".
+// Note: this is display-only and does NOT change the network client identity.
+wxString get_app_display_name();
 } // namespace GUI
 } // Slic3r
 

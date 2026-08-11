@@ -34,6 +34,7 @@
     ],
     "from": "system",
     "inherits": "Flashforge Generic TPU",
+    "setting_id": "s0hK4FbFmjbpYt7B",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "kexcelled TPU 64D @FF G4P",

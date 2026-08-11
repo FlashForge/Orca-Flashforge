@@ -196,6 +196,57 @@ msgstr ""
 "在排列或验证模型间距时，最终的圈数不会被考虑在内。\n"
 "在这种情况下，建议增加圈数。"
 
+msgid "Expert settings"
+msgstr "专家设置"
+
+msgid "Simple settings"
+msgstr "简单设置"
+
+msgid "Local-Z pair split: requested F<a>/F<b> <percent>/<percent>."
+msgstr "Local-Z 成对拆分：请求 F<a>/F<b> <percent>/<percent>。"
+
+msgid "Cycle settings visibility"
+msgstr "切换设置可见性"
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d."
+msgstr "Local-Z 成对拆分：请求 F%u/F%u %d/%d。"
+
+msgid "Local-Z breakdown: manual pattern rows do not use pair decomposition."
+msgstr "Local-Z 分解：手动图案行不使用成对分解。"
+
+msgid "Local-Z breakdown: same-layer mode does not use local-Z pair decomposition."
+msgstr "Local-Z 分解：同层模式不使用 Local-Z 成对分解。"
+
+msgid "Local-Z breakdown: unavailable."
+msgstr "Local-Z 分解：不可用。"
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d, effective %d/%d over %d sublayers."
+msgstr "Local-Z 成对拆分：请求 F%u/F%u %d/%d，实际 %d/%d，共 %d 个子层。"
+
+msgid "Local-Z direct multicolor solver: %s"
+msgstr "Local-Z 直接多色求解器：%s"
+
+msgid "Carry-over error is distributed directly across all %d components instead of collapsing them into pair cadence."
+msgstr "传递误差会直接分配到全部 %d 个组件，而不是折叠为成对节奏。"
+
+msgid "Effective Local-Z cap: up to %d sublayers per nominal layer."
+msgstr "有效 Local-Z 上限：每个标称层最多 %d 个子层。"
+
+msgid "Local-Z layer cadence: %s."
+msgstr "Local-Z 层节奏：%s。"
+
+msgid "Pair splits: %s."
+msgstr "成对拆分：%s。"
+
+msgid "Saved row limit will apply when Local-Z dithering mode is enabled in print settings."
+msgstr "保存的行限制会在打印设置中启用 Local-Z 抖动模式时生效。"
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers."
+msgstr "有效 Local-Z 堆叠：%d 个子层覆盖 %d 个成对层。"
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers (uncapped %d)."
+msgstr "有效 Local-Z 堆叠：%d 个子层覆盖 %d 个成对层（未限制为 %d）。"
+
 msgid "Associate files to OrcaSlicer"
 msgstr "Flash Studio文件关联"
 
@@ -597,3 +648,6 @@ msgstr "视频已暂停"
 
 msgid "Printer disconnected"
 msgstr "打印机断开连接"
+
+msgid "No camera detected"
+msgstr "未检测到摄像头"

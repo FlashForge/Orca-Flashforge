@@ -3,6 +3,7 @@
         "40"
     ],
     "compatible_printers": [
+        "Flashforge Creator 5 0.25 nozzle",
         "Flashforge Creator 5 0.4 nozzle",
         "Flashforge Creator 5 0.6 nozzle",
         "Flashforge Creator 5 0.8 nozzle"
@@ -35,7 +36,7 @@
         "Direct Drive Standard"
     ],
     "filament_flow_ratio": [
-        "0.98"
+        "1"
     ],
     "filament_max_volumetric_speed": [
         "3.2"
@@ -54,6 +55,7 @@
         "60"
     ],
     "inherits": "Generic PVA @System",
+    "setting_id": "vmza1STzeagaMYbX",
     "instantiation": "true",
     "name": "Generic PVA @FF C5",
     "nozzle_temperature": [
@@ -63,7 +65,7 @@
         "240"
     ],
     "pressure_advance": [
-        "0.0225"
+        "0.035"
     ],
     "slow_down_layer_time": [
         "8"

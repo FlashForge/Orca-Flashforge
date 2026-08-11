@@ -87,6 +87,7 @@
     "high_current_on_filament_swap": "0",
     "host_type": "octoprint",
     "inherits": "Flashforge Adventurer 5M Pro 0.4 Nozzle",
+    "setting_id": "DVWFCsTdr2KaH4Sk",
     "instantiation": "true",
     "layer_change_gcode": ";AFTER_LAYER_CHANGE\n;[layer_z]",
     "long_retractions_when_cut": [

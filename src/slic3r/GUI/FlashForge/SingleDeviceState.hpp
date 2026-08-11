@@ -280,7 +280,7 @@ public:
     void msw_rescale();
     void connectEvent();
     void UpdateScrollVirtualSize();
- 
+
 
 private:
     void OnScrollWinSize(wxSizeEvent& evt);

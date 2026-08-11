@@ -17888,3 +17888,57 @@ msgstr ""
 
 #~ msgid "Orient the model"
 #~ msgstr "Orient the model"
+
+
+msgid "Simple settings"
+msgstr "Impostazioni semplici"
+
+msgid "Local-Z pair split: requested F<a>/F<b> <percent>/<percent>."
+msgstr "Divisione coppia Local-Z: richiesto F<a>/F<b> <percent>/<percent>."
+
+msgid "Cycle settings visibility"
+msgstr "Cambia visibilità impostazioni"
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d."
+msgstr "Divisione coppia Local-Z: richiesto F%u/F%u %d/%d."
+
+msgid "Local-Z breakdown: manual pattern rows do not use pair decomposition."
+msgstr "Suddivisione Local-Z: le righe del motivo manuale non usano la decomposizione a coppie."
+
+
+msgid "Local-Z breakdown: same-layer mode does not use local-Z pair decomposition."
+msgstr "Suddivisione Local-Z: la modalità stesso layer non usa la decomposizione a coppie Local-Z."
+
+msgid "Local-Z breakdown: unavailable."
+msgstr "Suddivisione Local-Z: non disponibile."
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d, effective %d/%d over %d sublayers."
+msgstr "Divisione coppia Local-Z: richiesto F%u/F%u %d/%d, effettivo %d/%d su %d sottostrati."
+
+
+msgid "Expert settings"
+msgstr "Impostazioni esperte"
+
+msgid "Local-Z direct multicolor solver: %s"
+msgstr "Risolutore multicolore diretto Local-Z: %s"
+
+msgid "Carry-over error is distributed directly across all %d components instead of collapsing them into pair cadence."
+msgstr "L'errore residuo viene distribuito direttamente su tutti i %d componenti invece di essere ridotto a una cadenza a coppie."
+
+msgid "Effective Local-Z cap: up to %d sublayers per nominal layer."
+msgstr "Limite Local-Z effettivo: fino a %d sottostrati per layer nominale."
+
+msgid "Local-Z layer cadence: %s."
+msgstr "Cadenza layer Local-Z: %s."
+
+msgid "Pair splits: %s."
+msgstr "Divisioni a coppie: %s."
+
+msgid "Saved row limit will apply when Local-Z dithering mode is enabled in print settings."
+msgstr "Il limite righe salvato verr? applicato quando la modalit? dithering Local-Z ? abilitata nelle impostazioni di stampa."
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers."
+msgstr "Stack Local-Z effettivo: %d sottostrati su %d layer a coppie."
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers (uncapped %d)."
+msgstr "Stack Local-Z effettivo: %d sottostrati su %d layer a coppie (senza limite %d)."

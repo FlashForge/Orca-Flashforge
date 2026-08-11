@@ -1,13 +1,19 @@
 #include "WebView.hpp"
 #include "slic3r/GUI/GUI_App.hpp"
 #include "slic3r/Utils/MacDarkMode.hpp"
+#include "libslic3r/Utils.hpp"
 
+#include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
+#include <cctype>
 
 #include <nlohmann/json.hpp>
 
 #include <wx/webviewarchivehandler.h>
 #include <wx/webviewfshandler.h>
+#include <wx/filename.h>
+#include <wx/stdpaths.h>
+#include <wx/utils.h>
 #if wxUSE_WEBVIEW_EDGE
 #include <wx/msw/webview_edge.h>
 #elif defined(__WXMAC__)
@@ -63,6 +69,65 @@ WEBKIT_API const gchar *
 webkit_download_get_destination                      (WebKitDownload            *download);
 }
 #endif
+
+namespace {
+
+#ifdef __WIN32__
+std::string webview_profile_component(std::string value)
+{
+    for (char &ch : value) {
+        const unsigned char c = static_cast<unsigned char>(ch);
+        if (!std::isalnum(c) && ch != '-' && ch != '_')
+            ch = '_';
+    }
+    return value.empty() ? "default" : value;
+}
+
+boost::filesystem::path edge_webview_data_path()
+{
+    static const boost::filesystem::path profile_dir = [] {
+        const std::string version = webview_profile_component(Orca_Flashforge_VERSION);
+        const std::string pid = std::to_string(Slic3r::get_current_pid());
+
+        wxString local_data_dir = wxStandardPaths::Get().GetUserLocalDataDir();
+        boost::filesystem::path base_dir;
+        if (!local_data_dir.empty()) {
+            // Keep the new WebView2 profile outside wxWidgets' default user data
+            // folder, which is still used by release_0516.
+            base_dir = boost::filesystem::path((local_data_dir + "-webview2-isolated-v2").ToUTF8().data());
+        } else {
+            wxFileName exe_path(wxStandardPaths::Get().GetExecutablePath());
+            base_dir = boost::filesystem::path(exe_path.GetPath().ToUTF8().data()) / "webview2-isolated-v2";
+        }
+
+        boost::filesystem::path path = base_dir / version / pid;
+        path.make_preferred();
+        return path;
+    }();
+    return profile_dir;
+}
+
+wxWebViewConfiguration create_edge_webview_config()
+{
+    wxWebViewConfiguration config = wxWebView::NewConfiguration(wxWebViewBackendEdge);
+
+    boost::filesystem::path profile_dir = edge_webview_data_path();
+    boost::system::error_code ec;
+    boost::filesystem::create_directories(profile_dir, ec);
+    if (ec) {
+        BOOST_LOG_TRIVIAL(warning) << "Failed to create WebView2 user data folder: "
+                                   << profile_dir.string() << ", " << ec.message();
+    }
+
+    config.SetDataPath(wxString::FromUTF8(profile_dir.string()));
+    config.EnablePersistentStorage(true);
+    BOOST_LOG_TRIVIAL(info) << "WebView2 user data folder: " << profile_dir.string();
+
+    return config;
+}
+#endif
+
+} // namespace
 
 #ifdef __WIN32__
 // Run Download and Install in another thread so we don't block the UI thread
@@ -124,6 +189,13 @@ DWORD DownloadAndInstallWV2RT() {
 class WebViewEdge : public wxWebViewEdge
 {
 public:
+    WebViewEdge() = default;
+
+    explicit WebViewEdge(const wxWebViewConfiguration &config)
+        : wxWebViewEdge(config)
+    {
+    }
+
     bool SetUserAgent(const wxString &userAgent)
     {
         bool dark = userAgent.Contains("dark");
@@ -196,6 +268,12 @@ private:
 
 class WebViewWebKit : public wxWebViewWebKit
 {
+public:
+    WebViewWebKit()
+        : wxWebViewWebKit(wxWebView::NewConfiguration(wxWebViewBackendWebKit))
+    {
+    }
+
     ~WebViewWebKit() override
     {
         RemoveScriptMessageHandler("wx");
@@ -455,9 +533,9 @@ wxWebView* WebView::CreateWebView(wxWindow * parent, wxString const & url)
     BOOST_LOG_TRIVIAL(trace) << __FUNCTION__ << ": " << url2.ToUTF8();
 
 #ifdef __WIN32__
-    wxWebView* webView = new WebViewEdge;
+    wxWebView* webView = new WebViewEdge(create_edge_webview_config());
 #elif defined(__WXOSX__)
-    wxWebView *webView = new WebViewWebKit;
+    wxWebView* webView = new WebViewWebKit;
 #else
     auto webView = wxWebView::New();
 #endif
@@ -524,10 +602,28 @@ wxWebView* WebView::CreateWebView(wxWindow * parent, wxString const & url)
     return webView;
 }
 #if wxUSE_WEBVIEW_EDGE
+void WebView::InitWebViewDataPath()
+{
+#ifdef __WIN32__
+    const wxString data_path = wxString::FromUTF8(edge_webview_data_path().string());
+    wxString existing_path;
+    if (wxGetEnv("WEBVIEW2_USER_DATA_FOLDER", &existing_path) && existing_path != data_path) {
+        BOOST_LOG_TRIVIAL(info) << "Override WEBVIEW2_USER_DATA_FOLDER for this process: "
+                                << existing_path.ToUTF8().data() << " -> " << data_path.ToUTF8().data();
+    }
+    if (!wxSetEnv("WEBVIEW2_USER_DATA_FOLDER", data_path)) {
+        BOOST_LOG_TRIVIAL(warning) << "Failed to set WEBVIEW2_USER_DATA_FOLDER: "
+                                   << data_path.ToUTF8().data();
+    } else {
+        BOOST_LOG_TRIVIAL(info) << "WEBVIEW2_USER_DATA_FOLDER=" << data_path.ToUTF8().data();
+    }
+#endif
+}
+
 bool WebView::CheckWebViewRuntime()
 {
     wxWebViewFactoryEdge factory;
-    auto wxVersion = factory.GetVersionInfo();
+    auto wxVersion = factory.GetVersionInfo(wxVersionContext::RunTime);
     return wxVersion.GetMajor() != 0;
 }
 

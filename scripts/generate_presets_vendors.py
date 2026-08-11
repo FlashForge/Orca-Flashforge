@@ -98,7 +98,6 @@ filament_vendors = [
     'FLASHFORGE',
     'Formfutura',
     'Francofil',
-    'FusRock',
     'GEEETECH',
     'Giantarm',
     'Gizmo Dorks',

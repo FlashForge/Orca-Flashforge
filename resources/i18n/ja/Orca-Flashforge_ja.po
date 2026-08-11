@@ -171,8 +171,8 @@ msgstr "ツールタイプ"
 msgid "Smart fill angle"
 msgstr "自動充填角度"
 
-msgid "On overhangs only"
-msgstr "オーバーハングのみ"
+msgid "On highlighted overhangs only"
+msgstr "強調表示されたオーバーハングのみ"
 
 msgid "Auto support threshold angle: "
 msgstr "自動サポート角度閾値"
@@ -5032,6 +5032,9 @@ msgstr "コスト"
 msgid "Filament change times"
 msgstr "フィラメント交換回数"
 
+msgid "Tool changes"
+msgstr "ツール交換回数"
+
 msgid "Color change"
 msgstr "色変更"
 
@@ -6430,6 +6433,15 @@ msgstr "オリジナルモデル"
 msgid "Number of Colors"
 msgstr "色数"
 
+msgid "Color Style"
+msgstr "カラースタイル"
+
+msgid "Soft"
+msgstr "ソフト"
+
+msgid "Vivid"
+msgstr "ビビッド"
+
 msgid "Parameters have changed, please click Apply to take effect"
 msgstr "パラメータが変更されました。有効にするには「適用」をクリックしてください"
 
@@ -7008,6 +7020,12 @@ msgstr "エクスポートが成功しました。"
 msgid "Model file downloaded."
 msgstr "モデルファイルがダウンロードされました。"
 
+msgid "Shared profiles may be available for this printer."
+msgstr "このプリンターでは共有プロファイルを利用できる場合があります。"
+
+msgid "Browse shared profiles"
+msgstr "共有プロファイルを参照"
+
 msgid "Serious warning:"
 msgstr "重大な警告:"
 
@@ -7539,7 +7557,9 @@ msgstr "一度に追加できるフルカラーファイルは1つだけです"
 msgid ""
 "Only one OBJ or GLB file can be imported at a time. Please select the file "
 "you want to use this time."
-msgstr "一度にインポートできるOBJまたはGLBファイルは1つだけです。今回使用するファイルを選択してください。"
+msgstr ""
+"一度にインポートできるOBJまたはGLBファイルは1つだけです。今回使用するファイル"
+"を選択してください。"
 
 msgid "Please import model files with the same file extension each time"
 msgstr "一度にインポートするモデルファイルは同じ拡張子にしてください"
@@ -8614,6 +8634,9 @@ msgstr "安定版アップデートのみ確認"
 
 msgid "Auto sync user presets (Printer/Filament/Process)"
 msgstr "ユーザープリセットの自動同期 (プリンター/フィラメント/プロセス)"
+
+msgid "Synchronize user presets with FlashForge Cloud after login"
+msgstr "ログイン後にユーザープリセットをFlashForge Cloudと同期します"
 
 msgid "Update built-in Presets automatically."
 msgstr "組み込みプリセットを自動更新します。"
@@ -20176,6 +20199,9 @@ msgstr "一時停止中"
 msgid "Printer disconnected"
 msgstr "プリンターが切断されました"
 
+msgid "No camera detected"
+msgstr "カメラが検出されませんでした"
+
 #~ msgid "每次只可添加一个全彩文件"
 #~ msgstr "一度に追加できるフルカラーファイルは1つだけです"
 
@@ -21799,9 +21825,6 @@ msgctxt "Flashforge"
 msgid "Original"
 msgstr "オリジナル"
 
-msgid "No camera detected"
-msgstr "カメラが検出されませんでした"
-
 #: resources/data/hints.ini: [hint:Chamber temperature]
 msgid ""
 "Chamber temperature\n"
@@ -21835,6 +21858,507 @@ msgid ""
 "and 3D scene operations."
 msgstr ""
 "キーボードのショートカットの使用方法 Flashforge Studioは多彩なキーボードのショートカットと3Dシーン操作の機能を備えていることをご存じですか？"
+
+msgid "Dithering cadence height A"
+msgstr "ディザリング周期高さ A"
+
+msgid ""
+"Layer height contribution of component A for dithering virtual filaments. Set to 0 to use normal 1-layer A / 1-layer B alternation.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"ディザリング仮想フィラメントでコンポーネント A が占めるレイヤー高さです。0 に設定すると、通常の 1 レイヤー A / 1 レイヤー B の交互動作を使用します。\n"
+"\n"
+"プロジェクト Wiki が利用可能になり次第、混合フィラメント設定の詳細な説明を公開します。"
+
+msgid "Dithering cadence height B"
+msgstr "ディザリング周期高さ B"
+
+msgid ""
+"Layer height contribution of component B for dithering virtual filaments. Set to 0 to use normal 1-layer A / 1-layer B alternation.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"ディザリング仮想フィラメントでコンポーネント B が占めるレイヤー高さです。0 に設定すると、通常の 1 レイヤー A / 1 レイヤー B の交互動作を使用します。\n"
+"\n"
+"プロジェクト Wiki が利用可能になり次第、混合フィラメント設定の詳細な説明を公開します。"
+
+msgid "Height-weighted cadence"
+msgstr "高さ加重周期"
+
+msgid ""
+"Enable height-weighted cadence for mixed filaments. Limitation: only one height-weighted mixed color should be present at a given Z plane, because independent per-color layer heights are not supported and the resulting layer height applies to the whole plane. When disabled, layer-cycle cadence is used.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"混合フィラメントで高さ加重周期を有効にします。制限: 色ごとの独立したレイヤー高さはサポートされず、計算されたレイヤー高さは平面全体に適用されるため、同じ Z 平面には高さ加重の混合色を 1 つだけ配置してください。無効時はレイヤーサイクル周期を使用します。\n"
+"\n"
+"プロジェクト Wiki が利用可能になり次第、混合フィラメント設定の詳細な説明を公開します。"
+
+msgid "Local-Z lower height bound"
+msgstr "Local-Z 下限高さ"
+
+msgid ""
+"Lower bound used when Local-Z mixed-filament dithering chooses per-color sublayer heights.\n"
+"\n"
+"Smaller values let Local-Z use thinner sublayers for a color when needed.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"Local-Z 混合フィラメントのディザリングが色ごとのサブレイヤー高さを選択するときに使用する下限です。\n"
+"\n"
+"値を小さくすると、必要に応じて Local-Z がその色により薄いサブレイヤーを使用できます。\n"
+"\n"
+"プロジェクト Wiki が利用可能になり次第、混合フィラメント設定の詳細な説明を公開します。"
+
+msgid "Local-Z upper height bound"
+msgstr "Local-Z 上限高さ"
+
+msgid ""
+"Upper bound used when Local-Z mixed-filament dithering chooses per-color sublayer heights.\n"
+"\n"
+"Larger values let Local-Z use thicker sublayers for a color when needed.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"Local-Z 混合フィラメントのディザリングが色ごとのサブレイヤー高さを選択するときに使用する上限です。\n"
+"\n"
+"値を大きくすると、必要に応じて Local-Z がその色により厚いサブレイヤーを使用できます。\n"
+"\n"
+"プロジェクト Wiki が利用可能になり次第、混合フィラメント設定の詳細な説明を公開します。"
+
+msgid "Advanced dithering"
+msgstr "高度なディザリング"
+
+msgid ""
+"Distribute mixed filament layer-cycle cadence using an advanced ordered dithering pattern instead of a simple contiguous A-then-B run. This can reduce visible striping for some hues.\n"
+"\n"
+"This is an even more experimental mode and the perceived color may differ from normal dithering for the same filament pair and ratio.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"単純な連続 A-then-B の並びではなく、高度な順序付きディザリングパターンで混合フィラメントのレイヤーサイクル周期を分散します。一部の色相では目立つ縞を減らせます。\n"
+"\n"
+"これはさらに実験的なモードで、同じフィラメントペアと比率でも通常のディザリングとは見た目の色が異なる場合があります。\n"
+"\n"
+"プロジェクト Wiki が利用可能になり次第、混合フィラメント設定の詳細な説明を公開します。"
+
+msgid "Enable mixed filament bias"
+msgstr "混合フィラメントバイアスを有効化"
+
+msgid ""
+"Show and apply the per-row mixed filament Bias control.\n"
+"\n"
+"When enabled, the selected filament in a mixed pair is recessed slightly so the other component becomes more visible.\n"
+"\n"
+"Bias is ignored for grouped wall patterns, same-layer pointillisme, and Local Z dithering."
+msgstr ""
+"行ごとの混合フィラメントバイアス制御を表示して適用します。\n"
+"\n"
+"有効にすると、混合ペア内の選択したフィラメントをわずかに奥へ下げ、もう一方の成分を見えやすくします。\n"
+"\n"
+"グループ化されたウォールパターン、同一レイヤー点描、Local Z ディザリングではバイアスは無視されます。"
+
+msgid "Selective Expansion contraction"
+msgstr "選択的な拡張/収縮"
+
+msgid ""
+"XY offset applied to mixed-filament painted regions before region assignment.\n"
+"\n"
+"Positive values contract the mixed zone inward. Negative values expand it outward.\n"
+"\n"
+"This applies to mixed filament usage in layer cadence, height cadence, same-layer pointillisme, and local Z dithering."
+msgstr ""
+"領域割り当ての前に、混合フィラメントで塗られた領域へ適用する XY オフセットです。\n"
+"\n"
+"正の値は混合領域を内側へ縮小し、負の値は外側へ拡張します。\n"
+"\n"
+"レイヤー周期、高さ周期、同一レイヤー点描、Local Z ディザリングでの混合フィラメント使用に適用されます。"
+
+msgid "Collapse same-color mixed regions"
+msgstr "同色の混合領域を結合"
+
+msgid ""
+"Merge ordinary mixed-filament painted regions into a single area when they resolve to the same physical filament on a layer.\n"
+"\n"
+"This improves continuity for adjacent same-color areas. Local Z dithering turns this off automatically when enabled, but you may turn it back on manually.\n"
+"\n"
+"Experimental with Local Z dithering."
+msgstr ""
+"通常の混合フィラメント塗り領域が、あるレイヤーで同じ物理フィラメントに解決される場合、それらを 1 つの領域に結合します。\n"
+"\n"
+"隣接する同色領域の連続性が向上します。Local Z ディザリングを有効にすると自動的にオフになりますが、手動で再度オンにできます。\n"
+"\n"
+"Local Z ディザリングとの組み合わせは実験的です。"
+
+msgid "Mixed filament custom definitions"
+msgstr "混合フィラメントのカスタム定義"
+
+msgid ""
+"Serialized custom mixed filament rows.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"シリアライズされたカスタム混合フィラメント行です。\n"
+"\n"
+"プロジェクト Wiki が利用可能になり次第、混合フィラメント設定の詳細な説明を公開します。"
+
+msgid "Pointillisme pixel size"
+msgstr "点描ピクセルサイズ"
+
+msgid ""
+"Length of one pointillisme segment along an extrusion path for same-layer pointillisme mode. Set to 0 to use automatic nozzle-based sizing.\n"
+"\n"
+"Warning: Same-layer pointillisme is extremely experimental and may produce unusable results."
+msgstr ""
+"同一レイヤー点描モードで、押出パスに沿った 1 つの点描セグメントの長さです。0 に設定するとノズルに基づく自動サイズを使用します。\n"
+"\n"
+"警告: 同一レイヤー点描モードは非常に実験的で、使用できない結果になる場合があります。"
+
+msgid "Pointillisme line gap"
+msgstr "点描ライン間隔"
+
+msgid ""
+"Optional non-extruded spacing between adjacent pointillisme segments. Increase carefully to improve separation and print quality.\n"
+"\n"
+"Warning: Same-layer pointillisme is extremely experimental and may produce unusable results."
+msgstr ""
+"隣接する点描セグメント間の任意の非押出間隔です。分離とプリント品質を改善する場合は慎重に増やしてください。\n"
+"\n"
+"警告: 同一レイヤー点描モードは非常に実験的で、使用できない結果になる場合があります。"
+
+msgid "Dithering Z step size"
+msgstr "ディザリング Z ステップサイズ"
+
+msgid ""
+"Layer height used in Z zones painted with dithering (mixed virtual filaments). Set to 0 to keep normal layer height in those zones.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"ディザリング（混合仮想フィラメント）で塗られた Z ゾーンで使用するレイヤー高さです。0 に設定すると、そのゾーンでは通常のレイヤー高さを維持します。\n"
+"\n"
+"プロジェクト Wiki が利用可能になり次第、混合フィラメント設定の詳細な説明を公開します。"
+
+msgid "Local Z dithering mode"
+msgstr "Local Z ディザリングモード"
+
+msgid ""
+"Use Variable Layers for Color Blending\n"
+"\n"
+"Blend colors by varying layer heights instead of using a fixed ratio of equal-height layers. This only affects blended color zones; non-blended areas keep their nominal layer height and cadence when possible.\n"
+"\n"
+"This setting increases color blending smoothness by splitting each blended layer according to the blend ratio. For example, a 66/33 blend at 0.12 mm layer height will print as one 0.08 mm layer and one 0.04 mm layer. At 0.20 mm layer height, a 75/25 blend will print as one 0.15 mm layer and one 0.05 mm layer."
+msgstr ""
+"色混合に可変レイヤーを使用\n"
+"\n"
+"同じ高さのレイヤーを固定比率で使う代わりに、レイヤー高さを変化させて色を混合します。これは混合色ゾーンのみに影響し、非混合領域は可能な限り公称レイヤー高さと周期を維持します。\n"
+"\n"
+"この設定は混合比率に応じて各混合レイヤーを分割し、色混合をより滑らかにします。たとえば、0.12 mm レイヤー高さで 66/33 の混合は 0.08 mm レイヤー 1 つと 0.04 mm レイヤー 1 つとしてプリントされます。0.20 mm レイヤー高さで 75/25 の混合は 0.15 mm レイヤー 1 つと 0.05 mm レイヤー 1 つとしてプリントされます。"
+
+msgid "Apply Local-Z to whole mixed objects"
+msgstr "混合オブジェクト全体に Local-Z を適用"
+
+msgid ""
+"Experimental. Extend Local-Z dithering beyond painted mixed zones so mixed wall regions can use Local-Z across the whole object.\n"
+"\n"
+"This also lets Local-Z continue through default mixed walls around painted areas instead of limiting the effect strictly to painted masks."
+msgstr ""
+"実験的機能です。Local-Z ディザリングを塗られた混合ゾーンの外側まで拡張し、混合ウォール領域がオブジェクト全体で Local-Z を使用できるようにします。\n"
+"\n"
+"また、効果を塗りマスクだけに厳密に制限せず、塗られた領域周辺の既定の混合ウォールを通して Local-Z を継続させます。"
+
+msgid "Use direct multicolor Local-Z solver"
+msgstr "直接マルチカラー Local-Z ソルバーを使用"
+
+msgid ""
+"Experimental. For mixed rows with 3 or more physical filaments, allocate Local-Z sublayers directly across all components with carry-over error between layers instead of collapsing them into pair cadence.\n"
+"\n"
+"This can reduce visible banding in multicolor Local-Z blends at the cost of more toolchanges. It is ignored when explicit Local-Z A/B heights are set."
+msgstr ""
+"実験的機能です。3 つ以上の物理フィラメントを含む混合行では、ペア周期に折りたたむ代わりに、レイヤー間の持ち越し誤差を使って全コンポーネントへ Local-Z サブレイヤーを直接割り当てます。\n"
+"\n"
+"ツールチェンジは増えますが、マルチカラー Local-Z ブレンドの目立つバンディングを減らせます。明示的な Local-Z A/B 高さが設定されている場合は無視されます。"
+
+msgid "Use step size in painted zones only"
+msgstr "塗りゾーンのみにステップサイズを使用"
+
+msgid ""
+"When enabled, dithering Z step size is applied only where mixed filament is painted. Unpainted zones keep their original layer height.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"有効にすると、ディザリング Z ステップサイズは混合フィラメントで塗られた場所にのみ適用されます。塗られていないゾーンは元のレイヤー高さを維持します。\n"
+"\n"
+"プロジェクト Wiki が利用可能になり次第、混合フィラメント設定の詳細な説明を公開します。"
+
+msgid "Local-Z mini wipe lines"
+msgstr "Local-Z ミニワイプライン"
+
+msgid "Mixed filaments are unreliable on a single-extruder printer."
+msgstr "単一押出機プリンターでは混合フィラメントの信頼性は高くありません。"
+
+msgid "Mixed Filament %d"
+msgstr "混合フィラメント %d"
+
+msgid "Add Color"
+msgstr "色を追加"
+
+msgid "Hex"
+msgstr "16 進数"
+
+msgid "Requested"
+msgstr "要求色"
+
+msgid "Creates"
+msgstr "作成結果"
+
+msgid "Exact preset mixes"
+msgstr "正確なプリセット混合"
+
+msgid "Matching closest supported mix..."
+msgstr "最も近い対応混合を照合中..."
+
+msgid "Calculating closest supported mix..."
+msgstr "最も近い対応混合を計算中..."
+
+msgid "%d%% min"
+msgstr "最小 %d%%"
+
+msgid "Use a valid hex color like #00FF88."
+msgstr "#00FF88 のような有効な 16 進カラーを使用してください。"
+
+msgid "No supported 2-color, 3-color, or 4-color recipe found."
+msgstr "対応する 2 色、3 色、または 4 色のレシピが見つかりません。"
+
+msgid "Matching %s..."
+msgstr "%s を照合中..."
+
+msgid "Requested %s, closest recipe delta: %.2f"
+msgstr "要求 %s、最も近いレシピの差: %.2f"
+
+msgid "Unable to create a color mix from the current physical filament colors within the selected range."
+msgstr "選択範囲内で現在の物理フィラメント色から色混合を作成できません。"
+
+msgid "Local-Z breakdown: manual pattern rows do not use pair decomposition."
+msgstr "Local-Z 内訳: 手動パターン行ではペア分解を使用しません。"
+
+msgid "Local-Z breakdown: same-layer mode does not use local-Z pair decomposition."
+msgstr "Local-Z 内訳: 同一レイヤーモードでは Local-Z ペア分解を使用しません。"
+
+msgid "Local-Z direct multicolor solver: %s"
+msgstr "Local-Z 直接マルチカラーソルバー: %s"
+
+msgid "Local-Z direct multicolor solver: F<n> <percent>%, ..."
+msgstr "Local-Z 直接マルチカラーソルバー: F<n> <percent>%, ..."
+
+msgid ""
+"Carry-over error is distributed directly across all %d components instead of collapsing them into pair cadence."
+msgstr "持ち越し誤差はペア周期へ折りたたまず、全 %d コンポーネントに直接分配されます。"
+
+msgid ""
+"Carry-over error is distributed directly across all <count> components instead of collapsing them into pair cadence."
+msgstr "持ち越し誤差はペア周期へ折りたたまず、全 <count> コンポーネントに直接分配されます。"
+
+msgid "Effective Local-Z cap: up to %d sublayers per nominal layer."
+msgstr "有効な Local-Z 上限: 公称レイヤーあたり最大 %d サブレイヤー。"
+
+msgid "Effective Local-Z cap: up to <count> sublayers per nominal layer."
+msgstr "有効な Local-Z 上限: 公称レイヤーあたり最大 <count> サブレイヤー。"
+
+msgid "Local-Z layer cadence: %s."
+msgstr "Local-Z レイヤー周期: %s。"
+
+msgid "Local-Z layer cadence: <pair cadence summary>."
+msgstr "Local-Z レイヤー周期: <pair cadence summary>。"
+
+msgid "Pair splits: %s."
+msgstr "ペア分割: %s。"
+
+msgid "Pair splits: <pair split summary>."
+msgstr "ペア分割: <pair split summary>。"
+
+msgid "Saved row limit will apply when Local-Z dithering mode is enabled in print settings."
+msgstr "保存された行制限は、プリント設定で Local-Z ディザリングモードを有効にしたときに適用されます。"
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers."
+msgstr "有効な Local-Z スタック: %d サブレイヤーを %d ペアレイヤーに配置。"
+
+msgid "Effective Local-Z stack: <count> sublayers over <count> pair layers."
+msgstr "有効な Local-Z スタック: <count> サブレイヤーを <count> ペアレイヤーに配置。"
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers (uncapped %d)."
+msgstr "有効な Local-Z スタック: %d サブレイヤーを %d ペアレイヤーに配置（上限なし %d）。"
+
+msgid "Effective Local-Z stack: <count> sublayers over <count> pair layers (uncapped <count>)."
+msgstr "有効な Local-Z スタック: <count> サブレイヤーを <count> ペアレイヤーに配置（上限なし <count>）。"
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d."
+msgstr "Local-Z ペア分割: 要求 F%u/F%u %d/%d。"
+
+msgid "Local-Z pair split: requested F<a>/F<b> <percent>/<percent>."
+msgstr "Local-Z ペア分割: 要求 F<a>/F<b> <percent>/<percent>。"
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d, effective %d/%d over %d sublayers."
+msgstr "Local-Z ペア分割: 要求 F%u/F%u %d/%d、有効 %d/%d、%d サブレイヤー。"
+
+msgid ""
+"Local-Z pair split: requested F<a>/F<b> <percent>/<percent>, effective <percent>/<percent> over <count> sublayers."
+msgstr "Local-Z ペア分割: 要求 F<a>/F<b> <percent>/<percent>、有効 <percent>/<percent>、<count> サブレイヤー。"
+
+msgid "Local-Z breakdown: unavailable."
+msgstr "Local-Z 内訳: 使用できません。"
+
+msgid "Click to choose a physical filament color"
+msgstr "クリックして物理フィラメント色を選択"
+
+msgid "Append filament %d to pattern"
+msgstr "フィラメント %d をパターンに追加"
+
+msgid "Bias"
+msgstr "バイアス"
+
+msgid "Limit Local-Z"
+msgstr "Local-Z を制限"
+
+msgid "Max sublayers"
+msgstr "最大サブレイヤー数"
+
+msgid ""
+"No other consumables of the same type are available for mixing. Please add consumables of the same type."
+msgstr "混合に使用できる同じ種類の消耗材が他にありません。同じ種類の消耗材を追加してください。"
+
+msgid "Consumable types are inconsistent. Please add consumables of the same type."
+msgstr "消耗材の種類が一致しません。同じ種類の消耗材を追加してください。"
+
+msgid "%d-color layer cycle"
+msgstr "%d 色レイヤーサイクル"
+
+msgid "%d%%/%d%%"
+msgstr "%d%%/%d%%"
+
+msgid "Simple %d%%/%d%%"
+msgstr "シンプル %d%%/%d%%"
+
+msgid "None (Selected)"
+msgstr "なし（選択済み）"
+
+msgid "F%d (Selected)"
+msgstr "F%d（選択済み）"
+
+msgid "F<n> (Selected)"
+msgstr "F<n>（選択済み）"
+
+msgid "Click to edit"
+msgstr "クリックして編集"
+
+msgid "Gradient Mix Weights"
+msgstr "グラデーション混合ウェイト"
+
+msgid "Mixed Filaments"
+msgstr "混合フィラメント"
+
+msgid "Add Pattern"
+msgstr "パターンを追加"
+
+msgid "Remove last mixed filament"
+msgstr "最後の混合フィラメントを削除"
+
+msgid "Add mixed filament"
+msgstr "混合フィラメントを追加"
+
+msgid "Confirm merge"
+msgstr "結合を確認"
+
+msgid "No mixed filaments yet. Use Add to create one."
+msgstr "混合フィラメントはまだありません。追加で作成してください。"
+
+msgid "(Pattern)"
+msgstr "（パターン）"
+
+msgid "Drag to reorder mixed filaments in this panel."
+msgstr "このパネルで混合フィラメントを並べ替えるにはドラッグします。"
+
+msgid "Edit mixed filament"
+msgstr "混合フィラメントを編集"
+
+msgid ""
+"Number of purge lines reserved for each runtime Local-Z wipe tower toolchange. Higher values improve cleanup but increase tower depth. Only used when Local-Z dithering and the prime tower are enabled."
+msgstr ""
+"実行時の Local-Z ワイプタワーツールチェンジごとに予約するパージライン数です。値を大きくすると清掃は改善しますが、タワーの奥行きが増えます。Local-Z ディザリングとプライムタワーが有効な場合にのみ使用されます。"
+
+msgid "Using variable layer height together with Local-Z dithering may result in poor color mixing quality."
+msgstr "可変レイヤー高さと Local-Z ディザリングを併用すると、色混合品質が低下する場合があります。"
+
+msgid ""
+"Pick from the current filament gamut. The dialog previews the closest 2-color, 3-color, or 4-color FilamentMixer recipe before it is added."
+msgstr "現在のフィラメント色域から選択します。追加前に、このダイアログは最も近い 2 色、3 色、または 4 色の FilamentMixer レシピをプレビューします。"
+
+msgid "Enter a hex color like #00FF88. The picker will snap to the closest supported FilamentMixer color."
+msgstr "#00FF88 のような 16 進カラーを入力してください。ピッカーは最も近い対応 FilamentMixer 色にスナップします。"
+
+msgid "Classic color picker. The result will snap to the closest supported FilamentMixer color."
+msgstr "クラシックカラーピッカーです。結果は最も近い対応 FilamentMixer 色にスナップします。"
+
+msgid "Minimum percent for each participating color. Higher values block highly skewed mixes."
+msgstr "参加する各色の最小パーセントです。値を大きくすると極端に偏った混合を防ぎます。"
+
+msgid "Consumable types in the current mixing scheme are inconsistent. Please select another mixing scheme."
+msgstr "現在の混合方式では消耗材の種類が一致していません。別の混合方式を選択してください。"
+
+msgid ""
+"Manual repeating pattern. Use physical filament IDs 1..9. Use commas to define deeper perimeter patterns, for example 12,21. Example: 1/1/1/1/2/2/2/2, 12,21, or 1/2/3/4."
+msgstr ""
+"手動の繰り返しパターンです。物理フィラメント ID 1..9 を使用します。より深い外周パターンを定義するにはカンマを使用します（例: 12,21）。例: 1/1/1/1/2/2/2/2、12,21、または 1/2/3/4。"
+
+msgid ""
+"Positive bias recesses the second filament in the pair; negative bias recesses the first filament.\n"
+"\n"
+"The color chip shows which filament the current value affects.\n"
+"\n"
+"Grouped wall patterns and Local-Z dithering ignore it."
+msgstr ""
+"正のバイアスはペアの 2 番目のフィラメントを奥へ下げ、負のバイアスは 1 番目のフィラメントを奥へ下げます。\n"
+"\n"
+"カラーチップは現在値が影響するフィラメントを示します。\n"
+"\n"
+"グループ化されたウォールパターンと Local-Z ディザリングでは無視されます。"
+
+msgid ""
+"Store a per-color Local-Z cadence cap. It applies when Local-Z dithering mode is enabled in print settings."
+msgstr "色ごとの Local-Z 周期上限を保存します。プリント設定で Local-Z ディザリングモードを有効にすると適用されます。"
+
+msgid "Maximum number of Local-Z sublayers this color may use before its cadence repeats."
+msgstr "この色が周期を繰り返す前に使用できる Local-Z サブレイヤーの最大数です。"
+
+msgid "Pick a point in the gradient map to control multi-filament mix."
+msgstr "マルチフィラメント混合を制御するには、グラデーションマップ上の点を選択します。"
+
+msgid "Unable to create a color match from the current physical filament colors."
+msgstr "現在の物理フィラメント色から色合わせを作成できません。"
+
+msgid "Merging will remove this physical filament and may invalidate the mixed filament. Continue?"
+msgstr "結合するとこの物理フィラメントが削除され、混合フィラメントが無効になる場合があります。続行しますか？"
+
+msgid "(Filament %u + Filament %u)"
+msgstr "（フィラメント %u + フィラメント %u）"
+
+msgid "(Filament <a> + Filament <b>)"
+msgstr "（フィラメント <a> + フィラメント <b>）"
+
+msgid "(F%u + F%u)"
+msgstr "（F%u + F%u）"
+
+msgid "(F<a> + F<b>)"
+msgstr "（F<a> + F<b>）"
+
+msgid "Expert settings"
+msgstr "エキスパート設定"
+
+msgid "Simple settings"
+msgstr "シンプル設定"
+
+msgid "Cycle settings visibility"
+msgstr "設定の表示レベルを切り替え"
 
 msgid "C5 or C5P Not Connected"
 msgstr "C5またはC5Pが接続されていません"
@@ -21891,3 +22415,19 @@ msgstr "%lld分"
 #, c-format
 msgid "%lld hours %lld minutes"
 msgstr "%lld時間%lld分"
+
+msgid "The multicolor filament limit has been reached. Reopen the project and try again."
+msgstr "マルチカラーフィラメントの上限に達しました。プロジェクトを開き直して、もう一度お試しください。"
+
+msgid ""
+"Do you want to synchronize your personal presets with FlashForge Cloud?\n"
+"It contains the following information:\n"
+"1. The Process presets\n"
+"2. The Filament presets\n"
+"3. The Printer presets"
+msgstr ""
+"個人プリセットを FlashForge Cloud と同期しますか？\n"
+"以下の情報が含まれます：\n"
+"1. プロセスプリセット\n"
+"2. フィラメントプリセット\n"
+"3. プリンタープリセット"

@@ -29,7 +29,6 @@
     "pressure_advance": [
         "0.1"
     ],
-    "setting_id": "GFSA04_02",
     "type": "filament",
     "version": "1.8.0.0"
 }

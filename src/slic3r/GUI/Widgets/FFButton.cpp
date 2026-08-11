@@ -1,5 +1,6 @@
 #include "FFButton.hpp"
 #include <wx/dcgraph.h>
+#include <wx/dcbuffer.h>
 #include "slic3r/GUI/wxExtensions.hpp"
 
 
@@ -29,6 +30,7 @@ FFButton::FFButton(wxWindow* parent, wxWindowID id/*= wxID_ANY*/, const wxString
 	if (parent) {
 		SetBackgroundColour(parent->GetBackgroundColour());	
 	}
+	SetBackgroundStyle(wxBG_STYLE_PAINT);
 	SetLabel(label);
 	Bind(wxEVT_ENTER_WINDOW, [this](wxMouseEvent& e) { m_hoverFlag = true; Refresh(); e.Skip(); });
 	Bind(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent& e) { m_hoverFlag = false; m_pressFlag = false; Refresh(); e.Skip(); });
@@ -37,9 +39,6 @@ FFButton::FFButton(wxWindow* parent, wxWindowID id/*= wxID_ANY*/, const wxString
 	Bind(wxEVT_SET_FOCUS, [this](wxFocusEvent &e) { Refresh(); e.Skip(); });
 	Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent &e) { Refresh(); e.Skip(); });
 	Bind(wxEVT_PAINT, &FFButton::OnPaint, this);
-	Bind(wxEVT_ERASE_BACKGROUND, [=](auto& e) {
-		e.Skip();
-	});
 	Layout();
 	Fit();
 }
@@ -128,6 +127,24 @@ void FFButton::SetFontUniformColor(const wxColour& color)
 	m_fontPressColor = color;
 	m_fontDisableColor = color;
 	Refresh();
+}
+
+void FFButton::SetUniformColors(const wxColour& fontColor, const wxColour& borderColor, const wxColour& bgColor)
+{
+	const bool unchanged =
+		m_fontColor == fontColor && m_fontHoverColor == fontColor &&
+		m_fontPressColor == fontColor && m_fontDisableColor == fontColor &&
+		m_borderColor == borderColor && m_borderHoverColor == borderColor &&
+		m_borderPressColor == borderColor && m_borderDisableColor == borderColor &&
+		m_bgColor == bgColor && m_bgHoverColor == bgColor &&
+		m_bgPressColor == bgColor && m_bgDisableColor == bgColor;
+	if (unchanged)
+		return;
+
+	m_fontColor = m_fontHoverColor = m_fontPressColor = m_fontDisableColor = fontColor;
+	m_borderColor = m_borderHoverColor = m_borderPressColor = m_borderDisableColor = borderColor;
+	m_bgColor = m_bgHoverColor = m_bgPressColor = m_bgDisableColor = bgColor;
+	Refresh(false);
 }
 
 void FFButton::SetBorderColor(const wxColour& color)
@@ -241,16 +258,17 @@ void FFButton::SetIconSpacing(int spacing)
     Refresh();
 }
 
-void FFButton::OnPaint(wxPaintEvent& event)
+void FFButton::OnPaint(wxPaintEvent&)
 {
-	wxPaintDC dc(this);
+	wxAutoBufferedPaintDC dc(this);
+	dc.SetBackground(wxBrush(GetBackgroundColour()));
+	dc.Clear();
     render(dc);
-    event.Skip();
 }
 
-void FFButton::render(wxPaintDC &dc)
+void FFButton::render(wxDC &dc)
 {
-    std::unique_ptr<wxGraphicsContext> gc(wxGraphicsContext::Create(dc));
+    std::unique_ptr<wxGraphicsContext> gc(wxGraphicsContext::CreateFromUnknownDC(dc));
     if (gc == nullptr) {
         return;
     }

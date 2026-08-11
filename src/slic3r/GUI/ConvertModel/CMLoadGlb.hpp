@@ -27,8 +27,11 @@ class CMLoadGlb
 {
 public:
     bool loadGlb(const wxString &glbPath, in_model_data_t &inData, glb_data_t &glbData);
+    bool loadGltf(const wxString &gltfPath, in_model_data_t &inData, glb_data_t &glbData);
 
 private:
+    bool load(const wxString &path, bool binary, in_model_data_t &inData, glb_data_t &glbData);
+
     struct indices_info_t {
         int maxIndex;
         int cnt;

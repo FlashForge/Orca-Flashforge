@@ -11959,3 +11959,57 @@ msgstr ""
 
 #~ msgid "Orient the model"
 #~ msgstr "Orientera modellen"
+
+
+msgid "Simple settings"
+msgstr "Enkla inställningar"
+
+msgid "Local-Z pair split: requested F<a>/F<b> <percent>/<percent>."
+msgstr "Local-Z paruppdelning: begärt F<a>/F<b> <percent>/<percent>."
+
+msgid "Cycle settings visibility"
+msgstr "Växla inställningarnas synlighet"
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d."
+msgstr "Local-Z paruppdelning: begärt F%u/F%u %d/%d."
+
+msgid "Local-Z breakdown: manual pattern rows do not use pair decomposition."
+msgstr "Local-Z-uppdelning: manuella mönsterrader använder inte paruppdelning."
+
+
+msgid "Local-Z breakdown: same-layer mode does not use local-Z pair decomposition."
+msgstr "Local-Z-uppdelning: samma lager-läge använder inte Local-Z paruppdelning."
+
+msgid "Local-Z breakdown: unavailable."
+msgstr "Local-Z-uppdelning: inte tillgänglig."
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d, effective %d/%d over %d sublayers."
+msgstr "Local-Z paruppdelning: begärt F%u/F%u %d/%d, effektivt %d/%d över %d underlager."
+
+
+msgid "Expert settings"
+msgstr "Expertinställningar"
+
+msgid "Local-Z direct multicolor solver: %s"
+msgstr "Direkt Local-Z-flerf?rgsl?sare: %s"
+
+msgid "Carry-over error is distributed directly across all %d components instead of collapsing them into pair cadence."
+msgstr "?verf?ringsfelet f?rdelas direkt ?ver alla %d komponenter i st?llet f?r att f?llas ihop till par-kadens."
+
+msgid "Effective Local-Z cap: up to %d sublayers per nominal layer."
+msgstr "Effektiv Local-Z-gr?ns: upp till %d underlager per nominellt lager."
+
+msgid "Local-Z layer cadence: %s."
+msgstr "Local-Z lagerkadens: %s."
+
+msgid "Pair splits: %s."
+msgstr "Pardelningar: %s."
+
+msgid "Saved row limit will apply when Local-Z dithering mode is enabled in print settings."
+msgstr "Den sparade radgr?nsen anv?nds n?r Local-Z dithering-l?ge ?r aktiverat i utskriftsinst?llningarna."
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers."
+msgstr "Effektiv Local-Z-stack: %d underlager ?ver %d parlager."
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers (uncapped %d)."
+msgstr "Effektiv Local-Z-stack: %d underlager ?ver %d parlager (utan gr?ns %d)."

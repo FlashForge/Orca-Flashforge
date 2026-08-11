@@ -32,6 +32,7 @@
     "inherits": "0.20mm Standard @Flashforge AD5M Pro 0.4 Nozzle",
     "initial_layer_print_height": "0.25",
     "inner_wall_acceleration": "10000",
+    "setting_id": "Uk9Svk5KG7qGu1YQ",
     "instantiation": "true",
     "internal_solid_infill_pattern": "rectilinear",
     "is_custom_defined": "0",
@@ -54,5 +55,7 @@
     "support_top_z_distance": "0.2",
     "support_type": "tree(auto)",
     "wipe_tower_cone_angle": "12",
-    "wipe_tower_extra_spacing": "120%"
+    "wipe_tower_extra_spacing": "120%",
+    "slowdown_for_curled_perimeters": "0",
+    "support_base_pattern": "default"
 }

@@ -46,6 +46,7 @@
     ],
     "from": "system",
     "inherits": "Flashforge Generic PLA @G3U 0.6 Nozzle",
+    "setting_id": "XlxXZj9Wi1D6IwCE",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PLA Silk @FF G4P 0.8 HF nozzle",

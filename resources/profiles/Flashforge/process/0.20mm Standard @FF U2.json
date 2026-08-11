@@ -5,6 +5,7 @@
     "filename_format": "{input_filename_base}_{filament_type[initial_tool]}_{print_time}.gcode",
     "filter_out_gap_fill": "0.1",
     "from": "system",
+    "setting_id": "7gCBSoVQcu6ntzz4",
     "instantiation": "true",
     "compatible_printers": [
         "Flashforge U2 0.4 nozzle"

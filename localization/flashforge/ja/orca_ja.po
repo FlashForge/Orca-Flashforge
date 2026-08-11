@@ -213,6 +213,57 @@ msgstr ""
 "最終的なスカートのループ数は、オブジェクト間の距離の配置や検証の際には考慮されません。\n"
 "この場合は、ループ数を増やしてください。"
 
+msgid "Expert settings"
+msgstr "エキスパート設定"
+
+msgid "Simple settings"
+msgstr "シンプル設定"
+
+msgid "Local-Z pair split: requested F<a>/F<b> <percent>/<percent>."
+msgstr "Local-Z ペア分割: 要求 F<a>/F<b> <percent>/<percent>。"
+
+msgid "Cycle settings visibility"
+msgstr "設定の表示レベルを切り替え"
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d."
+msgstr "Local-Z ペア分割: 要求 F%u/F%u %d/%d。"
+
+msgid "Local-Z breakdown: manual pattern rows do not use pair decomposition."
+msgstr "Local-Z 内訳: 手動パターン行はペア分解を使用しません。"
+
+msgid "Local-Z breakdown: same-layer mode does not use local-Z pair decomposition."
+msgstr "Local-Z 内訳: 同一レイヤーモードでは Local-Z ペア分解を使用しません。"
+
+msgid "Local-Z breakdown: unavailable."
+msgstr "Local-Z 内訳: 利用できません。"
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d, effective %d/%d over %d sublayers."
+msgstr "Local-Z ペア分割: 要求 F%u/F%u %d/%d、実効 %d/%d、%d サブレイヤー。"
+
+msgid "Local-Z direct multicolor solver: %s"
+msgstr "Local-Z 直接マルチカラーソルバー: %s"
+
+msgid "Carry-over error is distributed directly across all %d components instead of collapsing them into pair cadence."
+msgstr "持ち越し誤差はペア周期へ折りたたまず、全 %d コンポーネントに直接分配されます。"
+
+msgid "Effective Local-Z cap: up to %d sublayers per nominal layer."
+msgstr "有効な Local-Z 上限: 公称レイヤーあたり最大 %d サブレイヤー。"
+
+msgid "Local-Z layer cadence: %s."
+msgstr "Local-Z レイヤー周期: %s。"
+
+msgid "Pair splits: %s."
+msgstr "ペア分割: %s。"
+
+msgid "Saved row limit will apply when Local-Z dithering mode is enabled in print settings."
+msgstr "保存された行制限は、プリント設定で Local-Z ディザリングモードを有効にしたときに適用されます。"
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers."
+msgstr "有効な Local-Z スタック: %d サブレイヤーを %d ペアレイヤーに配置。"
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers (uncapped %d)."
+msgstr "有効な Local-Z スタック: %d サブレイヤーを %d ペアレイヤーに配置（上限なし %d）。"
+
 msgid "Associate files to OrcaSlicer"
 msgstr "ファイルをFlash Studioに関連付ける"
 
@@ -602,3 +653,6 @@ msgstr "現在のフィラメントリスト"
 
 msgid "New filament"
 msgstr "新規フィラメント"
+
+msgid "No camera detected"
+msgstr "カメラが検出されませんでした"

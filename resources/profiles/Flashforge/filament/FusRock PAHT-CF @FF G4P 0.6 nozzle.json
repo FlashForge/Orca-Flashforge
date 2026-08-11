@@ -46,7 +46,8 @@
         "80"
     ],
     "inherits": "FusRock Generic PAHT-CF @G3U 0.6 Nozzle",
-    "instantiation": "true",
+    "setting_id": "yok12IOGZzGot5Ll",
+    "instantiation": "false",
     "is_custom_defined": "0",
     "name": "FusRock PAHT-CF @FF G4P 0.6 nozzle",
     "overhang_fan_speed": [
