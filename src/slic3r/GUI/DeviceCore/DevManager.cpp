@@ -215,12 +215,7 @@ namespace Slic3r
                     it->second->bind_sec_link       = sec_link;
                     it->second->dev_connection_type = connect_type;
                     it->second->bind_ssdp_version   = ssdp_version;
-                    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " UpdateUserMachineInfo"
-                        << ", dev_id= " << dev_id
-                        << ", ip = "  <<dev_ip
-                        << ", printer_name= " << dev_name
-                        << ", con_type= " << connect_type << ", signal= " << printer_signal
-                        << ", bind_state= " << bind_state;
+                    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " UpdateUserMachineInfo";
                 }
             }
 
@@ -233,14 +228,12 @@ namespace Slic3r
 
                 if (obj->get_dev_ip().compare(dev_ip) != 0) {
                     if ( connection_name.empty() ) {
-                        BOOST_LOG_TRIVIAL(info) << "MachineObject IP changed from " << obj->get_dev_ip()
-                                                << " to " << dev_ip;
+                        BOOST_LOG_TRIVIAL(info) << "MachineObject IP changed";
                         obj->set_dev_ip(dev_ip);
                     }
                     else {
                         if ( obj->dev_connection_name.empty() || obj->dev_connection_name.compare(connection_name) == 0) {
-                            BOOST_LOG_TRIVIAL(info) << "MachineObject IP changed from " << obj->get_dev_ip()
-                                                    << " to " << dev_ip << " connection_name is " << connection_name;
+                            BOOST_LOG_TRIVIAL(info) << "MachineObject IP changed";
                             if(obj->dev_connection_name.empty()){obj->dev_connection_name = connection_name;}
                             obj->set_dev_ip(dev_ip);
                         }
@@ -261,21 +254,11 @@ namespace Slic3r
                         obj->bind_ssdp_version != ssdp_version ||
                         obj->printer_type != _parse_printer_type(printer_type_str))
                     {
-                        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " UpdateLocalMachineInfo"
-                            << ", dev_id= " << dev_id
-                            << ", ip = " << dev_ip
-                            << ", printer_name= " << dev_name
-                            << ", con_type= " << connect_type << ", signal= " << printer_signal
-                            << ", bind_state= " << bind_state;
+                        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " UpdateLocalMachineInfo";
                     }
                     else
                     {
-                        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " UpdateLocalMachineInfo_WIFI"
-                            << ", dev_id= " << dev_id
-                            << ", ip = "  << dev_ip
-                            << ", printer_name= " << dev_name
-                            << ", con_type= " << connect_type << ", signal= " << printer_signal
-                            << ", bind_state= " << bind_state;
+                        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " UpdateLocalMachineInfo_WIFI";
                     }
 
                     obj->wifi_signal         = printer_signal;
@@ -322,9 +305,7 @@ namespace Slic3r
                 Slic3r::GUI::wxGetApp().app_config->set_str("ip_address", obj->dev_id, obj->dev_ip);
                 Slic3r::GUI::wxGetApp().app_config->save();
                 }*/
-                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " New Machine, dev_id= " << dev_id
-                    << ", ip = " << dev_ip <<", printer_name = " << dev_name
-                    << ", con_type= " << connect_type <<", signal= " << printer_signal << ", bind_state= " << bind_state;
+                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " New Machine";
             }
             update_local_machine(*obj);
         }
@@ -466,8 +447,7 @@ namespace Slic3r
 
     bool DeviceManager::set_selected_machine(std::string dev_id)
     {
-        BOOST_LOG_TRIVIAL(info) << "set_selected_machine=" << dev_id
-            << " cur_selected=" << selected_machine;
+        BOOST_LOG_TRIVIAL(info) << "set_selected_machine";
         auto my_machine_list = get_my_machine_list();
         auto it = my_machine_list.find(dev_id);
 
@@ -492,8 +472,7 @@ namespace Slic3r
                 // same dev_id, cloud => reset update time
                 if (it->second->connection_type() != "lan")
                 {
-                    BOOST_LOG_TRIVIAL(info) << "set_selected_machine: same cloud machine, dev_id =" << dev_id
-                        << ", just reset update time";
+                    BOOST_LOG_TRIVIAL(info) << "set_selected_machine: same cloud machine, just reset update time";
 
                     // only reset update time
                     it->second->reset_update_time();
@@ -506,8 +485,7 @@ namespace Slic3r
                 // same dev_id, lan => disconnect and reconnect
                 else
                 {
-                    BOOST_LOG_TRIVIAL(info) << "set_selected_machine: same lan machine, dev_id =" << dev_id
-                        << ", disconnect and reconnect";
+                    BOOST_LOG_TRIVIAL(info) << "set_selected_machine: same lan machine, disconnect and reconnect";
 
                     // lan mode printer reconnect printer
                     if (m_agent)
@@ -531,13 +509,13 @@ namespace Slic3r
                     if (it->second->connection_type() != "lan" || it->second->connection_type().empty())
                     {
                         // diff dev_id, cloud => set_user_selected_machine(new)
-                        BOOST_LOG_TRIVIAL(info) << "set_selected_machine: select new cloud machine, dev_id =" << dev_id;
+                        BOOST_LOG_TRIVIAL(info) << "set_selected_machine: select new cloud machine";
                         m_agent->set_user_selected_machine(dev_id);
                         it->second->reset();
                     }
                     else
                     {
-                        BOOST_LOG_TRIVIAL(info) << "set_selected_machine: select new lan machine, dev_id =" << dev_id;
+                        BOOST_LOG_TRIVIAL(info) << "set_selected_machine: select new lan machine";
                         it->second->reset();
 #if !BBL_RELEASE_TO_PUBLIC
                         it->second->connect(Slic3r::GUI::wxGetApp().app_config->get("enable_ssl_for_mqtt") == "true" ? true : false);

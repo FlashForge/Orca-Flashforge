@@ -1078,3 +1078,57 @@ msgstr "%lld分"
 #, c-format
 msgid "%lld hours %lld minutes"
 msgstr "%lld時間%lld分"
+
+msgid "To help us identify and resolve your issue more quickly, we recommend uploading your device and app logs. The logs are used solely for troubleshooting and will not collect any of your personal information."
+msgstr "お客様の問題を迅速に特定し、解決するため、デバイスおよびアプリのログをアップロードすることをお勧めします。ログは問題の分析にのみ使用され、お客様の個人情報は収集されません。"
+
+msgid "orca software Logs"
+msgstr "スライスログ"
+
+msgid "orca software Operation Logs"
+msgstr "スライスソフトウェアの操作ログ"
+
+msgid "App Logs"
+msgstr "アプリログ"
+
+msgid "App Operation Logs"
+msgstr "アプリの操作ログ"
+
+msgid "Device Logs"
+msgstr "デバイスログ"
+
+msgid "Device Operation Logs"
+msgstr "デバイスの操作ログ"
+
+msgid "Select a Device"
+msgstr "機器の選択"
+
+msgid "{device} device is currently offline, so we are unable to retrieve the device logs at this time. You can still submit feedback. Once the device is back online, you can submit feedback again or go to Settings > Upload Firmware Log to upload the device logs."
+msgstr "{device} 現在、デバイスはオフライン状態のため、一時的にデバイスログを取得できません。引き続きフィードバックを送信することは可能です。デバイスがオンラインに戻ったら、再度フィードバックを送信するか、設定 > ファームウェアログをアップロードからデバイスログをアップロードしてください。"
+
+msgid "Slice Log"
+msgstr "スライスログ"
+
+msgid "App Log"
+msgstr "アプリログ"
+
+msgid "Device Log"
+msgstr "デバイスログ"
+
+msgid "The current device is offline, so we are unable to retrieve the device logs at this time. You can still submit feedback. Once the device is back online, you can submit feedback again or go to Settings > Upload Firmware Log to upload the device logs."
+msgstr "現在、デバイスはオフライン状態のため、一時的にデバイスログを取得できません。引き続きフィードバックを送信することは可能です。デバイスがオンラインに戻ったら、再度フィードバックを送信するか、設定 > ファームウェアログをアップロードからデバイスログをアップロードしてください。"
+
+msgid "Slicing software operation log"
+msgstr "スライスソフトウェアの操作ログ"
+
+msgid "App operation log"
+msgstr "アプリの操作ログ"
+
+msgid "Device operation log"
+msgstr "デバイスの操作ログ"
+
+msgid "Add Device"
+msgstr "デバイスを追加"
+
+msgid "Select Device"
+msgstr "デバイスを選択"

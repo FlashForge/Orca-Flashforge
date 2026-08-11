@@ -251,3 +251,4 @@ src/slic3r/GUI/StepMeshDialog.cpp
 src/slic3r/GUI/FilamentPickerDialog.hpp
 src/libslic3r/PresetBundle.cpp
 src/slic3r/GUI/FlashForge/FFRTMPVideoCtrl.cpp
+src/slic3r/GUI/FlashForge/FeedbackLogDialog.cpp
