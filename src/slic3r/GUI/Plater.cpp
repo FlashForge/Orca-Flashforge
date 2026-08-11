@@ -9191,7 +9191,7 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                     if (!skip_convert_pipeline) {
                         skip_legacy_small_object_prompt = true;
                         if (model_size_has_dimension_less_than_one(prepared_data.model_size)) {
-                            SmallObjectScaleDialog small_object_dlg(q, from_path(filename));
+                            SmallObjectScaleDialog small_object_dlg(&dlg, from_path(filename));
                             if (small_object_dlg.ShowModal() != wxID_YES)
                                 cm.setScaleModelSize(convert_model_data, false);
                         }
