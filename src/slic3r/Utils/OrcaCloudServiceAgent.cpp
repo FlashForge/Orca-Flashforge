@@ -948,7 +948,7 @@ std::string OrcaCloudServiceAgent::request_setting_id(std::string name, std::map
     return "";
 }
 
-int OrcaCloudServiceAgent::put_setting(std::string setting_id, std::string name, std::map<std::string, std::string>* values_map, unsigned int* http_code, bool force)
+int OrcaCloudServiceAgent::put_setting(std::string setting_id, std::string name, std::map<std::string, std::string>* values_map, unsigned int* http_code)
 {
     // Extract original_updated_time for Optimistic Concurrency Control
     // If present, server will verify version before update. If absent, treated as insert.
@@ -972,7 +972,7 @@ int OrcaCloudServiceAgent::put_setting(std::string setting_id, std::string name,
         }
     }
 
-    auto result = sync_push(setting_id, name, content, original_updated_time, force);
+    auto result = sync_push(setting_id, name, content, original_updated_time);
     if (http_code) *http_code = result.http_code;
 
     if (result.success) {

@@ -154,9 +154,6 @@ std::unique_ptr<NetworkAgent> create_agent_from_config(const std::string& log_di
     if (!app_config)
         return std::make_unique<NetworkAgent>(nullptr, nullptr);
 
-    // Determine cloud provider from config
-    // bool use_orca_cloud = app_config->get_bool("use_orca_cloud");
-
     // Create cloud agent
     std::shared_ptr<ICloudServiceAgent> cloud_agent;
     if (app_config->get_bool("installed_networking")) {
@@ -169,13 +166,6 @@ std::unique_ptr<NetworkAgent> create_agent_from_config(const std::string& log_di
 
     // Create NetworkAgent with cloud agent only (printer agent added later when printer is selected)
     auto agent = std::make_unique<NetworkAgent>(std::move(cloud_agent), nullptr);
-
-    if (agent && use_orca_cloud) {
-        auto* orca_cloud = dynamic_cast<OrcaCloudServiceAgent*>(agent->get_cloud_agent().get());
-        if (orca_cloud) {
-            orca_cloud->configure_urls(app_config);
-        }
-    }
 
     return agent;
 }

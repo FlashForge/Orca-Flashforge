@@ -468,7 +468,7 @@ std::string BBLCloudServiceAgent::request_setting_id(std::string name, std::map<
     return "";
 }
 
-int BBLCloudServiceAgent::put_setting(std::string setting_id, std::string name, std::map<std::string, std::string>* values_map, unsigned int* http_code, bool force)
+int BBLCloudServiceAgent::put_setting(std::string setting_id, std::string name, std::map<std::string, std::string>* values_map, unsigned int* http_code)
 {
     auto& plugin = BBLNetworkPlugin::instance();
     auto agent = plugin.get_agent();

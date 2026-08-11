@@ -11,6 +11,9 @@ public:
     FlashCloudServiceAgent() = default;
     ~FlashCloudServiceAgent() override = default;
 
+    // FlashForge builds use NetworkAgent's primary cloud slot, currently keyed as Orca.
+    std::string get_id() const override { return ORCA_CLOUD_PROVIDER; }
+
     static std::string generate_uuid_for_setting_id(const std::string &name, const std::string &type,
                                                     const std::string &user_id);
     bool is_user_login() override;
@@ -73,6 +76,7 @@ public:
     int get_model_mall_home_url(std::string *) override { return -1; }
     int get_model_mall_detail_url(std::string *, std::string) override { return -1; }
     int get_my_profile(std::string, unsigned int *, std::string *) override { return -1; }
+    int get_my_token(std::string, unsigned int *, std::string *) override { return -1; }
     int track_enable(bool) override { return -1; }
     int track_remove_files() override { return -1; }
     int track_event(std::string, std::string) override { return -1; }
@@ -86,12 +90,9 @@ public:
     int get_model_mall_rating_result(int, std::string &, unsigned int &, std::string &) override { return -1; }
     int get_mw_user_preference(std::function<void(std::string)>) override { return -1; }
     int get_mw_user_4ulist(int, int, std::function<void(std::string)>) override { return -1; }
-    int set_extra_http_header(std::map<std::string, std::string>) override { return -1; }
-    std::string get_studio_info_url() override { return {}; }
     std::string get_version() override { return {}; }
-    int set_on_user_login_fn(OnUserLoginFn) override { return 0; }
-    int set_on_server_connected_fn(OnServerConnectedFn) override { return 0; }
-    int set_on_http_error_fn(OnHttpErrorFn) override { return 0; }
+    int set_on_server_connected_fn(AppOnServerConnectedFn) override { return 0; }
+    int set_on_http_error_fn(AppOnHttpErrorFn) override { return 0; }
     int set_get_country_code_fn(GetCountryCodeFn) override { return 0; }
     int set_queue_on_main_fn(QueueOnMainFn) override { return 0; }
 };

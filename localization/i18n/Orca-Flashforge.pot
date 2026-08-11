@@ -5780,7 +5780,7 @@ msgid "Filament Settings"
 msgstr ""
 
 msgid ""
-"Do you want to synchronize your personal data from Orca Cloud?\n"
+"Do you want to synchronize your personal presets with FlashForge Cloud?\n"
 "It contains the following information:\n"
 "1. The Process presets\n"
 "2. The Filament presets\n"
