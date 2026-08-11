@@ -400,10 +400,17 @@ void MulticolorModelPreviewCanvas::set_textured_model(std::shared_ptr<const Full
     Refresh();
 }
 
+void MulticolorModelPreviewCanvas::set_default_rotation(float rot_x, float rot_y)
+{
+    m_default_rot_x = rot_x;
+    m_default_rot_y = rot_y;
+    reset_view();
+}
+
 void MulticolorModelPreviewCanvas::reset_view()
 {
-    m_rot_x = -90.0f;
-    m_rot_y = 0.0f;
+    m_rot_x = m_default_rot_x;
+    m_rot_y = m_default_rot_y;
     m_zoom = 1.0f;
     Refresh();
 }
@@ -740,6 +747,10 @@ MulticolorModelDialog::MulticolorModelDialog(wxWindow *parent, ConvertModel &con
     m_quantization_settings.conversion = m_model_data.conversionParams;
 
     build_ui();
+    // Textured OBJ data stays in its source Y-up coordinate system. Show it from
+    // the front without changing the coordinates used by the final import.
+    if (!m_model_data.conversionParams.transCoordSys)
+        m_canvas->set_default_rotation(0.0f, 0.0f);
     init_model_data(initial_color_count, precomputed_data);
     Fit();
     CenterOnParent();
