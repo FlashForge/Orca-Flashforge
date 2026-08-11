@@ -614,13 +614,17 @@ void Preset::remove_files(bool cloud_already_deleted)
     if (this->is_project_embedded) {
         return;
     }
+
+    // Back up the preset and its cloud metadata before deleting the local files.
+    if (!PresetBundle::backup_user_preset_before_delete(this->file))
+        BOOST_LOG_TRIVIAL(error) << "Deleting preset without a refreshed user_back_up copy: " << this->file;
     // Erase the preset file.
     boost::nowide::remove(this->file.c_str());
     fs::path idx_path(this->file);
     idx_path.replace_extension(".info");
     if (fs::exists(idx_path)) {
         if (!this->setting_id.empty() && !cloud_already_deleted) {
-            // Cloud-synced preset - mark for deletion and keep .info file until sync confirms
+            // Keep the metadata as a durable deletion marker until the cloud confirms deletion.
             this->sync_info = "delete";
             this->save_info(idx_path.string());
         } else {
@@ -2031,6 +2035,21 @@ void PresetCollection::set_sync_info_and_save(std::string name, std::string sett
     unlock();
 }
 
+void PresetCollection::set_sync_status_and_save(std::string name, std::string syncinfo)
+{
+    lock();
+    for (Preset &preset : m_presets) {
+        if (preset.name != name)
+            continue;
+        if (syncinfo.empty())
+            preset.sync_info.clear();
+        else
+            preset.sync_info = syncinfo;
+        preset.save_info();
+        break;
+    }
+    unlock();
+}
 bool PresetCollection::need_sync(std::string name, std::string setting_id, long long update_time)
 {
     lock();
@@ -2047,7 +2066,9 @@ int PresetCollection::get_user_presets(PresetBundle *preset_bundle, std::vector<
     result_presets.clear();
 
     lock();
+    int idx = 0;
     for (Preset &preset : m_presets) {
+        idx += 1;
         if (!preset.is_user()) continue;
         if (preset.base_id.empty() && preset.inherits() != "") continue;
         if (!preset.setting_id.empty() && preset.sync_info.empty()) continue;

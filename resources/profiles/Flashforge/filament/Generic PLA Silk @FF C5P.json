@@ -60,6 +60,7 @@
     ],
     "from": "system",
     "inherits": "Generic PLA Silk @System",
+    "setting_id": "RnoS9bqY1TvNPtg2",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Generic PLA Silk @FF C5P",

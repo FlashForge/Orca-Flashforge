@@ -54,6 +54,7 @@
     ],
     "from": "system",
     "inherits": "Generic PLA @System",
+    "setting_id": "Bn2BaG7f1tkvlyYI",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PLA Matte @FF C5P",

@@ -193,6 +193,8 @@ public:
 
     // BBS Load user presets
     PresetsConfigSubstitutions load_user_presets(std::string user, ForwardCompatibilitySubstitutionRule rule);
+    // Cloud preset maps use setting_id as the outer key. The display name is
+    // carried separately in each value map under BBL_JSON_KEY_NAME.
     PresetsConfigSubstitutions load_user_presets(AppConfig &config, std::map<std::string, std::map<std::string, std::string>>& my_presets, ForwardCompatibilitySubstitutionRule rule);
     // Orca: Import subscribed bundle presets (load and save to disk in one operation), handles one bundle at a time
     PresetsConfigSubstitutions update_subscribed_presets(AppConfig& config,
@@ -210,9 +212,9 @@ public:
                                                    std::function<int(std::string const &)> override_confirm,
                                                    ForwardCompatibilitySubstitutionRule    rule,
                                                    int &                                   overwrite,
-                             std::vector<std::string>& result,
-                             const std::string& bundle_dir = "");
-                             
+                                                   std::vector<std::string>& result,
+                                                   const std::string&       bundle_dir = "");
+
     void save_user_presets(AppConfig& config, std::map<std::string, std::string>& need_to_delete_list);
     void check_and_fix_user_presets_syncinfo(const std::string& user_id);
     void remove_users_preset(AppConfig &config, std::map<std::string, std::map<std::string, std::string>> * my_presets = nullptr);
@@ -267,6 +269,7 @@ public:
     bool is_flashforge_vendor();
 
     bool backup_user_folder() const;
+    static bool backup_user_preset_before_delete(const std::string &preset_file_path);
 
     //BBS: project embedded preset logic
     PresetsConfigSubstitutions load_project_embedded_presets(std::vector<Preset*> project_presets, ForwardCompatibilitySubstitutionRule substitution_rule);

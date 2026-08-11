@@ -36,6 +36,7 @@
     ],
     "from": "system",
     "inherits": "Generic PPA-GF @System",
+    "setting_id": "Jws2AaLWaNyZhqX4",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PPA-CF @FF C5P",

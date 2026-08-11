@@ -61,6 +61,7 @@
     ],
     "from": "system",
     "inherits": "Generic PETG-CF @System",
+    "setting_id": "O3tz36NNMoagELL0",
     "instantiation": "false",
     "is_custom_defined": "0",
     "name": "FusRock S-Multi @FF C5",

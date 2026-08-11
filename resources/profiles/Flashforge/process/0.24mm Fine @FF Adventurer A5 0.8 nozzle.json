@@ -2,6 +2,7 @@
     "bridge_flow": "1",
     "enable_arc_fitting": "1",
     "from": "system",
+    "setting_id": "INfUgOlQBMZLYrfu",
     "instantiation": "true",
     "compatible_printers": [
         "Flashforge Adventurer A5 0.8 nozzle"

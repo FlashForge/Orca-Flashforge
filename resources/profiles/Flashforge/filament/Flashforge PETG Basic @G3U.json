@@ -10,7 +10,6 @@
     "instantiation": "false",
     "is_custom_defined": "0",
     "name": "Flashforge PETG Basic @G3U",
-    "setting_id": "GFSA04",
     "type": "filament",
     "version": "2.1.1.0"
 }

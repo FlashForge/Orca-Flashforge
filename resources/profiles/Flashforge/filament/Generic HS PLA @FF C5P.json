@@ -54,6 +54,7 @@
         "Generic"
     ],
     "inherits": "Generic PLA High Speed @System",
+    "setting_id": "67oIhbcXz7XMbeHG",
     "instantiation": "true",
     "name": "Generic HS PLA @FF C5P",
     "pressure_advance": [

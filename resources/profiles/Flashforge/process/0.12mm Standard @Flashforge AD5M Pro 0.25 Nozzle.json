@@ -9,7 +9,7 @@
   ],
   "filename_format": "{input_filename_base}.gcode",
   "post_process": "",
-  "setting_id": "GP011",
+  "setting_id": "m8tMfAWzSm9vmAiL",
   "print_settings_id": "0.12mm Standard @Flashforge AD5M Pro 0.25 Nozzle",
   "bottom_shell_layers": "4",
   "brim_width": "3",

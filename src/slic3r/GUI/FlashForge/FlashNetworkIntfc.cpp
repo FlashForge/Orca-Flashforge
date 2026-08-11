@@ -127,6 +127,12 @@ FlashNetworkIntfc::FlashNetworkIntfc(const char *libraryPath, const char *server
     INIT_FUNC_PTR(freeJobInfo, fnet_freeJobInfo);
     INIT_FUNC_PTR(doBusGetRequest, fnet_doBusGetRequest);
     INIT_FUNC_PTR(doBusPostRequest, fnet_doBusPostRequest);
+    INIT_FUNC_PTR(getSettingList2, fnet_getSettingList2);
+    INIT_FUNC_PTR(getSettingList, fnet_getSettingList);
+    INIT_FUNC_PTR(getUserPresets, fnet_getUserPresets);
+    INIT_FUNC_PTR(requestSettingId, fnet_requestSettingId);
+    INIT_FUNC_PTR(putSetting, fnet_putSetting);
+    INIT_FUNC_PTR(deleteSetting, fnet_deleteSetting);
     INIT_FUNC_PTR(getMqttConfig, fnet_getMqttConfig);
     INIT_FUNC_PTR(freeMqttConfig, fnet_freeMqttConfig);
     INIT_FUNC_PTR(createConnection, fnet_createConnection);
@@ -142,7 +148,7 @@ FlashNetworkIntfc::FlashNetworkIntfc(const char *libraryPath, const char *server
     INIT_FUNC_PTR(freeSyncOnlineInfo, fnet_freeSyncOnlineInfo);
     INIT_FUNC_PTR(allocString, fnet_allocString);
     INIT_FUNC_PTR(freeString, fnet_freeString);
-    if (initlize(serverSettingsPath, &logSettings) == FNET_OK && strcmp(getVersion(), "3.4.2") == 0) {
+    if (initlize(serverSettingsPath, &logSettings) == FNET_OK && strcmp(getVersion(), "3.4.3") == 0) {
         m_isOk = true;
     }
     else {

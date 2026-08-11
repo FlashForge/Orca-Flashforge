@@ -8984,7 +8984,10 @@ msgid "Check for stable updates only"
 msgstr "Vérifier les mises à jour stables uniquement"
 
 msgid "Auto sync user presets (Printer/Filament/Process)"
-msgstr ""
+msgstr "Synchroniser automatiquement les préréglages utilisateur (Imprimante/Filament/Processus)"
+
+msgid "Synchronize user presets with FlashForge Cloud after login"
+msgstr "Synchroniser les préréglages utilisateur avec FlashForge Cloud après la connexion"
 
 msgid "Update built-in Presets automatically."
 msgstr "Mettre à jour automatiquement les préréglages intégrés."
@@ -25281,3 +25284,16 @@ msgstr "%lld heures %lld minutes"
 
 msgid "The multicolor filament limit has been reached. Reopen the project and try again."
 msgstr "La limite de filaments multicolores est atteinte. Rouvrez le projet et réessayez."
+
+msgid ""
+"Do you want to synchronize your personal presets with FlashForge Cloud?\n"
+"It contains the following information:\n"
+"1. The Process presets\n"
+"2. The Filament presets\n"
+"3. The Printer presets"
+msgstr ""
+"Voulez-vous synchroniser vos préréglages personnels avec FlashForge Cloud ?\n"
+"Ils contiennent les informations suivantes :\n"
+"1. Préréglages de processus\n"
+"2. Préréglages de filament\n"
+"3. Préréglages d'imprimante"

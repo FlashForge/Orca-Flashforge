@@ -8941,6 +8941,9 @@ msgstr ""
 "Автоматическая синхронизация пользовательских настроек (Принтер/Филамент/"
 "Процесс)"
 
+msgid "Synchronize user presets with FlashForge Cloud after login"
+msgstr "Синхронизировать пользовательские профили с FlashForge Cloud после входа в систему"
+
 msgid "Update built-in Presets automatically."
 msgstr "Автоматически обновлять системные профили"
 

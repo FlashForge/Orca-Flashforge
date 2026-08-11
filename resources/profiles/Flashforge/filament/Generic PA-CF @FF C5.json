@@ -28,6 +28,7 @@
     ],
     "from": "system",
     "inherits": "Generic PA-CF @System",
+    "setting_id": "uFTeE9CIdjO1u9FI",
     "instantiation": "true",
     "name": "Generic PA-CF @FF C5",
     "nozzle_temperature": [

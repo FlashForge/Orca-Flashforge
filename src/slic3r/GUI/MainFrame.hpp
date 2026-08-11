@@ -333,9 +333,9 @@ public:
 
     void        update_ui_from_settings();
     //BBS
-    void        show_sync_dialog();
+    void        show_sync_dialog(const std::string& user_id);
     void        update_side_preset_ui();
-    void        on_select_default_preset(SimpleEvent& evt);
+    void        on_select_default_preset(wxCommandEvent& evt);
 
     void        resetFirstGotoMonitor() { m_firstGotoMonitor = true; }
     bool        is_loaded() const { return m_loaded; }

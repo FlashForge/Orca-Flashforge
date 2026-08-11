@@ -70,7 +70,7 @@ namespace {
 
 constexpr auto FF_DEVICE_PAGE_PRIMARY_TEXT = "#333333";
 
-enum class CameraStreamProtocol { Source, Hls, Rtmp };
+enum class CameraStreamProtocol { Source, Rtmp };
 
 // Change this single value to compare the device's fixed HLS and RTMP URLs.
 static constexpr CameraStreamProtocol g_camera_stream_protocol = CameraStreamProtocol::Rtmp;
@@ -86,19 +86,11 @@ std::string switch_camera_stream_url(const std::string& source, CameraStreamProt
         else if (result.rfind("http://", 0) == 0)
             result.replace(0, 7, "rtmp://");
 
-        // RTMP uses the same fixed host/path without the HLS playlist suffix.
         const size_t suffix = result.find(".m3u8");
         if (suffix != std::string::npos) result.erase(suffix, 5);
-    } else if (protocol == CameraStreamProtocol::Hls) {
-        if (result.rfind("rtmps://", 0) == 0)
-            result.replace(0, 8, "https://");
-        else if (result.rfind("rtmp://", 0) == 0)
-            result.replace(0, 7, "http://");
-
-        const size_t query = result.find('?');
-        const std::string path = result.substr(0, query);
-        if (path.size() < 5 || path.substr(path.size() - 5) != ".m3u8")
-            result.insert(query == std::string::npos ? result.size() : query, ".m3u8");
+        const size_t suffix2 = result.find(".flv");
+        if (suffix2 != std::string::npos) result.erase(suffix2, 4);
+    } else if (protocol == CameraStreamProtocol::Source) {
     }
     return result;
 }
@@ -4464,7 +4456,6 @@ void SingleDeviceState::refreshCameraStream()
     // signal in LAN mode. All other cases use the explicit camera field.
     const bool camera_available = uses_stream_url_capability ? stream_url_present : data.devDetail->camera == 1;
 
-    BOOST_LOG_TRIVIAL(error) << "camera_available: " << camera_available;
     camera_capability_log(
         "refresh: cameraComId=" + std::to_string(m_camera_cur_id)
         + " currentComId=" + std::to_string(m_cur_id)

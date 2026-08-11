@@ -70,6 +70,7 @@
         "40"
     ],
     "inherits": "Generic TPU @System",
+    "setting_id": "i59KgPtnplOJ8ZBh",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Generic TPU-64D @FF C5",

@@ -13,6 +13,7 @@
 #include <map>
 #include <mutex>
 #include <set>
+#include <mutex>
 #include <fstream>
 #include <sstream>
 #include <unordered_map>
@@ -610,6 +611,9 @@ PresetsConfigSubstitutions PresetBundle::load_presets(AppConfig &config, Forward
     // BBS load preset from user's folder, load system default if
     // BBS: change directories by design
     std::string dir_user_presets = config.get("preset_folder");
+    const std::string user_preset_folder = data_dir() + "/" + PRESET_USER_DIR + "/" +
+                                           (dir_user_presets.empty() ? DEFAULT_USER_FOLDER_NAME : dir_user_presets);
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " user preset folder: " << user_preset_folder;
     if (dir_user_presets.empty()) {
         load_user_presets(DEFAULT_USER_FOLDER_NAME, substitution_rule);
     } else {
@@ -782,6 +786,48 @@ bool PresetBundle::backup_user_folder() const
         // Try to clean up partially copied backup folder
         if (boost::filesystem::exists(boost::filesystem::path(backup_folderpath)))
             boost::filesystem::remove_all(boost::filesystem::path(backup_folderpath));
+        return false;
+    }
+}
+
+bool PresetBundle::backup_user_preset_before_delete(const std::string &preset_file_path)
+{
+    static std::mutex backup_mutex;
+    const std::scoped_lock lock(backup_mutex);
+
+    const fs::path user_folder   = fs::path(data_dir()) / PRESET_USER_DIR;
+    const fs::path backup_folder = fs::path(data_dir()) / "user_back_up";
+    const fs::path preset_file   = fs::absolute(fs::path(preset_file_path)).make_preferred();
+
+    if (!fs::exists(user_folder) || !fs::exists(preset_file)) {
+        BOOST_LOG_TRIVIAL(info) << "Skip user preset backup before delete because source does not exist: " << preset_file.string();
+        return true;
+    }
+
+    try {
+        const fs::path relative_path = fs::relative(preset_file, fs::absolute(user_folder));
+        if (relative_path.empty() || *relative_path.begin() == "..") {
+            BOOST_LOG_TRIVIAL(info) << "Skip backing up preset outside the user directory: " << preset_file.string();
+            return true;
+        }
+
+        const fs::path backup_preset_file = backup_folder / relative_path;
+        fs::create_directories(backup_preset_file.parent_path());
+        fs::copy_file(preset_file, backup_preset_file, fs::copy_options::overwrite_existing);
+
+        fs::path preset_info_file = preset_file;
+        preset_info_file.replace_extension(".info");
+        if (fs::exists(preset_info_file)) {
+            fs::path backup_info_file = backup_preset_file;
+            backup_info_file.replace_extension(".info");
+            fs::copy_file(preset_info_file, backup_info_file, fs::copy_options::overwrite_existing);
+        }
+
+        BOOST_LOG_TRIVIAL(info) << "User preset backup before delete completed successfully: " << preset_file.string() << " -> "
+                                << backup_preset_file.string();
+        return true;
+    } catch (const std::exception &ex) {
+        BOOST_LOG_TRIVIAL(error) << "Failed to back up user preset before deleting it: " << preset_file.string() << ", " << ex.what();
         return false;
     }
 }
@@ -1181,13 +1227,32 @@ PresetsConfigSubstitutions PresetBundle::load_user_presets(AppConfig &          
     std::map<std::string, std::map<std::string, std::string>>::iterator it;
     for (int pass = 0; pass < 2; ++pass)
     for (it = my_presets.begin(); it != my_presets.end(); it++) {
-        std::string name = it->first;
+        const std::string setting_id = it->first;
         std::map<std::string, std::string>& value_map = it->second;
+        if (setting_id.empty()) {
+            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << " can not load a cloud preset with an empty setting_id";
+            continue;
+        }
+
+        const auto name_iter = value_map.find(BBL_JSON_KEY_NAME);
+        if (name_iter == value_map.end() || name_iter->second.empty()) {
+            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(" can not find name for setting_id %1%") % setting_id;
+            continue;
+        }
+        const std::string& name = name_iter->second;
+
+        const auto value_setting_id = value_map.find(BBL_JSON_KEY_SETTING_ID);
+        if (value_setting_id != value_map.end() && !value_setting_id->second.empty() && value_setting_id->second != setting_id) {
+            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__
+                                       << boost::format(" setting_id mismatch for preset %1%, map key %2%, value %3%; using map key")
+                                              % name % setting_id % value_setting_id->second;
+        }
+        value_map[BBL_JSON_KEY_SETTING_ID] = setting_id;
         // Load user root presets at first pass
         std::map<std::string, std::string>::iterator inherits_iter = value_map.find(BBL_JSON_KEY_INHERITS);
         if ((pass == 1) == (inherits_iter == value_map.end() || inherits_iter->second.empty()))
             continue;
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " start load from cloud: " << name;
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " start load from cloud: " << name << ", setting_id: " << setting_id;
         //get the type first
         std::map<std::string, std::string>::iterator type_iter = value_map.find(BBL_JSON_KEY_TYPE);
         if (type_iter == value_map.end()) {
@@ -2167,9 +2232,9 @@ int PresetBundle::validate_presets(const std::string &file_name, DynamicPrintCon
 
 void PresetBundle::remove_users_preset(AppConfig &config, std::map<std::string, std::map<std::string, std::string>> *my_presets)
 {
-    auto check_removed = [my_presets, this](Preset &preset) -> bool {
+    auto check_removed = [my_presets](Preset &preset) -> bool {
         if (my_presets == nullptr) return true;
-        if (my_presets->find(preset.name) != my_presets->end()) return false;
+        if (!preset.setting_id.empty() && my_presets->find(preset.setting_id) != my_presets->end()) return false;
         if (!preset.sync_info.empty()) return false; // syncing, not remove
         if (preset.setting_id.empty()) return false; // no id, not remove
         // Saved preset is removed by another session

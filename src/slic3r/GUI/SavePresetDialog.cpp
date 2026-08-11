@@ -234,7 +234,7 @@ void SavePresetDialog::Item::accept()
         Preset &current_preset   = *it;
         if (!current_preset.setting_id.empty()) {
             BOOST_LOG_TRIVIAL(info) << "delete preset = " << current_preset.name << ", setting_id = " << current_preset.setting_id;
-            wxGetApp().delete_preset_from_cloud(current_preset.setting_id);
+            wxGetApp().delete_preset_from_cloud(current_preset.setting_id, current_preset.file);
         }
         m_presets->delete_preset(m_preset_name);
     }

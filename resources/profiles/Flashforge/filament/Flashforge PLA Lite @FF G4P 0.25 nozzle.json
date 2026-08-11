@@ -207,6 +207,7 @@
         "nil"
     ],
     "from": "system",
+    "setting_id": "rtBTrveNVmTll9P0",
     "instantiation": "true",
     "compatible_printers": [
       "Flashforge Guider4 Pro 0.25 nozzle"

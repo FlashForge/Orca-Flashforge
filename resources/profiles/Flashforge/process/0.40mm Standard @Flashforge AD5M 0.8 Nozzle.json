@@ -9,7 +9,7 @@
   ],
   "filename_format": "{input_filename_base}.gcode",
   "post_process": "",
-  "setting_id": "GP002",
+  "setting_id": "u0jpovtEQsNZSkyN",
   "print_settings_id": "0.40mm Standard @Flashforge AD5M 0.8 Nozzle",
   "elefant_foot_compensation": "0",
   "initial_layer_infill_speed": "55",

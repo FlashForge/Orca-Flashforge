@@ -54,6 +54,7 @@
     ],
     "from": "system",
     "inherits": "Generic PLA-CF @System",
+    "setting_id": "xReo12oteZ4ECNJN",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PLA-CF @FF C5P",

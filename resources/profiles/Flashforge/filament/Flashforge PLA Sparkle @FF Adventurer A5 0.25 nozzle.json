@@ -25,6 +25,7 @@
         "60"
     ],
     "inherits": "Flashforge PLA Sparkle @FF AD5M 0.25 nozzle",
+    "setting_id": "VV75FchmjnPjnDE8",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PLA Sparkle @FF Adventurer A5 0.25 nozzle",

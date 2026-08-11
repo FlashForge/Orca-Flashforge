@@ -6,6 +6,7 @@
     "exclude_object": "1",
     "filter_out_gap_fill": "0.1",
     "from": "system",
+    "setting_id": "boicXzn9lxXQLWx4",
     "instantiation": "true",
     "compatible_printers": [
         "Flashforge Guider4 Pro 0.4 nozzle"

@@ -67,6 +67,7 @@
         "80"
     ],
     "inherits": "Flashforge Generic ABS @G3U",
+    "setting_id": "m7oJx47UMlFctMkX",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PETG Pro @FF G4P HF",

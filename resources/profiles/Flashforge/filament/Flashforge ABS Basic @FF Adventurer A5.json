@@ -24,6 +24,7 @@
     ],
     "from": "system",
     "inherits": "Flashforge Generic ABS",
+    "setting_id": "rDW4AwKc7SD7WIxN",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge ABS Basic @FF Adventurer A5",

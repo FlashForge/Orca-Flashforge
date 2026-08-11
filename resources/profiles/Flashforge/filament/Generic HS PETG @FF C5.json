@@ -43,6 +43,7 @@
     ],
     "from": "system",
     "inherits": "Generic PETG HF @System",
+    "setting_id": "sABpz2mHenZgvDKv",
     "instantiation": "true",
     "name": "Generic HS PETG @FF C5",
     "nozzle_temperature": [

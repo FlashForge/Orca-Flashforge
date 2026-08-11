@@ -54,6 +54,7 @@
     ],
     "from": "system",
     "inherits": "Generic PLA @System",
+    "setting_id": "ALRfG5zUa6ytbtho",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Generic PLA @FF C5P",

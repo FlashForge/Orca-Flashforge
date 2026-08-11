@@ -70,6 +70,7 @@
         "110"
     ],
     "inherits": "FusRock Generic PET-CF @G3U 0.6 Nozzle",
+    "setting_id": "3w8fnDjkoFaJ6Nhw",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "FlashForge PPS @FF G4 0.6 HF nozzle",

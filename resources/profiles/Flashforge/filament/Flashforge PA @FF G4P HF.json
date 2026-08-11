@@ -70,6 +70,7 @@
         "100"
     ],
     "inherits": "Flashforge Generic ABS @G3U",
+    "setting_id": "XGNPvS2ps7Xn2fpx",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PA @FF G4P HF",

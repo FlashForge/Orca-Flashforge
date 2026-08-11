@@ -64,6 +64,7 @@
         "85"
     ],
     "inherits": "Generic PETG HF @System",
+    "setting_id": "kpRved5M3NktqIYn",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge HS PETG @FF C5",

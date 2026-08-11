@@ -54,6 +54,7 @@
         "110"
     ],
     "inherits": "Generic PPA-GF @System",
+    "setting_id": "UWFjBmSpUkZLBvoO",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PPS-CF @FF C5P",

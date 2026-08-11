@@ -616,9 +616,8 @@ void AppConfig::set_defaults()
 
     set_version_check_url();
 
-    if(get("installed_networking").empty()) {
-        set_bool("installed_networking", false);
-    }
+    // flashforge的云不走网络插件
+    set_bool("installed_networking", true);
 
 #ifdef __linux__
     if (get("window_buttons_on_left").empty())

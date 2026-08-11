@@ -856,6 +856,7 @@ int OrcaCloudServiceAgent::get_user_presets(std::map<std::string, std::map<std::
 {
     if (!user_presets) return BAMBU_NETWORK_ERR_INVALID_HANDLE;
 
+    user_presets->clear();
     if (!is_user_login()) {
         BOOST_LOG_TRIVIAL(error) << "OrcaCloudServiceAgent: Not logged in";
         return BAMBU_NETWORK_ERR_INVALID_HANDLE;
@@ -877,31 +878,12 @@ int OrcaCloudServiceAgent::get_user_presets(std::map<std::string, std::map<std::
         std::string current_user_id = get_user_id();
 
         for (const auto& upsert : resp.upserts) {
-            // Parse JSON content into key-value pairs using helper
-            std::map<std::string, std::string> value_map;
-            json_to_map(upsert.content.dump(), value_map);
-
-            // Add metadata from top-level sync response if not already in content
-            // These are required by PresetCollection::load_user_preset
-            if (value_map.find(BBL_JSON_KEY_SETTING_ID) == value_map.end()) {
-                value_map[BBL_JSON_KEY_SETTING_ID] = upsert.id;
-            }
-            if (value_map.find(BBL_JSON_KEY_USER_ID) == value_map.end()) {
-                value_map[BBL_JSON_KEY_USER_ID] = current_user_id;
-            }
-            if (value_map.find(ORCA_JSON_KEY_UPDATE_TIME) == value_map.end()) {
-                value_map[ORCA_JSON_KEY_UPDATE_TIME] = std::to_string(upsert.updated_time);
+            std::string preset_type = IOT_PRINT_TYPE_STRING;
+            if (upsert.content.contains("type") && upsert.content["type"].is_string()) {
+                preset_type = upsert.content["type"].get<std::string>();
             }
 
-            // Use preset name from content or fallback to upsert.name or upsert.id
-            std::string preset_name = upsert.content.value(BBL_JSON_KEY_NAME, "");
-            if (preset_name.empty()) {
-                preset_name = upsert.name.empty() ? upsert.id : upsert.name;
-            }
-
-            // Store as: user_presets[preset_name][key] = value
-            // This matches the format expected by PresetBundle::load_user_presets
-            (*user_presets)[preset_name] = value_map;
+            (*user_presets)[preset_type][upsert.id] = upsert.content.dump();
         }
 
         if (resp.next_cursor != 0) {
@@ -966,7 +948,7 @@ std::string OrcaCloudServiceAgent::request_setting_id(std::string name, std::map
     return "";
 }
 
-int OrcaCloudServiceAgent::put_setting(std::string setting_id, std::string name, std::map<std::string, std::string>* values_map, unsigned int* http_code, bool force)
+int OrcaCloudServiceAgent::put_setting(std::string setting_id, std::string name, std::map<std::string, std::string>* values_map, unsigned int* http_code)
 {
     // Extract original_updated_time for Optimistic Concurrency Control
     // If present, server will verify version before update. If absent, treated as insert.
@@ -990,7 +972,7 @@ int OrcaCloudServiceAgent::put_setting(std::string setting_id, std::string name,
         }
     }
 
-    auto result = sync_push(setting_id, name, content, original_updated_time, force);
+    auto result = sync_push(setting_id, name, content, original_updated_time);
     if (http_code) *http_code = result.http_code;
 
     if (result.success) {

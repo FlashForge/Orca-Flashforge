@@ -7,6 +7,7 @@
     "wipe_tower_wall_type": "rib",
     "type": "process",
     "from": "system",
+    "setting_id": "NDOQ4LhG0S0b6vAp",
     "instantiation": "true",
     "compatible_printers": [
         "Flashforge AD5X 0.8 nozzle"

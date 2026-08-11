@@ -37,6 +37,7 @@
     "inner_wall_acceleration": "10000",
     "inner_wall_line_width": "0.62",
     "inner_wall_speed": "150",
+    "setting_id": "VbgpUmBZySYfOWFM",
     "instantiation": "true",
     "internal_solid_infill_line_width": "0.62",
     "internal_solid_infill_pattern": "rectilinear",

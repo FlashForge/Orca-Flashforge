@@ -54,6 +54,7 @@
     ],
     "from": "system",
     "inherits": "Generic PLA @System",
+    "setting_id": "9qVabnSl8xfKSIYX",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PLA Galaxy @FF C5P",

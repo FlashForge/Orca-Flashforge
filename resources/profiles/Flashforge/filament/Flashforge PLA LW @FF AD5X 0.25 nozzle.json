@@ -10,6 +10,7 @@
     ],
     "from": "system",
     "inherits": "Flashforge PLA Basic @FF AD5X 0.25 nozzle",
+    "setting_id": "E3uDOFx8lH2ywVCr",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PLA LW @FF AD5X 0.25 nozzle",

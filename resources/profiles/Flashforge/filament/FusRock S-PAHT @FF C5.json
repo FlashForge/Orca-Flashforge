@@ -61,6 +61,7 @@
         "80"
     ],
     "inherits": "Generic PA-CF @System",
+    "setting_id": "pV5QERvRuROIZTOa",
     "instantiation": "false",
     "is_custom_defined": "0",
     "name": "FusRock S-PAHT @FF C5",

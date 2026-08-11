@@ -1578,7 +1578,9 @@ void PreferencesDialog::create_items()
     auto item_stable_updates   = create_item_checkbox(_L("Check for stable updates only"), "", "check_stable_update_only");
     g_sizer->Add(item_stable_updates);
 
-    auto item_user_sync        = create_item_checkbox(_L("Auto sync user presets (Printer/Filament/Process)"), "", "sync_user_preset");
+    auto item_user_sync = create_item_checkbox(_L("Auto sync user presets (Printer/Filament/Process)"),
+                                                  _L("Synchronize user presets with FlashForge Cloud after login"),
+                                                  "sync_user_preset");
     g_sizer->Add(item_user_sync);
 
     auto item_system_sync      = create_item_checkbox(_L("Update built-in Presets automatically."), "", "sync_system_preset");

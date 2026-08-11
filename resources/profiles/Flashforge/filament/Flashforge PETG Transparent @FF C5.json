@@ -58,6 +58,7 @@
         "85"
     ],
     "inherits": "Generic PETG @System",
+    "setting_id": "TtXy042wtT6nF3WB",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PETG Transparent @FF C5",

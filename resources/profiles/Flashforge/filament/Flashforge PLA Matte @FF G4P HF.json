@@ -73,6 +73,7 @@
         "55"
     ],
     "inherits": "Flashforge Generic ABS @G3U",
+    "setting_id": "IRC2n4GaofxvvyTt",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PLA Matte @FF G4P HF",

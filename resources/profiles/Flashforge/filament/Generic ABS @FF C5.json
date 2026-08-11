@@ -46,6 +46,7 @@
         "110"
     ],
     "inherits": "Generic ABS @System",
+    "setting_id": "HfBXVGhboM5bEOq0",
     "instantiation": "true",
     "name": "Generic ABS @FF C5",
     "nozzle_temperature": [

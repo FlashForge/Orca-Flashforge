@@ -54,6 +54,7 @@
     ],
     "from": "system",
     "inherits": "Generic PLA @System",
+    "setting_id": "xdFZUsj1cNLXdvT6",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge HS PLA @FF C5P",

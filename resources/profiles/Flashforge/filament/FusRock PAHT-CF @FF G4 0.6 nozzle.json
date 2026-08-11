@@ -46,6 +46,7 @@
         "80"
     ],
     "inherits": "FusRock Generic PAHT-CF @G3U 0.6 Nozzle",
+    "setting_id": "TZ0nKqxoIYk2mPh8",
     "instantiation": "false",
     "is_custom_defined": "0",
     "name": "FusRock PAHT-CF @FF G4 0.6 nozzle",

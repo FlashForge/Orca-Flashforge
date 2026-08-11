@@ -94,6 +94,7 @@
         "65"
     ],
     "inherits": "Generic PLA @System",
+    "setting_id": "2VMiVCUPVbi52diP",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Generic PLA @FF C5",

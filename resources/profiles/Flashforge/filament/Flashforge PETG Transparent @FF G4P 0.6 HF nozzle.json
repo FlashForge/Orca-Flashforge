@@ -49,6 +49,7 @@
     ],
     "from": "system",
     "inherits": "Flashforge Generic PETG @G3U 0.6 Nozzle",
+    "setting_id": "kuCvwo6Phr6Ywhm4",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PETG Transparent @FF G4P 0.6 HF nozzle",

@@ -300,6 +300,7 @@ ComErrno MultiComMgr::addWanDev(const com_token_data_t &tokenData, bool isCheckV
     if (ret != COM_OK) {
         return ret;
     }
+    m_userId = addDevData.userProfile.uid;
     m_login = true;
     ++m_mqttGeneration;
     m_mqttReconnectAllowed = true;
@@ -332,6 +333,7 @@ void MultiComMgr::removeWanDev()
             comPtr->disconnect(0);
         }
     }
+    m_userId.clear();
     ++m_mqttGeneration;
     m_mqttConfigRefreshInFlight = false;
     m_mqttReconnectAllowed = false;

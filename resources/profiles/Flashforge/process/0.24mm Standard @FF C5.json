@@ -34,6 +34,7 @@
     "initial_layer_print_height": "0.25",
     "inner_wall_acceleration": "10000",
     "inner_wall_speed": "230",
+    "setting_id": "vchCynehN4s32swH",
     "instantiation": "true",
     "internal_solid_infill_pattern": "rectilinear",
     "internal_solid_infill_speed": "230",

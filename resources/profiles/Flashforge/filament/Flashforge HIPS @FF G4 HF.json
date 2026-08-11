@@ -55,6 +55,7 @@
         "100"
     ],
     "inherits": "Flashforge Generic ABS @G3U",
+    "setting_id": "tEohTtyHofD6l6o3",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge HIPS @FF G4 HF",
