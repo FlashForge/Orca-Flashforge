@@ -59,7 +59,7 @@
     ],
     "inherits": "Flashforge Generic TPU",
     "setting_id": "JXf7KCy4KY65xuzO",
-    "instantiation": "true",
+    "instantiation": "false",
     "is_custom_defined": "0",
     "name": "FusRock PET-CF @FF G4P",
     "nozzle_temperature": [

@@ -4,24 +4,34 @@ else()
     set(library_build_shared "0")
 endif()
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    set(_ft_disable_zlib "-D FT_DISABLE_ZLIB=FALSE")
+if(WIN32)
+    set(_ft_zlib_args
+        -DFT_DISABLE_ZLIB=TRUE
+    )
+    set(_ft_zlib_depends "")
 else()
-    set(_ft_disable_zlib "-D FT_DISABLE_ZLIB=TRUE")
+    # Keep FreeType and the rest of the application on the same zlib. In a
+    # static macOS build, FreeType's bundled copy may otherwise satisfy only
+    # part of Assimp's zlib symbols and make compressed FBX data unreadable.
+    set(_ft_zlib_args
+        -DFT_DISABLE_ZLIB=FALSE
+        -DFT_REQUIRE_ZLIB=TRUE
+    )
+    set(_ft_zlib_depends ${ZLIB_PKG})
 endif()
 
 orcaslicer_add_cmake_project(FREETYPE
     URL https://github.com/SoftFever/orca_deps/releases/download/freetype-2.12.1.tar.gz/freetype-2.12.1.tar.gz
     URL_HASH SHA256=efe71fd4b8246f1b0b1b9bfca13cfff1c9ad85930340c27df469733bbb620938
-    #DEPENDS ${ZLIB_PKG}
+    DEPENDS ${_ft_zlib_depends}
     #"${_patch_step}"
     CMAKE_ARGS
-	-D BUILD_SHARED_LIBS=${library_build_shared}
-	${_ft_disable_zlib}
-        -D FT_DISABLE_BZIP2=TRUE
-        -D FT_DISABLE_PNG=TRUE
-        -D FT_DISABLE_HARFBUZZ=TRUE
-        -D FT_DISABLE_BROTLI=TRUE
+	-DBUILD_SHARED_LIBS=${library_build_shared}
+	${_ft_zlib_args}
+        -DFT_DISABLE_BZIP2=TRUE
+        -DFT_DISABLE_PNG=TRUE
+        -DFT_DISABLE_HARFBUZZ=TRUE
+        -DFT_DISABLE_BROTLI=TRUE
 )
 
 if(MSVC)

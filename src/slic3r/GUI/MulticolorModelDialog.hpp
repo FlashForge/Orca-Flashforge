@@ -90,6 +90,7 @@ public:
 
     void set_model(const out_model_data_t &model);
     void set_textured_model(std::shared_ptr<const FullColorOriginalPreview> model);
+    void set_default_rotation(float rot_x, float rot_y);
     void reset_view();
 
 private:
@@ -116,6 +117,8 @@ private:
     bool m_show_textured_model{false};
     std::array<float, 3> m_center{0.0f, 0.0f, 0.0f};
     float m_extent{1.0f};
+    float m_default_rot_x{-90.0f};
+    float m_default_rot_y{0.0f};
     float m_rot_x{-90.0f};
     float m_rot_y{0.0f};
     float m_zoom{1.0f};

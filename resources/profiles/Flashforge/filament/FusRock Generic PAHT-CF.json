@@ -201,7 +201,7 @@
         "80"
     ],
     "inherits": "Flashforge Generic PETG",
-    "instantiation": "true",
+    "instantiation": "false",
     "name": "FusRock Generic PAHT-CF",
     "nozzle_temperature": [
         "295"

@@ -1,5 +1,6 @@
 {
     "compatible_printers": [
+        "Flashforge Creator 5 0.25 nozzle",
         "Flashforge Creator 5 0.4 nozzle",
         "Flashforge Creator 5 0.6 nozzle",
         "Flashforge Creator 5 0.8 nozzle"
@@ -61,7 +62,7 @@
     ],
     "inherits": "Generic PA-CF @System",
     "setting_id": "pV5QERvRuROIZTOa",
-    "instantiation": "true",
+    "instantiation": "false",
     "is_custom_defined": "0",
     "name": "FusRock S-PAHT @FF C5",
     "nozzle_temperature_range_high": [

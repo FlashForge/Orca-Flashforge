@@ -67,7 +67,7 @@
     "from": "system",
     "inherits": "Generic PETG-CF @System",
     "setting_id": "Gg9H6I32fOqoLSqE",
-    "instantiation": "true",
+    "instantiation": "false",
     "is_custom_defined": "0",
     "name": "FusRock S-Multi @FF C5P",
     "nozzle_temperature": [

@@ -41,7 +41,7 @@
     "from": "system",
     "inherits": "FusRock Generic S-PAHT @G3U 0.6 Nozzle",
     "setting_id": "3SCkpXXK8VcQBMQn",
-    "instantiation": "true",
+    "instantiation": "false",
     "is_custom_defined": "0",
     "name": "FusRock PAHT @FF G4 0.6 nozzle",
     "overhang_fan_speed": [
