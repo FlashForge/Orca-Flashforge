@@ -392,3 +392,6 @@ msgstr "Geçerli filament listesi"
 
 msgid "New filament"
 msgstr "Yeni filament"
+
+msgid "No camera detected"
+msgstr "Kamera algılanmadı"

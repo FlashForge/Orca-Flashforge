@@ -6,6 +6,7 @@
         "600"
     ],
     "compatible_printers": [
+        "Flashforge Creator 5 0.25 nozzle",
         "Flashforge Creator 5 0.4 nozzle",
         "Flashforge Creator 5 0.6 nozzle",
         "Flashforge Creator 5 0.8 nozzle"
@@ -69,6 +70,7 @@
         "40"
     ],
     "inherits": "Generic TPU @System",
+    "setting_id": "i59KgPtnplOJ8ZBh",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Generic TPU-64D @FF C5",
@@ -82,7 +84,7 @@
         "50%"
     ],
     "pressure_advance": [
-        "0.0225"
+        "0.035"
     ],
     "slow_down_layer_time": [
         "10"
@@ -108,5 +110,8 @@
     "textured_plate_temp_initial_layer": [
         "40"
     ],
-    "version": "2.3.0.3"
+    "version": "2.3.0.3",
+    "filament_extruder_variant": [
+        "Direct Drive Standard"
+    ]
 }

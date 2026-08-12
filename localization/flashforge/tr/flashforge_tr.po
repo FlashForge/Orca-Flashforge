@@ -1001,9 +1001,6 @@ msgctxt "Flashforge"
 msgid "Original"
 msgstr "Orijinal"
 
-msgid "No camera detected"
-msgstr "Kamera algılanmadı"
-
 #: resources/data/hints.ini: [hint:Chamber temperature]
 msgid ""
 "Chamber temperature\n"
@@ -1083,3 +1080,90 @@ msgstr "Onarılan ağ sonlandırılıyor"
 
 msgid "Remapping repaired mesh colors"
 msgstr "Onarılan ağ renkleri yeniden eşleniyor"
+
+#, c-format
+msgid "%lld minutes"
+msgstr "%lld dakika"
+
+#, c-format
+msgid "%lld hours %lld minutes"
+msgstr "%lld saat %lld dakika"
+
+msgid "Click to edit"
+msgstr "Düzenlemek için tıklayın"
+
+msgid "Gradient Mix Weights"
+msgstr "Gradyan karışım ağırlıkları"
+
+msgid "Pick a point in the gradient map to control multi-filament mix."
+msgstr "Çoklu filament karışımını kontrol etmek için gradyan haritasında bir nokta seçin."
+
+msgid "The multicolor filament limit has been reached. Reopen the project and try again."
+msgstr "Çok renkli filament sınırına ulaşıldı. Projeyi yeniden açıp tekrar deneyin."
+
+msgid ""
+"Do you want to synchronize your personal presets with FlashForge Cloud?\n"
+"It contains the following information:\n"
+"1. The Process presets\n"
+"2. The Filament presets\n"
+"3. The Printer presets"
+msgstr ""
+"Kişisel ön ayarlarınızı FlashForge Cloud ile senkronize etmek istiyor musunuz?\n"
+"Aşağıdaki bilgileri içerir:\n"
+"1. Süreç ön ayarları\n"
+"2. Filament ön ayarları\n"
+"3. Yazıcı ön ayarları"
+
+msgid "To help us identify and resolve your issue more quickly, we recommend uploading your device and app logs. The logs are used solely for troubleshooting and will not collect any of your personal information."
+msgstr "Sorununuzu daha hızlı tespit edip çözebilmemiz için, cihaz ve uygulama günlüklerini yüklemenizi öneririz. Günlükler yalnızca sorun analizi amacıyla kullanılır; kişisel bilgileriniz toplanmaz."
+
+msgid "orca software Logs"
+msgstr "Dilim Günlüğü"
+
+msgid "orca software Operation Logs"
+msgstr "Dilim Yazılımı İşlem Günlüğü"
+
+msgid "App Logs"
+msgstr "Uygulama Günlüğü"
+
+msgid "App Operation Logs"
+msgstr "Uygulama İşlem Günlüğü"
+
+msgid "Device Logs"
+msgstr "Cihaz Günlüğü"
+
+msgid "Device Operation Logs"
+msgstr "Cihaz İşlem Günlüğü"
+
+msgid "Select a Device"
+msgstr "Cihaz seçimi"
+
+msgid "{device} device is currently offline, so we are unable to retrieve the device logs at this time. You can still submit feedback. Once the device is back online, you can submit feedback again or go to Settings > Upload Firmware Log to upload the device logs."
+msgstr "{device} Cihaz şu anda çevrimdışı durumda olduğundan, cihaz günlüğüne geçici olarak erişilemiyor. Yine de geri bildirim gönderebilirsiniz; cihaz tekrar çevrimiçi hale geldiğinde, geri bildiriminizi yeniden gönderebilir veya Ayarlar > Firmware Günlüğünü Yükle seçeneğine giderek cihaz günlüğünü yükleyebilirsiniz."
+
+msgid "Slice Log"
+msgstr "Dilim Günlüğü"
+
+msgid "App Log"
+msgstr "Uygulama Günlüğü"
+
+msgid "Device Log"
+msgstr "Cihaz Günlüğü"
+
+msgid "The current device is offline, so we are unable to retrieve the device logs at this time. You can still submit feedback. Once the device is back online, you can submit feedback again or go to Settings > Upload Firmware Log to upload the device logs."
+msgstr "Cihaz şu anda çevrimdışı durumda olduğundan, cihaz günlüğüne geçici olarak erişilemiyor. Yine de geri bildirim gönderebilirsiniz; cihaz tekrar çevrimiçi hale geldiğinde, geri bildiriminizi yeniden gönderebilir veya Ayarlar > Firmware Günlüğünü Yükle seçeneğine giderek cihaz günlüğünü yükleyebilirsiniz."
+
+msgid "Slicing software operation log"
+msgstr "Dilim Yazılımı İşlem Günlüğü"
+
+msgid "App operation log"
+msgstr "Uygulama İşlem Günlüğü"
+
+msgid "Device operation log"
+msgstr "Cihaz İşlem Günlüğü"
+
+msgid "Add Device"
+msgstr "Cihaz Ekle"
+
+msgid "Select Device"
+msgstr "Cihaz Seç"

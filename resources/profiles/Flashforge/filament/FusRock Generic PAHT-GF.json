@@ -24,10 +24,10 @@
         "75"
     ],
     "inherits": "FusRock Generic PAHT-CF",
-    "instantiation": "true",
+    "instantiation": "false",
     "is_custom_defined": "0",
     "name": "FusRock Generic PAHT-GF",
-    "setting_id": "GFSA04",
+    "setting_id": "gLG1R5gtdliSlnZJ",
     "slow_down_layer_time": [
         "10"
     ],

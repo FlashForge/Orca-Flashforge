@@ -3,9 +3,12 @@
 
 #include <atomic>
 #include <chrono>
+#include <cstdint>
+#include <deque>
 #include <list>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <set>
 #include <string>
 #include <boost/bimap.hpp>
@@ -22,10 +25,6 @@
 #include "WanDevMaintainThd.hpp"
 #include "WanDevSendGcodeThd.hpp"
 
-namespace boost { namespace interprocess {
-    class file_lock;
-}}
-
 namespace Slic3r { namespace GUI {
 
 class MultiComMgr : public wxEvtHandler, public Singleton<MultiComMgr>
@@ -38,6 +37,10 @@ public:
     void uninitalize();
 
     fnet::FlashNetworkIntfc *networkIntfc();
+
+    const std::string &clientId() const { return m_clientId; }
+    bool isLoggedIn() const { return m_login; }
+    const std::string &userId() const { return m_userId; }
 
     std::string homePageUrl();
     
@@ -73,8 +76,6 @@ public:
 private:
     using std_precise_clock = std::chrono::high_resolution_clock;
 
-    typedef std::map<com_id_t, std_precise_clock::time_point> dev_alive_time_map_t;
-
     typedef std::shared_ptr<ComConnection> com_ptr_t;
 
     typedef boost::bimap<com_id_t, ComConnection*> com_ptr_map_t;
@@ -107,7 +108,17 @@ private:
 
     void onWanConnRead(const WanConnReadEvent &event);
 
+    void onWanConnUnauthorized(wxCommandEvent &event);
+
     void onRefreshToken(const ComRefreshTokenEvent &event);
+
+    void onMqttConfigRefresh(const ComMqttConfigRefreshEvent &event);
+
+    void requestMqttConfigRefresh();
+
+    void scheduleMqttConfigRefreshRetry();
+
+    void clearRejectedMqttConnection(ComErrno ret);
 
     std::string generateClientId();
 
@@ -115,43 +126,64 @@ private:
 
     com_dev_data_t makeWanDevData(const fnet_wan_dev_info_t *wanDevInfo);
 
+    bool updateWanDeviceState(com_id_t id, WanDevicePresence presence, WanDeviceStatusSource source,
+        const std::string *workStatus = nullptr, bool notify = true, bool forceNotify = false);
+
+    bool mergeWanDeviceInfo(com_id_t id, const fnet_wan_dev_info_t &wanDevInfo);
+
     void maintianWanDev(ComErrno ret, bool needLogout);
 
     void setMaintainThdReqHeader(bool isCheckVersionTestServer);
 
-    void setWanDevOffline();
-
+    void initWanConnAsync(const std::string &accessToken);
     void subscribeWanDevTopic();
 
     void updateWanDevDetail();
 
-    void freeConnReadData(const WanConnReadEvent &event);
+    void freeConnReadData(const WanConnReadEvent& event);
+
+    void startFeedbackLogSession();
+
+    void stopFeedbackLogSession();
 
 private:
-    int                                      m_idNum;
-    bool                                     m_login;
-    bool                                     m_httpOnline;
-    bool                                     m_connOnline;
-    bool                                     m_connFirstConnected;
-    std::string                              m_clientId;
-    com_mqtt_config_t                        m_mqttConfig;
-    std::list<com_ptr_t>                     m_comPtrs;
-    com_ptr_map_t                            m_ptrMap;
-    std::map<com_id_t, com_dev_data_t>       m_datMap;
-    std::set<com_id_t>                       m_readyIdSet;
+    int                                                       m_idNum;
+    bool                                                      m_login;
+    bool                                                      m_httpOnline;
+    bool                                                      m_connOnline;
+    std::atomic<uint64_t>                                     m_mqttGeneration { 0 };
+    std::atomic_bool                                          m_mqttConfigRefreshInFlight { false };
+    bool                                                      m_mqttReconnectAllowed { false };
+    bool                                                      m_mqttRecoveryInProgress { false };
+    unsigned int                                              m_mqttConfigRefreshRetryCount { 0 };
+    std::chrono::steady_clock::time_point                     m_nextMqttConfigRefreshTime {};
+    std::string                                               m_clientId;
+    std::string                                               m_userId;
+    std::string                                               m_dataDir;
+    com_mqtt_config_t                                         m_mqttConfig;
+    std::list<com_ptr_t>                                      m_comPtrs;
+    com_ptr_map_t                                             m_ptrMap;
+    std::map<com_id_t, com_dev_data_t>                        m_datMap;
+    std::set<com_id_t>                                        m_readyIdSet;
     std::unordered_map<std::string, std::vector<std::string>> m_unUpdateDevList;
-    std::map<std::string, com_id_t>          m_devIdMap;
-    dev_alive_time_map_t                     m_devAliveTimeMap;
-    std::list<com_dev_data_t>                m_pendingWanDevDatas;
-    wxTimer                                  m_loopCheckTimer;
-    std::atomic_bool                         m_blockCommandFailedUpdate;
-    std_precise_clock::time_point            m_commandFailedUpdateTime;
-    std_precise_clock::time_point            m_pendingSetUpdateWanDevTime;
-    std::unique_ptr<WanDevMaintainThd>       m_wanDevMaintainThd;
-    std::unique_ptr<WanDevSendGcodeThd>      m_sendGcodeThd;
-    std::unique_ptr<fnet::FlashNetworkIntfc> m_networkIntfc;
-    std::unique_ptr<ComThreadPool>           m_threadPool;
-    WaitEvent                                m_threadExitEvent;
+    std::map<std::string, com_id_t>                           m_devIdMap;
+    std::set<std::string>                                     m_activeFeedbackLogIds;
+    std::set<std::string>                                     m_completedFeedbackLogIds;
+    std::deque<std::string>                                   m_feedbackLogHistory;
+    std::mutex                                                m_feedbackLogMutex;
+    std::shared_ptr<WaitEvent>                                m_feedbackLogCancelEvent;
+    std::uint64_t                                             m_feedbackLogSessionGeneration { 0 };
+    std::list<com_dev_data_t>                                 m_pendingWanDevDatas;
+    wxTimer                                                   m_loopCheckTimer;
+    std::atomic_bool                                          m_blockCommandFailedUpdate;
+    std_precise_clock::time_point                             m_commandFailedUpdateTime;
+    std_precise_clock::time_point                             m_pendingSetUpdateWanDevTime;
+    std::unique_ptr<WanDevMaintainThd>                        m_wanDevMaintainThd;
+    std::unique_ptr<WanDevSendGcodeThd>                       m_sendGcodeThd;
+    std::unique_ptr<fnet::FlashNetworkIntfc>                  m_networkIntfc;
+    std::unique_ptr<ComThreadPool>                            m_threadPool;
+    std::unique_ptr<ComThreadPool>                            m_logUploadThreadPool;
+    WaitEvent                                                 m_threadExitEvent;
 };
 
 }} // namespace Slic3r::GUI

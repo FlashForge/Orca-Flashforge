@@ -37,6 +37,7 @@
         "80"
     ],
     "inherits": "Flashforge Generic PETG",
+    "setting_id": "Ql2BBBymzqEG7GKk",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PETG Pro @FF G4",

@@ -198,7 +198,7 @@
         "75"
     ],
     "inherits": "Flashforge Generic PETG",
-    "instantiation": "true",
+    "instantiation": "false",
     "name": "FusRock Generic S-Multi",
     "nozzle_temperature": [
         "270"
@@ -227,7 +227,7 @@
     "required_nozzle_HRC": [
         "0"
     ],
-    "setting_id": "GFSA04",
+    "setting_id": "gQLoSJ7xGEdOd8kr",
     "slow_down_for_layer_cooling": [
         "1"
     ],

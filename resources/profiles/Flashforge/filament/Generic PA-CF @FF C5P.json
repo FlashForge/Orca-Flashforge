@@ -33,6 +33,7 @@
         "Generic"
     ],
     "inherits": "Generic PA-CF @System",
+    "setting_id": "dXxPSicIUitvuDT3",
     "instantiation": "true",
     "name": "Generic PA-CF @FF C5P",
     "nozzle_temperature": [
@@ -53,5 +54,8 @@
     "textured_cool_plate_temp_initial_layer": [
         "0"
     ],
-    "version": "2.3.0.3"
+    "version": "2.3.0.3",
+    "pressure_advance": [
+        "0.035"
+    ]
 }

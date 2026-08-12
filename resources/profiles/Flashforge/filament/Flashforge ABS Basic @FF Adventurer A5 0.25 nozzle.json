@@ -22,6 +22,7 @@
     ],
     "from": "system",
     "inherits": "Flashforge ABS Basic @FF AD5M 0.25 nozzle",
+    "setting_id": "jRIJ0cO4GhaMg2By",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge ABS Basic @FF Adventurer A5 0.25 nozzle",

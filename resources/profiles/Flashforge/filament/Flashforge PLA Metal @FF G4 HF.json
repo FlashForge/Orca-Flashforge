@@ -73,6 +73,7 @@
         "55"
     ],
     "inherits": "Flashforge Generic ABS @G3U",
+    "setting_id": "UxMNNil2KnWvAJ4q",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PLA Metal @FF G4 HF",

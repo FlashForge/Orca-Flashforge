@@ -166,7 +166,7 @@ void SimplyPrint::save_oauth_credential(const GUI::OAuthResult& cred) const
     
     boost::nowide::ofstream c;
     c.open(cred_file, std::ios::out | std::ios::trunc);
-    c << std::setw(4) << j << std::endl;
+    c << j.dump(1, '\t') << std::endl;
     c.close();
 }
 
@@ -301,18 +301,18 @@ bool SimplyPrint::do_temp_upload(const boost::filesystem::path& file_path,
             return http;
         },
         [&error_fn, &filename, this](std::string body, unsigned status) {
-            BOOST_LOG_TRIVIAL(info) << boost::format("SimplyPrint: File uploaded: HTTP %1%: %2%") % status % body;
+            BOOST_LOG_TRIVIAL(info) << boost::format("SimplyPrint: File uploaded: HTTP %1%, bodyBytes=%2%") % status % body.size();
 
             // Get file UUID
             const auto j = nlohmann::json::parse(body, nullptr, false, true);
             if (j.is_discarded()) {
-                BOOST_LOG_TRIVIAL(error) << "SimplyPrint: Invalid or no JSON data on token response: " << body;
+                BOOST_LOG_TRIVIAL(error) << "SimplyPrint: Invalid or no JSON data on token response, bodyBytes=" << body.size();
                 error_fn(_L("Unknown error"));
                 return false;
             }
 
             if (j.find("uuid") == j.end()) {
-                BOOST_LOG_TRIVIAL(error) << "SimplyPrint: Invalid or no JSON data on token response: " << body;
+                BOOST_LOG_TRIVIAL(error) << "SimplyPrint: Invalid or no JSON data on token response, bodyBytes=" << body.size();
                 error_fn(_L("Unknown error"));
                 return false;
             }

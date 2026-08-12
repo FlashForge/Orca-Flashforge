@@ -12,6 +12,7 @@ export REQUIRED_DEV_PACKAGES=(
     gettext
     git
     glew
+    gst-plugins-good
     gstreamer
     gstreamermm
     gtk3
@@ -19,6 +20,7 @@ export REQUIRED_DEV_PACKAGES=(
     libsecret
     libspnav
     mesa
+    nasm
     ninja
     openssl
     texinfo

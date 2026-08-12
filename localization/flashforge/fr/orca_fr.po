@@ -230,6 +230,57 @@ msgstr ""
 "Le nombre final de boucles n'est pas pris en compte lors de l'agencement ou de la validation de l'espacement entre les objets.\n"
 "Augmentez le nombre de boucles dans ce cas."
 
+msgid "Expert settings"
+msgstr "Paramètres expert"
+
+msgid "Simple settings"
+msgstr "Paramètres simples"
+
+msgid "Local-Z pair split: requested F<a>/F<b> <percent>/<percent>."
+msgstr "Répartition par paire Local-Z : demandé F<a>/F<b> <percent>/<percent>."
+
+msgid "Cycle settings visibility"
+msgstr "Basculer la visibilité des paramètres"
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d."
+msgstr "Répartition par paire Local-Z : demandé F%u/F%u %d/%d."
+
+msgid "Local-Z breakdown: manual pattern rows do not use pair decomposition."
+msgstr "Décomposition Local-Z : les lignes de motif manuel n'utilisent pas la décomposition par paires."
+
+msgid "Local-Z breakdown: same-layer mode does not use local-Z pair decomposition."
+msgstr "Décomposition Local-Z : le mode même couche n'utilise pas la décomposition par paires Local-Z."
+
+msgid "Local-Z breakdown: unavailable."
+msgstr "Décomposition Local-Z : indisponible."
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d, effective %d/%d over %d sublayers."
+msgstr "Répartition par paire Local-Z : demandé F%u/F%u %d/%d, effectif %d/%d sur %d sous-couches."
+
+msgid "Local-Z direct multicolor solver: %s"
+msgstr "Solveur Local-Z multicolore direct : %s"
+
+msgid "Carry-over error is distributed directly across all %d components instead of collapsing them into pair cadence."
+msgstr "L'erreur reportée est distribuée directement sur les %d composants au lieu d'être réduite à une cadence par paires."
+
+msgid "Effective Local-Z cap: up to %d sublayers per nominal layer."
+msgstr "Limite Local-Z effective : jusqu'à %d sous-couches par couche nominale."
+
+msgid "Local-Z layer cadence: %s."
+msgstr "Cadence de couches Local-Z : %s."
+
+msgid "Pair splits: %s."
+msgstr "Répartitions par paires : %s."
+
+msgid "Saved row limit will apply when Local-Z dithering mode is enabled in print settings."
+msgstr "La limite de ligne enregistrée s'appliquera lorsque le mode de tramage Local-Z est activé dans les réglages d'impression."
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers."
+msgstr "Pile Local-Z effective : %d sous-couches sur %d couches de paires."
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers (uncapped %d)."
+msgstr "Pile Local-Z effective : %d sous-couches sur %d couches de paires (sans limite %d)."
+
 msgid "Associate files to OrcaSlicer"
 msgstr "Associer des fichiers à Flash Studio"
 
@@ -645,3 +696,6 @@ msgstr "Liste actuelle des filaments"
 
 msgid "New filament"
 msgstr "Nouveau filament"
+
+msgid "No camera detected"
+msgstr "Aucune caméra détectée"

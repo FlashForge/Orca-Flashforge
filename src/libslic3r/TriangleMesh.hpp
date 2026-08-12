@@ -55,8 +55,6 @@ struct TriangleMeshStats {
 
     // Mesh errors, remaining.
     int           open_edges                = 0;
-    int           non_manifold_edges        = 0;
-    int           non_manifold_vertices     = 0;
 
     // Mesh errors, fixed.
     RepairedMeshErrors repaired_errors;
@@ -74,19 +72,15 @@ struct TriangleMeshStats {
         out.min                     = this->min.cwiseMin(rhs.min);
         out.max                     = this->max.cwiseMax(rhs.max);
         out.size                    = out.max - out.min;
-        out.number_of_parts         = this->number_of_parts          + rhs.number_of_parts;
-        out.open_edges              = this->open_edges               + rhs.open_edges;
-        out.non_manifold_edges      = this->non_manifold_edges       + rhs.non_manifold_edges;
-        out.non_manifold_vertices   = this->non_manifold_vertices    + rhs.non_manifold_vertices;
-        out.volume                  = this->volume                   + rhs.volume;
+        out.number_of_parts         = this->number_of_parts     + rhs.number_of_parts;
+        out.open_edges              = this->open_edges          + rhs.open_edges;
+        out.volume                  = this->volume              + rhs.volume;
         out.repaired_errors.merge(rhs.repaired_errors);
         return out;
       }
     }
 
-    bool manifold() const { return non_manifold_edges == 0 && non_manifold_vertices == 0; }
-    bool has_open_edges() const { return open_edges > 0; }
-    bool has_any_issue() const { return !manifold() || has_open_edges(); }
+    bool manifold() const { return open_edges == 0; }
     bool repaired() const { return repaired_errors.repaired(); }
 };
 

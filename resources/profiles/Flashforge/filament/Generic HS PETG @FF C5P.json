@@ -32,7 +32,7 @@
         "Direct Drive Standard"
     ],
     "filament_flow_ratio": [
-        "0.98"
+        "1"
     ],
     "filament_max_volumetric_speed": [
         "18"
@@ -45,6 +45,7 @@
         "Generic"
     ],
     "inherits": "Generic PETG HF @System",
+    "setting_id": "gw2RWGZxs7t1Ki6z",
     "instantiation": "true",
     "name": "Generic HS PETG @FF C5P",
     "nozzle_temperature": [
@@ -54,7 +55,7 @@
         "235"
     ],
     "pressure_advance": [
-        "0.0325"
+        "0.07"
     ],
     "slow_down_min_speed": [
         "20"

@@ -9,6 +9,7 @@
         "100"
     ],
     "compatible_printers": [
+        "Flashforge Creator 5 Pro 0.25 nozzle",
         "Flashforge Creator 5 Pro 0.4 nozzle",
         "Flashforge Creator 5 Pro 0.6 nozzle",
         "Flashforge Creator 5 Pro 0.8 nozzle"
@@ -54,6 +55,7 @@
     ],
     "from": "system",
     "inherits": "Generic PLA @System",
+    "setting_id": "Q0RsVOPLuMByur9c",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PLA Basic @FF C5P",
@@ -61,7 +63,7 @@
         "210"
     ],
     "pressure_advance": [
-        "0.025"
+        "0.035"
     ],
     "slow_down_layer_time": [
         "8"
@@ -75,5 +77,11 @@
     "supertack_plate_temp_initial_layer": [
         "40"
     ],
-    "version": "2.3.0.3"
+    "version": "2.3.0.3",
+    "filament_extruder_variant": [
+        "Direct Drive Standard"
+    ],
+    "filament_flow_ratio": [
+        "1"
+    ]
 }

@@ -2,7 +2,6 @@
 #include "TriangleMesh.hpp"
 #include "TriangleMeshSlicer.hpp"
 #include "MeshSplitImpl.hpp"
-#include "MeshDiagnostics.hpp"
 #include "ClipperUtils.hpp"
 #include "Geometry.hpp"
 #include "Geometry/ConvexHull.hpp"
@@ -17,7 +16,6 @@
 #include <libqhullcpp/QhullVertexSet.h>
 
 #include <cmath>
-#include <climits>
 #include <deque>
 #include <queue>
 #include <vector>
@@ -52,12 +50,7 @@ static void fill_initial_stats(const indexed_triangle_set &its, TriangleMeshStat
 
     const std::vector<Vec3i32> face_neighbors = its_face_neighbors(its);
     out.number_of_parts = its_number_of_patches(its, face_neighbors);
-
-    const auto nm_stats       = its_edge_diagnostics(its);
-    assert(nm_stats.open_edges <= INT_MAX && nm_stats.non_manifold_edges <= INT_MAX && nm_stats.non_manifold_vertices <= INT_MAX);
-    out.open_edges            = static_cast<int>(nm_stats.open_edges);
-    out.non_manifold_edges    = static_cast<int>(nm_stats.non_manifold_edges);
-    out.non_manifold_vertices = static_cast<int>(nm_stats.non_manifold_vertices);
+    out.open_edges      = its_num_open_edges(face_neighbors);
 }
 
 TriangleMesh::TriangleMesh(const std::vector<Vec3f> &vertices, const std::vector<Vec3i32> &faces) : its { faces, vertices }

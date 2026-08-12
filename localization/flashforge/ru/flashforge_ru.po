@@ -963,6 +963,520 @@ msgstr "Отправить"
 msgid "Report submitted"
 msgstr "Отчет отправлен"
 
+msgid "Dithering cadence height A"
+msgstr "Высота каденции дизеринга A"
+
+msgid ""
+"Layer height contribution of component A for dithering virtual filaments. Set to 0 to use normal 1-layer A / 1-layer B alternation.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"Вклад компонента A в высоту слоя для виртуальных филаментов дизеринга. Установите 0, чтобы использовать обычное чередование: 1 слой A / 1 слой B.\n"
+"\n"
+"Подробные пояснения к настройкам смешанного филамента будут опубликованы после появления Wiki проекта."
+
+msgid "Dithering cadence height B"
+msgstr "Высота каденции дизеринга B"
+
+msgid ""
+"Layer height contribution of component B for dithering virtual filaments. Set to 0 to use normal 1-layer A / 1-layer B alternation.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"Вклад компонента B в высоту слоя для виртуальных филаментов дизеринга. Установите 0, чтобы использовать обычное чередование: 1 слой A / 1 слой B.\n"
+"\n"
+"Подробные пояснения к настройкам смешанного филамента будут опубликованы после появления Wiki проекта."
+
+msgid "Height-weighted cadence"
+msgstr "Каденция с учетом высоты"
+
+msgid ""
+"Enable height-weighted cadence for mixed filaments. Limitation: only one height-weighted mixed color should be present at a given Z plane, because independent per-color layer heights are not supported and the resulting layer height applies to the whole plane. When disabled, layer-cycle cadence is used.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"Включает каденцию с учетом высоты для смешанных филаментов. Ограничение: на одной плоскости Z должен присутствовать только один смешанный цвет с учетом высоты, так как независимые высоты слоев для каждого цвета не поддерживаются, а итоговая высота слоя применяется ко всей плоскости. Если отключено, используется послойная циклическая каденция.\n"
+"\n"
+"Подробные пояснения к настройкам смешанного филамента будут опубликованы после появления Wiki проекта."
+
+msgid "Local-Z lower height bound"
+msgstr "Нижняя граница высоты Local-Z"
+
+msgid ""
+"Lower bound used when Local-Z mixed-filament dithering chooses per-color sublayer heights.\n"
+"\n"
+"Smaller values let Local-Z use thinner sublayers for a color when needed.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"Нижняя граница, используемая при выборе высот подслоев для каждого цвета в Local-Z дизеринге смешанного филамента.\n"
+"\n"
+"Меньшие значения позволяют Local-Z при необходимости использовать более тонкие подслои для цвета.\n"
+"\n"
+"Подробные пояснения к настройкам смешанного филамента будут опубликованы после появления Wiki проекта."
+
+msgid "Local-Z upper height bound"
+msgstr "Верхняя граница высоты Local-Z"
+
+msgid ""
+"Upper bound used when Local-Z mixed-filament dithering chooses per-color sublayer heights.\n"
+"\n"
+"Larger values let Local-Z use thicker sublayers for a color when needed.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"Верхняя граница, используемая при выборе высот подслоев для каждого цвета в Local-Z дизеринге смешанного филамента.\n"
+"\n"
+"Большие значения позволяют Local-Z при необходимости использовать более толстые подслои для цвета.\n"
+"\n"
+"Подробные пояснения к настройкам смешанного филамента будут опубликованы после появления Wiki проекта."
+
+msgid "Advanced dithering"
+msgstr "Расширенный дизеринг"
+
+msgid ""
+"Distribute mixed filament layer-cycle cadence using an advanced ordered dithering pattern instead of a simple contiguous A-then-B run. This can reduce visible striping for some hues.\n"
+"\n"
+"This is an even more experimental mode and the perceived color may differ from normal dithering for the same filament pair and ratio.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"Распределяет послойную циклическую каденцию смешанного филамента с помощью расширенного упорядоченного шаблона дизеринга вместо простой непрерывной последовательности A-затем-B. Это может уменьшить видимые полосы для некоторых оттенков.\n"
+"\n"
+"Это еще более экспериментальный режим, и воспринимаемый цвет может отличаться от обычного дизеринга при той же паре филаментов и том же соотношении.\n"
+"\n"
+"Подробные пояснения к настройкам смешанного филамента будут опубликованы после появления Wiki проекта."
+
+msgid "Enable mixed filament bias"
+msgstr "Включить смещение смешанного филамента"
+
+msgid ""
+"Show and apply the per-row mixed filament Bias control.\n"
+"\n"
+"When enabled, the selected filament in a mixed pair is recessed slightly so the other component becomes more visible.\n"
+"\n"
+"Bias is ignored for grouped wall patterns, same-layer pointillisme, and Local Z dithering."
+msgstr ""
+"Показывает и применяет управление смещением для каждой строки смешанного филамента.\n"
+"\n"
+"Если включено, выбранный филамент в смешанной паре немного утапливается, чтобы другой компонент был заметнее.\n"
+"\n"
+"Смещение игнорируется для сгруппированных шаблонов стенок, однослойного пуантилизма и дизеринга Local Z."
+
+msgid "Selective Expansion contraction"
+msgstr "Выборочное расширение/сжатие"
+
+msgid ""
+"XY offset applied to mixed-filament painted regions before region assignment.\n"
+"\n"
+"Positive values contract the mixed zone inward. Negative values expand it outward.\n"
+"\n"
+"This applies to mixed filament usage in layer cadence, height cadence, same-layer pointillisme, and local Z dithering."
+msgstr ""
+"XY-смещение, применяемое к окрашенным областям смешанного филамента перед назначением областей.\n"
+"\n"
+"Положительные значения сжимают смешанную зону внутрь. Отрицательные значения расширяют ее наружу.\n"
+"\n"
+"Применяется к использованию смешанного филамента в послойной каденции, каденции высоты, однослойном пуантилизме и дизеринге Local Z."
+
+msgid "Collapse same-color mixed regions"
+msgstr "Объединять смешанные области одного цвета"
+
+msgid ""
+"Merge ordinary mixed-filament painted regions into a single area when they resolve to the same physical filament on a layer.\n"
+"\n"
+"This improves continuity for adjacent same-color areas. Local Z dithering turns this off automatically when enabled, but you may turn it back on manually.\n"
+"\n"
+"Experimental with Local Z dithering."
+msgstr ""
+"Объединяет обычные окрашенные области смешанного филамента в одну область, когда на слое они соответствуют одному и тому же физическому филаменту.\n"
+"\n"
+"Это улучшает непрерывность соседних областей одного цвета. При включении дизеринга Local Z параметр автоматически отключается, но его можно снова включить вручную.\n"
+"\n"
+"Экспериментально при использовании с дизерингом Local Z."
+
+msgid "Mixed filament custom definitions"
+msgstr "Пользовательские определения смешанного филамента"
+
+msgid ""
+"Serialized custom mixed filament rows.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"Сериализованные пользовательские строки смешанного филамента.\n"
+"\n"
+"Подробные пояснения к настройкам смешанного филамента будут опубликованы после появления Wiki проекта."
+
+msgid "Pointillisme pixel size"
+msgstr "Размер пикселя пуантилизма"
+
+msgid ""
+"Length of one pointillisme segment along an extrusion path for same-layer pointillisme mode. Set to 0 to use automatic nozzle-based sizing.\n"
+"\n"
+"Warning: Same-layer pointillisme is extremely experimental and may produce unusable results."
+msgstr ""
+"Длина одного сегмента пуантилизма вдоль траектории экструзии для режима однослойного пуантилизма. Установите 0, чтобы использовать автоматический размер на основе сопла.\n"
+"\n"
+"Предупреждение: однослойный пуантилизм является крайне экспериментальным режимом и может дать непригодные результаты."
+
+msgid "Pointillisme line gap"
+msgstr "Зазор линии пуантилизма"
+
+msgid ""
+"Optional non-extruded spacing between adjacent pointillisme segments. Increase carefully to improve separation and print quality.\n"
+"\n"
+"Warning: Same-layer pointillisme is extremely experimental and may produce unusable results."
+msgstr ""
+"Необязательный неэкструдируемый зазор между соседними сегментами пуантилизма. Увеличивайте осторожно, чтобы улучшить разделение и качество печати.\n"
+"\n"
+"Предупреждение: однослойный пуантилизм является крайне экспериментальным режимом и может дать непригодные результаты."
+
+msgid "Dithering Z step size"
+msgstr "Размер шага Z дизеринга"
+
+msgid ""
+"Layer height used in Z zones painted with dithering (mixed virtual filaments). Set to 0 to keep normal layer height in those zones.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"Высота слоя, используемая в Z-зонах, окрашенных дизерингом (смешанные виртуальные филаменты). Установите 0, чтобы сохранить обычную высоту слоя в этих зонах.\n"
+"\n"
+"Подробные пояснения к настройкам смешанного филамента будут опубликованы после появления Wiki проекта."
+
+msgid "Local Z dithering mode"
+msgstr "Режим дизеринга Local Z"
+
+msgid ""
+"Use Variable Layers for Color Blending\n"
+"\n"
+"Blend colors by varying layer heights instead of using a fixed ratio of equal-height layers. This only affects blended color zones; non-blended areas keep their nominal layer height and cadence when possible.\n"
+"\n"
+"This setting increases color blending smoothness by splitting each blended layer according to the blend ratio. For example, a 66/33 blend at 0.12 mm layer height will print as one 0.08 mm layer and one 0.04 mm layer. At 0.20 mm layer height, a 75/25 blend will print as one 0.15 mm layer and one 0.05 mm layer."
+msgstr ""
+"Использовать переменные слои для смешивания цветов\n"
+"\n"
+"Смешивает цвета путем изменения высоты слоев вместо фиксированного соотношения слоев одинаковой высоты. Это влияет только на зоны смешанного цвета; несмешанные области по возможности сохраняют номинальную высоту слоя и каденцию.\n"
+"\n"
+"Этот параметр повышает плавность смешивания цвета, разделяя каждый смешанный слой согласно соотношению смешивания. Например, смесь 66/33 при высоте слоя 0,12 мм будет напечатана как один слой 0,08 мм и один слой 0,04 мм. При высоте слоя 0,20 мм смесь 75/25 будет напечатана как один слой 0,15 мм и один слой 0,05 мм."
+
+msgid "Apply Local-Z to whole mixed objects"
+msgstr "Применять Local-Z ко всем смешанным объектам"
+
+msgid ""
+"Experimental. Extend Local-Z dithering beyond painted mixed zones so mixed wall regions can use Local-Z across the whole object.\n"
+"\n"
+"This also lets Local-Z continue through default mixed walls around painted areas instead of limiting the effect strictly to painted masks."
+msgstr ""
+"Экспериментально. Расширяет дизеринг Local-Z за пределы окрашенных смешанных зон, чтобы смешанные области стенок могли использовать Local-Z по всему объекту.\n"
+"\n"
+"Также позволяет Local-Z продолжаться через стандартные смешанные стенки вокруг окрашенных областей, а не строго ограничивать эффект окрашенными масками."
+
+msgid "Use direct multicolor Local-Z solver"
+msgstr "Использовать прямой многоцветный решатель Local-Z"
+
+msgid ""
+"Experimental. For mixed rows with 3 or more physical filaments, allocate Local-Z sublayers directly across all components with carry-over error between layers instead of collapsing them into pair cadence.\n"
+"\n"
+"This can reduce visible banding in multicolor Local-Z blends at the cost of more toolchanges. It is ignored when explicit Local-Z A/B heights are set."
+msgstr ""
+"Экспериментально. Для смешанных строк с 3 или более физическими филаментами распределяет подслои Local-Z напрямую между всеми компонентами с переносом ошибки между слоями вместо сворачивания в парную каденцию.\n"
+"\n"
+"Это может уменьшить видимую полосатость в многоцветных смесях Local-Z ценой большего числа смен инструмента. Игнорируется, если явно заданы высоты Local-Z A/B."
+
+msgid "Use step size in painted zones only"
+msgstr "Использовать размер шага только в окрашенных зонах"
+
+msgid ""
+"When enabled, dithering Z step size is applied only where mixed filament is painted. Unpainted zones keep their original layer height.\n"
+"\n"
+"Detailed mixed filament setting explanations will be published once the project wiki is available."
+msgstr ""
+"Если включено, размер шага Z дизеринга применяется только там, где нанесен смешанный филамент. Неокрашенные зоны сохраняют исходную высоту слоя.\n"
+"\n"
+"Подробные пояснения к настройкам смешанного филамента будут опубликованы после появления Wiki проекта."
+
+msgid "Local-Z mini wipe lines"
+msgstr "Мини-линии очистки Local-Z"
+
+msgid "Mixed filaments are unreliable on a single-extruder printer."
+msgstr "Смешанные филаменты ненадежны на принтере с одним экструдером."
+
+msgid "Mixed Filament %d"
+msgstr "Смешанный филамент %d"
+
+msgid "Add Color"
+msgstr "Добавить цвет"
+
+msgid "Hex"
+msgstr "HEX"
+
+msgid "Requested"
+msgstr "Запрошено"
+
+msgid "Creates"
+msgstr "Создает"
+
+msgid "Exact preset mixes"
+msgstr "Точные предустановленные смеси"
+
+msgid "Matching closest supported mix..."
+msgstr "Подбор ближайшей поддерживаемой смеси..."
+
+msgid "Calculating closest supported mix..."
+msgstr "Расчет ближайшей поддерживаемой смеси..."
+
+msgid "%d%% min"
+msgstr "мин. %d%%"
+
+msgid "Use a valid hex color like #00FF88."
+msgstr "Используйте корректный HEX-цвет, например #00FF88."
+
+msgid "No supported 2-color, 3-color, or 4-color recipe found."
+msgstr "Не найден поддерживаемый рецепт из 2, 3 или 4 цветов."
+
+msgid "Matching %s..."
+msgstr "Подбор %s..."
+
+msgid "Requested %s, closest recipe delta: %.2f"
+msgstr "Запрошено %s, дельта ближайшего рецепта: %.2f"
+
+msgid "Unable to create a color mix from the current physical filament colors within the selected range."
+msgstr "Не удалось создать цветовую смесь из текущих физических цветов филаментов в выбранном диапазоне."
+
+msgid "Local-Z breakdown: manual pattern rows do not use pair decomposition."
+msgstr "Разбор Local-Z: строки ручного шаблона не используют парное разложение."
+
+msgid "Local-Z breakdown: same-layer mode does not use local-Z pair decomposition."
+msgstr "Разбор Local-Z: режим одного слоя не использует парное разложение Local-Z."
+
+msgid "Local-Z direct multicolor solver: %s"
+msgstr "Прямой многоцветный решатель Local-Z: %s"
+
+msgid "Local-Z direct multicolor solver: F<n> <percent>%, ..."
+msgstr "Прямой многоцветный решатель Local-Z: F<n> <percent>%, ..."
+
+msgid ""
+"Carry-over error is distributed directly across all %d components instead of collapsing them into pair cadence."
+msgstr ""
+"Переносимая ошибка распределяется напрямую по всем %d компонентам вместо сворачивания в парную каденцию."
+
+msgid ""
+"Carry-over error is distributed directly across all <count> components instead of collapsing them into pair cadence."
+msgstr ""
+"Переносимая ошибка распределяется напрямую по всем <count> компонентам вместо сворачивания в парную каденцию."
+
+msgid "Effective Local-Z cap: up to %d sublayers per nominal layer."
+msgstr "Эффективное ограничение Local-Z: до %d подслоев на номинальный слой."
+
+msgid "Effective Local-Z cap: up to <count> sublayers per nominal layer."
+msgstr "Эффективное ограничение Local-Z: до <count> подслоев на номинальный слой."
+
+msgid "Local-Z layer cadence: %s."
+msgstr "Каденция слоев Local-Z: %s."
+
+msgid "Local-Z layer cadence: <pair cadence summary>."
+msgstr "Каденция слоев Local-Z: <pair cadence summary>."
+
+msgid "Pair splits: %s."
+msgstr "Парные разбиения: %s."
+
+msgid "Pair splits: <pair split summary>."
+msgstr "Парные разбиения: <pair split summary>."
+
+msgid "Saved row limit will apply when Local-Z dithering mode is enabled in print settings."
+msgstr ""
+"Сохраненное ограничение строки будет применяться, когда в настройках печати включен режим дизеринга Local-Z."
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers."
+msgstr "Эффективный стек Local-Z: %d подслоев на %d парных слоях."
+
+msgid "Effective Local-Z stack: <count> sublayers over <count> pair layers."
+msgstr "Эффективный стек Local-Z: <count> подслоев на <count> парных слоях."
+
+msgid "Effective Local-Z stack: %d sublayers over %d pair layers (uncapped %d)."
+msgstr "Эффективный стек Local-Z: %d подслоев на %d парных слоях (без ограничения %d)."
+
+msgid "Effective Local-Z stack: <count> sublayers over <count> pair layers (uncapped <count>)."
+msgstr "Эффективный стек Local-Z: <count> подслоев на <count> парных слоях (без ограничения <count>)."
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d."
+msgstr "Парное разбиение Local-Z: запрошено F%u/F%u %d/%d."
+
+msgid "Local-Z pair split: requested F<a>/F<b> <percent>/<percent>."
+msgstr "Парное разбиение Local-Z: запрошено F<a>/F<b> <percent>/<percent>."
+
+msgid "Local-Z pair split: requested F%u/F%u %d/%d, effective %d/%d over %d sublayers."
+msgstr "Парное разбиение Local-Z: запрошено F%u/F%u %d/%d, эффективно %d/%d на %d подслоях."
+
+msgid ""
+"Local-Z pair split: requested F<a>/F<b> <percent>/<percent>, effective <percent>/<percent> over <count> sublayers."
+msgstr ""
+"Парное разбиение Local-Z: запрошено F<a>/F<b> <percent>/<percent>, эффективно <percent>/<percent> на <count> подслоях."
+
+msgid "Local-Z breakdown: unavailable."
+msgstr "Разбор Local-Z: недоступен."
+
+msgid "Click to choose a physical filament color"
+msgstr "Нажмите, чтобы выбрать цвет физического филамента"
+
+msgid "Append filament %d to pattern"
+msgstr "Добавить филамент %d в шаблон"
+
+msgid "Bias"
+msgstr "Смещение"
+
+msgid "Limit Local-Z"
+msgstr "Ограничить Local-Z"
+
+msgid "Max sublayers"
+msgstr "Макс. подслоев"
+
+msgid ""
+"No other consumables of the same type are available for mixing. Please add consumables of the same type."
+msgstr ""
+"Нет других расходных материалов того же типа для смешивания. Добавьте расходные материалы того же типа."
+
+msgid "Consumable types are inconsistent. Please add consumables of the same type."
+msgstr "Типы расходных материалов не совпадают. Добавьте расходные материалы одного типа."
+
+msgid "%d-color layer cycle"
+msgstr "Цикл слоев из %d цветов"
+
+msgid "%d%%/%d%%"
+msgstr "%d%%/%d%%"
+
+msgid "Simple %d%%/%d%%"
+msgstr "Простой %d%%/%d%%"
+
+msgid "None (Selected)"
+msgstr "Нет (выбрано)"
+
+msgid "F%d (Selected)"
+msgstr "F%d (выбрано)"
+
+msgid "F<n> (Selected)"
+msgstr "F<n> (выбрано)"
+
+msgid "Click to edit"
+msgstr "Нажмите для редактирования"
+
+msgid "Gradient Mix Weights"
+msgstr "Весовые коэффициенты градиентной смеси"
+
+msgid "Mixed Filaments"
+msgstr "Смешанные филаменты"
+
+msgid "Add Pattern"
+msgstr "Добавить шаблон"
+
+msgid "Remove last mixed filament"
+msgstr "Удалить последний смешанный филамент"
+
+msgid "Add mixed filament"
+msgstr "Добавить смешанный филамент"
+
+msgid "Confirm merge"
+msgstr "Подтвердить объединение"
+
+msgid "No mixed filaments yet. Use Add to create one."
+msgstr "Смешанных филаментов пока нет. Используйте «Добавить», чтобы создать один."
+
+msgid "(Pattern)"
+msgstr "(Шаблон)"
+
+msgid "Drag to reorder mixed filaments in this panel."
+msgstr "Перетащите, чтобы изменить порядок смешанных филаментов на этой панели."
+
+msgid "Edit mixed filament"
+msgstr "Редактировать смешанный филамент"
+
+msgid ""
+"Number of purge lines reserved for each runtime Local-Z wipe tower toolchange. Higher values improve cleanup but increase tower depth. Only used when Local-Z dithering and the prime tower are enabled."
+msgstr ""
+"Количество линий продувки, зарезервированных для каждой смены инструмента башни очистки Local-Z во время выполнения. Большие значения улучшают очистку, но увеличивают глубину башни. Используется только при включенных дизеринге Local-Z и прайм-башне."
+
+msgid "Using variable layer height together with Local-Z dithering may result in poor color mixing quality."
+msgstr ""
+"Использование переменной высоты слоя вместе с дизерингом Local-Z может привести к низкому качеству смешивания цветов."
+
+msgid ""
+"Pick from the current filament gamut. The dialog previews the closest 2-color, 3-color, or 4-color FilamentMixer recipe before it is added."
+msgstr ""
+"Выберите из текущей гаммы филаментов. Перед добавлением диалог показывает ближайший рецепт FilamentMixer из 2, 3 или 4 цветов."
+
+msgid "Enter a hex color like #00FF88. The picker will snap to the closest supported FilamentMixer color."
+msgstr ""
+"Введите HEX-цвет, например #00FF88. Палитра привяжется к ближайшему поддерживаемому цвету FilamentMixer."
+
+msgid "Classic color picker. The result will snap to the closest supported FilamentMixer color."
+msgstr ""
+"Классическая палитра цветов. Результат будет привязан к ближайшему поддерживаемому цвету FilamentMixer."
+
+msgid "Minimum percent for each participating color. Higher values block highly skewed mixes."
+msgstr ""
+"Минимальный процент для каждого участвующего цвета. Большие значения блокируют сильно перекошенные смеси."
+
+msgid "Consumable types in the current mixing scheme are inconsistent. Please select another mixing scheme."
+msgstr "Типы расходных материалов в текущей схеме смешивания не совпадают. Выберите другую схему смешивания."
+
+msgid ""
+"Manual repeating pattern. Use physical filament IDs 1..9. Use commas to define deeper perimeter patterns, for example 12,21. Example: 1/1/1/1/2/2/2/2, 12,21, or 1/2/3/4."
+msgstr ""
+"Ручной повторяющийся шаблон. Используйте ID физических филаментов 1..9. Используйте запятые для определения более глубоких периметрических шаблонов, например 12,21. Пример: 1/1/1/1/2/2/2/2, 12,21 или 1/2/3/4."
+
+msgid ""
+"Positive bias recesses the second filament in the pair; negative bias recesses the first filament.\n"
+"\n"
+"The color chip shows which filament the current value affects.\n"
+"\n"
+"Grouped wall patterns and Local-Z dithering ignore it."
+msgstr ""
+"Положительное смещение утапливает второй филамент в паре; отрицательное смещение утапливает первый филамент.\n"
+"\n"
+"Цветовой образец показывает, на какой филамент влияет текущее значение.\n"
+"\n"
+"Сгруппированные шаблоны стенок и дизеринг Local-Z игнорируют этот параметр."
+
+msgid ""
+"Store a per-color Local-Z cadence cap. It applies when Local-Z dithering mode is enabled in print settings."
+msgstr ""
+"Сохраняет ограничение каденции Local-Z для каждого цвета. Применяется, когда в настройках печати включен режим дизеринга Local-Z."
+
+msgid "Maximum number of Local-Z sublayers this color may use before its cadence repeats."
+msgstr ""
+"Максимальное количество подслоев Local-Z, которое этот цвет может использовать до повторения каденции."
+
+msgid "Pick a point in the gradient map to control multi-filament mix."
+msgstr "Выберите точку на карте градиента, чтобы управлять смесью нескольких филаментов."
+
+msgid "Unable to create a color match from the current physical filament colors."
+msgstr "Не удалось создать подбор цвета из текущих физических цветов филамента."
+
+msgid "Merging will remove this physical filament and may invalidate the mixed filament. Continue?"
+msgstr ""
+"Объединение удалит этот физический филамент и может сделать смешанный филамент недействительным. Продолжить?"
+
+msgid "(Filament %u + Filament %u)"
+msgstr "(Филамент %u + филамент %u)"
+
+msgid "(Filament <a> + Filament <b>)"
+msgstr "(Филамент <a> + филамент <b>)"
+
+msgid "(F%u + F%u)"
+msgstr "(F%u + F%u)"
+
+msgid "(F<a> + F<b>)"
+msgstr "(F<a> + F<b>)"
+
+msgid "Expert settings"
+msgstr "Экспертные настройки"
+
+msgid "Simple settings"
+msgstr "Простые настройки"
+
+msgid "Cycle settings visibility"
+msgstr "Переключить видимость настроек"
+
 msgid "C5 or C5P Not Connected"
 msgstr "C5 или C5P не подключены"
 
@@ -1084,9 +1598,6 @@ msgstr "Загрузка прошла успешно"
 msgid "Upload failed"
 msgstr "Ошибка загрузки"
 
-msgid "No camera detected"
-msgstr "Камера не обнаружена"
-
 msgid "Repairing polygon soup"
 msgstr "Исправление полигональных данных"
 
@@ -1104,3 +1615,81 @@ msgstr "Завершение исправленной сетки"
 
 msgid "Remapping repaired mesh colors"
 msgstr "Переназначение цветов исправленной сетки"
+
+#, c-format
+msgid "%lld minutes"
+msgstr "%lld мин"
+
+#, c-format
+msgid "%lld hours %lld minutes"
+msgstr "%lld ч %lld мин"
+
+msgid "The multicolor filament limit has been reached. Reopen the project and try again."
+msgstr "Достигнут лимит многоцветных филаментов. Повторно откройте проект и попробуйте снова."
+
+msgid ""
+"Do you want to synchronize your personal presets with FlashForge Cloud?\n"
+"It contains the following information:\n"
+"1. The Process presets\n"
+"2. The Filament presets\n"
+"3. The Printer presets"
+msgstr ""
+"Хотите синхронизировать личные профили с FlashForge Cloud?\n"
+"Они содержат следующую информацию:\n"
+"1. Профили процесса\n"
+"2. Профили филамента\n"
+"3. Профили принтера"
+
+msgid "To help us identify and resolve your issue more quickly, we recommend uploading your device and app logs. The logs are used solely for troubleshooting and will not collect any of your personal information."
+msgstr "Чтобы мы могли быстрее определить и устранить вашу проблему, рекомендуем загрузить журналы устройства и приложения. Журналы используются исключительно для анализа проблемы; ваша личная информация не будет собираться."
+
+msgid "orca software Logs"
+msgstr "Журналы программного обеспечения Orca"
+
+msgid "orca software Operation Logs"
+msgstr "журналы работы программного обеспечения Orca"
+
+msgid "App Logs"
+msgstr "журналы приложений"
+
+msgid "App Operation Logs"
+msgstr "журналы работы приложений"
+
+msgid "Device Logs"
+msgstr "журналы устройств"
+
+msgid "Device Operation Logs"
+msgstr "журналы работы устройств"
+
+msgid "Select a Device"
+msgstr "Выбор оборудования"
+
+msgid "{device} device is currently offline, so we are unable to retrieve the device logs at this time. You can still submit feedback. Once the device is back online, you can submit feedback again or go to Settings > Upload Firmware Log to upload the device logs."
+msgstr "{device} В настоящее время устройство находится в автономном режиме, поэтому получить журнал устройства пока невозможно. Вы можете отправить отзыв. Как только устройство вернётся в онлайн-режим, вы сможете отправить отзыв повторно или перейти в раздел «Настройки» > «Загрузить журнал прошивки», чтобы загрузить журнал устройства."
+
+msgid "Slice Log"
+msgstr "Журнал слайсера"
+
+msgid "App Log"
+msgstr "Журнал приложения"
+
+msgid "Device Log"
+msgstr "Журнал устройства"
+
+msgid "The current device is offline, so we are unable to retrieve the device logs at this time. You can still submit feedback. Once the device is back online, you can submit feedback again or go to Settings > Upload Firmware Log to upload the device logs."
+msgstr "В настоящее время устройство находится в автономном режиме, поэтому получить журнал устройства пока невозможно. Вы можете отправить отзыв. Как только устройство вернётся в онлайн-режим, вы сможете отправить отзыв повторно или перейти в раздел «Настройки» > «Загрузить журнал прошивки», чтобы загрузить журнал устройства."
+
+msgid "Slicing software operation log"
+msgstr "Журнал работы программы-слайсера"
+
+msgid "App operation log"
+msgstr "Журнал работы приложения"
+
+msgid "Device operation log"
+msgstr "Журнал работы устройства"
+
+msgid "Add Device"
+msgstr "Добавить устройство"
+
+msgid "Select Device"
+msgstr "Выбрать устройство"

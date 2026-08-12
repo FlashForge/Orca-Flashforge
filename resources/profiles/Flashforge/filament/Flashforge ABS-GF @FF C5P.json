@@ -32,7 +32,7 @@
         "40"
     ],
     "filament_flow_ratio": [
-        "0.95"
+        "0.98"
     ],
     "filament_max_volumetric_speed": [
         "10"
@@ -57,6 +57,7 @@
         "110"
     ],
     "inherits": "Generic ABS @System",
+    "setting_id": "ycgiXY41kqNgslE3",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge ABS-GF @FF C5P",
@@ -84,5 +85,11 @@
     "textured_plate_temp_initial_layer": [
         "110"
     ],
-    "version": "2.3.0.3"
+    "version": "2.3.0.3",
+    "filament_extruder_variant": [
+        "Direct Drive Standard"
+    ],
+    "pressure_advance": [
+        "0.035"
+    ]
 }

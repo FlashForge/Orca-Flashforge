@@ -424,6 +424,28 @@ ComErrno MultiComHelper::uploadLogFileCloud(const std::string&       filePath,
     return ret;
 }
 
+ComErrno MultiComHelper::uploadFeedbackLogFileCloud(const std::string& clientId,
+                                                    const std::string& accessToken,
+                                                    const std::string& filePath,
+                                                    const std::string& saveName,
+                                                    const std::string& feedbackId,
+                                                    fnet_progress_callback_t callback,
+                                                    void*                    callbackData,
+                                                    int                msTimeout)
+{
+    fnet::FlashNetworkIntfc* intfc = MultiComMgr::inst()->networkIntfc();
+    if (intfc == nullptr || clientId.empty() || accessToken.empty() || feedbackId.empty()) {
+        return COM_ERROR;
+    }
+    fnet_upload_file_data_t uploadFileData;
+    uploadFileData.filePath     = filePath.c_str();
+    uploadFileData.saveName     = saveName.c_str();
+    uploadFileData.callback     = callback;
+    uploadFileData.callbackData = callbackData;
+    return MultiComUtils::fnetRet2ComErrno(
+        intfc->uploadLogFileCloudEx(clientId.c_str(), accessToken.c_str(), &uploadFileData, "", feedbackId.c_str(), msTimeout));
+}
+
 ComErrno MultiComHelper::createAiJobPipeline(const std::string &entryType,
     com_ai_job_pipeline_info_t &pipelineInfo, int msTimeout)
 {

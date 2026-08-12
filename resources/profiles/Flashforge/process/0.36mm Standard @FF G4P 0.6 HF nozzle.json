@@ -10,6 +10,7 @@
     "filter_out_gap_fill": "0.1",
     "flush_into_support": "1",
     "from": "system",
+    "setting_id": "n6mjyu5geF4sjscL",
     "instantiation": "true",
     "compatible_printers": [
         "Flashforge Guider4 Pro 0.6 HF nozzle"

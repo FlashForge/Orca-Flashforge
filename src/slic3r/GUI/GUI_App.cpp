@@ -9,6 +9,9 @@
 #include "libslic3r_version.h"
 #include "Downloader.hpp"
 #include <boost/date_time/gregorian/gregorian.hpp>
+#include <boost/chrono/duration.hpp>
+#include <boost/log/detail/native_typeof.hpp>
+#include <wx/event.h>
 
 // Localization headers: include libslic3r version first so everything in this file
 // uses the slic3r/GUI version (the macros will take precedence over the functions).
@@ -20,6 +23,7 @@
 #include "slic3r/GUI/I18N.hpp"
 
 #include <algorithm>
+#include <cassert>
 #include <iterator>
 #include <exception>
 #include <cstdlib>
@@ -145,6 +149,7 @@
 
 #include "slic3r/Utils/NetworkAgentFactory.hpp"
 #include "slic3r/Utils/BBLNetworkPlugin.hpp"
+#include "slic3r/Utils/OrcaCloudServiceAgent.hpp"
 #include "slic3r/Utils/bambu_networking.hpp"
 
 //#ifdef WIN32
@@ -220,6 +225,21 @@ wxDEFINE_EVENT(EVT_LOGIN_SUCCEED, wxCommandEvent);
 wxDEFINE_EVENT(EVT_LOGIN_OUT, wxCommandEvent);
 wxDEFINE_EVENT(EVT_USER_HEAD_IMAGE_UPDATED, wxCommandEvent);
 wxDEFINE_EVENT(EVT_BANNER_UPDATE, wxCommandEvent);
+wxDEFINE_EVENT(EVT_UPDATE_PRESET_BUNDLE, wxCommandEvent);
+wxDEFINE_EVENT(EVT_UPDATE_BUNDLE_COMPLETE, wxCommandEvent);
+
+namespace {
+
+bool uses_flash_cloud_agent(const NetworkAgent* agent)
+{
+    if (agent == nullptr)
+        return false;
+
+    const auto cloud_agent = agent->get_cloud_agent();
+    return dynamic_cast<FlashCloudServiceAgent*>(cloud_agent.get()) != nullptr;
+}
+
+} // namespace
 
 
 class MainFrame;
@@ -608,10 +628,14 @@ static const FileWildcards file_wildcards_by_type[FT_SIZE] = {
     /* FT_GCODE */   { L("G-code files"),    { ".gcode"sv} },
 #ifdef __APPLE__
     /* FT_MODEL */
-    {L("Supported files"), {".3mf"sv, ".stl"sv, ".oltp"sv, ".stp"sv, ".step"sv, ".svg"sv, ".amf"sv, ".obj"sv, ".glb"sv, ".usd"sv, ".usda"sv, ".usdc"sv, ".usdz"sv, ".abc"sv, ".ply"sv, ".drc"sv}},
+    {L("Supported files"),
+     {".3mf"sv, ".stl"sv, ".oltp"sv, ".stp"sv, ".step"sv, ".svg"sv, ".amf"sv, ".obj"sv, ".glb"sv, ".gltf"sv, ".fbx"sv,
+      ".usd"sv, ".usda"sv, ".usdc"sv, ".usdz"sv, ".abc"sv, ".ply"sv, ".drc"sv}},
 #else
     /* FT_MODEL */
-    {L("Supported files"), {".3mf"sv, ".stl"sv, ".oltp"sv, ".stp"sv, ".step"sv, ".svg"sv, ".amf"sv, ".obj"sv, ".glb"sv, ".drc"sv}},
+    {L("Supported files"),
+     {".3mf"sv, ".stl"sv, ".oltp"sv, ".stp"sv, ".step"sv, ".svg"sv, ".amf"sv, ".obj"sv, ".glb"sv, ".gltf"sv, ".fbx"sv,
+      ".drc"sv}},
 #endif
     /* FT_ZIP */     { L("ZIP files"),       { ".zip"sv } },
     /* FT_PROJECT */ { L("Project files"),   { ".3mf"sv} },
@@ -1096,9 +1120,11 @@ void GUI_App::post_init()
                     });
             }
         );
-        m_agent->set_on_http_error_fn([this](unsigned int status, std::string body) {
-            this->handle_http_error(status, body);
-        });
+        if (!uses_flash_cloud_agent(m_agent)) {
+            m_agent->set_on_http_error_fn([this](CloudEvent, unsigned int status, std::string body) {
+                this->handle_http_error(status, body);
+            });
+        }
         m_agent->start_discovery(true, false);
     }
 
@@ -1738,9 +1764,11 @@ void GUI_App::restart_networking()
                     });
             }
         );
-        m_agent->set_on_http_error_fn([this](unsigned int status, std::string body) {
-            this->handle_http_error(status, body);
-        });
+        if (!uses_flash_cloud_agent(m_agent)) {
+            m_agent->set_on_http_error_fn([this](CloudEvent, unsigned int status, std::string body) {
+                this->handle_http_error(status, body);
+            });
+        }
         m_agent->start_discovery(true, false);
         if (mainframe)
             mainframe->refresh_plugin_tips();
@@ -1766,6 +1794,20 @@ void GUI_App::restart_networking()
 
 // Network plugin hot reload timeout constants (in milliseconds)
 namespace {
+    constexpr bool FLASH_PRESET_SYNC_LOG_ENABLED = true;
+
+    void log_flash_preset_sync(const std::string &message)
+    {
+        if (!FLASH_PRESET_SYNC_LOG_ENABLED)
+            return;
+
+        const std::string line = "[FlashPresetSync] " + message;
+        BOOST_LOG_TRIVIAL(info) << line;
+#ifdef __WXMSW__
+        ::OutputDebugStringA((line + "\r\n").c_str());
+#endif
+    }
+
     constexpr int CALLBACK_DRAIN_TIMEOUT_MS   = 200;  // Time to drain pending CallAfter callbacks
     constexpr int NETWORK_IDLE_TIMEOUT_MS     = 500;  // Max wait for network operations to complete
     constexpr int FINAL_DRAIN_TIMEOUT_MS      = 100;  // Final event processing before destruction
@@ -1859,7 +1901,6 @@ bool GUI_App::hot_reload_network_plugin()
         // Phase 1: Clear all callbacks (stops new invocations)
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": Phase 1 - clearing callbacks";
         m_agent->set_on_ssdp_msg_fn(nullptr);
-        m_agent->set_on_user_login_fn(nullptr);
         m_agent->set_on_printer_connected_fn(nullptr);
         m_agent->set_on_server_connected_fn(nullptr);
         m_agent->set_on_http_error_fn(nullptr);
@@ -2106,25 +2147,20 @@ void GUI_App::init_networking_callbacks()
         });
 
 
-        m_agent->set_on_server_connected_fn([this](int return_code, int reason_code) {
-            if (is_closing()) {
-            return;
-            }
-            if (return_code == 5) {
-                GUI::wxGetApp().CallAfter([this] {
-                    this->request_user_logout();
-                    MessageDialog msg_dlg(nullptr, _L("Login information expired. Please login again."), "", wxAPPLY | wxOK);
-                    if (msg_dlg.ShowModal() == wxOK) {
-                        return;
-                    }
-                });
-                return;
-            }
-            GUI::wxGetApp().CallAfter([this] {
-                if (is_closing())
+        if (!uses_flash_cloud_agent(m_agent)) {
+            m_agent->set_on_server_connected_fn([this](CloudEvent, int return_code, int reason_code) {
+                if (is_closing()) {
                     return;
-                BOOST_LOG_TRIVIAL(trace) << "static: server connected";
-                m_agent->set_user_selected_machine(m_agent->get_user_selected_machine());
+                }
+                if (return_code == 5) {
+                    GUI::wxGetApp().CallAfter([this] { handle_http_error(401, "{}"); });
+                    return;
+                }
+                GUI::wxGetApp().CallAfter([this] {
+                    if (is_closing())
+                        return;
+                    BOOST_LOG_TRIVIAL(trace) << "static: server connected";
+                    m_agent->set_user_selected_machine(m_agent->get_user_selected_machine());
                     if (this->is_enable_multi_machine()) {
                         auto evt = new wxCommandEvent(EVT_UPDATE_MACHINE_LIST);
                         wxQueueEvent(this, evt);
@@ -2135,21 +2171,21 @@ void GUI_App::init_networking_callbacks()
 
                         /*disconnect lan*/
                         DeviceManager* dev = this->getDeviceManager();
-                        if (!dev) return;
+                        if (!dev)
+                            return;
 
-                        MachineObject *obj = dev->get_selected_machine();
-                        if (!obj) return;
+                        MachineObject* obj = dev->get_selected_machine();
+                        if (!obj)
+                            return;
 
                         /* resubscribe the cache dev list */
-                        if (this->is_enable_multi_machine()) {
-
-                            if (!dev->subscribe_list_cache.empty()) {
-                                dev->subscribe_device_list(dev->subscribe_list_cache);
-                            }
+                        if (this->is_enable_multi_machine() && !dev->subscribe_list_cache.empty()) {
+                            dev->subscribe_device_list(dev->subscribe_list_cache);
                         }
                     }
                 });
             });
+        }
 
         m_agent->set_on_printer_connected_fn([this](std::string dev_id) {
             if (is_closing()) {
@@ -2173,12 +2209,13 @@ void GUI_App::init_networking_callbacks()
                 });
             });
 
-        m_agent->set_get_country_code_fn([this]() {
-            if (app_config)
-                return app_config->get_country_code();
-            return std::string();
-            }
-        );
+        if (!uses_flash_cloud_agent(m_agent)) {
+            m_agent->set_get_country_code_fn([this]() {
+                if (app_config)
+                    return app_config->get_country_code();
+                return std::string();
+            });
+        }
 
         m_agent->set_on_subscribe_failure_fn([this](std::string dev_id) {
             CallAfter([this, dev_id] {
@@ -2272,7 +2309,8 @@ void GUI_App::init_networking_callbacks()
                     auto sel = this->m_device_manager->get_selected_machine();
                     if (sel && sel->get_dev_id() == dev_id) {
                         obj->parse_json("cloud", msg);
-                        GUI::wxGetApp().sidebar().load_ams_list(obj);
+                        if (auto *sidebar = GUI::wxGetApp().sidebar_ptr())
+                            sidebar->load_ams_list(obj);
                     } else {
                         obj->parse_json("cloud", msg, true);
                     }
@@ -2321,7 +2359,8 @@ void GUI_App::init_networking_callbacks()
                     // Orca: skip it if it doesn't support subscription based filament sync
                     if (this->m_device_manager->get_selected_machine() == obj &&
                         m_agent->get_filament_sync_mode() == FilamentSyncMode::subscription) {
-                        GUI::wxGetApp().sidebar().load_ams_list(obj);
+                        if (auto *sidebar = GUI::wxGetApp().sidebar_ptr())
+                            sidebar->load_ams_list(obj);
                     }
                 }
 
@@ -2486,6 +2525,8 @@ void GUI_App::init_flashnetwork()
 #if wxUSE_WEBVIEW_EDGE
 void GUI_App::init_webview_runtime()
 {
+    WebView::InitWebViewDataPath();
+
     // Check WebView Runtime
     if (!WebView::CheckWebViewRuntime()) {
         int nRet = wxMessageBox(_L("Flash Studio requires the Microsoft WebView2 Runtime to operate certain features.\nClick Yes to install it now."),
@@ -2497,13 +2538,42 @@ void GUI_App::init_webview_runtime()
 }
 #endif
 
+wxString get_app_release_tag()
+{
+    const std::string ver = Orca_Flashforge_VERSION;
+    if (ver.find("alpha") != std::string::npos)
+        return "Alpha";
+    if (ver.find("beta") != std::string::npos)
+        return "Beta";
+    return wxEmptyString;
+}
+
+wxString get_app_display_name()
+{
+    wxString name = SLIC3R_APP_FULL_NAME;
+    const wxString tag = get_app_release_tag();
+    if (!tag.empty())
+        name += " " + tag;
+    return name;
+}
+
 void GUI_App::init_app_config()
 {
-	// Profiles for the alpha are stored into the PrusaSlicer-alpha directory to not mix with the current release.
-    SetAppName(SLIC3R_APP_KEY);
-//	SetAppName(SLIC3R_APP_KEY "-alpha");
-//  SetAppName(SLIC3R_APP_KEY "-beta");
-    SetAppDisplayName(SLIC3R_APP_NAME);
+    // Pre-release builds (alpha/beta, detected from Orca_Flashforge_VERSION) use a
+    // dedicated user data directory and display name so they don't collide with the
+    // stable release. The network client identity (SLIC3R_APP_NAME, sent as the HTTP
+    // User-Agent and X-BBL-Client-Name header) is intentionally left unchanged so the
+    // cloud service keeps recognizing the client.
+    {
+        const std::string ver = Orca_Flashforge_VERSION;
+        wxString app_key = SLIC3R_APP_KEY;
+        if (ver.find("alpha") != std::string::npos)
+            app_key += "-alpha";
+        else if (ver.find("beta") != std::string::npos)
+            app_key += "-beta";
+        SetAppName(app_key);
+    }
+    SetAppDisplayName(get_app_display_name());
 
 	// Set the Slic3r data directory at the Slic3r XS module.
 	// Unix: ~/ .Slic3r
@@ -2603,6 +2673,68 @@ void GUI_App::init_app_config()
     }
     set_logging_level(Slic3r::level_string_to_boost(app_config->get("log_severity_level")));
 
+    // Pre-release builds reuse the stable release's device fingerprint and login.
+    seed_prerelease_config_from_stable();
+}
+
+void GUI_App::seed_prerelease_config_from_stable()
+{
+    const wxString tag = get_app_release_tag();
+    if (tag.empty())
+        return; // stable build: dedicated data dir is the stable one, nothing to mirror
+
+    // Our data dir differs from the stable one only by an "-alpha"/"-beta" suffix on
+    // the last path component (see init_app_config); the config filename is identical.
+    const std::string suffix = (tag == "Alpha") ? "-alpha" : "-beta";
+    boost::filesystem::path self_dir(Slic3r::data_dir());
+    const std::string folder = self_dir.filename().string();
+    if (folder.size() <= suffix.size() ||
+        folder.compare(folder.size() - suffix.size(), suffix.size(), suffix) != 0)
+        return; // unexpected layout; bail rather than guess
+
+    boost::filesystem::path stable_conf = self_dir.parent_path()
+        / folder.substr(0, folder.size() - suffix.size())
+        / (SLIC3R_APP_KEY ".conf");
+
+    boost::system::error_code ec;
+    if (!boost::filesystem::exists(stable_conf, ec) || ec)
+        return; // stable release never ran on this machine
+
+    AppConfig stable_cfg;
+    stable_cfg.set_loading_path(stable_conf.string());
+    if (!stable_cfg.load().empty())
+        return; // unreadable/corrupted stable config
+
+    bool dirty = false;
+
+    // 1) Device fingerprint: always mirror the stable slicer_uuid so the cloud's
+    //    same-device multi-login exemption applies and the two builds don't log each
+    //    other out. slicer_uuid is immutable once generated, so this converges.
+    const std::string stable_uuid = stable_cfg.get("slicer_uuid");
+    if (!stable_uuid.empty() && app_config->get("slicer_uuid") != stable_uuid) {
+        app_config->set("slicer_uuid", stable_uuid);
+        dirty = true;
+    }
+
+    // 2) Login state: seed once (gated by a flag) so we neither clobber an independent
+    //    pre-release session nor re-seed after the user signs out in this build.
+    if (app_config->get("prerelease_login_seeded") != "true") {
+        static const char* login_keys[] = {
+            "access_token", "refresh_token", "token_expire_time", "token_start_time",
+            "usr_email", "usr_uid", "usr_pic", "usr_name", "usr_input_name",
+            "show_user_points",
+        };
+        for (const char* key : login_keys) {
+            const std::string val = stable_cfg.get(key);
+            if (!val.empty())
+                app_config->set(key, val);
+        }
+        app_config->set("prerelease_login_seeded", "true");
+        dirty = true;
+    }
+
+    if (dirty)
+        app_config->save();
 }
 
 // returns true if found newer version and user agreed to use it
@@ -2648,17 +2780,13 @@ std::map<std::string, std::string> GUI_App::get_extra_header()
 void GUI_App::init_http_extra_header()
 {
     std::map<std::string, std::string> extra_headers = get_extra_header();
-
-    if (m_agent)
-        m_agent->set_extra_http_header(extra_headers);
+    Slic3r::Http::set_extra_headers(extra_headers);
 }
 
 void GUI_App::update_http_extra_header()
 {
     std::map<std::string, std::string> extra_headers = get_extra_header();
     Slic3r::Http::set_extra_headers(extra_headers);
-    if (m_agent)
-        m_agent->set_extra_http_header(extra_headers);
 }
 
 void GUI_App::on_start_subscribe_again(std::string dev_id)
@@ -2939,7 +3067,7 @@ bool GUI_App::on_init_inner()
               mainframe->topbar()->SetTitle(m_cur_title);
             }
       }
-#else if __APPLE__
+#elif defined(__APPLE__)
     if(mainframe && !mainframe->is_shutdown()){
         mainframe->SetTitle(m_cur_title);
     }
@@ -2971,7 +3099,7 @@ bool GUI_App::on_init_inner()
                mainframe->topbar()->SetTitle(m_cur_title);
          }
       }
-#else if __APPLE__
+#elif defined(__APPLE__)
     if(mainframe){
         mainframe->SetTitle(m_cur_title);
     }
@@ -4504,6 +4632,33 @@ void GUI_App::recreate_GUI(const wxString &msg_name)
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << "recreate_GUI exit";
 }
 
+bool GUI_App::restart_application()
+{
+    const wxString executable_path = wxStandardPaths::Get().GetExecutablePath();
+    if (executable_path.empty()) {
+        BOOST_LOG_TRIVIAL(error) << "restart_application failed: executable path is empty";
+        return false;
+    }
+
+    const wxString command = wxString::Format("\"%s\"", executable_path);
+    const long pid = wxExecute(command, wxEXEC_ASYNC, nullptr);
+    if (pid == 0) {
+        BOOST_LOG_TRIVIAL(error) << "restart_application failed: wxExecute returned 0, executable="
+                                 << executable_path.ToUTF8().data();
+        return false;
+    }
+
+    BOOST_LOG_TRIVIAL(info) << "restart_application launched new process, pid=" << pid
+                            << ", executable=" << executable_path.ToUTF8().data();
+
+    if (mainframe != nullptr)
+        mainframe->Close(false);
+    else
+        ExitMainLoop();
+
+    return true;
+}
+
 void GUI_App::system_info()
 {
     //SysInfoDialog dlg;
@@ -4705,8 +4860,7 @@ void GUI_App::force_colors_update()
 #ifdef _MSW_DARK_MODE
 #ifdef __WINDOWS__
     NppDarkMode::SetDarkMode(dark_mode());
-    if (WXHWND wxHWND = wxToolTip::GetToolTipCtrl())
-        NppDarkMode::SetDarkExplorerTheme((HWND)wxHWND);
+    // wxToolTip::GetToolTipCtrl is private in this wxWidgets version; tooltip dark theme skipped.
     NppDarkMode::SetDarkTitleBar(mainframe->GetHWND());
 
 
@@ -4781,9 +4935,9 @@ void GUI_App::import_model(wxWindow *parent, wxArrayString& input_files) const
     input_files.Clear();
     wxFileDialog dialog(parent ? parent : GetTopWindow(),
 #ifdef __APPLE__
-        _L("Choose one or more files (3MF/STEP/STL/SVG/OBJ/GLB/AMF/USD*/ABC/PLY):"),
+        _L("Choose one or more files (3MF/STEP/STL/SVG/OBJ/GLB/GLTF/FBX/AMF/USD*/ABC/PLY):"),
 #else
-        _L("Choose one or more files (3MF/STEP/STL/SVG/OBJ/GLB/AMF):"),
+        _L("Choose one or more files (3MF/STEP/STL/SVG/OBJ/GLB/GLTF/FBX/AMF):"),
 #endif
         from_u8(app_config->get_last_dir()), "",
         file_wildcards(FT_MODEL), wxFD_OPEN | wxFD_MULTIPLE | wxFD_FILE_MUST_EXIST);
@@ -5074,24 +5228,51 @@ void GUI_App::request_user_login(int online_login)
 
 void GUI_App::request_user_logout()
 {
-    if (m_agent && m_agent->is_user_login()) {
-        // Update data first before showing dialogs
-        m_agent->user_logout(true);
-        m_agent->set_user_selected_machine("");
-        /* delete old user settings */
-        bool     transfer_preset_changes = false;
-        wxString header = _L("Some presets are modified.") + "\n" +
-            _L("You can keep the modified presets to the new project, discard or save changes as new presets.");
-        wxGetApp().check_and_keep_current_preset_changes(_L("User logged out"), header, ActionButtons::KEEP | ActionButtons::SAVE, &transfer_preset_changes);
+    if (!m_agent || !m_agent->is_user_login())
+        return;
 
+    stop_sync_user_preset();
+
+    bool     transfer_preset_changes = false;
+    wxString header = _L("Some presets are modified.") + "\n" +
+                      _L("You can keep the modified presets to the new project, discard or save changes as new presets.");
+    check_and_keep_current_preset_changes(
+        _L("User logged out"), header, ActionButtons::KEEP | ActionButtons::SAVE, &transfer_preset_changes);
+
+    if (m_device_manager)
         m_device_manager->clean_user_info();
-        remove_user_presets();
-        enable_user_preset_folder(false);
-        preset_bundle->load_user_presets(DEFAULT_USER_FOLDER_NAME, ForwardCompatibilitySubstitutionRule::Enable);
-        mainframe->update_side_preset_ui();
 
-        GUI::wxGetApp().stop_sync_user_preset();
+    // Remove account presets before preset_folder and usr_uid are cleared.
+    remove_user_presets();
+    enable_user_preset_folder(false);
+    preset_bundle->load_user_presets(DEFAULT_USER_FOLDER_NAME, ForwardCompatibilitySubstitutionRule::Enable);
+    mainframe->update_side_preset_ui();
+
+    const auto cloud_agent = m_agent->get_cloud_agent();
+    if (dynamic_cast<FlashCloudServiceAgent *>(cloud_agent.get()) != nullptr || MultiComMgr::inst()->isLoggedIn()) {
+        const ComErrno logout_result = MultiComHelper::inst()->singOut(ComTimeoutWanA);
+        if (logout_result != ComErrno::COM_OK)
+            BOOST_LOG_TRIVIAL(warning) << "MultiComHelper::singOut failed, result=" << static_cast<int>(logout_result);
+    } else {
+        m_agent->user_logout(true);
     }
+
+    m_agent->set_user_selected_machine("");
+
+    if (app_config) {
+        app_config->set("access_token", "");
+        app_config->set("refresh_token", "");
+        app_config->set("token_expire_time", "");
+        app_config->set("token_start_time", "");
+        app_config->set("usr_uid", "");
+        app_config->set("usr_email", "");
+        app_config->set("usr_name", "");
+        app_config->set("usr_pic", "");
+        app_config->set("show_user_points", "");
+    }
+
+    MultiComMgr::inst()->removeWanDev();
+    handle_login_out();
 }
 
 int GUI_App::request_user_unbind(std::string dev_id)
@@ -5197,45 +5378,79 @@ std::string GUI_App::handle_web_request(std::string cmd, const std::vector<std::
             }
             else if (command_str.compare("homepage_logout") == 0) {
                 CallAfter([this] {
-                    //Slic3r::GUI::MultiComMgr::inst()->removeWanDev();
-                    //wxGetApp().handle_login_out();
                     MessageDialog dlg(nullptr, _L("Are you sure to log out?"), _L("Confirm"), wxOK | wxCANCEL);
                     if (dlg.ShowModal() == wxID_OK) {
+                        stop_sync_user_preset();
+
+                        bool     transfer_preset_changes = false;
+                        wxString header = _L("Some presets are modified.") + "\n" +
+                                          _L("You can keep the modified presets to the new project, discard or save changes as new presets.");
+                        check_and_keep_current_preset_changes(
+                            _L("User logged out"), header, ActionButtons::KEEP | ActionButtons::SAVE, &transfer_preset_changes);
+
+                        if (m_device_manager)
+                            m_device_manager->clean_user_info();
+                        remove_user_presets();
+                        enable_user_preset_folder(false);
+                        preset_bundle->load_user_presets(DEFAULT_USER_FOLDER_NAME, ForwardCompatibilitySubstitutionRule::Enable);
+                        mainframe->update_side_preset_ui();
+                        if (m_agent)
+                            m_agent->set_user_selected_machine("");
                         wxGetApp().handle_login_out();
                         AppConfig* app_config = wxGetApp().app_config;
                         if (app_config) {
                             ComErrno login_out_result = MultiComHelper::inst()->singOut(ComTimeoutWanA);
-                            if (login_out_result != ComErrno::COM_OK) {
-                                BOOST_LOG_TRIVIAL(warning) << boost::format("MultiComHelper::inst()->singOut Failed!");
-                            }
+                            if (login_out_result != ComErrno::COM_OK)
+                                BOOST_LOG_TRIVIAL(warning) << "MultiComHelper::singOut failed, result="
+                                                           << static_cast<int>(login_out_result);
                             app_config->set("access_token", "");
                             app_config->set("refresh_token", "");
                             app_config->set("token_expire_time", "");
                             app_config->set("token_start_time", "");
+                            app_config->set("usr_uid", "");
+                            app_config->set("usr_email", "");
                             app_config->set("usr_name", "");
                             app_config->set("usr_pic", "");
-                            Slic3r::GUI::MultiComMgr::inst()->removeWanDev();
+                            app_config->set("show_user_points", "");
+                            MultiComMgr::inst()->removeWanDev();
                         }
                     }
                 });
             } else if (command_str.compare("homepage_userlogout") == 0) {
                 CallAfter([this] {
-                    // Slic3r::GUI::MultiComMgr::inst()->removeWanDev();
-                    // wxGetApp().handle_login_out();
+                    stop_sync_user_preset();
+
+                    bool     transfer_preset_changes = false;
+                    wxString header = _L("Some presets are modified.") + "\n" +
+                                      _L("You can keep the modified presets to the new project, discard or save changes as new presets.");
+                    check_and_keep_current_preset_changes(
+                        _L("User logged out"), header, ActionButtons::KEEP | ActionButtons::SAVE, &transfer_preset_changes);
+
+                    if (m_device_manager)
+                        m_device_manager->clean_user_info();
+                    remove_user_presets();
+                    enable_user_preset_folder(false);
+                    preset_bundle->load_user_presets(DEFAULT_USER_FOLDER_NAME, ForwardCompatibilitySubstitutionRule::Enable);
+                    mainframe->update_side_preset_ui();
+                    if (m_agent)
+                        m_agent->set_user_selected_machine("");
                     wxGetApp().handle_login_out();
                     AppConfig* app_config = wxGetApp().app_config;
                     if (app_config) {
                         ComErrno login_out_result = MultiComHelper::inst()->singOut(ComTimeoutWanA);
-                        if (login_out_result != ComErrno::COM_OK) {
-                            BOOST_LOG_TRIVIAL(warning) << boost::format("MultiComHelper::inst()->singOut Failed!");
-                        }
+                        if (login_out_result != ComErrno::COM_OK)
+                            BOOST_LOG_TRIVIAL(warning) << "MultiComHelper::singOut failed, result="
+                                                       << static_cast<int>(login_out_result);
                         app_config->set("access_token", "");
                         app_config->set("refresh_token", "");
                         app_config->set("token_expire_time", "");
                         app_config->set("token_start_time", "");
+                        app_config->set("usr_uid", "");
+                        app_config->set("usr_email", "");
                         app_config->set("usr_name", "");
                         app_config->set("usr_pic", "");
-                        Slic3r::GUI::MultiComMgr::inst()->removeWanDev();
+                        app_config->set("show_user_points", "");
+                        MultiComMgr::inst()->removeWanDev();
                     }
                 });
             }
@@ -5518,20 +5733,28 @@ void GUI_App::handle_login_result(const std::string &token, const com_add_wan_de
     m_login_success = true;
     LoginDialog::SetUsrLogin(true);
     if (white_dlg) {
-        com_sys_msg_data_t data;
         std::string        language = wxGetApp().current_language_code_safe().BeforeFirst('_').ToStdString();
-        int    ret = COM_OK;
-        ret      = MultiComHelper::inst()->getSystemMessage(data, language, ComTimeoutWanB);
-        if (ret == COM_OK) {
-            wxGetApp().mainframe->msgTipBar()->SetMsg(data.id, wxString::FromUTF8(data.content), 
-                data.duration, data.linkUrl);
-        }
-        std::string monitorStr;
-        ret = MultiComHelper::inst()->getMonitorMessage(monitorStr, language, ComTimeoutWanB);
-        if (ret == COM_OK) {
-            wxGetApp().mainframe->msgTipBar()->SetMonitorMsg(wxString::FromUTF8(monitorStr));
-        }
-        wxGetApp().mainframe->msgTipBar()->ShowMsg();
+        std::thread([this, language]() {
+            com_sys_msg_data_t data;
+            std::string monitorStr;
+            bool has_sys_msg = MultiComHelper::inst()->getSystemMessage(data, language, ComTimeoutWanB) == COM_OK;
+            bool has_monitor_msg = MultiComHelper::inst()->getMonitorMessage(monitorStr, language, ComTimeoutWanB) == COM_OK;
+            CallAfter([this, data, monitorStr, has_sys_msg, has_monitor_msg]() {
+                if (mainframe == nullptr || mainframe->is_shutdown()) {
+                    return;
+                }
+                if (has_sys_msg) {
+                    mainframe->msgTipBar()->SetMsg(data.id, wxString::FromUTF8(data.content),
+                        data.duration, data.linkUrl);
+                }
+                if (has_monitor_msg) {
+                    mainframe->msgTipBar()->SetMonitorMsg(wxString::FromUTF8(monitorStr));
+                }
+                if (has_sys_msg || has_monitor_msg) {
+                    mainframe->msgTipBar()->ShowMsg();
+                }
+            });
+        }).detach();
         banner_update(true);
 
         if (app_config->get("check_version_test").empty()) {
@@ -5562,13 +5785,16 @@ void GUI_App::handle_login_result(const std::string &token, const com_add_wan_de
                         return;
                     }
                     if (!j["data"]["list"].empty()) {
-                        boost::gregorian::date today     = boost::gregorian::day_clock::local_day();
-                        std::string            today_str = boost::gregorian::to_iso_extended_string(today);
-                        if (app_config->get("last_login_date") == today_str) {
+                        std::string uid = add_dev_data.userProfile.uid;
+                        if (uid.empty()) {
+                            BOOST_LOG_TRIVIAL(warning) << "New Product popup skipped: empty uid";
                             return;
-                        } else {
-                            app_config->set("last_login_date", today_str);
                         }
+                        std::string popup_shown_key = "new_product_popup_shown_" + uid;
+                        if (app_config->get(popup_shown_key) == "true") {
+                            return;
+                        }
+                        app_config->set(popup_shown_key, "true");
                         wxString language = wxGetApp().current_language_code_safe().BeforeFirst('_');
                         CallAfter([=]() {
                             MessageDialog
@@ -5624,6 +5850,7 @@ void GUI_App::handle_login_out()
         return;
     }
     m_login_success = false;
+    m_sync_prompted_user_id.clear();
     m_usr_pic_image.Destroy();
     LoginDialog::SetUsrLogin(false);
 
@@ -5647,9 +5874,14 @@ void GUI_App::handle_script_message(std::string msg)
             wxString cmd = j["command"];
             if (cmd == "user_login") {
                 if (m_agent) {
-                    m_agent->change_user(j.dump());
-                    if (m_agent->is_user_login()) {
-                        request_user_login(1);
+                    if (uses_flash_cloud_agent(m_agent)) {
+                        BOOST_LOG_TRIVIAL(warning)
+                            << "Ignore generic user_login for FlashCloudServiceAgent; FlashForge login requires homepage_get_token";
+                    } else {
+                        m_agent->change_user(j.dump());
+                        if (m_agent->is_user_login()) {
+                            request_user_login(1);
+                        }
                     }
                 }
             }
@@ -5761,19 +5993,53 @@ void GUI_App::on_http_error(wxCommandEvent &evt)
 
     // request login
     if (status == 401) {
-        if (m_agent) {
-            if (m_agent->is_user_login()) {
-                this->request_user_logout();
+        const bool has_user_state = m_login_success ||
+                                    (app_config && !app_config->get("preset_folder").empty()) ||
+                                    (m_agent && m_agent->is_user_login());
+        if (has_user_state) {
+            stop_sync_user_preset();
 
-                if (!m_show_http_errpr_msgdlg) {
-                    MessageDialog msg_dlg(nullptr, _L("Login information expired. Please login again."), "", wxAPPLY | wxOK);
-                    m_show_http_errpr_msgdlg = true;
-                    auto modal_result = msg_dlg.ShowModal();
-                    if (modal_result == wxOK || modal_result == wxCLOSE) {
-                        m_show_http_errpr_msgdlg = false;
-                        return;
-                    }
-                }
+            bool     transfer_preset_changes = false;
+            wxString header = _L("Some presets are modified.") + "\n" +
+                              _L("You can keep the modified presets to the new project, discard or save changes as new presets.");
+            check_and_keep_current_preset_changes(
+                _L("User logged out"), header, ActionButtons::KEEP | ActionButtons::SAVE, &transfer_preset_changes);
+
+            if (m_device_manager)
+                m_device_manager->clean_user_info();
+            remove_user_presets();
+            enable_user_preset_folder(false);
+            preset_bundle->load_user_presets(DEFAULT_USER_FOLDER_NAME, ForwardCompatibilitySubstitutionRule::Enable);
+            mainframe->update_side_preset_ui();
+
+            // The token is already invalid. Clear the local agent session without
+            // sending another logout request to the server.
+            if (m_agent) {
+                m_agent->user_logout(false);
+                m_agent->set_user_selected_machine("");
+            }
+
+            if (app_config) {
+                app_config->set("access_token", "");
+                app_config->set("refresh_token", "");
+                app_config->set("token_expire_time", "");
+                app_config->set("token_start_time", "");
+                app_config->set("usr_uid", "");
+                app_config->set("usr_email", "");
+                app_config->set("usr_name", "");
+                app_config->set("usr_pic", "");
+                app_config->set("show_user_points", "");
+            }
+
+            MultiComMgr::inst()->removeWanDev();
+            handle_login_out();
+
+            if (!m_show_http_errpr_msgdlg) {
+                MessageDialog msg_dlg(nullptr, _L("Login information expired. Please login again."), "", wxAPPLY | wxOK);
+                m_show_http_errpr_msgdlg = true;
+                auto modal_result = msg_dlg.ShowModal();
+                if (modal_result == wxOK || modal_result == wxCLOSE)
+                    m_show_http_errpr_msgdlg = false;
             }
         }
         return;
@@ -5810,6 +6076,8 @@ void GUI_App::on_connect_event()
 void GUI_App::get_usr_profile(ComGetUserProfileEvent &event) 
 {
     event.Skip();
+    log_flash_preset_sync("LOGIN_PROFILE result=" + std::to_string(static_cast<int>(event.ret))
+                          + " user_id=" + event.userProfile.uid);
     if (event.ret == ComErrno::COM_OK) {
         std::string access_token;
         bool show_user_points = false;
@@ -5824,6 +6092,19 @@ void GUI_App::get_usr_profile(ComGetUserProfileEvent &event)
         }
         LoginDialog::SetUsrInfo(event.userProfile);
         handle_login_result(access_token, com_add_wan_dev_data_t{ event.userProfile, show_user_points }, 0);
+
+        // FlashForge login owns the preset-sync lifecycle in the current single-agent architecture.
+        if (m_agent && preset_bundle && mainframe && m_agent->is_user_login()) {
+            log_flash_preset_sync("create dir");
+            const std::string user_id = m_agent->get_user_id();
+            if (!user_id.empty() && app_config->get("preset_folder") != user_id) {
+                remove_user_presets();
+                enable_user_preset_folder(true);
+                preset_bundle->load_user_presets(user_id, ForwardCompatibilitySubstitutionRule::Enable);
+                mainframe->update_side_preset_ui();
+            }
+            handle_user_preset_sync_on_login(user_id);
+        }
         wxImage image;
         if (image.LoadFile(Slic3r::GUI::from_u8(Slic3r::var("login_default_usr_pic.png")), wxBITMAP_TYPE_PNG)) {
             m_usr_pic_image = image;
@@ -5854,7 +6135,7 @@ void GUI_App::onAutoStartLogin(wxCommandEvent& event)
             mainframe->topbar()->SetTitle(_L("Account Auto Connecting..."));
         }
     }
-#else if __APPLE__
+#elif defined(__APPLE__)
     if (mainframe) {
         m_cur_title = mainframe->GetTitle();
         mainframe->SetTitle(_L("Account Auto Connecting..."));
@@ -5915,7 +6196,9 @@ void GUI_App::on_user_login_handle(wxCommandEvent &evt)
     if (!m_agent) { return; }
 
     int online_login = evt.GetInt();
-    m_agent->connect_server();
+    // FlashForge establishes and maintains its account connection in MultiComMgr::addWanDev().
+    if (!uses_flash_cloud_agent(m_agent))
+        m_agent->connect_server();
     // get machine list
     DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
     if (!dev) return;
@@ -5930,7 +6213,7 @@ void GUI_App::on_user_login_handle(wxCommandEvent &evt)
         preset_bundle->load_user_presets(m_agent->get_user_id(), ForwardCompatibilitySubstitutionRule::Enable);
         mainframe->update_side_preset_ui();
 
-        GUI::wxGetApp().mainframe->show_sync_dialog();
+        handle_user_preset_sync_on_login(m_agent->get_user_id());
     }
 }
 
@@ -5956,14 +6239,34 @@ void GUI_App::on_user_login(wxCommandEvent &evt)
 void GUI_App::wan_dev_maintain(ComWanDevMaintainEvent& event)
 {
     event.Skip();
+    log_flash_preset_sync("ACCOUNT_STATE login=" + std::string(event.login ? "true" : "false")
+                          + " gui_login_success=" + (m_login_success ? "true" : "false"));
     if (!event.login && m_login_success) {
 #ifdef __WXGTK__
         const bool restore_gl_after_logout_tip = mainframe && mainframe->IsIconized() && mainframe->m_tabpanel &&
                                                  (mainframe->m_tabpanel->GetSelection() == MainFrame::tp3DEditor ||
                                                   mainframe->m_tabpanel->GetSelection() == MainFrame::tpPreview);
 #endif
-        // login out
-        handle_login_out();
+        stop_sync_user_preset();
+
+        bool     transfer_preset_changes = false;
+        wxString header = _L("Some presets are modified.") + "\n" +
+                          _L("You can keep the modified presets to the new project, discard or save changes as new presets.");
+        check_and_keep_current_preset_changes(
+            _L("User logged out"), header, ActionButtons::KEEP | ActionButtons::SAVE, &transfer_preset_changes);
+
+        if (m_device_manager)
+            m_device_manager->clean_user_info();
+
+        // This is a server-side logout. Do not call singOut() here.
+        remove_user_presets();
+        enable_user_preset_folder(false);
+        preset_bundle->load_user_presets(DEFAULT_USER_FOLDER_NAME, ForwardCompatibilitySubstitutionRule::Enable);
+        mainframe->update_side_preset_ui();
+
+        if (m_agent)
+            m_agent->set_user_selected_machine("");
+
         if (app_config) {
             app_config->set("access_token", "");
             app_config->set("refresh_token", "");
@@ -5975,6 +6278,10 @@ void GUI_App::wan_dev_maintain(ComWanDevMaintainEvent& event)
             app_config->set("usr_pic", "");
             app_config->set("usr_uid", "");
         }
+
+        MultiComMgr::inst()->removeWanDev();
+        handle_login_out();
+
         if (!m_logout_tip) {
             m_logout_tip = new ShowTip(_L("The current account has been logged out!"));
         } else {
@@ -6092,10 +6399,10 @@ void GUI_App::connect_sys_notify(ComConnSysNotifyEvent& event)
     try {
         wxString language = wxGetApp().current_language_code_safe().BeforeFirst('_');
         json j = json::parse(event.payload);
-        wxString title = wxString::FromUTF8(j["title"][language.ToStdString()].is_null() ? 
-            j["title"]["en"] : j["title"][language.ToStdString()]);
-        wxString content = wxString::FromUTF8(j["content"][language.ToStdString()].is_null() ? j["content"]["en"] :
-                                                                                           j["content"][language.ToStdString()]);
+        wxString title = wxString::FromUTF8((j["title"][language.ToStdString()].is_null() ?
+            j["title"]["en"].get<std::string>() : j["title"][language.ToStdString()].get<std::string>()).c_str());
+        wxString content = wxString::FromUTF8((j["content"][language.ToStdString()].is_null() ? j["content"]["en"].get<std::string>() :
+                                                                                           j["content"][language.ToStdString()].get<std::string>()).c_str());
         if (m_notify_dlg) {
             m_notify_dlg->Destroy();
             m_notify_dlg = nullptr;
@@ -6108,7 +6415,7 @@ void GUI_App::connect_sys_notify(ComConnSysNotifyEvent& event)
         m_notify_dlg->ShowModal();
     } 
     catch (...) {
-        BOOST_LOG_TRIVIAL(error) << "connect sys notify error: " << event.payload;
+        BOOST_LOG_TRIVIAL(error) << "connect sys notify error";
     }
 }
 
@@ -6123,7 +6430,7 @@ void GUI_App::connect_update_notify(ComConnSysNotifyEvent& event)
         json     content  = j["content"];
         json     link      = j["link"];
         auto     transInfo = [=](json json) {
-            return wxString::FromUTF8(json[language.ToStdString()].is_null() ? json["en"] : json[language.ToStdString()]);
+            return wxString::FromUTF8((json[language.ToStdString()].is_null() ? json["en"].get<std::string>() : json[language.ToStdString()].get<std::string>()).c_str());
         };
         wxString text;
         if (!content["5x"].is_null()) {
@@ -6134,7 +6441,7 @@ void GUI_App::connect_update_notify(ComConnSysNotifyEvent& event)
             text += transInfo(content["5m"]);
             text += "\n\n";
         }
-        wxString url = wxString::FromUTF8(language == "zh" ? link["url"]["zh"] : link["url"]["other"]);
+        wxString url = wxString::FromUTF8((language == "zh" ? link["url"]["zh"].get<std::string>() : link["url"]["other"].get<std::string>()).c_str());
         text += transInfo(link["content"]) + " ";
         if (m_notify_dlg) {
             m_notify_dlg->Destroy();
@@ -6151,7 +6458,7 @@ void GUI_App::connect_update_notify(ComConnSysNotifyEvent& event)
         m_notify_dlg->ShowModal();
 
     } catch (...) {
-        BOOST_LOG_TRIVIAL(error) << "connect update notify error: " << event.payload;
+        BOOST_LOG_TRIVIAL(error) << "connect update notify error";
     }
 }      
 
@@ -6396,6 +6703,14 @@ static void remember_weekly_version_prompt(AppConfig* app_config, const std::str
 void GUI_App::check_new_version_sf(bool by_user, bool use_uid)
 {
     if (mainframe == nullptr || mainframe->is_shutdown()) {
+        return;
+    }
+    if (std::string(Orca_Flashforge_VERSION).find("beta") != std::string::npos) {
+        if (by_user) {
+            CallAfter([]() {
+                wxMessageBox(_L("Beta version does not support checking for updates currently."), _L("Info"), wxOK | wxICON_INFORMATION);
+            });
+        }
         return;
     }
     if (app_config->get("check_version_test").empty()) {
@@ -6939,11 +7254,40 @@ void GUI_App::show_check_privacy_dlg(wxCommandEvent& evt)
         request_user_handle(online_login);
         });
     privacy_dlg.Bind(EVT_PRIVACY_UPDATE_CANCEL, [this](wxCommandEvent &e) {
-            app_config->set_bool("privacy_update_checked", false);
-            if (m_agent) {
-                m_agent->user_logout();
-            }
-        });
+        app_config->set_bool("privacy_update_checked", false);
+        stop_sync_user_preset();
+
+        if (m_device_manager)
+            m_device_manager->clean_user_info();
+
+        // Privacy is rejected during the login flow, so there is no need to
+        // prompt for preset modifications. Still switch back to local presets.
+        remove_user_presets();
+        enable_user_preset_folder(false);
+        preset_bundle->load_user_presets(DEFAULT_USER_FOLDER_NAME, ForwardCompatibilitySubstitutionRule::Enable);
+        mainframe->update_side_preset_ui();
+
+        if (m_agent)
+            m_agent->set_user_selected_machine("");
+
+        const ComErrno logout_result = MultiComHelper::inst()->singOut(ComTimeoutWanA);
+        if (logout_result != ComErrno::COM_OK)
+            BOOST_LOG_TRIVIAL(warning) << "MultiComHelper::singOut failed after privacy rejection, result="
+                                       << static_cast<int>(logout_result);
+
+        app_config->set("access_token", "");
+        app_config->set("refresh_token", "");
+        app_config->set("token_expire_time", "");
+        app_config->set("token_start_time", "");
+        app_config->set("usr_uid", "");
+        app_config->set("usr_email", "");
+        app_config->set("usr_name", "");
+        app_config->set("usr_pic", "");
+        app_config->set("show_user_points", "");
+
+        MultiComMgr::inst()->removeWanDev();
+        handle_login_out();
+    });
 
     privacy_dlg.set_text(privacy_version_info.description);
     privacy_dlg.on_show();
@@ -7109,14 +7453,37 @@ void  GUI_App::push_notification(const MachineObject* obj, wxString msg, wxStrin
 
 void GUI_App::reload_settings()
 {
+    log_flash_preset_sync("CACHE_READ_BEGIN");
     if (preset_bundle && m_agent) {
         std::map<std::string, std::map<std::string, std::string>> user_presets;
-        m_agent->get_user_presets(&user_presets);
+        const int result = m_agent->get_user_presets(&user_presets);
+        log_flash_preset_sync("CACHE_READ_END result=" + std::to_string(result)
+                              + " preset_count=" + std::to_string(user_presets.size()));
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << __LINE__ << " cloud user preset number is: " << user_presets.size();
         preset_bundle->load_user_presets(*app_config, user_presets, ForwardCompatibilitySubstitutionRule::Enable);
         preset_bundle->save_user_presets(*app_config, get_delete_cache_presets());
         mainframe->update_side_preset_ui();
+        log_flash_preset_sync("REMOTE_APPLY_END status=success");
+    } else {
+        log_flash_preset_sync("CACHE_READ_END status=skipped reason=missing_preset_bundle_or_agent");
     }
+}
+
+void GUI_App::handle_user_preset_sync_on_login(const std::string& user_id)
+{
+    if (user_id.empty() || !m_agent || !m_agent->is_user_login() || !app_config || !mainframe)
+        return;
+
+    if (app_config->get_bool("sync_user_preset")) {
+        start_sync_user_preset();
+        return;
+    }
+
+    if (m_sync_prompted_user_id == user_id)
+        return;
+
+    m_sync_prompted_user_id = user_id;
+    mainframe->show_sync_dialog(user_id);
 }
 
 //BBS reload when logout
@@ -7140,17 +7507,29 @@ void GUI_App::sync_preset(Preset* preset)
     unsigned int http_code = 200;
     std::string updated_info;
     long long update_time = 0;
+    bool preserve_cloud_metadata = false;
     // only sync user's preset
     if (!preset->is_user()) return;
 
     auto setting_id = preset->setting_id;
     std::map<std::string, std::string> values_map;
+    log_flash_preset_sync("PRESET_BEGIN name=" + preset->name
+                          + " type=" + std::to_string(static_cast<int>(preset->type))
+                          + " setting_id=" + setting_id + " sync_info=" + preset->sync_info
+                          + " updated_time=" + std::to_string(preset->updated_time));
     if (setting_id.empty() && preset->sync_info.empty()) {
         if (m_create_preset_blocked[preset->type])
             return;
         int ret = preset_bundle->get_differed_values_to_update(*preset, values_map);
+        log_flash_preset_sync("DIFF_PREPARE name=" + preset->name + " result=" + std::to_string(ret));
         if (!ret) {
+            log_flash_preset_sync("CREATE_REQUEST name=" + preset->name);
             std::string new_setting_id = m_agent->request_setting_id(preset->name, &values_map, &http_code);
+            log_flash_preset_sync("CREATE_RESPONSE name=" + preset->name
+                                  + " http_code=" + std::to_string(http_code)
+                                  + " setting_id=" + new_setting_id
+                                  + " business_code="
+                                  + (values_map.count("code") ? values_map.at("code") : std::string()));
             if (!new_setting_id.empty()) {
                 setting_id = new_setting_id;
                 result = 0;
@@ -7164,6 +7543,7 @@ void GUI_App::sync_preset(Preset* preset)
                 if (http_code >= 400) {
                     result = 0;
                     updated_info = "hold";
+                    preserve_cloud_metadata = true;
                 } else
                     result = -1;
             }
@@ -7172,14 +7552,22 @@ void GUI_App::sync_preset(Preset* preset)
             BOOST_LOG_TRIVIAL(trace) << "[sync_preset]init: can not generate differed key-values";
             result = 0;
             updated_info = "hold";
+            preserve_cloud_metadata = true;
         }
     }
     else if (preset->sync_info.compare("create") == 0) {
         if (m_create_preset_blocked[preset->type])
             return;
         int ret = preset_bundle->get_differed_values_to_update(*preset, values_map);
+        log_flash_preset_sync("DIFF_PREPARE name=" + preset->name + " result=" + std::to_string(ret));
         if (!ret) {
+            log_flash_preset_sync("CREATE_REQUEST name=" + preset->name);
             std::string new_setting_id = m_agent->request_setting_id(preset->name, &values_map, &http_code);
+            log_flash_preset_sync("CREATE_RESPONSE name=" + preset->name
+                                  + " http_code=" + std::to_string(http_code)
+                                  + " setting_id=" + new_setting_id
+                                  + " business_code="
+                                  + (values_map.count("code") ? values_map.at("code") : std::string()));
             if (!new_setting_id.empty()) {
                 setting_id = new_setting_id;
                 result = 0;
@@ -7192,6 +7580,7 @@ void GUI_App::sync_preset(Preset* preset)
                 if (http_code >= 400) {
                     result = 0;
                     updated_info = "hold";
+                    preserve_cloud_metadata = true;
                 }
                 else
                     result = -1;
@@ -7201,7 +7590,9 @@ void GUI_App::sync_preset(Preset* preset)
         }
     } else if (preset->sync_info.compare("update") == 0) {
         if (!setting_id.empty()) {
+            log_flash_preset_sync("UPDATE_PREPARE name=" + preset->name + " setting_id=" + setting_id);
             int ret = preset_bundle->get_differed_values_to_update(*preset, values_map);
+            log_flash_preset_sync("DIFF_PREPARE name=" + preset->name + " result=" + std::to_string(ret));
             if (!ret) {
                 if (auto iter = values_map.find(BBL_JSON_KEY_BASE_ID); iter != values_map.end() && iter->second == setting_id) {
                     //clear the setting_id in this case ???
@@ -7209,10 +7600,17 @@ void GUI_App::sync_preset(Preset* preset)
                     result = 0;
                 }
                 else {
-                result = m_agent->put_setting(setting_id, preset->name, &values_map, &http_code);
+                    log_flash_preset_sync("UPDATE_REQUEST name=" + preset->name + " setting_id=" + setting_id);
+                    result = m_agent->put_setting(setting_id, preset->name, &values_map, &http_code);
+                    log_flash_preset_sync("UPDATE_RESPONSE name=" + preset->name
+                                      + " result=" + std::to_string(result)
+                                      + " http_code=" + std::to_string(http_code)
+                                      + " business_code="
+                                      + (values_map.count("code") ? values_map.at("code") : std::string()));
                 if (http_code >= 400) {
                     result = 0;
                     updated_info = "hold";
+                    preserve_cloud_metadata = true;
                     BOOST_LOG_TRIVIAL(error) << "[sync_preset] put setting_id = " << setting_id << " failed, http_code = " << http_code;
                 } else {
                         auto update_time_str = values_map[ORCA_JSON_KEY_UPDATE_TIME];
@@ -7255,27 +7653,60 @@ void GUI_App::sync_preset(Preset* preset)
         if (!this->preset_bundle) return;
 
         BOOST_LOG_TRIVIAL(trace) << "sync_preset: sync operation: " << preset->sync_info << " success! preset = " << preset->name;
-        if (preset->type == Preset::Type::TYPE_FILAMENT) {
-            preset_bundle->filaments.set_sync_info_and_save(preset->name, setting_id, updated_info, update_time);
-        } else if (preset->type == Preset::Type::TYPE_PRINT) {
-            preset_bundle->prints.set_sync_info_and_save(preset->name, setting_id, updated_info, update_time);
-        } else if (preset->type == Preset::Type::TYPE_PRINTER) {
-            preset_bundle->printers.set_sync_info_and_save(preset->name, setting_id, updated_info, update_time);
+        PresetCollection *collection = nullptr;
+        if (preset->type == Preset::Type::TYPE_FILAMENT)
+            collection = &preset_bundle->filaments;
+        else if (preset->type == Preset::Type::TYPE_PRINT)
+            collection = &preset_bundle->prints;
+        else if (preset->type == Preset::Type::TYPE_PRINTER)
+            collection = &preset_bundle->printers;
+
+        if (collection != nullptr) {
+            if (preserve_cloud_metadata) {
+                log_flash_preset_sync("LOCAL_STATUS_WRITE name=" + preset->name + " sync_info=" + updated_info
+                                      + " preserve_setting_id=true preserve_updated_time=true");
+                collection->set_sync_status_and_save(preset->name, updated_info);
+            } else {
+                log_flash_preset_sync("LOCAL_INFO_WRITE name=" + preset->name + " setting_id=" + setting_id
+                                      + " sync_info=" + updated_info
+                                      + " updated_time=" + std::to_string(update_time));
+                collection->set_sync_info_and_save(preset->name, setting_id, updated_info, update_time);
+            }
         }
+        log_flash_preset_sync("PRESET_END name=" + preset->name + " status=local_state_updated"
+                              + " http_code=" + std::to_string(http_code));
+    } else {
+        log_flash_preset_sync("PRESET_END name=" + preset->name + " status=failed result="
+                              + std::to_string(result) + " http_code=" + std::to_string(http_code));
     }
 }
 
 void GUI_App::start_sync_user_preset(bool with_progress_dlg)
 {
-    if (app_config->get_stealth_mode())
+    log_flash_preset_sync("SYNC_START_REQUEST progress_dialog=" + std::string(with_progress_dlg ? "true" : "false"));
+    if (app_config->get_stealth_mode()) {
+        log_flash_preset_sync("SYNC_START_SKIP reason=stealth_mode");
         return;
+    }
 
-    if (!m_agent || !m_agent->is_user_login()) return;
-    if(!m_agent->get_cloud_agent())
+    if (!m_agent) {
+        log_flash_preset_sync("SYNC_START_SKIP reason=missing_agent");
         return;
+    }
+    if (!m_agent->get_cloud_agent()) {
+        log_flash_preset_sync("SYNC_START_SKIP reason=missing_cloud_agent");
+        return;
+    }
+    if (!m_agent->is_user_login()) {
+        log_flash_preset_sync("SYNC_START_SKIP reason=flash_user_not_logged_in");
+        return;
+    }
 
     // has already start sync
-    if (m_user_sync_token) return;
+    if (m_user_sync_token) {
+        log_flash_preset_sync("SYNC_START_SKIP reason=already_running");
+        return;
+    }
 
     ProgressFn progressFn;
     WasCancelledFn cancelFn;
@@ -7315,9 +7746,16 @@ void GUI_App::start_sync_user_preset(bool with_progress_dlg)
 
     m_sync_update_thread = Slic3r::create_thread(
         [this, progressFn, cancelFn, finishFn, t = std::weak_ptr<int>(m_user_sync_token)] {
+            log_flash_preset_sync("SYNC_THREAD_BEGIN");
+            // Recover cloud deletions left behind while the application was offline.
+            log_flash_preset_sync("DELETE_SCAN_BEGIN");
+            scan_orphaned_info_files();
+            process_delete_presets();
+            log_flash_preset_sync("DELETE_SCAN_END");
             // get setting list, update setting list
             std::string version = preset_bundle->get_vendor_profile_version(PresetBundle::ORCA_DEFAULT_BUNDLE).to_string();
             if(!m_agent) return;
+            log_flash_preset_sync("REMOTE_PULL_BEGIN bundle_version=" + version);
             int ret = m_agent->get_setting_list2(version, [this](auto info) {
                 auto type = info[BBL_JSON_KEY_TYPE];
                 auto name = info[BBL_JSON_KEY_NAME];
@@ -7336,6 +7774,7 @@ void GUI_App::start_sync_user_preset(bool with_progress_dlg)
                     return true;
                 }
             }, progressFn, cancelFn);
+            log_flash_preset_sync("REMOTE_PULL_END result=" + std::to_string(ret));
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << __LINE__ << " get_setting_list2 ret = " << ret << " m_is_closing = " << m_is_closing;
             finishFn(ret == 0);
 
@@ -7353,6 +7792,7 @@ void GUI_App::start_sync_user_preset(bool with_progress_dlg)
 
                         int total_count = 0;
                         sync_count = preset_bundle->prints.get_user_presets(preset_bundle, presets_to_sync);
+                        log_flash_preset_sync("PUSH_SCAN type=print count=" + std::to_string(sync_count));
                         if (sync_count > 0) {
                             for (Preset& preset : presets_to_sync) {
                                 sync_preset(&preset);
@@ -7362,6 +7802,7 @@ void GUI_App::start_sync_user_preset(bool with_progress_dlg)
                         total_count += sync_count;
 
                         sync_count = preset_bundle->filaments.get_user_presets(preset_bundle, presets_to_sync);
+                        log_flash_preset_sync("PUSH_SCAN type=filament count=" + std::to_string(sync_count));
                         if (sync_count > 0) {
                             for (Preset& preset : presets_to_sync) {
                                 sync_preset(&preset);
@@ -7371,6 +7812,7 @@ void GUI_App::start_sync_user_preset(bool with_progress_dlg)
                         total_count += sync_count;
 
                         sync_count = preset_bundle->printers.get_user_presets(preset_bundle, presets_to_sync);
+                        log_flash_preset_sync("PUSH_SCAN type=printer count=" + std::to_string(sync_count));
                         if (sync_count > 0) {
                             for (Preset& preset : presets_to_sync) {
                                 sync_preset(&preset);
@@ -7388,36 +7830,24 @@ void GUI_App::start_sync_user_preset(bool with_progress_dlg)
 
                         unsigned int http_code = 200;
 
-                        /* get list witch need to be deleted*/
-                        std::vector<string> delete_cache_presets = get_delete_cache_presets_lock();
-                        for (auto it = delete_cache_presets.begin(); it != delete_cache_presets.end();) {
-                            if ((*it).empty()) continue;
-                            std::string del_setting_id = *it;
-                            int result = m_agent->delete_setting(del_setting_id);
-                            if (result == 0) {
-                                preset_deleted_from_cloud(del_setting_id);
-                                it = delete_cache_presets.erase(it);
-                                m_create_preset_blocked = { false, false, false, false, false, false };
-                                BOOST_LOG_TRIVIAL(trace) << "sync_preset: sync operation: delete success! setting id = " << del_setting_id;
-                            }
-                            else {
-                                BOOST_LOG_TRIVIAL(info) << "delete setting = " <<del_setting_id << " failed";
-                                it++;
-                            }
-                        }
+                        process_delete_presets();
                     }
                 } else {
                     boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
                 }
             }
+            log_flash_preset_sync("SYNC_THREAD_END status=stopped");
         });
 }
 
 void GUI_App::stop_sync_user_preset()
 {
-    if (!m_user_sync_token)
+    if (!m_user_sync_token) {
+        log_flash_preset_sync("SYNC_STOP_SKIP reason=not_running");
         return;
+    }
 
+    log_flash_preset_sync("SYNC_STOP_REQUEST");
     m_user_sync_token.reset();
     if (m_sync_update_thread.joinable()) {
         if (is_closing())
@@ -7466,7 +7896,9 @@ void GUI_App::switch_staff_pick(bool on)
 bool GUI_App::switch_language()
 {
     if (select_language()) {
-        recreate_GUI(_L("Switching application language") + dots);
+        app_config->save();
+        if (!restart_application())
+            MessageDialog(mainframe, _L("Please restart the application to apply the language change."), _L("Language"), wxICON_WARNING | wxOK).ShowModal();
         return true;
     } else {
         return false;
@@ -7868,31 +8300,59 @@ Tab* GUI_App::get_layer_tab()
     return model_tabs_list[2];
 }
 
-ConfigOptionMode GUI_App::get_mode()
+namespace
+{
+ConfigOptionMode saved_mode_from_string(const std::string& mode)
+{
+    return mode == "expert" ? comExpert :
+           mode == "advanced" ? comAdvanced :
+           mode == "develop" ? comAdvanced :
+           comSimple;
+}
+
+std::string saved_mode_to_string(ConfigOptionMode mode)
+{
+    return mode == comExpert ? "expert" :
+           mode == comAdvanced ? "advanced" :
+           "simple";
+}
+
+std::string effective_mode_to_string(ConfigOptionMode mode)
+{
+    return mode == comDevelop ? "develop" : saved_mode_to_string(mode);
+}
+}
+
+ConfigOptionMode GUI_App::get_saved_mode()
 {
     if (!app_config->has("user_mode"))
         return comSimple;
-    //BBS
-    const auto mode = app_config->get("user_mode");
-    return mode == "advanced" ? comAdvanced :
-           mode == "simple" ? comSimple :
-           mode == "develop" ? comDevelop : comSimple;
+
+    return saved_mode_from_string(app_config->get("user_mode"));
+}
+
+ConfigOptionMode GUI_App::get_mode()
+{
+    return app_config->get_bool("developer_mode") ? comDevelop : get_saved_mode();
+}
+
+std::string GUI_App::get_saved_mode_str()
+{
+    return saved_mode_to_string(get_saved_mode());
 }
 
 std::string GUI_App::get_mode_str()
 {
-    if (!app_config->has("user_mode"))
-        return "simple";
-    return app_config->get("user_mode");
+    return effective_mode_to_string(get_mode());
 }
 
 void GUI_App::save_mode(const /*ConfigOptionMode*/int mode)
 {
-    //BBS
-    const std::string mode_str = mode == comAdvanced ? "advanced" :
-                                 mode == comSimple ? "simple" :
-                                 mode == comDevelop ? "develop" : "simple";
-    app_config->set("user_mode", mode_str);
+    const auto saved_mode = mode == comExpert ? comExpert :
+                            mode == comAdvanced ? comAdvanced :
+                            mode == comSimple ? comSimple :
+                            get_saved_mode();
+    app_config->set("user_mode", saved_mode_to_string(saved_mode));
     update_mode();
 }
 
@@ -8166,14 +8626,11 @@ void GUI_App::open_preferences(size_t open_on_tab, const std::string& highlight_
     }
 
     if (!pending_language.empty()) {
-        const std::string previous_language = app_config->get("language");
         app_config->set("language", pending_language);
-        if (!load_language(wxString::FromUTF8(pending_language), false)) {
-            app_config->set("language", previous_language);
-            if (this->plater_)
-                this->plater_->get_current_canvas3D()->force_set_focus();
-            return;
-        }
+        app_config->save();
+        if (!restart_application())
+            MessageDialog(mainframe, _L("Please restart the application to apply the language change."), _L("Language"), wxICON_WARNING | wxOK).ShowModal();
+        return;
     }
 
     if (need_recreate_gui)
@@ -8445,31 +8902,139 @@ void GUI_App::load_current_presets(bool active_preset_combox/*= false*/, bool ch
 		if (tab->supports_printer_technology(printer_technology)) {
             tab->rebuild_page_tree();
         }
+
+    if (printer_technology == ptFFF && preset_bundle != nullptr) {
+        // GUI reconstruction, application startup and project loading all pass
+        // through here. Keep the loaded project/session config authoritative;
+        // only an explicit print-preset switch copies preset values into it.
+        preset_bundle->sync_mixed_filaments_from_config();
+
+        if (plater_ != nullptr)
+            sidebar().update_mixed_filament_panel(false);
+    }
 }
 
 static std::mutex mutex_delete_cache_presets;
 
-std::vector<std::string> & GUI_App::get_delete_cache_presets()
+std::map<std::string, std::string> & GUI_App::get_delete_cache_presets()
 {
     return need_delete_presets;
 }
 
-std::vector<std::string> GUI_App::get_delete_cache_presets_lock()
+std::map<std::string, std::string> GUI_App::get_delete_cache_presets_lock()
 {
     std::scoped_lock l(mutex_delete_cache_presets);
     return need_delete_presets;
 }
 
-void GUI_App::delete_preset_from_cloud(std::string setting_id)
+void GUI_App::process_delete_presets()
 {
+    if (!m_agent)
+        return;
+
+    std::map<std::string, std::string> delete_cache_presets = get_delete_cache_presets_lock();
+    log_flash_preset_sync("DELETE_QUEUE_BEGIN count=" + std::to_string(delete_cache_presets.size()));
+    for (const auto &entry : delete_cache_presets) {
+        const std::string &setting_id = entry.first;
+        if (setting_id.empty())
+            continue;
+        log_flash_preset_sync("DELETE_REQUEST setting_id=" + setting_id);
+        int result = m_agent->delete_setting(setting_id);
+        log_flash_preset_sync("DELETE_RESPONSE setting_id=" + setting_id + " result=" + std::to_string(result));
+        if (result == 0) {
+            preset_deleted_from_cloud(setting_id);
+            m_create_preset_blocked = {false, false, false, false, false, false};
+            BOOST_LOG_TRIVIAL(trace) << "sync_preset: delete success, setting id = " << setting_id;
+        } else {
+            BOOST_LOG_TRIVIAL(info) << "delete setting = " << setting_id << " failed";
+        }
+    }
+    log_flash_preset_sync("DELETE_QUEUE_END");
+}
+
+void GUI_App::delete_preset_from_cloud(std::string setting_id, std::string preset_file_path)
+{
+    if (setting_id.empty())
+        return;
+
+    boost::filesystem::path info_path(preset_file_path);
+    info_path.replace_extension(".info");
     std::scoped_lock l(mutex_delete_cache_presets);
-    need_delete_presets.push_back(setting_id);
+    need_delete_presets[setting_id] = info_path.string();
+    log_flash_preset_sync("DELETE_ENQUEUE setting_id=" + setting_id + " info_path=" + info_path.string());
 }
 
 void GUI_App::preset_deleted_from_cloud(std::string setting_id)
 {
     std::scoped_lock l(mutex_delete_cache_presets);
-    need_delete_presets.erase(std::remove(need_delete_presets.begin(), need_delete_presets.end(), setting_id), need_delete_presets.end());
+    auto it = need_delete_presets.find(setting_id);
+    if (it == need_delete_presets.end())
+        return;
+
+    if (!it->second.empty() && boost::filesystem::exists(it->second)) {
+        boost::nowide::remove(it->second.c_str());
+        BOOST_LOG_TRIVIAL(info) << "Deleted .info file after cloud confirmation: " << it->second;
+    }
+    need_delete_presets.erase(it);
+}
+
+std::string GUI_App::extract_setting_id_from_info(const std::string &info_file_path)
+{
+    boost::nowide::ifstream file(info_file_path);
+    if (!file.is_open())
+        return {};
+
+    std::string line;
+    while (std::getline(file, line)) {
+        const size_t delimiter = line.find('=');
+        if (delimiter == std::string::npos)
+            continue;
+        std::string key = line.substr(0, delimiter);
+        const size_t key_end = key.find_last_not_of(" \t");
+        if (key_end == std::string::npos || key.substr(0, key_end + 1) != "setting_id")
+            continue;
+
+        std::string setting_id = line.substr(delimiter + 1);
+        const size_t first = setting_id.find_first_not_of(" \t\r\n");
+        if (first == std::string::npos)
+            return {};
+        const size_t last = setting_id.find_last_not_of(" \t\r\n");
+        return setting_id.substr(first, last - first + 1);
+    }
+    return {};
+}
+
+void GUI_App::scan_orphaned_info_files()
+{
+    std::string user_sub_folder = app_config->get("preset_folder");
+    if (user_sub_folder.empty())
+        user_sub_folder = DEFAULT_USER_FOLDER_NAME;
+    const boost::filesystem::path user_dir = boost::filesystem::path(data_dir()) / PRESET_USER_DIR / user_sub_folder;
+    const std::vector<std::string> preset_types = {PRESET_PRINT_NAME, PRESET_FILAMENT_NAME, PRESET_PRINTER_NAME};
+
+    for (const std::string &type : preset_types) {
+        const boost::filesystem::path type_dir = user_dir / type;
+        if (!boost::filesystem::exists(type_dir))
+            continue;
+
+        for (const auto &entry : boost::filesystem::directory_iterator(type_dir)) {
+            const boost::filesystem::path info_file = entry.path();
+            if (info_file.extension() != ".info")
+                continue;
+
+            boost::filesystem::path preset_file = info_file;
+            preset_file.replace_extension(".json");
+            if (boost::filesystem::exists(preset_file))
+                continue;
+
+            const std::string setting_id = extract_setting_id_from_info(info_file.string());
+            if (!setting_id.empty()) {
+                delete_preset_from_cloud(setting_id, info_file.string());
+                BOOST_LOG_TRIVIAL(info) << "Found orphaned preset metadata: " << info_file.string();
+                log_flash_preset_sync("DELETE_RECOVER setting_id=" + setting_id + " info_path=" + info_file.string());
+            }
+        }
+    }
 }
 
 wxString GUI_App::filter_string(wxString str)
@@ -8596,9 +9161,21 @@ void GUI_App::MacOpenFiles(const wxArrayString &fileNames)
 
 #endif /* __APPLE */
 
+Sidebar* GUI_App::sidebar_ptr()
+{
+    return plater_ != nullptr && plater_->has_sidebar() ? &plater_->sidebar() : nullptr;
+}
+
+const Sidebar* GUI_App::sidebar_ptr() const
+{
+    return plater_ != nullptr && plater_->has_sidebar() ? &plater_->sidebar() : nullptr;
+}
+
 Sidebar& GUI_App::sidebar()
 {
-    return plater_->sidebar();
+    Sidebar *sidebar = sidebar_ptr();
+    assert(sidebar != nullptr);
+    return *sidebar;
 }
 
 GizmoObjectManipulation *GUI_App::obj_manipul()
@@ -8609,17 +9186,20 @@ GizmoObjectManipulation *GUI_App::obj_manipul()
 
 ObjectSettings* GUI_App::obj_settings()
 {
-    return sidebar().obj_settings();
+    Sidebar *sidebar = sidebar_ptr();
+    return sidebar != nullptr ? sidebar->obj_settings() : nullptr;
 }
 
 ObjectList* GUI_App::obj_list()
 {
-    return sidebar().obj_list();
+    Sidebar *sidebar = sidebar_ptr();
+    return sidebar != nullptr ? sidebar->obj_list() : nullptr;
 }
 
 ObjectLayers* GUI_App::obj_layers()
 {
-    return sidebar().obj_layers();
+    Sidebar *sidebar = sidebar_ptr();
+    return sidebar != nullptr ? sidebar->obj_layers() : nullptr;
 }
 
 Plater* GUI_App::plater()
@@ -9435,6 +10015,37 @@ bool is_support_filament(int extruder_id, bool strict_check)
     if (support_option == nullptr) return false;
     return support_option->get_at(0);
 };
+
+void GUI_App::open_presetbundledialog(size_t open_on_tab, const std::string& highlight_option)
+{
+    if (m_preset_bundle_dlg)
+        return;
+    m_preset_bundle_dlg = new PresetBundleDialog(mainframe, open_on_tab, highlight_option);
+    m_preset_bundle_dlg->Bind(wxEVT_DESTROY, [this](wxWindowDestroyEvent&) {
+        if (m_preset_bundle_dlg)
+            m_preset_bundle_dlg = nullptr;
+    });
+    m_preset_bundle_dlg->ShowModal();
+    if (m_preset_bundle_dlg) {
+        m_preset_bundle_dlg->Destroy();
+        m_preset_bundle_dlg = nullptr;
+    }
+    this->plater_->get_current_canvas3D()->force_set_focus();
+}
+
+std::string GUI_App::get_bbl_client_version()
+{
+    if (BBLNetworkPlugin::instance().get_get_my_token() == nullptr) {
+        return "01.10.01.50";
+    }
+    return VersionInfo::convert_full_version(SLIC3R_VERSION);
+}
+
+bool GUI_App::unsubscribe_bundle(const std::string& id)
+{
+    auto orca_agent = std::dynamic_pointer_cast<OrcaCloudServiceAgent>(m_agent->get_cloud_agent());
+    return orca_agent->unsubscribe_bundle(id);
+}
 
 } // GUI
 } //Slic3r

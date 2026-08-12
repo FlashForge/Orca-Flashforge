@@ -25,6 +25,7 @@
 #include "CalibrationPanel.hpp"
 
 #include "DeviceCore/DevConfig.h"
+#include "DeviceCore/DevConfigUtil.h"
 #include "DeviceCore/DevFilaSystem.h"
 #include "DeviceCore/DevManager.h"
 #include "DeviceCore/DevMapping.h"
@@ -48,14 +49,31 @@ wxDEFINE_EVENT(EVT_PRINT_JOB_CANCEL, wxCommandEvent);
 #define SYNC_FLEX_GRID_COL 7
 
 std::map<int, wxImage> SyncMachineItem::m_machineBitmapMap;
-SyncMachineItem::SyncMachineItem(wxWindow* parent, const FFPrinterSimpleData& data) : 
+
+static size_t physical_filament_count_for_sync()
+{
+    PresetBundle *preset_bundle = wxGetApp().preset_bundle;
+    if (!preset_bundle)
+        return 0;
+
+    if (!preset_bundle->filament_presets.empty())
+        return preset_bundle->filament_presets.size();
+
+    if (Plater *plater = wxGetApp().plater())
+        return plater->get_extruder_colors_from_plater_config(nullptr, /*include_mixed=*/false).size();
+
+    const ConfigOptionStrings *colors = preset_bundle->project_config.option<ConfigOptionStrings>("filament_colour");
+    return colors ? colors->values.size() : 0;
+}
+
+SyncMachineItem::SyncMachineItem(wxWindow* parent, const FFPrinterSimpleData& data) :
     wxPanel(parent), m_data(data)
 {
     if (m_machineBitmapMap.empty()) {
         auto& printer_map = FFUtils::printer_preset_map;
         for (auto it : printer_map) {
             m_machineBitmapMap[it.first] = create_scaled_bitmap(it.second.bmp_file_name, 0, 80).ConvertToImage();
-        }	
+        }
     }
 
     int width = FromDIP(360), height = FromDIP(100);
@@ -118,13 +136,13 @@ SyncMachineItem::SyncMachineItem(wxWindow* parent, const FFPrinterSimpleData& da
     Bind(wxEVT_LEFT_DOWN, &SyncMachineItem::onMouseClicked, this);
 }
 
-const FFPrinterSimpleData& SyncMachineItem::data() { 
-    return m_data; 
+const FFPrinterSimpleData& SyncMachineItem::data() {
+    return m_data;
 }
 
-void SyncMachineItem::SetRadio(bool radio) 
-{ 
-    m_radioBox->SetValue(radio); 
+void SyncMachineItem::SetRadio(bool radio)
+{
+    m_radioBox->SetValue(radio);
     wxColour color;
     if (radio) {
         color = wxColour(245, 245, 245);
@@ -169,8 +187,8 @@ SyncChoiceMachineDialog::SyncChoiceMachineDialog(wxWindow* parent, const std::un
     SetMaxSize(wxSize(width, height));
     auto refresh_sizer = new wxBoxSizer(wxHORIZONTAL);
     auto refresh_btn        = new Button(this, _L("Refresh"), "sync_machine_refresh", 0, 16);
-    refresh_btn->Bind(wxEVT_BUTTON, [=](wxCommandEvent& evt) { 
-        auto devList = FFUtils::getSelectPresetDevList();
+    refresh_btn->Bind(wxEVT_BUTTON, [=](wxCommandEvent& evt) {
+        auto devList = FFUtils::getSelectPresetDevList(/*include_printing=*/true);
         if (devList.size() == 0) {
             MessageDialog dlg(this, _L("No Available Device"), _L("Warning"), wxID_OK);
             dlg.ShowModal();
@@ -211,14 +229,14 @@ SyncChoiceMachineDialog::SyncChoiceMachineDialog(wxWindow* parent, const std::un
     m_button_ok    = new Button(this, _L("Confirm"));
     m_button_ok->SetMinSize(wxSize(FromDIP(74), FromDIP(32)));
     m_button_ok->SetStyle(ButtonStyle::Confirm, ButtonType::Choice);
-    m_button_ok->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e) { 
+    m_button_ok->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e) {
         EndModal(wxID_OK);
     });
 
     m_button_cancel = new Button(this, _L("Cancel"));
     m_button_cancel->SetMinSize(wxSize(FromDIP(74), FromDIP(32)));
     m_button_cancel->SetStyle(ButtonStyle::Regular, ButtonType::Choice);
-    m_button_cancel->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e) { 
+    m_button_cancel->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e) {
         EndModal(wxID_CANCEL);
     });
 
@@ -239,7 +257,7 @@ SyncChoiceMachineDialog::SyncChoiceMachineDialog(wxWindow* parent, const std::un
     Center();
 }
 
-void SyncChoiceMachineDialog::updateMachineList() 
+void SyncChoiceMachineDialog::updateMachineList()
 {
     if (m_list.empty()) {
         return;
@@ -395,7 +413,7 @@ void SyncAmsInfoDialog::set_default_normal(const ThumbnailData &data)
         image = image.Rescale(FromDIP(RIGHT_THUMBNAIL_SIZE_WIDTH), FromDIP(RIGHT_THUMBNAIL_SIZE_WIDTH), wxIMAGE_QUALITY_BOX_AVERAGE);
         m_right_image_button->SetBitmap(image);
         auto extruders = wxGetApp().plater()->get_partplate_list().get_plate(m_specify_plate_idx)->get_extruders();
-        if (wxGetApp().plater()->get_extruders_colors().size() == extruders.size()) {
+        if (physical_filament_count_for_sync() == extruders.size()) {
             //m_used_colors_tip_text->Hide();
         }
         else {
@@ -513,6 +531,7 @@ bool SyncAmsInfoDialog::is_need_show()
         update_when_change_map_mode(mode);
         update_plate_combox();
         update_swipe_button_state();
+        show_thumbnail_page();
     }
     return true;
 }
@@ -1310,8 +1329,8 @@ SyncAmsInfoDialog::SyncAmsInfoDialog(wxWindow *parent, SyncInfo &info) :
     wxGetApp().UpdateDlgDarkUI(this);
 }
 
-void SyncAmsInfoDialog::set_real_device_data(const FFPrinterSimpleData& data) 
-{ 
+void SyncAmsInfoDialog::set_real_device_data(const FFPrinterSimpleData& data)
+{
     m_real_device_data = data;
 }
 
@@ -1327,15 +1346,7 @@ void SyncAmsInfoDialog::check_empty_project()
         auto temp_plate = GUI::wxGetApp().plater()->get_partplate_list().get_plate(i);
         if (!temp_plate->get_objects_on_this_plate().empty()) {
             if (m_is_empty_project) { m_is_empty_project = false; }
-            if (i < 9) {
-                m_plate_number_choices_str.Add("0" + std::to_wstring(i + 1));
-            }
-            else if (i == 9) {
-                m_plate_number_choices_str.Add("10");
-            }
-            else {
-                m_plate_number_choices_str.Add(std::to_wstring(i + 1));
-            }
+            m_plate_number_choices_str.Add(wxString::Format("%02d", int(i + 1)));
             m_plate_choices.emplace_back(i);
         }
     }
@@ -1490,24 +1501,52 @@ void SyncAmsInfoDialog::sync_ams_mapping_result(std::vector<FilamentInfo> &resul
     }
 }
 
-bool SyncAmsInfoDialog::mapping_best_color_slots(std::vector<FilamentInfo>& infos) 
+bool SyncAmsInfoDialog::mapping_best_color_slots(std::vector<FilamentInfo>& infos)
 {
     com_id_t                 comId = m_real_device_data.comId;
-    bool                     valid;
-    const fnet_dev_detail_t* devDetail = MultiComMgr::inst()->devData(comId, &valid).devDetail;
+    bool                     valid = false;
+    const auto               devData = MultiComMgr::inst()->devData(comId, &valid);
 
-    if (!devDetail || devDetail->matlStationInfo.slotCnt <= 0 || devDetail->matlStationInfo.slotInfos == nullptr) {
+    if (!valid || devData.devDetail == nullptr) {
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " invalid device detail, comId=" << comId << ", valid=" << valid;
         return false;
     }
-    if (!valid) {
+    const fnet_dev_detail_t* devDetail = devData.devDetail;
+    if (devDetail->matlStationInfo.slotCnt <= 0 || devDetail->matlStationInfo.slotInfos == nullptr) {
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " empty material station detail, comId=" << comId << ", slotCnt=" << devDetail->matlStationInfo.slotCnt;
         return false;
     }
-    std::unordered_map<int, wxColour> slotColors;
+    struct SlotCandidate {
+        int      slot_index       = -1;
+        int      protocol_slot_id = -1;
+        wxColour color;
+        wxString material_name;
+    };
+    std::vector<SlotCandidate> slots;
+    std::vector<int> slot_lookup(size_t(devDetail->matlStationInfo.slotCnt), -1);
     for (int i = 0; i < devDetail->matlStationInfo.slotCnt; i++) {
-        if (devDetail->matlStationInfo.slotInfos[i].hasFilament) {
-            slotColors[i] = wxColour(devDetail->matlStationInfo.slotInfos[i].materialColor);
+        const fnet_matl_slot_info_t &slotInfo = devDetail->matlStationInfo.slotInfos[i];
+        if (slotInfo.hasFilament) {
+            SlotCandidate slot;
+            slot.slot_index       = i;
+            slot.protocol_slot_id = slotInfo.slotId;
+            slot.color            = wxColour(slotInfo.materialColor ? slotInfo.materialColor : "");
+            slot.material_name    = wxString::FromUTF8(slotInfo.materialName ? slotInfo.materialName : "");
+            slot_lookup[size_t(i)] = int(slots.size());
+            slots.emplace_back(slot);
         }
     }
+    for (auto &item : infos) {
+        item.ams_id.clear();
+        item.slot_id.clear();
+        item.tray_id  = -1;
+        item.distance = 99999.f;
+    }
+    if (slots.empty()) {
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " no material station slots with filament, slotCnt=" << devDetail->matlStationInfo.slotCnt;
+        return true;
+    }
+
     auto calc_color_distance = [](wxColour c1, wxColour c2) {
         float lab[2][3];
         RGB2Lab(c1.Red(), c1.Green(), c1.Blue(), &lab[0][0], &lab[0][1], &lab[0][2]);
@@ -1515,41 +1554,76 @@ bool SyncAmsInfoDialog::mapping_best_color_slots(std::vector<FilamentInfo>& info
 
         return DeltaE76(lab[0][0], lab[0][1], lab[0][2], lab[1][0], lab[1][1], lab[1][2]);
     };
-    for (int j = 0; j < infos.size(); j++) {
-        auto&                       item = infos[j];
-        std::vector<ColorDistValue> colorMap;
-        wxColour                    c(item.color);
-        for (auto& v : slotColors) {
-            ColorDistValue val;
-            val.id       = v.first;
-            bool match   = FFUtils::matchMaterialName(devDetail->matlStationInfo.slotInfos[val.id].materialName, item.type);
-            val.distance = match ? calc_color_distance(c, v.second) : INT_MAX - 1;
-            colorMap.push_back(val);
-        }
-        sort(colorMap.begin(), colorMap.end(), [](ColorDistValue& a, ColorDistValue& b) { return a.distance < b.distance; });
-
-        if (colorMap.empty()) {
-            continue;
-        }
-        if (colorMap[0].distance != INT_MAX - 1) {
-            item.ams_id = std::to_string(colorMap[0].id + 1);
-            item.slot_id           = std::to_string(colorMap[0].id + 1);
-            item.tray_id           = colorMap[0].id;
-            auto     ams_colour    = slotColors[colorMap[0].id];
-            wxString color      = wxString::Format("%02X%02X%02X%02X", ams_colour.Red(), ams_colour.Green(), ams_colour.Blue(),
-                                                   ams_colour.Alpha());
-            item.color             = color.ToStdString();
-        } else {
-            item.tray_id = -1;
+    struct MappingCandidate {
+        int   filament_index = -1;
+        int   slot_index     = -1;
+        float distance       = 0.f;
+    };
+    std::vector<MappingCandidate> candidates;
+    for (int j = 0; j < int(infos.size()); j++) {
+        wxColour source_color(infos[j].color);
+        for (const SlotCandidate &slot : slots) {
+            if (!FFUtils::matchMaterialName(slot.material_name, infos[j].type))
+                continue;
+            MappingCandidate candidate;
+            candidate.filament_index = j;
+            candidate.slot_index     = slot.slot_index;
+            candidate.distance       = calc_color_distance(source_color, slot.color);
+            candidates.emplace_back(candidate);
         }
     }
+    if (candidates.empty()) {
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " no type-matched candidates, filaments=" << infos.size() << ", slots=" << slots.size();
+    }
+    std::sort(candidates.begin(), candidates.end(), [](const MappingCandidate &a, const MappingCandidate &b) {
+        if (a.distance != b.distance)
+            return a.distance < b.distance;
+        if (a.filament_index != b.filament_index)
+            return a.filament_index < b.filament_index;
+        return a.slot_index < b.slot_index;
+    });
+
+    std::vector<unsigned char> filament_mapped(infos.size(), 0);
+    std::vector<unsigned char> slot_used(size_t(devDetail->matlStationInfo.slotCnt), 0);
+    constexpr float exact_color_distance = 0.0001f;
+    auto apply_candidate = [&](const MappingCandidate &candidate, bool allow_exact_reuse) {
+        if (candidate.filament_index < 0 || candidate.filament_index >= int(infos.size()) ||
+            candidate.slot_index < 0 || candidate.slot_index >= devDetail->matlStationInfo.slotCnt)
+            return;
+        if (filament_mapped[size_t(candidate.filament_index)] != 0)
+            return;
+        if (slot_used[size_t(candidate.slot_index)] != 0 &&
+            (!allow_exact_reuse || candidate.distance >= exact_color_distance))
+            return;
+
+        const int slot_pos = slot_lookup[size_t(candidate.slot_index)];
+        if (slot_pos < 0 || slot_pos >= int(slots.size()))
+            return;
+        const SlotCandidate &slot = slots[size_t(slot_pos)];
+        const int protocol_slot_id = slot.protocol_slot_id > 0 ? slot.protocol_slot_id : candidate.slot_index + 1;
+
+        auto &item = infos[size_t(candidate.filament_index)];
+        item.ams_id   = std::to_string(protocol_slot_id);
+        item.slot_id  = std::to_string(protocol_slot_id);
+        item.tray_id  = protocol_slot_id - 1;
+        item.distance = candidate.distance;
+        const wxColour &ams_colour = slot.color;
+        wxString color = wxString::Format("%02X%02X%02X%02X", ams_colour.Red(), ams_colour.Green(), ams_colour.Blue(), ams_colour.Alpha());
+        item.color = color.ToStdString();
+
+        filament_mapped[size_t(candidate.filament_index)] = 1;
+        slot_used[size_t(candidate.slot_index)]           = 1;
+    };
+    for (const MappingCandidate &candidate : candidates)
+        apply_candidate(candidate, false);
+    for (const MappingCandidate &candidate : candidates)
+        apply_candidate(candidate, true);
     return true;
 }
 
 bool SyncAmsInfoDialog::do_ams_mapping(MachineObject *obj_)
 {
-    //if (!obj_) return false;
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " begin do_ams_mapping result";
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " begin do_ams_mapping result, comId=" << m_real_device_data.comId << ", has_machine_obj=" << (obj_ != nullptr);
     //obj_->get_ams_colors(m_cur_colors_in_thumbnail);
     // try color and type mapping
     m_cur_colors_in_thumbnail.clear();
@@ -1588,13 +1662,19 @@ bool SyncAmsInfoDialog::do_ams_mapping(MachineObject *obj_)
         int i = 0;
         for (auto& v : m_ams_mapping_result) {
             i++;
-            v.slot_id           = std::to_string(i);
-            v.ams_id            = std::to_string(i);
-            v.tray_id           = i - 1;
-            auto     ams_colour = m_cur_colors_in_thumbnail[i - 1];
-            wxString color      = wxString::Format("%02X%02X%02X%02X", ams_colour.Red(), ams_colour.Green(), ams_colour.Blue(),
-                                                   ams_colour.Alpha());
-            v.color             = color.ToStdString();
+            const size_t slot_idx = size_t(i - 1);
+            if (slot_idx >= m_cur_colors_in_thumbnail.size()) {
+                v.slot_id.clear();
+                v.ams_id.clear();
+                v.tray_id = -1;
+                continue;
+            }
+            v.slot_id        = std::to_string(i);
+            v.ams_id         = std::to_string(i);
+            v.tray_id        = i - 1;
+            auto     colour  = m_cur_colors_in_thumbnail[slot_idx];
+            wxString color   = wxString::Format("%02X%02X%02X%02X", colour.Red(), colour.Green(), colour.Blue(), colour.Alpha());
+            v.color          = color.ToStdString();
         }
     }
     if (filament_result == 0) {
@@ -1702,7 +1782,8 @@ bool SyncAmsInfoDialog::get_ams_mapping_result(std::string &mapping_array_str, s
             BOOST_LOG_TRIVIAL(error) << "get_ams_mapping_result, plater is nullptr";
         }
 
-        for (int i = 0; i < wxGetApp().preset_bundle->filament_presets.size(); i++) {
+        const int physical_filament_count = int(physical_filament_count_for_sync());
+        for (int i = 0; i < physical_filament_count; i++) {
             int  tray_id = -1;
             json mapping_item_v1;
             mapping_item_v1["ams_id"]  = 0xff;
@@ -1909,10 +1990,11 @@ bool SyncAmsInfoDialog::is_nozzle_type_match(DevExtderSystem data, wxString &err
             if (target_machine_nozzle_id < flow_type_of_machine.size()) {
                 if (flow_type_of_machine[target_machine_nozzle_id] != used_extruders_flow[it->first]) {
                     wxString pos;
+                    auto sai_nz_pt = wxGetApp().preset_bundle->printers.get_edited_preset().get_printer_type(wxGetApp().preset_bundle);
                     if (target_machine_nozzle_id == DEPUTY_EXTRUDER_ID) {
-                        pos = _L("left nozzle");
+                        pos = _L(DevPrinterConfigUtil::get_toolhead_display_name(sai_nz_pt, DEPUTY_EXTRUDER_ID, ToolHeadComponent::Nozzle, ToolHeadNameCase::LowerCase));
                     } else if ((target_machine_nozzle_id == MAIN_EXTRUDER_ID)) {
-                        pos = _L("right nozzle");
+                        pos = _L(DevPrinterConfigUtil::get_toolhead_display_name(sai_nz_pt, MAIN_EXTRUDER_ID, ToolHeadComponent::Nozzle, ToolHeadNameCase::LowerCase));
                     }
 
                     error_message = wxString::Format(_L("The nozzle flow setting of %s(%s) doesn't match with the slicing file(%s). "
@@ -2245,65 +2327,6 @@ bool SyncAmsInfoDialog::is_blocking_printing(MachineObject *obj_)
     }
 
     return false;
-}
-
-bool SyncAmsInfoDialog::is_same_nozzle_diameters(NozzleType &tag_nozzle_type, float &nozzle_diameter)
-{
-    bool is_same_nozzle_diameters = true;
-
-    float       preset_nozzle_diameters;
-    std::string preset_nozzle_type;
-
-    DeviceManager *dev = Slic3r::GUI::wxGetApp().getDeviceManager();
-    if (!dev) return true;
-
-    MachineObject *obj_ = dev->get_selected_machine();
-    if (obj_ == nullptr) return true;
-
-    try {
-        PresetBundle *preset_bundle        = wxGetApp().preset_bundle;
-        auto          opt_nozzle_diameters = preset_bundle->printers.get_edited_preset().config.option<ConfigOptionFloats>("nozzle_diameter");
-
-        const ConfigOptionEnumsGenericNullable *nozzle_type = preset_bundle->printers.get_edited_preset().config.option<ConfigOptionEnumsGenericNullable>("nozzle_type");
-        std::vector<std::string>                preset_nozzle_types(nozzle_type->size());
-        for (size_t idx = 0; idx < nozzle_type->size(); ++idx) preset_nozzle_types[idx] = NozzleTypeEumnToStr[NozzleType(nozzle_type->values[idx])];
-
-        std::vector<std::string> machine_nozzle_types(obj_->GetExtderSystem()->GetTotalExtderCount());
-        for (size_t idx = 0; idx < obj_->GetExtderSystem()->GetTotalExtderCount(); ++idx) machine_nozzle_types[idx] = obj_->GetExtderSystem()->GetNozzleType(idx);
-
-        auto used_filaments = wxGetApp().plater()->get_partplate_list().get_curr_plate()->get_used_filaments();                                  // 1 based
-        auto filament_maps  = wxGetApp().plater()->get_partplate_list().get_curr_plate()->get_real_filament_maps(preset_bundle->project_config); // 1 based
-
-        std::vector<int> used_extruders; // 0 based
-        for (auto f : used_filaments) {
-            if (f <= 0 || static_cast<size_t>(f) > filament_maps.size()) {
-                BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": invalid filament index " << f
-                                           << ", filament_map size=" << filament_maps.size();
-                continue;
-            }
-            int filament_extruder = filament_maps[f - 1] - 1;
-            if (filament_extruder < 0)
-                continue;
-            if (std::find(used_extruders.begin(), used_extruders.end(), filament_extruder) == used_extruders.end()) used_extruders.emplace_back(filament_extruder);
-        }
-        std::sort(used_extruders.begin(), used_extruders.end());
-
-        // TODO [tao wang] : add idx mapping
-        tag_nozzle_type = obj_->GetExtderSystem()->GetNozzleType(0);
-
-        if (opt_nozzle_diameters != nullptr) {
-            for (auto i = 0; i < used_extruders.size(); i++) {
-                auto extruder           = used_extruders[i];
-                preset_nozzle_diameters = float(opt_nozzle_diameters->get_at(extruder));
-                if (preset_nozzle_diameters != obj_->GetExtderSystem()->GetNozzleDiameter(0)) { is_same_nozzle_diameters = false; }
-            }
-        }
-
-    } catch (...) {}
-
-    nozzle_diameter = preset_nozzle_diameters;
-
-    return is_same_nozzle_diameters;
 }
 
 bool SyncAmsInfoDialog::is_same_nozzle_type(std::string &filament_type, NozzleType &tag_nozzle_type)
@@ -2745,7 +2768,7 @@ void SyncAmsInfoDialog::update_show_status()
     size_t      nozzle_nums = full_config.option<ConfigOptionFloats>("nozzle_diameter")->values.size();
 
     // the nozzle type of preset and machine are different
-    if (get_is_double_extruder()) {
+    if (obj_ && get_is_double_extruder()) {
          wxString error_message;
         if (!is_nozzle_type_match(*obj_->GetExtderSystem(), error_message)) {
             std::vector<wxString> params{error_message};
@@ -2981,7 +3004,7 @@ void SyncAmsInfoDialog::reset_and_sync_ams_list()
     } else {
         extruders = wxGetApp().plater()->get_partplate_list().get_plate(m_specify_plate_idx)->get_extruders();
     }*/
-    std::vector<int> extruders(wxGetApp().plater()->get_extruders_colors().size());
+    std::vector<int> extruders(physical_filament_count_for_sync());
     std::iota(extruders.begin(), extruders.end(), 1);
     BitmapCache            bmcache;
     MaterialHash::iterator iter = m_materialList.begin();
@@ -3089,11 +3112,11 @@ void SyncAmsInfoDialog::reset_and_sync_ams_list()
                     Update();
                 });
             });
-            m_select_wnd->Bind(SOLT_SELECT_EVENT, [=](SlotSelectEvent& evt) { 
+            m_select_wnd->Bind(SOLT_SELECT_EVENT, [=](SlotSelectEvent& evt) {
                 wxColour color = evt.color;
                 int      id    = evt.slotId;
                 wxCommandEvent* event = new wxCommandEvent(EVT_SET_FINISH_MAPPING);
-                event->SetInt(extruder);
+                event->SetInt(id > 0 ? id - 1 : -1);
 
                 wxString param = wxString::Format("%d|%d|%d|%d|%s|%d|%d|%d", color.Red(), color.Green(), color.Blue(), color.Alpha(), "A" + std::to_string(id),
                                                   extruder, id, id);
@@ -3220,7 +3243,7 @@ void SyncAmsInfoDialog::generate_override_fix_ams_list()
     if (m_ams_combo_info.empty()) {
         wxGetApp().preset_bundle->get_ams_cobox_infos(m_ams_combo_info);
     }
-    std::vector<int> extruders(wxGetApp().plater()->get_extruders_colors().size());
+    std::vector<int> extruders(physical_filament_count_for_sync());
     std::iota(extruders.begin(), extruders.end(), 1);
     BitmapCache            bmcache;
     MaterialHash::iterator iter = m_fix_materialList.begin();

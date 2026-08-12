@@ -64,6 +64,7 @@
         "100"
     ],
     "inherits": "Flashforge Generic PLA-CF10",
+    "setting_id": "C4DfYuQgDXIgK7mk",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge PA-CF @FF G4",

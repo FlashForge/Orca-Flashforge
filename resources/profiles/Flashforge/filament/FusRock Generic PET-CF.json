@@ -201,7 +201,7 @@
         "80"
     ],
     "inherits": "Flashforge Generic PETG",
-    "instantiation": "true",
+    "instantiation": "false",
     "name": "FusRock Generic PET-CF",
     "nozzle_temperature": [
         "290"
@@ -230,7 +230,7 @@
     "required_nozzle_HRC": [
         "0"
     ],
-    "setting_id": "GFSA04",
+    "setting_id": "jJVDAlGTt1QJlbn8",
     "slow_down_for_layer_cooling": [
         "1"
     ],

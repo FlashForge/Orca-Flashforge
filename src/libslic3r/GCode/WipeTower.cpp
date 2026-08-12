@@ -2452,7 +2452,7 @@ void WipeTower::plan_toolchange(float z_par, float layer_height_par, unsigned in
 	assert(m_plan.empty() || m_plan.back().z <= z_par + WT_EPSILON);	// refuses to add a layer below the last one
 
 	if (m_plan.empty() || m_plan.back().z + WT_EPSILON < z_par) // if we moved to a new layer, we'll add it to m_plan first
-		m_plan.push_back(WipeTowerInfo(z_par, layer_height_par));
+		m_plan.push_back(WipeTowerInfo(z_par, layer_height_par, old_tool));
 
     if (m_first_layer_idx == size_t(-1) && (! m_no_sparse_layers || old_tool != new_tool))
         m_first_layer_idx = m_plan.size() - 1;
@@ -3809,8 +3809,8 @@ int WipeTower::get_wall_filament_for_all_layer()
 {
     std::map<int, int> category_counts;
     std::map<int, int> filament_counts;
-    int current_tool = m_current_tool;
     for (const auto &layer : m_plan) {
+        const int current_tool = int(layer.start_tool);
         if (layer.tool_changes.empty()){
             filament_counts[current_tool]++;
             category_counts[get_filament_category(current_tool)]++;
@@ -3832,7 +3832,6 @@ int WipeTower::get_wall_filament_for_all_layer()
             used_tools.insert(layer.tool_changes[i].new_tool);
             used_category.insert(get_filament_category(layer.tool_changes[i].new_tool));
         }
-        current_tool = layer.tool_changes.empty()?current_tool:layer.tool_changes.back().new_tool;
     }
 
     // std::vector<std::pair<int, int>> category_counts_vec;
@@ -3871,12 +3870,7 @@ void WipeTower::generate_new(std::vector<std::vector<WipeTower::ToolChangeResult
 
     m_layer_info = m_plan.begin();
 
-    for (const auto &layer : m_plan) {
-        if (!layer.tool_changes.empty()) {
-            m_current_tool = layer.tool_changes.front().old_tool;
-            break;
-        }
-    }
+    m_current_tool = m_plan.front().start_tool;
 
     for (auto &used : m_used_filament_length) // reset used filament stats
         used = 0.f;
@@ -3887,6 +3881,7 @@ void WipeTower::generate_new(std::vector<std::vector<WipeTower::ToolChangeResult
     int index = 0;
     std::unordered_set<int> solid_blocks_id;// The contact surface of different bonded materials is solid.
     for (auto layer : m_plan) {
+        m_current_tool = layer.start_tool;
         reset_block_status();
         m_cur_layer_id = index++;
         m_prev_layer_had_interface = m_current_layer_has_interface;
@@ -4102,13 +4097,7 @@ void WipeTower::generate(std::vector<std::vector<WipeTower::ToolChangeResult>> &
 
     m_layer_info = m_plan.begin();
 
-    // we don't know which extruder to start with - we'll set it according to the first toolchange
-    for (const auto& layer : m_plan) {
-        if (!layer.tool_changes.empty()) {
-            m_current_tool = layer.tool_changes.front().old_tool;
-            break;
-        }
-    }
+    m_current_tool = m_plan.front().start_tool;
 
     for (auto& used : m_used_filament_length) // reset used filament stats
         used = 0.f;
@@ -4119,6 +4108,7 @@ void WipeTower::generate(std::vector<std::vector<WipeTower::ToolChangeResult>> &
     int index = 0;
 	for (auto layer : m_plan)
 	{
+        m_current_tool = layer.start_tool;
         m_cur_layer_id = index++;
         set_layer(layer.z, layer.height, 0, false/*layer.z == m_plan.front().z*/, layer.z == m_plan.back().z);
         // BBS

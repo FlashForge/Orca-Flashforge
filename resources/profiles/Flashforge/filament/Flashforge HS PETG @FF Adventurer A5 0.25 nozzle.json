@@ -22,6 +22,7 @@
     ],
     "from": "system",
     "inherits": "Flashforge HS PETG @FF AD5M 0.25 nozzle",
+    "setting_id": "UFal5gkMUJpoiOWP",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge HS PETG @FF Adventurer A5 0.25 nozzle",

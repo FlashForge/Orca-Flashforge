@@ -544,12 +544,7 @@ void BindMachineDialog::on_bind_printer(wxCommandEvent &event)
     #endif
 
 
-    BOOST_LOG_TRIVIAL(info) << "on_bind_printer: " << m_bind_info->dev_id
-                            << "--dev_ip:" << m_bind_info->dev_ip
-                            << "--dev_port:" << m_bind_info->dev_port
-                            << "--dev_pid:" << m_bind_info->dev_pid
-                            << "--dev_name: " << m_bind_info->dev_name
-                            << "--dev_bind_type: " << m_bind_info->dev_bind_type;
+    BOOST_LOG_TRIVIAL(info) << "on_bind_printer";
     m_bind_job = std::make_shared<BindJob>(m_bind_info->dev_ip, m_bind_info->dev_port,
         m_bind_info->dev_id, m_bind_info->dev_pid, m_bind_info->dev_name, m_bind_info->dev_bind_type);
     m_bind_job->set_event_handle(this);
@@ -602,7 +597,6 @@ void BindMachineDialog::on_show(wxShowEvent &event)
 
         if (LoginDialog::IsUsrLogin()) {
             auto user_info = LoginDialog::GetUsrInfo();
-            BOOST_LOG_TRIVIAL(error) << "Get user info: nickname (" << user_info.nickname << "), headImgUrl (" << user_info.headImgUrl << ")";
 
             wxString username = wxString::FromUTF8(user_info.nickname);
             wxGCDC   dc(this);
@@ -865,7 +859,6 @@ void UnBindMachineDialog::on_show(wxShowEvent &event)
 
         if (LoginDialog::IsUsrLogin()) {
             auto user_info = LoginDialog::GetUsrInfo();
-            BOOST_LOG_TRIVIAL(error) << "Get user info: nickname (" << user_info.nickname << "), headImgUrl (" << user_info.headImgUrl << ")";
             wxString username = wxString::FromUTF8(user_info.nickname);
             wxGCDC   dc(this);
             wxString clipName = FFUtils::trimString(dc, username, FromDIP(USER_NAME_LENGTH));

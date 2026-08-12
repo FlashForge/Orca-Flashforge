@@ -191,9 +191,23 @@ public:
     void Rescale();
 
 private:
+    enum class SecondaryPageMode
+    {
+        None,
+        ModelDetail,
+        EmbeddedPage
+    };
+
     bool InitBrowser();
     void InitModelNav();
     void SetMainLayout();
+    bool OpenEmbeddedPage(const wxString &url, const wxString &title);
+    bool RequestEmbeddedCheckout(const wxString &url, const wxString &title);
+    void RouteMainNewWindowUrl(const wxString &url);
+    void SetEmbeddedPageTitle(const wxString &title);
+    bool IsAllowedEmbeddedPageUrl(const wxString &url) const;
+    bool IsSafeEmbeddedNavigationUrl(const wxString &url) const;
+    void SetupSecondaryNavigation();
     void CheckGetSystemI18nConfig();
     void PostGetSystemI18nConfig();
     void ProcessGetSystemI18nConfig(const ComBusGetRequestEvent &evt);
@@ -208,6 +222,7 @@ private:
     void SetupBackButton();
     void SetupPrintListButton(bool printListAdded);
     void SetupSystemI18n();
+    void ResetModelBrowserUserScripts();
     void SetupDownloadScript();
     void MoveViewNowWindow();
     void ReportTrackingData(const std::string &eventType, const std::string &eventName);
@@ -301,6 +316,13 @@ private:
     std::shared_ptr<CheckDownloadUrl>  m_checkDownloadUrl;
     std::shared_ptr<OpenBase64Model>   m_openBase64Model;
     std::vector<std::pair<wxString, wxString>> m_modelBackUrls;
+    SecondaryPageMode m_secondaryPageMode{SecondaryPageMode::None};
+    wxString          m_embeddedPageTitle;
+    wxString          m_pendingEmbeddedPageUrl;
+    wxString          m_pendingEmbeddedPageTitle;
+    uint64_t          m_externalOpenGeneration{0};
+    bool              m_embeddedPageOpenPending{false};
+    bool              m_clearModelBrowserHistoryOnNextLoad{false};
 };
 
 }} // namespace Slic3r::GUI

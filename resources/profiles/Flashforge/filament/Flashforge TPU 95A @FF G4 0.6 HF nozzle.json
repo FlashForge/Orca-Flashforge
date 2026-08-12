@@ -70,6 +70,7 @@
         "50"
     ],
     "inherits": "Flashforge Generic PETG @G3U 0.6 Nozzle",
+    "setting_id": "M0ozqaD3jSKoD6fm",
     "instantiation": "true",
     "is_custom_defined": "0",
     "name": "Flashforge TPU 95A @FF G4 0.6 HF nozzle",

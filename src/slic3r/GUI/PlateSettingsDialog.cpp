@@ -216,6 +216,18 @@ OtherLayersSeqPanel::OtherLayersSeqPanel(wxWindow* parent)
     Layout();
     top_sizer->Fit(this);
 
+    // Disable custom sequence when mixed (virtual) filaments are in use.
+    {
+        size_t total    = wxGetApp().preset_bundle->total_filament_count();
+        size_t num_phys = wxGetApp().preset_bundle->filament_presets.size();
+        if (total > num_phys) {
+            m_other_layer_print_seq_choice->Disable();
+            auto* warn = new wxStaticText(this, wxID_ANY,
+                _L("Custom layer sequence is unavailable when mixed filaments are used."));
+            warn->SetForegroundColour(wxColour(255, 100, 0));
+            top_sizer->Add(warn, 0, wxALIGN_LEFT | wxTOP, FromDIP(4));
+        }
+    }
 
     m_other_layer_print_seq_choice->Bind(wxEVT_COMBOBOX, [this, buttons_sizer](auto& e) {
         if (e.GetSelection() == 0) {
@@ -313,7 +325,7 @@ void OtherLayersSeqPanel::append_layer(const LayerSeqInfo* layer_info)
     single_layer_input_sizer->Add(end_layer_input, 0, wxLEFT | wxRIGHT | wxALIGN_CENTER, FromDIP(5));
     single_layer_input_sizer->AddStretchSpacer();
     single_layer_input_sizer->Add(drag_canvas, 0, wxLEFT | wxALIGN_CENTER, FromDIP(5));
-    layer_panel_sizer->Add(single_layer_input_sizer, 0, wxEXPAND | wxALIGN_CENTER | wxBOTTOM, FromDIP(10));
+    layer_panel_sizer->Add(single_layer_input_sizer, 0, wxEXPAND | wxBOTTOM, FromDIP(10));
     m_layer_input_sizer_list.push_back(single_layer_input_sizer);
     m_begin_layer_input_list.push_back(begin_layer_input);
     m_end_layer_input_list.push_back(end_layer_input);

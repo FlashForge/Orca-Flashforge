@@ -82,6 +82,7 @@ public:
     decltype(&fnet_freeBindAccountRelpResult) freeBindAccountRelpResult;
     decltype(&fnet_uploadAiImageClound) uploadAiImageClound;
     decltype(&fnet_uploadLogFileCloud) uploadLogFileCloud;
+    decltype(&fnet_uploadLogFileCloudEx) uploadLogFileCloudEx;
     decltype(&fnet_freeCloundFileData) freeCloundFileData;
     decltype(&fnet_getUserAiPointsInfo) getUserAiPointsInfo;
     decltype(&fnet_freeUserAiPointsInfo) freeUserAiPointsInfo;
@@ -121,6 +122,12 @@ public:
     decltype(&fnet_freeJobInfo)freeJobInfo;
     decltype(&fnet_doBusGetRequest) doBusGetRequest;
     decltype(&fnet_doBusPostRequest) doBusPostRequest;
+    decltype(&fnet_getSettingList2) getSettingList2;
+    decltype(&fnet_getSettingList) getSettingList;
+    decltype(&fnet_getUserPresets) getUserPresets;
+    decltype(&fnet_requestSettingId) requestSettingId;
+    decltype(&fnet_putSetting) putSetting;
+    decltype(&fnet_deleteSetting) deleteSetting;
     decltype(&fnet_getMqttConfig) getMqttConfig;
     decltype(&fnet_freeMqttConfig) freeMqttConfig;
     decltype(&fnet_createConnection) createConnection;
@@ -134,6 +141,7 @@ public:
     decltype(&fnet_freeSyncLoginInfo) freeSyncLoginInfo;
     decltype(&fnet_freeSyncBindInfo) freeSyncBindInfo;
     decltype(&fnet_freeSyncOnlineInfo) freeSyncOnlineInfo;
+    decltype(&fnet_freeUploadLogInfo) freeUploadLogInfo;
     decltype(&fnet_allocString) allocString;
     decltype(&fnet_freeString) freeString;
 

@@ -640,12 +640,24 @@ void IconText::create_panel(wxWindow* parent,wxString icon,int iconSize,wxString
 
     m_panel_page->SetSizer(sizer);
     m_panel_page->Layout();
-    sizer->Fit(m_panel_page); 
+    sizer->Fit(m_panel_page);
+
+    // The outer panel (this) must own a sizer, otherwise m_panel_page is never
+    // repositioned/resized when a parent sizer changes our size: the content
+    // would float at its construction-time geometry (clipped or offset).
+    auto* outer_sizer = new wxBoxSizer(wxVERTICAL);
+    outer_sizer->Add(m_panel_page, 1, wxEXPAND);
+    parent->SetSizer(outer_sizer);
+    parent->Layout();
 }
 
 void IconText::setText(wxString text)
 {
     m_text_ctrl->SetLabel(text);
+    if (wxWindow* page = m_text_ctrl->GetParent()) {
+        page->Layout();
+    }
+    Layout();
     Refresh();
 }
 
@@ -1795,29 +1807,29 @@ void NewTempInputPanel::UpdateTempatrue(const com_dev_data_t& data)
 
     auto pid = FFUtils::getPid(m_cur_id);
     if (pid == C5) {
-        std::vector<double> nozzlesTemp;
-        std::vector<double> nozzlesTagTemp;
-        for (int i = 0; i < data.devDetail->nozzleCnt; i++) {
-            nozzlesTemp.push_back(data.devDetail->nozzleTemps[i]);
-            nozzlesTagTemp.push_back(data.devDetail->nozzleTargetTemps[i]);
-        }
         for (int i = 1; i <= m_count; i++) {
-            m_tempInputs["t" + std::to_string(i)]->SetCurrTemp(nozzlesTemp[m_count - 1], true);
-            m_tempInputs["t" + std::to_string(i)]->SetTagTemp(nozzlesTagTemp[m_count - 1], true);
+            NewTempInput* input = m_tempInputs["t" + std::to_string(i)];
+            if (i <= data.devDetail->nozzleCnt && data.devDetail->nozzleTemps
+                && data.devDetail->nozzleTargetTemps) {
+                input->SetCurrTemp(data.devDetail->nozzleTemps[i - 1], true);
+                input->SetTagTemp(data.devDetail->nozzleTargetTemps[i - 1], true);
+            } else {
+                input->SetCurrTemp(NO_TEMP);
+            }
         }
         m_tempInputs["bottom"]->SetCurrTemp(data.devDetail->platTemp, true);
         m_tempInputs["bottom"]->SetTagTemp(data.devDetail->platTargetTemp, true);
     } 
     else if (pid == C5P) {
-        std::vector<double> nozzlesTemp;
-        std::vector<double> nozzlesTagTemp;
-        for (int i = 0; i < data.devDetail->nozzleCnt; i++) {
-            nozzlesTemp.push_back(data.devDetail->nozzleTemps[i]);
-            nozzlesTagTemp.push_back(data.devDetail->nozzleTargetTemps[i]);
-        }
         for (int i = 1; i <= m_count; i++) {
-            m_tempInputs["t" + std::to_string(i)]->SetCurrTemp(nozzlesTemp[m_count - 1], true);
-            m_tempInputs["t" + std::to_string(i)]->SetTagTemp(nozzlesTagTemp[m_count - 1], true);
+            NewTempInput* input = m_tempInputs["t" + std::to_string(i)];
+            if (i <= data.devDetail->nozzleCnt && data.devDetail->nozzleTemps
+                && data.devDetail->nozzleTargetTemps) {
+                input->SetCurrTemp(data.devDetail->nozzleTemps[i - 1], true);
+                input->SetTagTemp(data.devDetail->nozzleTargetTemps[i - 1], true);
+            } else {
+                input->SetCurrTemp(NO_TEMP);
+            }
         }
         m_tempInputs["bottom"]->SetCurrTemp(data.devDetail->platTemp, true);
         m_tempInputs["bottom"]->SetTagTemp(data.devDetail->platTargetTemp, true);
@@ -1861,8 +1873,8 @@ wxSizer* NewTempInputPanel::createNozzlesSizer(wxPanel* panel, int cnt, int min_
     return u1_panel_up_sizer;
 }
 
-void NewTempInputPanel::updateNozzleCount(int cnt) 
-{ 
+void NewTempInputPanel::updateNozzleCount(int cnt)
+{
     StateColor tempinput_text_colour(std::make_pair(wxColour(51, 51, 51), (int) StateColor::Disabled),
                                      std::make_pair(wxColour(48, 58, 60), (int) StateColor::Normal));
     StateColor tempinput_border_colour(std::make_pair(*wxWHITE, (int) StateColor::Disabled),
@@ -1906,8 +1918,8 @@ void NewTempInputPanel::updateNozzleCount(int cnt)
     Layout();
 }
 
-void NewTempInputPanel::updateNozzleSlotId(std::vector<int>& slotIds) 
-{ 
+void NewTempInputPanel::updateNozzleSlotId(std::vector<int>& slotIds)
+{
     /*if (slotIds.size() != m_count) {
         return;
     }
@@ -2333,7 +2345,7 @@ void DeviceInfoPanel::setupLayoutDeviceInfo(wxBoxSizer* deviceInfoSizer, wxPanel
     bSizer_device_data->Add(m_ipAddr, 0, wxALL | wxEXPAND, 0);
 #ifdef __WIN32__
     bSizer_device_data->AddSpacer(FromDIP(12));
-#else if __APPLE__
+#elif defined(__APPLE__)
     bSizer_device_data->AddSpacer(FromDIP(24));
 #endif
 
@@ -2523,6 +2535,15 @@ MachineIconCombo::MachineIconCombo(
     m_panel_page->SetSizer(sizer);
     sizer->Fit(m_panel_page);
     m_panel_page->Layout();
+    sizer->Fit(m_panel_page);
+
+    // The outer panel (this) must own a sizer so m_panel_page (which holds the
+    // icon and the native combobox) follows our size when the grid lays us out;
+    // otherwise the combobox floats at its construction-time position.
+    auto* outer_sizer = new wxBoxSizer(wxVERTICAL);
+    outer_sizer->Add(m_panel_page, 1, wxEXPAND);
+    SetSizer(outer_sizer);
+    Layout();
 }
 
 MachineComboBox* MachineIconCombo::combobox() { return m_combobox; }

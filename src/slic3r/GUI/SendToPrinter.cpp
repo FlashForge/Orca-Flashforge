@@ -1625,7 +1625,7 @@ void SendToPrinterDialog::set_first_machine_filaments(bool only_unselected /*= f
             continue;
         }
         sort(colorMap.begin(), colorMap.end(), [](ColorDistValue& a, ColorDistValue& b) {
-            return a.distance < b.distance; 
+            return a.distance < b.distance;
         });
         if (colorMap[0].distance != INT_MAX - 1) {
             item->setupSlot(comId, matlStationInfo.slotInfos[colorMap[0].id].slotId);
@@ -1721,7 +1721,7 @@ void SendToPrinterDialog::update_user_printer()
                 FromDIP(400));
 
         m_noMachineText->SetLabel(nomachine_text);
-        
+
         m_machineListWindow->SetSize(fixed_width, 1);
         m_machineListWindow->Layout();
         m_noMachinePanel->Fit();

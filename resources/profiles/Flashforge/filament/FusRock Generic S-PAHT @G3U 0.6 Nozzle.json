@@ -50,7 +50,7 @@
         "75"
     ],
     "inherits": "Flashforge Generic PETG",
-    "instantiation": "true",
+    "instantiation": "false",
     "is_custom_defined": "0",
     "name": "FusRock Generic S-PAHT @G3U 0.6 Nozzle",
     "nozzle_temperature": [
@@ -71,7 +71,7 @@
     "pressure_advance": [
         "0.03"
     ],
-    "setting_id": "GFSA04",
+    "setting_id": "6Z5vce5YKlCGox8v",
     "slow_down_min_speed": [
         "12"
     ],
