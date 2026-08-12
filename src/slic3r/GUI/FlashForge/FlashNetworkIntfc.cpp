@@ -152,7 +152,8 @@ FlashNetworkIntfc::FlashNetworkIntfc(const char *libraryPath, const char *server
     INIT_FUNC_PTR(freeString, fnet_freeString);
     if (initlize(serverSettingsPath, &logSettings) == FNET_OK && strcmp(getVersion(), "3.4.3") == 0) {
         m_isOk = true;
-    } else {
+    }
+    else {
         printf("initlize flashnetwork failed, version = %s", getVersion());
     }
 }

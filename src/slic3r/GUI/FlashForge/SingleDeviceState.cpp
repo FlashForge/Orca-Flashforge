@@ -541,7 +541,6 @@ void DeviceDetail::create_panel(wxWindow* parent)
     sizer->AddSpacer(FromDIP(15));
     bSizer_confirm_row->AddStretchSpacer(1);
     bSizer_confirm_row->Add(confirm_push_btn, 0, wxRIGHT, FromDIP(20));
-    confirm_push_btn->Hide();
     sizer->Add(bSizer_confirm_row, 0, wxEXPAND, 0);
 //
     auto m_panel_separotor10 = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
@@ -550,7 +549,7 @@ void DeviceDetail::create_panel(wxWindow* parent)
 
     sizer->Add(m_panel_separotor10);
 //
-    m_grid_sizer = new wxFlexGridSizer(2, FromDIP(35), 0);
+    m_grid_sizer = new wxFlexGridSizer(2, FromDIP(35), FromDIP(20));
     m_panel_rows = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, -1), wxTAB_TRAVERSAL);
 
     m_device_material            = new IconText(m_panel_rows, wxString("device_material"), 16, wxString("PLA-12345678901234567890"), 12);
@@ -691,7 +690,7 @@ void DeviceDetail::updateGridSizer(int pid)
     auto addGrid = [=](wxWindow* window, bool show = true) { 
         if (show) {
             window->Show();
-            m_grid_sizer->Add(window, 0, wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 0);
+            m_grid_sizer->Add(window, 1, wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 0);
         } else {
             window->Hide();
         }

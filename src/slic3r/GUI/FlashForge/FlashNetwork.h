@@ -1023,7 +1023,9 @@ FNET_API int fnet_getUserPresets(const char *clientId, const char *accessToken,
     char **userPresetsJson);
 
 // valuesJson must be a JSON object whose values follow OrcaSlicer's string-map
-// convention. Writes are sent to the user-preset add/update endpoints.
+// convention. Create values must contain setting_id and type. Update values must
+// contain type and updated_time; updated_time is sent to the server as ISO-8601 UTC.
+// Writes are sent to the user-preset add/update endpoints.
 // Server updateTime/updatedTime values are returned as Unix epoch millisecond strings.
 // Release resultValuesJson with fnet_freeString.
 FNET_API int fnet_requestSettingId(const char *clientId, const char *accessToken,
