@@ -13640,7 +13640,7 @@ msgid "Default process profile when switching to this machine profile."
 msgstr "Profil de traitement par défaut lors du passage à ce profil de machine"
 
 msgid "Activate air filtration"
-msgstr "Activer la filtration de l’air"
+msgstr "Activer l’évacuation"
 
 msgid "Activate for better air filtration. G-code command: M106 P3 S(0-255)"
 msgstr ""
