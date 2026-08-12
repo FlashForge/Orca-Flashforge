@@ -627,8 +627,9 @@ public:
 
     void                normalize_fdm(int used_filaments = 0);
     void                normalize_fdm_1();
-    //return the changed param set
-    t_config_option_keys normalize_fdm_2(int num_objects, int used_filaments = 0);
+    // Normalize options which depend on the current print objects and return the changed keys.
+    // ori_values stores values temporarily overridden by the first pass so a later pass may restore them.
+    t_config_option_keys normalize_fdm_2(int num_objects, int used_filaments = 0, DynamicConfig *ori_values = nullptr);
 
     size_t              get_parameter_size(const std::string& param_name, size_t extruder_nums);
     void                set_num_extruders(unsigned int num_extruders);

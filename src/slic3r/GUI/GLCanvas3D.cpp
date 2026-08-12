@@ -2977,6 +2977,9 @@ void GLCanvas3D::reload_scene(bool refresh_immediately, bool force_full_scene_re
             bool mix_pla_and_petg = cur_plate->check_mixture_of_pla_and_petg(full_config_temp);
             _set_warning_notification(EWarning::MixUsePLAAndPETG, !mix_pla_and_petg);
 
+            _set_warning_notification(EWarning::PrimeTowerDisabledByPrintSequence,
+                                      printer_technology == ptFFF && cur_plate->is_prime_tower_suppressed_by_print_sequence(full_config_temp));
+
             bool filament_nozzle_compatible = cur_plate->check_compatible_of_nozzle_and_filament(full_config_temp, wxGetApp().preset_bundle->filament_presets, get_nozzle_filament_incompatible_text());
             _set_warning_notification(EWarning::NozzleFilamentIncompatible, !filament_nozzle_compatible);
 
@@ -2998,6 +3001,7 @@ void GLCanvas3D::reload_scene(bool refresh_immediately, bool force_full_scene_re
            _set_warning_notification(EWarning::TPUPrintableError, false);
            _set_warning_notification(EWarning::FilamentPrintableError, false);
            _set_warning_notification(EWarning::MixUsePLAAndPETG, false);
+           _set_warning_notification(EWarning::PrimeTowerDisabledByPrintSequence, false);
            _set_warning_notification(EWarning::PrimeTowerOutside, false);
            _set_warning_notification(EWarning::MultiExtruderPrintableError,false);
            _set_warning_notification(EWarning::MultiExtruderHeightOutside,false);
@@ -9708,6 +9712,18 @@ void GLCanvas3D::_set_warning_notification(EWarning warning, bool state)
     case EWarning::MixUsePLAAndPETG:
         text = _u8L("PLA and PETG filaments detected in the mixture. Adjust parameters according to the Wiki to ensure print quality.");
         break;
+    case EWarning::PrimeTowerDisabledByPrintSequence: {
+        text = _u8L("Prime tower is disabled because the current plate prints multiple objects by object. Change the plate print sequence to by layer to enable it.");
+        Plater *plater = wxGetApp().plater();
+        if (const PartPlate *plate = plater ? plater->get_partplate_list().get_curr_plate() : nullptr;
+            plate && plate->get_print_seq() == PrintSequence::ByObject && wxGetApp().preset_bundle) {
+            const DynamicPrintConfig &global_config = wxGetApp().preset_bundle->prints.get_edited_preset().config;
+            if (const auto *global_sequence = global_config.option<ConfigOptionEnum<PrintSequence>>("print_sequence");
+                global_sequence && global_sequence->value != PrintSequence::ByObject)
+                text += " " + _u8L("The plate print sequence overrides the global setting.");
+        }
+        break;
+    }
     case EWarning::PrimeTowerOutside:
         text  = _u8L("The prime tower extends beyond the plate boundary.");
         break;
@@ -9750,6 +9766,23 @@ void GLCanvas3D::_set_warning_notification(EWarning warning, bool state)
             }
             else
                 notification_manager.close_slicing_customize_error_notification(NotificationType::BBLMixUsePLAAndPETG, NotificationLevel::WarningNotificationLevel);
+        }
+        else if (warning == EWarning::PrimeTowerDisabledByPrintSequence) {
+            if (state) {
+                notification_manager.push_notification(
+                    NotificationType::BBLPrimeTowerDisabledByPrintSequence, NotificationLevel::HintNotificationLevel, text,
+                    _u8L("Open plate settings"), [](wxEvtHandler *) {
+                        if (Plater *plater = wxGetApp().plater()) {
+                            wxCommandEvent event(EVT_OPEN_PLATESETTINGSDIALOG);
+                            event.SetInt(plater->get_partplate_list().get_curr_plate_index());
+                            event.SetEventObject(plater);
+                            wxPostEvent(plater, event);
+                        }
+                        return false;
+                    });
+            } else {
+                notification_manager.close_notification_of_type(NotificationType::BBLPrimeTowerDisabledByPrintSequence);
+            }
         }
         else if (warning == EWarning::NozzleFilamentIncompatible){
             if(state){

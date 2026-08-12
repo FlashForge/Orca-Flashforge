@@ -1240,7 +1240,12 @@ void PartPlate::render_icons(bool bottom, bool only_name, int hover_id)
                     else
                         render_icon_texture(m_plate_settings_icon.model, m_partplate_list->m_plate_settings_changed_hovered_texture);
 
-                    show_tooltip(_u8L("Customize current plate"));
+                    std::string tooltip = _u8L("Customize current plate");
+                    if (get_print_seq() == PrintSequence::ByObject)
+                        tooltip += "\n" + _u8L("Print sequence: By object (plate override)");
+                    else if (get_print_seq() == PrintSequence::ByLayer)
+                        tooltip += "\n" + _u8L("Print sequence: By layer (plate override)");
+                    show_tooltip(tooltip);
                 } else {
                     if (!has_plate_settings)
                         render_icon_texture(m_plate_settings_icon.model, m_partplate_list->m_plate_settings_texture);
@@ -2007,6 +2012,28 @@ bool PartPlate::check_tpu_printable_status(const DynamicPrintConfig & config, co
 {
 	// do not limit the num of tpu filament in slicing
 	return true;
+}
+
+bool PartPlate::is_prime_tower_suppressed_by_print_sequence(const DynamicPrintConfig &config) const
+{
+    const ConfigOptionBool *prime_tower = config.option<ConfigOptionBool>("enable_prime_tower");
+    if (!prime_tower || !prime_tower->value || !m_print || m_print->objects().size() <= 1 || get_extruders(true).empty())
+        return false;
+
+    PrintSequence print_sequence = get_print_seq();
+    if (print_sequence == PrintSequence::ByDefault) {
+        const auto *global_sequence = config.option<ConfigOptionEnum<PrintSequence>>("print_sequence");
+        print_sequence = global_sequence ? global_sequence->value : PrintSequence::ByLayer;
+    }
+    if (print_sequence != PrintSequence::ByObject)
+        return false;
+
+    const auto *timelapse = config.option<ConfigOptionEnum<TimelapseType>>("timelapse_type");
+    if (timelapse && timelapse->value == TimelapseType::tlSmooth)
+        return false;
+
+    const ConfigOptionBool *wrapping = config.option<ConfigOptionBool>("enable_wrapping_detection");
+    return !wrapping || !wrapping->value;
 }
 
 bool PartPlate::check_mixture_of_pla_and_petg(const DynamicPrintConfig &config)

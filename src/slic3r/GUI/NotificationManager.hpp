@@ -168,6 +168,7 @@ enum class NotificationType
     OrcaSyncConflict,
     BBLMixedFilamentBroken,
     BBLSingleExtruderMixedFilamentRisk,
+    BBLPrimeTowerDisabledByPrintSequence,
     NotificationTypeCount
 
 };

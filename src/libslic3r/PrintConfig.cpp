@@ -8751,12 +8751,11 @@ void DynamicPrintConfig::normalize_fdm_1()
     return;
 }
 
-t_config_option_keys DynamicPrintConfig::normalize_fdm_2(int num_objects, int used_filaments)
+t_config_option_keys DynamicPrintConfig::normalize_fdm_2(int num_objects, int used_filaments, DynamicConfig *ori_values)
 {
     t_config_option_keys changed_keys;
     ConfigOptionBool* ept_opt = this->option<ConfigOptionBool>("enable_prime_tower");
-    if (used_filaments > 0 && ept_opt != nullptr) {
-        ConfigOptionBool* islh_opt = this->option<ConfigOptionBool>("independent_support_layer_height", true);
+    if (ept_opt != nullptr) {
         //ConfigOptionBool* alh_opt = this->option<ConfigOptionBool>("adaptive_layer_height");
         ConfigOptionEnum<PrintSequence>* ps_opt = this->option<ConfigOptionEnum<PrintSequence>>("print_sequence");
 
@@ -8766,15 +8765,26 @@ t_config_option_keys DynamicPrintConfig::normalize_fdm_2(int num_objects, int us
         ConfigOptionBool *enable_wrapping_opt = this->option<ConfigOptionBool>("enable_wrapping_detection");
         bool enable_wrapping = enable_wrapping_opt != nullptr && enable_wrapping_opt->value;
 
-        if (!is_smooth_timelapse && !enable_wrapping && (used_filaments == 1 || (ps_opt->value == PrintSequence::ByObject && num_objects > 1))) {
+        const bool suppress_prime_tower = used_filaments > 0 && !is_smooth_timelapse && !enable_wrapping &&
+                                          (used_filaments == 1 || (ps_opt->value == PrintSequence::ByObject && num_objects > 1));
+        if (suppress_prime_tower) {
             if (ept_opt->value) {
+                if (ori_values && !ori_values->has("enable_prime_tower"))
+                    ori_values->set_key_value("enable_prime_tower", ept_opt->clone());
                 ept_opt->value = false;
                 changed_keys.push_back("enable_prime_tower");
             }
             //ept_opt->value = false;
+        } else if (ori_values && ori_values->has("enable_prime_tower")) {
+            const bool original_value = ori_values->opt_bool("enable_prime_tower");
+            if (ept_opt->value != original_value) {
+                ept_opt->value = original_value;
+                changed_keys.push_back("enable_prime_tower");
+            }
         }
 
-        if (ept_opt->value) {
+        if (used_filaments > 0 && ept_opt->value) {
+            ConfigOptionBool* islh_opt = this->option<ConfigOptionBool>("independent_support_layer_height", true);
             if (islh_opt) {
                 if (islh_opt->value) {
                     islh_opt->value = false;

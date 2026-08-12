@@ -1,5 +1,7 @@
 #include <catch2/catch_all.hpp>
 
+#include <algorithm>
+
 #include "libslic3r/PrintConfig.hpp"
 #include "libslic3r/PrintConfigConstants.hpp"
 #include "libslic3r/LocalesUtils.hpp"
@@ -10,6 +12,51 @@
 #include <cereal/archives/binary.hpp>
 
 using namespace Slic3r;
+
+TEST_CASE("Conditional prime tower normalization restores its configured value", "[Config][PrimeTower]")
+{
+    DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
+    config.set("enable_prime_tower", true);
+    config.set("independent_support_layer_height", false);
+    config.option<ConfigOptionEnum<PrintSequence>>("print_sequence")->value = PrintSequence::ByObject;
+    config.option<ConfigOptionEnum<TimelapseType>>("timelapse_type")->value = TimelapseType::tlTraditional;
+    config.set("enable_wrapping_detection", false);
+
+    DynamicConfig original_values;
+    const t_config_option_keys disabled_keys = config.normalize_fdm_2(4, 4, &original_values);
+
+    CHECK_FALSE(config.opt_bool("enable_prime_tower"));
+    REQUIRE(original_values.has("enable_prime_tower"));
+    CHECK(original_values.opt_bool("enable_prime_tower"));
+    CHECK(std::find(disabled_keys.begin(), disabled_keys.end(), "enable_prime_tower") != disabled_keys.end());
+
+    const t_config_option_keys still_disabled_keys = config.normalize_fdm_2(4, 4, &original_values);
+
+    CHECK_FALSE(config.opt_bool("enable_prime_tower"));
+    CHECK(original_values.opt_bool("enable_prime_tower"));
+    CHECK(std::find(still_disabled_keys.begin(), still_disabled_keys.end(), "enable_prime_tower") == still_disabled_keys.end());
+
+    const t_config_option_keys restored_keys = config.normalize_fdm_2(1, 4, &original_values);
+
+    CHECK(config.opt_bool("enable_prime_tower"));
+    CHECK(std::find(restored_keys.begin(), restored_keys.end(), "enable_prime_tower") != restored_keys.end());
+
+    config.set("enable_prime_tower", true);
+    DynamicConfig empty_print_original_values;
+    config.normalize_fdm_2(4, 4, &empty_print_original_values);
+
+    const t_config_option_keys empty_print_restored_keys = config.normalize_fdm_2(0, 0, &empty_print_original_values);
+
+    CHECK(config.opt_bool("enable_prime_tower"));
+    CHECK(std::find(empty_print_restored_keys.begin(), empty_print_restored_keys.end(), "enable_prime_tower") != empty_print_restored_keys.end());
+
+    DynamicPrintConfig untouched_empty_print = DynamicPrintConfig::full_print_config();
+    untouched_empty_print.set("enable_prime_tower", true);
+    untouched_empty_print.set("independent_support_layer_height", true);
+    untouched_empty_print.normalize_fdm_2(0, 0);
+
+    CHECK(untouched_empty_print.opt_bool("independent_support_layer_height"));
+}
 
 SCENARIO("Generic config validation performs as expected.", "[Config]") {
     GIVEN("A config generated from default options") {
