@@ -25060,3 +25060,57 @@ msgstr ""
 "1. Ajustes preestablecidos de proceso\n"
 "2. Ajustes preestablecidos de filamento\n"
 "3. Ajustes preestablecidos de impresora"
+
+msgid "To help us identify and resolve your issue more quickly, we recommend uploading your device and app logs. The logs are used solely for troubleshooting and will not collect any of your personal information."
+msgstr "Para ayudarnos a identificar y resolver tu problema más rápidamente, te recomendamos que subas los registros del dispositivo y de la aplicación. Los registros se utilizarán únicamente para analizar el problema y no se recopilará ninguna información personal."
+
+msgid "orca software Logs"
+msgstr "Registro de segmentación"
+
+msgid "orca software Operation Logs"
+msgstr "registro de operaciones del software de segmentación"
+
+msgid "App Logs"
+msgstr "registro de la aplicación"
+
+msgid "App Operation Logs"
+msgstr "registro de operaciones de la aplicación"
+
+msgid "Device Logs"
+msgstr "registro del dispositivo"
+
+msgid "Device Operation Logs"
+msgstr "registro de operaciones del dispositivo"
+
+msgid "Select a Device"
+msgstr "Seleccionar equipo"
+
+msgid "{device} device is currently offline, so we are unable to retrieve the device logs at this time. You can still submit feedback. Once the device is back online, you can submit feedback again or go to Settings > Upload Firmware Log to upload the device logs."
+msgstr "{device} El dispositivo se encuentra actualmente fuera de línea, por lo que no es posible obtener el registro del dispositivo por el momento. No obstante, puede enviar sus comentarios; cuando el dispositivo vuelva a estar en línea, podrá volver a enviarlos o ir a «Ajustes» > «Subir registro de firmware» para subir el registro del dispositivo."
+
+msgid "Slice Log"
+msgstr "Registro de segmentación"
+
+msgid "App Log"
+msgstr "registro de la aplicación"
+
+msgid "Device Log"
+msgstr "registro del dispositivo"
+
+msgid "The current device is offline, so we are unable to retrieve the device logs at this time. You can still submit feedback. Once the device is back online, you can submit feedback again or go to Settings > Upload Firmware Log to upload the device logs."
+msgstr "El dispositivo se encuentra actualmente fuera de línea, por lo que no es posible obtener el registro del dispositivo por el momento. No obstante, puede enviar sus comentarios; cuando el dispositivo vuelva a estar en línea, podrá volver a enviarlos o ir a «Ajustes» > «Subir registro de firmware» para subir el registro del dispositivo."
+
+msgid "Slicing software operation log"
+msgstr "registro de operaciones del software de segmentación"
+
+msgid "App operation log"
+msgstr "registro de operaciones de la aplicación"
+
+msgid "Device operation log"
+msgstr "registro de operaciones del dispositivo"
+
+msgid "Add Device"
+msgstr "Añadir dispositivo"
+
+msgid "Select Device"
+msgstr "Seleccionar dispositivo"

@@ -1639,3 +1639,57 @@ msgstr ""
 "1. Профили процесса\n"
 "2. Профили филамента\n"
 "3. Профили принтера"
+
+msgid "To help us identify and resolve your issue more quickly, we recommend uploading your device and app logs. The logs are used solely for troubleshooting and will not collect any of your personal information."
+msgstr "Чтобы мы могли быстрее определить и устранить вашу проблему, рекомендуем загрузить журналы устройства и приложения. Журналы используются исключительно для анализа проблемы; ваша личная информация не будет собираться."
+
+msgid "orca software Logs"
+msgstr "Журналы программного обеспечения Orca"
+
+msgid "orca software Operation Logs"
+msgstr "журналы работы программного обеспечения Orca"
+
+msgid "App Logs"
+msgstr "журналы приложений"
+
+msgid "App Operation Logs"
+msgstr "журналы работы приложений"
+
+msgid "Device Logs"
+msgstr "журналы устройств"
+
+msgid "Device Operation Logs"
+msgstr "журналы работы устройств"
+
+msgid "Select a Device"
+msgstr "Выбор оборудования"
+
+msgid "{device} device is currently offline, so we are unable to retrieve the device logs at this time. You can still submit feedback. Once the device is back online, you can submit feedback again or go to Settings > Upload Firmware Log to upload the device logs."
+msgstr "{device} В настоящее время устройство находится в автономном режиме, поэтому получить журнал устройства пока невозможно. Вы можете отправить отзыв. Как только устройство вернётся в онлайн-режим, вы сможете отправить отзыв повторно или перейти в раздел «Настройки» > «Загрузить журнал прошивки», чтобы загрузить журнал устройства."
+
+msgid "Slice Log"
+msgstr "Журнал слайсера"
+
+msgid "App Log"
+msgstr "Журнал приложения"
+
+msgid "Device Log"
+msgstr "Журнал устройства"
+
+msgid "The current device is offline, so we are unable to retrieve the device logs at this time. You can still submit feedback. Once the device is back online, you can submit feedback again or go to Settings > Upload Firmware Log to upload the device logs."
+msgstr "В настоящее время устройство находится в автономном режиме, поэтому получить журнал устройства пока невозможно. Вы можете отправить отзыв. Как только устройство вернётся в онлайн-режим, вы сможете отправить отзыв повторно или перейти в раздел «Настройки» > «Загрузить журнал прошивки», чтобы загрузить журнал устройства."
+
+msgid "Slicing software operation log"
+msgstr "Журнал работы программы-слайсера"
+
+msgid "App operation log"
+msgstr "Журнал работы приложения"
+
+msgid "Device operation log"
+msgstr "Журнал работы устройства"
+
+msgid "Add Device"
+msgstr "Добавить устройство"
+
+msgid "Select Device"
+msgstr "Выбрать устройство"

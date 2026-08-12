@@ -20971,3 +20971,57 @@ msgstr ""
 "1. The Process presets\n"
 "2. The Filament presets\n"
 "3. The Printer presets"
+
+msgid "To help us identify and resolve your issue more quickly, we recommend uploading your device and app logs. The logs are used solely for troubleshooting and will not collect any of your personal information."
+msgstr "To help us identify and resolve your issue more quickly, we recommend uploading your device and app logs. The logs are used solely for troubleshooting and will not collect any of your personal information."
+
+msgid "orca software Logs"
+msgstr "orca software Logs"
+
+msgid "orca software Operation Logs"
+msgstr "orca software Operation Logs"
+
+msgid "App Logs"
+msgstr "App Logs"
+
+msgid "App Operation Logs"
+msgstr "App Operation Logs"
+
+msgid "Device Logs"
+msgstr "Device Logs"
+
+msgid "Device Operation Logs"
+msgstr "Device Operation Logs"
+
+msgid "Select a Device"
+msgstr "Select a Device"
+
+msgid "{device} device is currently offline, so we are unable to retrieve the device logs at this time. You can still submit feedback. Once the device is back online, you can submit feedback again or go to Settings > Upload Firmware Log to upload the device logs."
+msgstr "{device} device is currently offline, so we are unable to retrieve the device logs at this time. You can still submit feedback. Once the device is back online, you can submit feedback again or go to Settings > Upload Firmware Log to upload the device logs."
+
+msgid "Slice Log"
+msgstr "Slice Log"
+
+msgid "App Log"
+msgstr "App Log"
+
+msgid "Device Log"
+msgstr "Device Log"
+
+msgid "The current device is offline, so we are unable to retrieve the device logs at this time. You can still submit feedback. Once the device is back online, you can submit feedback again or go to Settings > Upload Firmware Log to upload the device logs."
+msgstr "The current device is offline, so we are unable to retrieve the device logs at this time. You can still submit feedback. Once the device is back online, you can submit feedback again or go to Settings > Upload Firmware Log to upload the device logs."
+
+msgid "Slicing software operation log"
+msgstr "Slicing software operation log"
+
+msgid "App operation log"
+msgstr "App operation log"
+
+msgid "Device operation log"
+msgstr "Device operation log"
+
+msgid "Add Device"
+msgstr "Add Device"
+
+msgid "Select Device"
+msgstr "Select Device"

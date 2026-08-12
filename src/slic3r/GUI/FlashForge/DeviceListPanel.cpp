@@ -1635,7 +1635,7 @@ void DeviceListPanel::onComDevDetailUpdate(ComDevDetailUpdateEvent& event)
         }
         std::string dev_id = info.lanFlag ? data.lanDevInfo.serialNumber : data.wanDevInfo.serialNumber;
         updateDeviceInfo(dev_id, info);
-        BOOST_LOG_TRIVIAL(info) << "onComDevDetailUpdate: " << info.name << ", " << info.placement << ", " << info.status;
+        BOOST_LOG_TRIVIAL(info) << "Device detail updated, status=" << info.status;
     }
     flush_logs();
     event.Skip();
@@ -1660,7 +1660,7 @@ void DeviceListPanel::onComWanDeviceInfoUpdate(ComWanDevInfoUpdateEvent& event)
             info.progress = data.devDetail->printProgress * 100;
         }
         updateDeviceInfo(data.wanDevInfo.serialNumber, info);
-        BOOST_LOG_TRIVIAL(info) << "onComWanDeviceInfoUpdate: " << info.name << ", " << info.placement << ", " << info.status;
+        BOOST_LOG_TRIVIAL(info) << "WAN device info updated, status=" << info.status;
     }
     flush_logs();
     event.Skip();

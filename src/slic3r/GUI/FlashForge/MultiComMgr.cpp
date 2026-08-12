@@ -7,7 +7,9 @@
 #include <cctype>
 #include <chrono>
 #include <cstring>
+#include <exception>
 #include <iterator>
+#include <utility>
 #include <wx/dir.h>
 #include <wx/file.h>
 #include <wx/filename.h>
@@ -16,6 +18,8 @@
 #include "libslic3r/Utils.hpp"
 #include "slic3r/GUI/GUI_App.hpp"
 #include "slic3r/GUI/MainFrame.hpp"
+#include "ExportLogs.hpp"
+#include "FeedbackLogUploadClaim.hpp"
 #include "FreeInDestructor.h"
 #include "MultiComHelper.hpp"
 #include "WanDevTokenMgr.hpp"
@@ -147,12 +151,13 @@ bool MultiComMgr::initalize(const std::string &dllPath, const std::string &dataD
     }
     wxFileName appFileName(wxStandardPaths::Get().GetExecutablePath());
     wxString appPathWithSep = appFileName.GetPathWithSep();
+    m_dataDir = dataDir;
     std::string logFileDir = dataDir + "/FlashNetwork";
     bool debug = wxFileName::FileExists(appPathWithSep + "FLASHNETWORK_DEBUG");
 
     fnet_log_settings_t logSettings;
     logSettings.fileDir = logFileDir.c_str();
-    logSettings.expireHours = 72;
+    logSettings.expireHours = 7 * 24;
     logSettings.level = debug ? FNET_LOG_LEVEL_DEBUG : FNET_LOG_LEVEL_INFO;
 
 #ifdef __APPLE__
@@ -184,6 +189,7 @@ bool MultiComMgr::initalize(const std::string &dllPath, const std::string &dataD
     m_sendGcodeThd->Bind(COM_SEND_GCODE_FINISH_EVENT, queueEvent);
 
     m_threadPool.reset(new ComThreadPool(5, 30000));
+    m_logUploadThreadPool.reset(new ComThreadPool(1, 30000));
     m_threadExitEvent.set(false);
     m_loopCheckTimer.Start(1000);
 
@@ -214,6 +220,7 @@ void MultiComMgr::uninitalize()
     ComWanConn::inst()->Unbind(WAN_CONN_READ_EVENT, &MultiComMgr::onWanConnRead, this);
     ComWanConn::inst()->Unbind(WAN_CONN_HTTP_UNAUTHORIZED, &MultiComMgr::onWanConnUnauthorized, this);
     Unbind(COM_MQTT_CONFIG_REFRESH_EVENT, &MultiComMgr::onMqttConfigRefresh, this);
+    m_logUploadThreadPool.reset();
     m_threadPool.reset();
     m_sendGcodeThd->exit();
     m_sendGcodeThd.reset();
@@ -317,6 +324,7 @@ ComErrno MultiComMgr::addWanDev(const com_token_data_t &tokenData, bool isCheckV
     setMaintainThdReqHeader(isCheckVersionOnTestServer);
     MultiComHelper::inst()->loginInit(m_clientId, addDevData.userProfile.uid);
     WanDevTokenMgr::inst()->initalize(tokenData, networkIntfc()); // initialize global token
+    startFeedbackLogSession();
     initWanConnAsync(tokenData.accessToken);
     QueueEvent(new ComGetUserProfileEvent(COM_GET_USER_PROFILE_EVENT, addDevData.userProfile, ret));
     return ret;
@@ -325,6 +333,7 @@ ComErrno MultiComMgr::addWanDev(const com_token_data_t &tokenData, bool isCheckV
 void MultiComMgr::removeWanDev()
 {
     BOOST_LOG_TRIVIAL(info) << "MultiComMgr::removeWanDev";
+    stopFeedbackLogSession();
     if (!m_login) {
         return;
     }
@@ -347,6 +356,37 @@ void MultiComMgr::removeWanDev()
     WanDevTokenMgr::inst()->exit();
     ComWanConn::inst()->freeConn();
     QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, false, false, COM_OK, WanServiceState::LoggedOut));
+}
+
+void MultiComMgr::startFeedbackLogSession()
+{
+    stopFeedbackLogSession();
+    std::lock_guard<std::mutex> lock(m_feedbackLogMutex);
+    ++m_feedbackLogSessionGeneration;
+    m_feedbackLogCancelEvent = std::make_shared<WaitEvent>(false);
+}
+
+void MultiComMgr::stopFeedbackLogSession()
+{
+    std::shared_ptr<WaitEvent> cancelEvent;
+    {
+        std::lock_guard<std::mutex> lock(m_feedbackLogMutex);
+        ++m_feedbackLogSessionGeneration;
+        cancelEvent = std::move(m_feedbackLogCancelEvent);
+    }
+    if (cancelEvent != nullptr) {
+        cancelEvent->set(true);
+    }
+    if (m_logUploadThreadPool != nullptr) {
+        m_logUploadThreadPool->clear();
+        m_logUploadThreadPool->wait();
+    }
+    {
+        std::lock_guard<std::mutex> lock(m_feedbackLogMutex);
+        m_activeFeedbackLogIds.clear();
+        m_completedFeedbackLogIds.clear();
+        m_feedbackLogHistory.clear();
+    }
 }
 
 ComErrno MultiComMgr::bindWanDev(const std::string &ip, unsigned short port, const std::string &serialNumber,
@@ -392,7 +432,7 @@ ComErrno MultiComMgr::unbindWanDev(const std::string &serialNumber, const std::s
         for (auto &comPtr : m_comPtrs) {
             if (comPtr->devId() == devId) {
                 if (m_readyIdSet.find(comPtr->id()) != m_readyIdSet.end()) {
-                    BOOST_LOG_TRIVIAL(info) << serialNumber << ", unbind disconnect";
+                    BOOST_LOG_TRIVIAL(info) << "unbind disconnect";
                 }
                 comPtr->disconnect(0);
                 break;
@@ -557,8 +597,10 @@ void MultiComMgr::onTimer(const wxTimerEvent &event)
                 if (aliveDuration.count() > WAN_DEVICE_STALE_TIMEOUT_SECONDS && refreshDue) {
                     staleDevTopics.push_back(devData.wanDevInfo.devTopic);
                     devData.wanLastDetailRefreshTime = now;
-                    BOOST_LOG_TRIVIAL(warning) << devData.wanDevInfo.devId << ", " << devData.wanDevInfo.serialNumber
-                                               << ", stale device state, request detail refresh";
+                    BOOST_LOG_TRIVIAL(warning) << "WAN device state is stale; requesting a detail refresh";
+#ifdef _WIN32
+                    OutputDebugStringA("[CAMDBG] MultiComMgr: stale WAN device state -> request detail refresh\n");
+#endif
                 }
             }
         }
@@ -616,7 +658,7 @@ void MultiComMgr::onUpdateWanDev(const GetWanDevEvent &event)
     for (int i = 0; i < event.devCnt; ++i) {
         const char *devId = event.devInfos[i].devId;
         if (strlen(devId) == 0 || devInfoMap.find(devId) != devInfoMap.end()) {
-            BOOST_LOG_TRIVIAL(fatal) << devId << ", empty devId/duplicated devId";
+            BOOST_LOG_TRIVIAL(fatal) << "Empty or duplicated device ID";
         } else {
             devInfoMap.emplace(devId, &event.devInfos[i]);
             if (std::string(event.devInfos[i].updateInfo.status) == "device") {
@@ -711,8 +753,7 @@ void MultiComMgr::onConnectionReady(const ComConnectionReadyEvent &event)
     }
     QueueEvent(event.Clone());
 
-    const std::string &serialNumber = m_ptrMap.left.at(event.id)->serialNumber();
-    BOOST_LOG_TRIVIAL(info) << serialNumber << ", connection_ready";
+    BOOST_LOG_TRIVIAL(info) << "connection_ready";
     BOOST_LOG_TRIVIAL(info) << "devices count: " << m_readyIdSet.size();
 }
 
@@ -722,9 +763,8 @@ void MultiComMgr::onConnectionExit(const ComConnectionExitEvent &event)
     // 若解绑卡顿发生在这里（joinThread 或 free* 阻塞），A. 之前就会有明显时间空档。
     unbind_ts("M0. MultiComMgr::onConnectionExit ENTER id=" + std::to_string(event.id));
     if (m_readyIdSet.find(event.id) != m_readyIdSet.end()) {
-        const std::string &serialNumber = m_ptrMap.left.at(event.id)->serialNumber();
         BOOST_LOG_TRIVIAL(info) << "devices count: " << m_readyIdSet.size();
-        BOOST_LOG_TRIVIAL(info) << serialNumber << ", connection_exit";
+        BOOST_LOG_TRIVIAL(info) << "connection_exit";
     }
     ComConnection *comConnection = m_ptrMap.left.at(event.id);
     unbind_ts("M1. joinThread BEGIN (UI线程等连接线程退出)");
@@ -767,6 +807,7 @@ void MultiComMgr::onDevDetailUpdate(const ComDevDetailUpdateEvent &event)
     if (devData.connectMode != COM_CONNECT_WAN) {
         return;
     }
+    BOOST_LOG_TRIVIAL(info) << "Device status updated";
 
     const std::string workStatus = devData.devDetail->status;
     const bool metadataChanged = devData.wanDevInfo.name != devData.devDetail->name
@@ -871,9 +912,11 @@ void MultiComMgr::onWanConnStatus(const WanConnStatusEvent &event)
     }
 }
 
-void MultiComMgr::onWanConnRead(const WanConnReadEvent &event)
+void MultiComMgr::onWanConnRead(const WanConnReadEvent& event)
 {
-    if (!m_login || !m_connOnline) {
+    // The MQTT callback already received this command. Its queued UI delivery may race a later connection-state change.
+    const bool isUploadLogCommand = event.readData.type == FNET_CONN_READ_UPLOAD_LOG;
+    if (!m_login || (!m_connOnline && !isUploadLogCommand)) {
         freeConnReadData(event);
         return;
     }
@@ -898,7 +941,7 @@ void MultiComMgr::onWanConnRead(const WanConnReadEvent &event)
         if (onlineInfo == nullptr || onlineInfo->devId == nullptr) {
             return;
         }
-        BOOST_LOG_TRIVIAL(warning) << "receive device offline, " << onlineInfo->devId;
+        BOOST_LOG_TRIVIAL(warning) << "Receive device offline notification";
         auto it = m_devIdMap.find(onlineInfo->devId);
         if (it != m_devIdMap.end()) {
             updateWanDeviceState(it->second, WanDevicePresence::Offline, WanDeviceStatusSource::SyncOffline);
@@ -961,7 +1004,7 @@ void MultiComMgr::onWanConnRead(const WanConnReadEvent &event)
             m_networkIntfc->freeJobInfo((fnet_job_info_t*) readData.data);
         }
     };
-    auto procDevKeepAlive = [this](const fnet_conn_read_data_t &readData) {
+    auto procDevKeepAlive = [this](const fnet_conn_read_data_t& readData) {
         auto it = m_devIdMap.find((char *)readData.data);
         if (it != m_devIdMap.end()) {
             com_dev_data_t &devData = m_datMap.at(it->second);
@@ -973,11 +1016,118 @@ void MultiComMgr::onWanConnRead(const WanConnReadEvent &event)
             }
         }
     };
+    auto procUploadLog = [this](const fnet_conn_read_data_t& readData) {
+        const auto* uploadLogInfo = static_cast<const fnet_upload_log_info_t*>(readData.data);
+        if (uploadLogInfo == nullptr || uploadLogInfo->feedbackId == nullptr || uploadLogInfo->clientType == nullptr) {
+            BOOST_LOG_TRIVIAL(warning) << "Ignore invalid feedback log upload command";
+            return;
+        }
+        if (readData.topic == nullptr || m_mqttConfig.userTopic != readData.topic) {
+            BOOST_LOG_TRIVIAL(warning) << "Ignore feedback log upload command from an unexpected topic";
+            return;
+        }
+
+        const std::string clientType = uploadLogInfo->clientType;
+        const std::string feedbackId = uploadLogInfo->feedbackId;
+        if (clientType != "slice" || feedbackId.empty()) {
+            BOOST_LOG_TRIVIAL(warning) << "Ignore feedback log upload command for clientType=" << clientType;
+            return;
+        }
+        if (m_logUploadThreadPool == nullptr) {
+            BOOST_LOG_TRIVIAL(error) << "Cannot schedule feedback log upload";
+            return;
+        }
+
+        ScopedWanDevToken scopedToken = WanDevTokenMgr::inst()->getScopedToken();
+        const std::string accessToken = scopedToken.accessToken();
+        if (accessToken.empty()) {
+            BOOST_LOG_TRIVIAL(error) << "Cannot upload feedback logs without an access token";
+            return;
+        }
+        const std::string          clientId = m_clientId;
+        std::shared_ptr<WaitEvent> cancelEvent;
+        std::uint64_t              sessionGeneration = 0;
+        {
+            std::lock_guard<std::mutex> lock(m_feedbackLogMutex);
+            cancelEvent       = m_feedbackLogCancelEvent;
+            sessionGeneration = m_feedbackLogSessionGeneration;
+            if (cancelEvent == nullptr || cancelEvent->get()) {
+                BOOST_LOG_TRIVIAL(warning) << "Ignore feedback log upload command outside an active login session";
+                return;
+            }
+            if (m_activeFeedbackLogIds.find(feedbackId) != m_activeFeedbackLogIds.end() ||
+                m_completedFeedbackLogIds.find(feedbackId) != m_completedFeedbackLogIds.end()) {
+                BOOST_LOG_TRIVIAL(info) << "Ignore duplicate feedback log upload command";
+                return;
+            }
+            m_activeFeedbackLogIds.insert(feedbackId);
+        }
+        try {
+            const std::string dataDir      = m_dataDir;
+            const std::string accountScope = m_mqttConfig.userTopic;
+            m_logUploadThreadPool->post([this, clientId, accessToken, feedbackId, dataDir, accountScope, cancelEvent,
+                                         sessionGeneration]() {
+                FeedbackLogUploadClaim claim(dataDir, accountScope, feedbackId);
+                const auto             claimStatus = claim.tryAcquire();
+                if (claimStatus == FeedbackLogUploadClaim::Status::Busy) {
+                    BOOST_LOG_TRIVIAL(info) << "Feedback log upload is already active in another local client";
+                    std::lock_guard<std::mutex> lock(m_feedbackLogMutex);
+                    if (sessionGeneration == m_feedbackLogSessionGeneration) {
+                        m_activeFeedbackLogIds.erase(feedbackId);
+                    }
+                    return;
+                }
+                if (claimStatus == FeedbackLogUploadClaim::Status::Error) {
+                    BOOST_LOG_TRIVIAL(error) << "Cannot coordinate feedback log upload between local clients";
+                    std::lock_guard<std::mutex> lock(m_feedbackLogMutex);
+                    if (sessionGeneration == m_feedbackLogSessionGeneration) {
+                        m_activeFeedbackLogIds.erase(feedbackId);
+                    }
+                    return;
+                }
+
+                bool succeeded = claimStatus == FeedbackLogUploadClaim::Status::Completed;
+                if (succeeded) {
+                    BOOST_LOG_TRIVIAL(info) << "Feedback log upload was already completed by another local client";
+                } else {
+                    succeeded = ExportLogs::uploadFeedback(clientId, accessToken, feedbackId, cancelEvent.get());
+                    if (succeeded && !claim.markCompleted()) {
+                        BOOST_LOG_TRIVIAL(error) << "Failed to persist feedback log upload completion state";
+                    }
+                }
+                std::lock_guard<std::mutex> lock(m_feedbackLogMutex);
+                if (sessionGeneration != m_feedbackLogSessionGeneration || cancelEvent != m_feedbackLogCancelEvent) {
+                    return;
+                }
+                m_activeFeedbackLogIds.erase(feedbackId);
+                if (!succeeded) {
+                    return;
+                }
+                constexpr size_t maxFeedbackLogHistory = 256;
+                if (m_feedbackLogHistory.size() >= maxFeedbackLogHistory) {
+                    m_completedFeedbackLogIds.erase(m_feedbackLogHistory.front());
+                    m_feedbackLogHistory.pop_front();
+                }
+                m_completedFeedbackLogIds.insert(feedbackId);
+                m_feedbackLogHistory.push_back(feedbackId);
+            });
+        } catch (const std::exception& e) {
+            std::lock_guard<std::mutex> lock(m_feedbackLogMutex);
+            if (sessionGeneration == m_feedbackLogSessionGeneration) {
+                m_activeFeedbackLogIds.erase(feedbackId);
+            }
+            BOOST_LOG_TRIVIAL(error) << "Cannot schedule feedback log upload: " << e.what();
+        } catch (...) {
+            std::lock_guard<std::mutex> lock(m_feedbackLogMutex);
+            if (sessionGeneration == m_feedbackLogSessionGeneration) {
+                m_activeFeedbackLogIds.erase(feedbackId);
+            }
+            BOOST_LOG_TRIVIAL(error) << "Cannot schedule feedback log upload";
+        }
+    };
     switch (event.readData.type) {
-    case FNET_CONN_READ_SYS_NOTIFY:
-        QueueEvent(new ComConnSysNotifyEvent(COM_CONN_SYS_NOTIFY_EVENT, (char *)event.readData.data));
-        break;
-    case FNET_CONN_READ_UPDATE_NOTIFY: 
+    case FNET_CONN_READ_SYS_NOTIFY: QueueEvent(new ComConnSysNotifyEvent(COM_CONN_SYS_NOTIFY_EVENT, (char*) event.readData.data)); break;
+    case FNET_CONN_READ_UPDATE_NOTIFY:
         QueueEvent(new ComConnSysNotifyEvent(COM_CONN_UPDATE_NOTIFY_EVENT, (char*) event.readData.data)); 
         break;
     case FNET_CONN_READ_SYNC_USER_PROFILE:
@@ -1012,6 +1162,9 @@ void MultiComMgr::onWanConnRead(const WanConnReadEvent &event)
         break;
     case FNET_CONN_READ_DEVICE_KEEP_ALIVE:
         procDevKeepAlive(event.readData);
+        break;
+    case FNET_CONN_READ_UPLOAD_LOG:
+        procUploadLog(event.readData);
         break;
     }
     if (event.readData.type == FNET_CONN_READ_DEVICE_DETAIL) {
@@ -1422,6 +1575,9 @@ void MultiComMgr::freeConnReadData(const WanConnReadEvent &event)
     case FNET_CONN_READ_SYNC_ONLINE:
     case FNET_CONN_READ_SYNC_OFFLINE:
         m_networkIntfc->freeSyncOnlineInfo((fnet_sync_online_info_t *)event.readData.data);
+        break;
+    case FNET_CONN_READ_UPLOAD_LOG:
+        m_networkIntfc->freeUploadLogInfo((fnet_upload_log_info_t *)event.readData.data);
         break;
     }
     m_networkIntfc->freeString(event.readData.topic);

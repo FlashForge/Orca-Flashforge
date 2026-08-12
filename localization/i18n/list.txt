@@ -256,3 +256,4 @@ src/slic3r/GUI/MixedFilamentConfigPanel.hpp
 src/slic3r/GUI/MixedGradientSelector.cpp
 src/slic3r/GUI/MixedGradientWeightsDialog.cpp
 src/slic3r/GUI/FlashForge/FFRTMPVideoCtrl.cpp
+src/slic3r/GUI/FlashForge/FeedbackLogDialog.cpp

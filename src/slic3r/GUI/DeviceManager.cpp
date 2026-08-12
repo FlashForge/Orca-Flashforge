@@ -2583,7 +2583,7 @@ static ENUM enum_index_of(char const *key, char const **enum_names, int enum_cou
 int MachineObject::parse_json(std::string tunnel, std::string payload, bool key_field_only)
 {
 #ifdef ORCA_NETWORK_DEBUG
-    BOOST_LOG_TRIVIAL(info) << "parse_json: payload = " << payload;
+    BOOST_LOG_TRIVIAL(info) << "parse_json: payloadBytes=" << payload.size();
     flush_logs();
 #endif
 
@@ -2762,12 +2762,12 @@ int MachineObject::parse_json(std::string tunnel, std::string payload, bool key_
             last_utc_time = last_update_time;
 
 #if !BBL_RELEASE_TO_PUBLIC
-        BOOST_LOG_TRIVIAL(info) << "parse_json: dev_id=" << dev_id << ", tunnel is=" << tunnel << ", merged playload=" << j.dump();
+        BOOST_LOG_TRIVIAL(info) << "parse_json: merged payload";
 #else
         if (Slic3r::get_logging_level() < level_string_to_boost("trace")) {
-            BOOST_LOG_TRIVIAL(info) << "parse_json: dev_id=" << dev_id << ", origin playload=" << j_pre.dump();
+            BOOST_LOG_TRIVIAL(info) << "parse_json: origin payload";
         } else {
-            BOOST_LOG_TRIVIAL(trace) << "parse_json: dev_id=" << dev_id << ", tunnel is=" << tunnel << ", merged playload=" << j.dump();
+            BOOST_LOG_TRIVIAL(trace) << "parse_json: merged payload";
         }
 #endif
 
@@ -4331,7 +4331,7 @@ int MachineObject::parse_json(std::string tunnel, std::string payload, bool key_
         }
     }
     catch (...) {
-        BOOST_LOG_TRIVIAL(trace) << "parse_json failed! dev_id=" << this->get_dev_id() <<", payload = " << payload;
+        BOOST_LOG_TRIVIAL(trace) << "parse_json failed, payloadBytes=" << payload.size();
     }
 
     std::chrono::system_clock::time_point clock_stop = std::chrono::system_clock::now();

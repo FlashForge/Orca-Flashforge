@@ -2819,8 +2819,8 @@ static wxMenu* generate_help_menu()
             ExportLogs::exportLocal();
         });
 
-    append_menu_item(logMenu, wxID_ANY, _L("Upload log"), _L("Unload log"), [](wxCommandEvent&) { 
-            ExportLogs::uploadLocal(); 
+    append_menu_item(logMenu, wxID_ANY, _L("Upload log"), _L("Upload log"), [](wxCommandEvent&) {
+            ExportLogs::uploadLocal();
         });
 
     append_submenu(helpMenu, logMenu, wxID_ANY, _L("Software log"), "");

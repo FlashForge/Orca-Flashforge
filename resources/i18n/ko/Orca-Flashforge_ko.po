@@ -23128,3 +23128,57 @@ msgstr ""
 "1. 프로세스 프리셋\n"
 "2. 필라멘트 프리셋\n"
 "3. 프린터 프리셋"
+
+msgid "To help us identify and resolve your issue more quickly, we recommend uploading your device and app logs. The logs are used solely for troubleshooting and will not collect any of your personal information."
+msgstr "귀하의 문제를 더 신속하게 파악하고 해결할 수 있도록, 기기 및 앱 로그를 업로드해 주시기를 권장합니다. 로그는 문제 분석 목적으로만 사용되며, 귀하의 개인 정보는 수집되지 않습니다."
+
+msgid "orca software Logs"
+msgstr "슬라이스 로그"
+
+msgid "orca software Operation Logs"
+msgstr "슬라이스 소프트웨어 운영 로그"
+
+msgid "App Logs"
+msgstr "앱 로그"
+
+msgid "App Operation Logs"
+msgstr "앱 운영 로그"
+
+msgid "Device Logs"
+msgstr "기기 로그"
+
+msgid "Device Operation Logs"
+msgstr "기기 운영 로그"
+
+msgid "Select a Device"
+msgstr "장비 선택"
+
+msgid "{device} device is currently offline, so we are unable to retrieve the device logs at this time. You can still submit feedback. Once the device is back online, you can submit feedback again or go to Settings > Upload Firmware Log to upload the device logs."
+msgstr "{device} 현재 기기가 오프라인 상태이므로, 당분간 기기 로그를 가져올 수 없습니다. 그래도 피드백을 제출하실 수 있으며, 기기가 다시 온라인 상태가 되면 피드백을 다시 제출하거나 설정 > 펌웨어 로그 업로드로 이동하여 기기 로그를 업로드하실 수 있습니다."
+
+msgid "Slice Log"
+msgstr "슬라이스 로그"
+
+msgid "App Log"
+msgstr "앱 로그"
+
+msgid "Device Log"
+msgstr "기기 로그"
+
+msgid "The current device is offline, so we are unable to retrieve the device logs at this time. You can still submit feedback. Once the device is back online, you can submit feedback again or go to Settings > Upload Firmware Log to upload the device logs."
+msgstr "현재 기기가 오프라인 상태이므로, 당분간 기기 로그를 가져올 수 없습니다. 그래도 피드백을 제출하실 수 있으며, 기기가 다시 온라인 상태가 되면 피드백을 다시 제출하거나 설정 > 펌웨어 로그 업로드로 이동하여 기기 로그를 업로드하실 수 있습니다."
+
+msgid "Slicing software operation log"
+msgstr "슬라이스 소프트웨어 운영 로그"
+
+msgid "App operation log"
+msgstr "앱 운영 로그"
+
+msgid "Device operation log"
+msgstr "기기 운영 로그"
+
+msgid "Add Device"
+msgstr "기기 추가"
+
+msgid "Select Device"
+msgstr "기기 선택"

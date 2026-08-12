@@ -82,6 +82,7 @@ public:
     decltype(&fnet_freeBindAccountRelpResult) freeBindAccountRelpResult;
     decltype(&fnet_uploadAiImageClound) uploadAiImageClound;
     decltype(&fnet_uploadLogFileCloud) uploadLogFileCloud;
+    decltype(&fnet_uploadLogFileCloudEx) uploadLogFileCloudEx;
     decltype(&fnet_freeCloundFileData) freeCloundFileData;
     decltype(&fnet_getUserAiPointsInfo) getUserAiPointsInfo;
     decltype(&fnet_freeUserAiPointsInfo) freeUserAiPointsInfo;
@@ -140,6 +141,7 @@ public:
     decltype(&fnet_freeSyncLoginInfo) freeSyncLoginInfo;
     decltype(&fnet_freeSyncBindInfo) freeSyncBindInfo;
     decltype(&fnet_freeSyncOnlineInfo) freeSyncOnlineInfo;
+    decltype(&fnet_freeUploadLogInfo) freeUploadLogInfo;
     decltype(&fnet_allocString) allocString;
     decltype(&fnet_freeString) freeString;
 

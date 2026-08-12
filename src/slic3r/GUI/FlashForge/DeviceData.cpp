@@ -154,7 +154,7 @@ std::string DeviceObject::connection_type() {
 
 void DeviceObject::reset_update_time()
 {
-    BOOST_LOG_TRIVIAL(trace) << "reset reset_update_time, dev_id =" << m_dev_id;
+    BOOST_LOG_TRIVIAL(trace) << "reset reset_update_time";
     last_update_time = std::chrono::system_clock::now();
 }
 
@@ -520,7 +520,7 @@ bool DeviceObjectOpr::my_machine_empty()
 
 bool DeviceObjectOpr::set_selected_machine(const std::string& dev_id, bool my_machine /*= false*/)
 {
-    BOOST_LOG_TRIVIAL(info) << "set_selected_machine begin" << dev_id;
+    BOOST_LOG_TRIVIAL(info) << "set_selected_machine begin";
     flush_logs();
     map<std::string, DeviceObject*> my_machine_list;
     get_my_machine_list_v2(my_machine_list, my_machine);
@@ -651,7 +651,7 @@ ComErrno DeviceObjectOpr::unbind_wan_machine(const std::string& dev_id, const st
         }
         sendDeviceListUpdateEvent(dev_id, -1);
     } else {
-        BOOST_LOG_TRIVIAL(info) << "unbindWanDev failed: " << dev_id;
+        BOOST_LOG_TRIVIAL(info) << "unbindWanDev failed";
     }
     return ret;
 }
@@ -1000,7 +1000,7 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
             mode.mode = COM_CONNECT_WAN;
             m_wan_dev_connect_map.emplace(make_pair(macSN, mode));
             sendDeviceListUpdateEvent(macSN, connectId);
-            BOOST_LOG_TRIVIAL(info) << "Add new wan dev: " << wanInfo.name;
+            BOOST_LOG_TRIVIAL(info) << "Add new WAN device";
             flush_logs();
         }
     } else {
@@ -1029,7 +1029,7 @@ void DeviceObjectOpr::onConnectReady(ComConnectionReadyEvent &event)
                 config->save_bind_machine_to_config(devObj->get_dev_id(), devObj->get_dev_name(), data.devDetail->location, devObj->get_dev_pid());
             }
             sendDeviceListUpdateEvent(serialNum, connectId);
-            BOOST_LOG_TRIVIAL(info) << "Add new lan dev: " << data.lanDevInfo.name;
+            BOOST_LOG_TRIVIAL(info) << "Add new LAN device";
             flush_logs();
         } else {
             sendDeviceListUpdateEvent(serialNum, connectId);
@@ -1059,12 +1059,12 @@ void DeviceObjectOpr::onConnectWanDevInfoUpdate(ComWanDevInfoUpdateEvent &event)
             it->second->set_online_state(is_wan_device_online(data));
             if (it->second->get_dev_name() != data.wanDevInfo.name) {
                 it->second->set_dev_name(data.wanDevInfo.name);
-                BOOST_LOG_TRIVIAL(info) << it->second->get_dev_name() << "  update dev name";
+                BOOST_LOG_TRIVIAL(info) << "Update device name";
                 flush_logs();
                 update = true;
             }
             if (state != it->second->is_online()) {      
-                BOOST_LOG_TRIVIAL(info) << it->second->get_dev_name()<<"  update online state";
+                BOOST_LOG_TRIVIAL(info) << "Update device online state";
                 flush_logs();
                 update = true;
             }

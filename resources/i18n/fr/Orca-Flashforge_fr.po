@@ -25297,3 +25297,57 @@ msgstr ""
 "1. Préréglages de processus\n"
 "2. Préréglages de filament\n"
 "3. Préréglages d'imprimante"
+
+msgid "To help us identify and resolve your issue more quickly, we recommend uploading your device and app logs. The logs are used solely for troubleshooting and will not collect any of your personal information."
+msgstr "Afin de nous aider à identifier et à résoudre plus rapidement votre problème, nous vous recommandons de télécharger les journaux de l'appareil et de l'application. Ces journaux sont utilisés uniquement à des fins d'analyse du problème et ne permettent pas de collecter vos données personnelles."
+
+msgid "orca software Logs"
+msgstr "Journal des tranches"
+
+msgid "orca software Operation Logs"
+msgstr "journal des opérations du logiciel de tranches"
+
+msgid "App Logs"
+msgstr "journal de l'application"
+
+msgid "App Operation Logs"
+msgstr "journal des opérations de l'application"
+
+msgid "Device Logs"
+msgstr "journal de l'appareil"
+
+msgid "Device Operation Logs"
+msgstr "journal des opérations de l'appareil"
+
+msgid "Select a Device"
+msgstr "Sélectionner un équipement"
+
+msgid "{device} device is currently offline, so we are unable to retrieve the device logs at this time. You can still submit feedback. Once the device is back online, you can submit feedback again or go to Settings > Upload Firmware Log to upload the device logs."
+msgstr "{device} L'appareil est actuellement hors ligne ; il n'est donc pas possible pour le moment d'accéder à son journal. Vous pouvez néanmoins envoyer vos commentaires. Une fois l'appareil de nouveau en ligne, vous pourrez envoyer à nouveau vos commentaires ou vous rendre dans « Paramètres > Télécharger les journaux du firmware » pour télécharger le journal de l'appareil."
+
+msgid "Slice Log"
+msgstr "Journal des tranches"
+
+msgid "App Log"
+msgstr "journal de l'application"
+
+msgid "Device Log"
+msgstr "journal de l'appareil"
+
+msgid "The current device is offline, so we are unable to retrieve the device logs at this time. You can still submit feedback. Once the device is back online, you can submit feedback again or go to Settings > Upload Firmware Log to upload the device logs."
+msgstr "L'appareil est actuellement hors ligne ; il n'est donc pas possible pour le moment d'accéder à son journal. Vous pouvez néanmoins envoyer vos commentaires. Une fois l'appareil de nouveau en ligne, vous pourrez envoyer à nouveau vos commentaires ou vous rendre dans « Paramètres > Télécharger les journaux du firmware » pour télécharger le journal de l'appareil."
+
+msgid "Slicing software operation log"
+msgstr "journal des opérations du logiciel de tranches"
+
+msgid "App operation log"
+msgstr "journal des opérations de l'application"
+
+msgid "Device operation log"
+msgstr "journal des opérations de l'appareil"
+
+msgid "Add Device"
+msgstr "Ajouter un appareil"
+
+msgid "Select Device"
+msgstr "Sélectionner un appareil"
