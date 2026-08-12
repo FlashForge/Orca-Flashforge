@@ -12697,7 +12697,7 @@ msgid "Default process profile when switching to this machine profile."
 msgstr "이 장치 사전설정으로 전환할 때의 기본 프로세스 사전설정"
 
 msgid "Activate air filtration"
-msgstr "공기 여과 활성화"
+msgstr "배기 활성화"
 
 msgid "Activate for better air filtration. G-code command: M106 P3 S(0-255)"
 msgstr "더 나은 공기 여과를 위해 활성화하세요. Gcode 명령: M106 P3 S(0-255)"

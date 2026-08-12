@@ -12290,7 +12290,7 @@ msgid "Default process profile when switching to this machine profile."
 msgstr "Bu yazıcı profiline geçildiğinde varsayılan işlem profili."
 
 msgid "Activate air filtration"
-msgstr "Hava filtrelemesini etkinleştirin"
+msgstr "Egzozu Etkinleştir"
 
 msgid "Activate for better air filtration. G-code command: M106 P3 S(0-255)"
 msgstr "Daha iyi hava filtrasyonu için etkinleştirin. G-kodu komutu: M106 P3 S(0-255)"

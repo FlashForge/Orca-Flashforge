@@ -12166,7 +12166,7 @@ msgid "Default process profile when switching to this machine profile."
 msgstr ""
 
 msgid "Activate air filtration"
-msgstr ""
+msgstr "Enable Exhaust"
 
 msgid "Activate for better air filtration. G-code command: M106 P3 S(0-255)"
 msgstr ""

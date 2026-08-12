@@ -12413,7 +12413,7 @@ msgid "Default process profile when switching to this machine profile."
 msgstr "该机器的默认切片配置"
 
 msgid "Activate air filtration"
-msgstr "启用空气过滤/排气"
+msgstr "启用排气"
 
 msgid "Activate for better air filtration. G-code command: M106 P3 S(0-255)"
 msgstr "启用空气过滤/排气风扇。G-code命令：M106 P3 S(0-255)"
