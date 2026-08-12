@@ -439,18 +439,21 @@ static constexpr const char *USE_SURFACE_ATTR = "use_surface";
 // static constexpr const char *FIX_TRANSFORMATION_ATTR = "transform";
 
 
-const unsigned int BBS_VALID_OBJECT_TYPES_COUNT = 2;
+const unsigned int BBS_VALID_OBJECT_TYPES_COUNT = 3;
 const char* BBS_VALID_OBJECT_TYPES[] =
 {
     "model",
-    "other"
+    "other",
+    // Some CAD exporters label an otherwise printable closed mesh as a
+    // surface. It is accepted provisionally and validated after the final
+    // TriangleMesh has been built.
+    "surface"
 };
 
 const char* BBS_INVALID_OBJECT_TYPES[] =
 {
     "solidsupport",
-    "support",
-    "surface"
+    "support"
 };
 
 template <typename T>
@@ -747,6 +750,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
         {
             Id object_id;
             Transform3d transform;
+            bool requires_closed_surface{false};
 
             explicit Component(Id object_id)
                 : object_id(object_id)
@@ -809,6 +813,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
             std::string name;
             std::string uuid;
             int         pid{-1};
+            bool        is_surface{false};
             //bool is_model_object;
 
             CurrentObject() { reset(); }
@@ -822,6 +827,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
                 //BBS: sub object id
                 uuid.clear();
                 name.clear();
+                is_surface = false;
             }
         };
 
@@ -3621,6 +3627,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
 
             m_curr_object->id = bbs_get_attribute_value_int(attributes, num_attributes, ID_ATTR);
             m_curr_object->name = bbs_get_attribute_value_string(attributes, num_attributes, NAME_ATTR);
+            m_curr_object->is_surface = object_type == "surface";
 
             m_curr_object->uuid = bbs_get_attribute_value_string(attributes, num_attributes, PUUID_ATTR);
             if (m_curr_object->uuid.empty()) {
@@ -4904,13 +4911,16 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
                 //found one
                 if (!current_object->second.components.empty()) {
                     for (const Component &comp : current_object->second.components) {
-                        id_list.push_back(std::pair(comp, current_item.second * comp.transform));
+                        Component child = comp;
+                        child.requires_closed_surface = current_id.requires_closed_surface || current_object->second.is_surface;
+                        id_list.push_back(std::pair(child, current_item.second * comp.transform));
                     }
                 }
                 else if (!(current_object->second.geometry.empty())) {
                     //CurrentObject* ptr = &(current_objects[current_id]);
                     //CurrentObject* ptr2 = &(current_object->second);
-                    sub_objects.push_back({ current_object->first, current_item.second});
+                    current_id.transform = current_item.second;
+                    sub_objects.push_back(std::move(current_id));
                 }
             }
         }
@@ -5031,6 +5041,17 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
 
                 TriangleMesh triangle_mesh(std::move(its), volume_data->mesh_stats);
 
+                // A 3MF "surface" is not necessarily a printable solid. Some
+                // CAD exporters, however, use that type for a closed shell.
+                // Reuse the finalized mesh connectivity statistics so only
+                // such closed shells are promoted to model volumes.
+                if ((sub_object->is_surface || sub_comp.requires_closed_surface) && !triangle_mesh.stats().manifold()) {
+                    add_error("3MF surface object " + std::to_string(sub_object->id) +
+                              " is open (" + std::to_string(triangle_mesh.stats().open_edges) +
+                              " boundary edges); only closed surface meshes can be imported as printable models");
+                    return false;
+                }
+
                 // BBS: no need to multiply the instance matrix into the volume
                 //if (!m_is_bbl_3mf) {
                 //    // if the 3mf was not produced by BambuStudio and there is only one instance,
@@ -5055,6 +5076,12 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
                     m_shared_meshes[sub_object->id] = volume;
             }
             else {
+                if ((sub_object->is_surface || sub_comp.requires_closed_surface) && !shared_volume->mesh().stats().manifold()) {
+                    add_error("3MF surface object " + std::to_string(sub_object->id) +
+                              " is open (" + std::to_string(shared_volume->mesh().stats().open_edges) +
+                              " boundary edges); only closed surface meshes can be imported as printable models");
+                    return false;
+                }
                 //create volume to use shared mesh
                 volume = object.add_volume_with_shared_mesh(*shared_volume);
                 BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": line %1%, create volume using shared_mesh %2%")%__LINE__%shared_volume;
@@ -5380,6 +5407,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
 
             current_object->id = bbs_get_attribute_value_int(attributes, num_attributes, ID_ATTR);
             current_object->name = bbs_get_attribute_value_string(attributes, num_attributes, NAME_ATTR);
+            current_object->is_surface = object_type == "surface";
 
             current_object->uuid = bbs_get_attribute_value_string(attributes, num_attributes, PUUID_ATTR);
             if (current_object->uuid.empty()) {
@@ -5422,6 +5450,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
                             new_object.model_object_idx = object_it->second.model_object_idx;
                             new_object.name = object_it->second.name;
                             new_object.uuid = object_it->second.uuid;
+                            new_object.is_surface = object_it->second.is_surface;
 
                             object_list.erase(object_it);
                             object_list.insert({ new_id, std::move(new_object) });

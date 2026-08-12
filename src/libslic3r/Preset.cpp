@@ -478,7 +478,11 @@ void Preset::normalize(DynamicPrintConfig &config)
         for (const std::string &key : { "filament_settings_id" }) {
             auto *opt = config.option(key, false);
             assert(opt == nullptr || opt->type() == coStrings);
-            if (opt != nullptr && opt->type() == coStrings)
+            // Printer tool count and physical filament count are independent for
+            // non-SEMM multi-extruder printers. Keep existing project filament IDs
+            // intact instead of extending them to the nozzle count.
+            if (opt != nullptr && opt->type() == coStrings &&
+                (config.option("single_extruder_multi_material") == nullptr || config.opt_bool("single_extruder_multi_material")))
                 static_cast<ConfigOptionStrings*>(opt)->values.resize(n, std::string());
         }
     }
