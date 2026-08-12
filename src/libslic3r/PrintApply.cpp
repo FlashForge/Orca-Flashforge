@@ -1263,35 +1263,36 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
     //     }
     // }
 
-    if (m_wipe_tower_position_clamped) {
-        ConfigOptionFloats *new_wipe_tower_x = new_full_config.option<ConfigOptionFloats>("wipe_tower_x", true);
-        ConfigOptionFloats *new_wipe_tower_y = new_full_config.option<ConfigOptionFloats>("wipe_tower_y", true);
-        if (new_wipe_tower_x != nullptr && new_wipe_tower_y != nullptr &&
-            m_plate_index < int(new_wipe_tower_x->values.size()) && m_plate_index < int(new_wipe_tower_y->values.size())) {
-            const Vec2d incoming(new_wipe_tower_x->values[m_plate_index], new_wipe_tower_y->values[m_plate_index]);
-            const bool incoming_is_original =
-                std::abs(incoming.x() - m_wipe_tower_clamp_original.x()) <= EPSILON &&
-                std::abs(incoming.y() - m_wipe_tower_clamp_original.y()) <= EPSILON;
-            const bool incoming_is_corrected =
-                std::abs(incoming.x() - m_wipe_tower_clamp_corrected.x()) <= EPSILON &&
-                std::abs(incoming.y() - m_wipe_tower_clamp_corrected.y()) <= EPSILON;
-            if (incoming_is_original) {
-                new_wipe_tower_x->values[m_plate_index] = m_wipe_tower_clamp_corrected.x();
-                new_wipe_tower_y->values[m_plate_index] = m_wipe_tower_clamp_corrected.y();
-            } else if (!incoming_is_corrected) {
-                m_wipe_tower_position_clamped = false;
-            }
-        }
-    }
-
     auto opt_filament_map = new_full_config.option<ConfigOptionInts>("filament_map");
     std::vector<int> filament_maps = opt_filament_map ? opt_filament_map->values : std::vector<int>();
 
-    // Find modified keys of the various configs. Resolve overrides extruder retract values by filament profiles.
+    // Resolve a generated clamp and compare the two configs under the same
+    // lock used by the wipe-tower worker when it publishes corrected values.
     DynamicPrintConfig   filament_overrides;
-    //BBS: add plate index
-    t_config_option_keys print_diff       = print_config_diffs(m_config, new_full_config, filament_overrides, this->m_plate_index, filament_maps);
-    t_config_option_keys full_config_diff = full_print_config_diffs(m_full_print_config, new_full_config, this->m_plate_index);
+    t_config_option_keys print_diff;
+    t_config_option_keys full_config_diff;
+    {
+        std::scoped_lock wipe_tower_position_lock(m_wipe_tower_position_mutex);
+        ConfigOptionFloats *new_wipe_tower_x = new_full_config.option<ConfigOptionFloats>("wipe_tower_x", true);
+        ConfigOptionFloats *new_wipe_tower_y = new_full_config.option<ConfigOptionFloats>("wipe_tower_y", true);
+        if (m_wipe_tower_position_clamped && new_wipe_tower_x != nullptr && new_wipe_tower_y != nullptr &&
+            m_plate_index < int(new_wipe_tower_x->values.size()) && m_plate_index < int(new_wipe_tower_y->values.size())) {
+            const Vec2d incoming(new_wipe_tower_x->values[m_plate_index], new_wipe_tower_y->values[m_plate_index]);
+            const Vec2d resolved = resolve_wipe_tower_position(incoming, true, m_wipe_tower_clamp_original,
+                                                               m_wipe_tower_clamp_corrected);
+            if (!is_approx(incoming, resolved)) {
+                new_wipe_tower_x->values[m_plate_index] = resolved.x();
+                new_wipe_tower_y->values[m_plate_index] = resolved.y();
+            } else if (!is_approx(incoming, m_wipe_tower_clamp_corrected)) {
+                m_wipe_tower_position_clamped = false;
+            }
+        }
+
+        print_diff       = print_config_diffs(m_config, new_full_config, filament_overrides, this->m_plate_index, filament_maps);
+        full_config_diff = full_print_config_diffs(m_full_print_config, new_full_config, this->m_plate_index);
+    }
+
+    // Find modified keys of the various configs. Resolve overrides extruder retract values by filament profiles.
     // Collect changes to object and region configs.
     t_config_option_keys object_diff      = m_default_object_config.diff(new_full_config);
     t_config_option_keys region_diff      = m_default_region_config.diff(new_full_config);

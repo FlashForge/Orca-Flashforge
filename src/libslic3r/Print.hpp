@@ -1043,6 +1043,11 @@ public:
     // Wipe tower support.
     bool                        has_wipe_tower() const;
     const WipeTowerData&        wipe_tower_data(size_t filaments_cnt = 0) const;
+    // A generated clamp correction is authoritative only while the project
+    // still contains the input position that was clamped.
+    static Vec2d                resolve_wipe_tower_position(const Vec2d &project_position, bool position_clamped,
+                                                           const Vec2d &clamp_original, const Vec2d &clamp_corrected);
+    Vec2d                       resolve_wipe_tower_position(const Vec2d &project_position) const;
     const ToolOrdering& 		tool_ordering() const { return m_tool_ordering; }
 
     void update_filament_maps_to_config(std::vector<int>& f_maps);
@@ -1240,6 +1245,7 @@ private:
     bool              m_wipe_tower_position_clamped{false};
     Vec2d             m_wipe_tower_clamp_original{0., 0.};
     Vec2d             m_wipe_tower_clamp_corrected{0., 0.};
+    mutable std::mutex m_wipe_tower_position_mutex;
     
     std::vector<std::set<int>> m_geometric_unprintable_filaments;
 

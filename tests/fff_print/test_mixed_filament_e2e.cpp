@@ -303,6 +303,7 @@ TEST_CASE("Mixed pattern and weighted color keep Local-Z wipe-tower planning in 
     Print print;
     print.is_BBL_printer() = false;
     print.is_flashforge_printer() = true;
+    print.set_plate_origin(Vec3d::Zero());
     print.set_status_silent();
     print.apply(empty_model, printer_config, true);
     REQUIRE(print.config().filament_diameter.size() == 4);
@@ -313,6 +314,15 @@ TEST_CASE("Mixed pattern and weighted color keep Local-Z wipe-tower planning in 
     REQUIRE(print.mixed_filament_manager().mixed_filament_from_id(6, 4) != nullptr);
 
     REQUIRE_NOTHROW(print.process());
+    const Vec2d requested_wipe_tower_position(
+        config.option<ConfigOptionFloats>("wipe_tower_x")->get_at(0),
+        config.option<ConfigOptionFloats>("wipe_tower_y")->get_at(0));
+    const Vec2d corrected_wipe_tower_position(
+        print.config().wipe_tower_x.get_at(0), print.config().wipe_tower_y.get_at(0));
+    REQUIRE_FALSE(is_approx(requested_wipe_tower_position, corrected_wipe_tower_position));
+    CHECK(is_approx(print.resolve_wipe_tower_position(requested_wipe_tower_position),
+                    corrected_wipe_tower_position));
+
     const bool exercised_local_z = std::any_of(
         print.objects().begin(), print.objects().end(), [](const PrintObject *object) {
             return std::any_of(object->local_z_intervals().begin(), object->local_z_intervals().end(),
@@ -335,6 +345,16 @@ TEST_CASE("Mixed pattern and weighted color keep Local-Z wipe-tower planning in 
     REQUIRE_NOTHROW(print.export_gcode(gcode_path.string(), &gcode_result, nullptr));
     REQUIRE(boost::filesystem::file_size(gcode_path) > 0);
     boost::filesystem::remove(gcode_path);
+
+    DynamicPrintConfig moved_config = config;
+    const Vec2d user_wipe_tower_position(80., 70.);
+    moved_config.option<ConfigOptionFloats>("wipe_tower_x")->values[0] = user_wipe_tower_position.x();
+    moved_config.option<ConfigOptionFloats>("wipe_tower_y")->values[0] = user_wipe_tower_position.y();
+    print.apply(model, moved_config, true);
+    CHECK(is_approx(Vec2d(print.config().wipe_tower_x.get_at(0), print.config().wipe_tower_y.get_at(0)),
+                    user_wipe_tower_position));
+    CHECK(is_approx(print.resolve_wipe_tower_position(requested_wipe_tower_position),
+                    requested_wipe_tower_position));
 }
 
 TEST_CASE("Snapmaker perimeter groups emit different physical tools for different walls",

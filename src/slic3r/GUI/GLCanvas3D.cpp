@@ -2882,11 +2882,13 @@ void GLCanvas3D::reload_scene(bool refresh_immediately, bool force_full_scene_re
                             if (volume_idx_wipe_tower_old != -1) map_glvolume_old_to_new[volume_idx_wipe_tower_old] = volume_idx_wipe_tower_new;
                         }
                     } else {
-                        const float print_x = current_print->config().wipe_tower_x.get_at(plate_id);
-                        const float print_y = current_print->config().wipe_tower_y.get_at(plate_id);
-                        if (std::abs(x - print_x) > EPSILON || std::abs(y - print_y) > EPSILON) {
-                            ConfigOptionFloat wipe_tower_x(print_x);
-                            ConfigOptionFloat wipe_tower_y(print_y);
+                        // Project coordinates are authoritative after a user move. Only propagate
+                        // the backend position when it is a recorded correction of the same input.
+                        const Vec2d project_position(x, y);
+                        const Vec2d resolved_position = current_print->resolve_wipe_tower_position(project_position);
+                        if (!is_approx(project_position, resolved_position)) {
+                            ConfigOptionFloat wipe_tower_x(resolved_position.x());
+                            ConfigOptionFloat wipe_tower_y(resolved_position.y());
                             ConfigOptionFloats *wipe_tower_x_opt = proj_cfg.option<ConfigOptionFloats>("wipe_tower_x", true);
                             ConfigOptionFloats *wipe_tower_y_opt = proj_cfg.option<ConfigOptionFloats>("wipe_tower_y", true);
                             if (wipe_tower_x_opt != nullptr && wipe_tower_y_opt != nullptr) {
@@ -2894,8 +2896,8 @@ void GLCanvas3D::reload_scene(bool refresh_immediately, bool force_full_scene_re
                                 wipe_tower_y_opt->set_at(&wipe_tower_y, plate_id, 0);
                             }
                         }
-                        x = print_x;
-                        y = print_y;
+                        x = resolved_position.x();
+                        y = resolved_position.y();
                         const float margin                    = 2.f;
                         auto        tower_bottom = current_print->wipe_tower_data().wipe_tower_mesh_data->bottom;
                         tower_bottom.translate(scaled(Vec2d{x, y}));
@@ -4860,9 +4862,35 @@ void GLCanvas3D::do_move(const std::string& snapshot_type)
     std::set<std::pair<int, int>> done;  // keeps track of modified instances
     bool object_moved = false;
 
-    // BBS: support wipe-tower for multi-plates
-    int n_plates = wxGetApp().plater()->get_partplate_list().get_plate_count();
-    std::vector<Vec3d> wipe_tower_origins(n_plates, Vec3d::Zero());
+    // Wipe towers are synthetic volumes, not ModelInstances. Commit their
+    // project position without running the ordinary object-move path, which
+    // reloads the scene before the backend receives the new coordinates.
+    if (m_selection.is_wipe_tower()) {
+        const GLVolume *wipe_tower = m_selection.get_first_volume();
+        const int       plate_id   = wipe_tower != nullptr ? wipe_tower->object_idx() - 1000 : -1;
+        PartPlateList  &ppl        = wxGetApp().plater()->get_partplate_list();
+        if (wipe_tower != nullptr && wipe_tower->is_wipe_tower && plate_id >= 0 && plate_id < ppl.get_plate_count()) {
+            DynamicConfig &proj_cfg = wxGetApp().preset_bundle->project_config;
+            const Vec3d plate_origin = ppl.get_plate(plate_id)->get_origin();
+            const Vec3d tower_origin = wipe_tower->get_volume_offset();
+            ConfigOptionFloat wipe_tower_x(tower_origin.x() - plate_origin.x());
+            ConfigOptionFloat wipe_tower_y(tower_origin.y() - plate_origin.y());
+            ConfigOptionFloats *wipe_tower_x_opt = proj_cfg.option<ConfigOptionFloats>("wipe_tower_x", true);
+            ConfigOptionFloats *wipe_tower_y_opt = proj_cfg.option<ConfigOptionFloats>("wipe_tower_y", true);
+            if (wipe_tower_x_opt != nullptr && wipe_tower_y_opt != nullptr &&
+                (!is_approx(wipe_tower_x_opt->get_at(plate_id), wipe_tower_x.value) ||
+                 !is_approx(wipe_tower_y_opt->get_at(plate_id), wipe_tower_y.value))) {
+                wipe_tower_x_opt->set_at(&wipe_tower_x, plate_id, 0);
+                wipe_tower_y_opt->set_at(&wipe_tower_y, plate_id, 0);
+                m_selection.notify_instance_update(-1, 0);
+                post_event(SimpleEvent(EVT_GLCANVAS_SCHEDULE_BACKGROUND_PROCESS));
+            }
+        }
+
+        reset_sequential_print_clearance();
+        m_dirty = true;
+        return;
+    }
 
     Selection::EMode selection_mode = m_selection.get_mode();
 
@@ -4906,10 +4934,6 @@ void GLCanvas3D::do_move(const std::string& snapshot_type)
             model_object->invalidate_bounding_box();
             
         }
-        else if (object_idx >= 1000 && object_idx < 1000 + n_plates) {
-            // Move a wipe tower proxy.
-            wipe_tower_origins[object_idx - 1000] = v->get_volume_offset();
-        }
     }
 
     //BBS: notify instance updates to part plater list
@@ -4941,24 +4965,6 @@ void GLCanvas3D::do_move(const std::string& snapshot_type)
 
     if (object_moved)
         post_event(SimpleEvent(EVT_GLCANVAS_INSTANCE_MOVED));
-
-    // BBS: support wipe-tower for multi-plates
-    for (int plate_id = 0; plate_id < wipe_tower_origins.size(); plate_id++) {
-        Vec3d& wipe_tower_origin = wipe_tower_origins[plate_id];
-        if (wipe_tower_origin == Vec3d::Zero())
-            continue;
-
-        PartPlateList& ppl = wxGetApp().plater()->get_partplate_list();
-        DynamicConfig& proj_cfg = wxGetApp().preset_bundle->project_config;
-        Vec3d plate_origin = ppl.get_plate(plate_id)->get_origin();
-        ConfigOptionFloat wipe_tower_x(wipe_tower_origin(0) - plate_origin(0));
-        ConfigOptionFloat wipe_tower_y(wipe_tower_origin(1) - plate_origin(1));
-
-        ConfigOptionFloats* wipe_tower_x_opt = proj_cfg.option<ConfigOptionFloats>("wipe_tower_x", true);
-        ConfigOptionFloats* wipe_tower_y_opt = proj_cfg.option<ConfigOptionFloats>("wipe_tower_y", true);
-        wipe_tower_x_opt->set_at(&wipe_tower_x, plate_id, 0);
-        wipe_tower_y_opt->set_at(&wipe_tower_y, plate_id, 0);
-    }
 
     reset_sequential_print_clearance();
 
