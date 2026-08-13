@@ -28,6 +28,7 @@
 #include <exception>
 #include <cstdlib>
 #include <ctime>
+#include <limits>
 #include <regex>
 #include <thread>
 #include <string_view>
@@ -62,9 +63,7 @@
 #include <wx/log.h>
 #include <wx/intl.h>
 #include <wx/url.h>
-#ifdef __WXGTK__
 #include <wx/timer.h>
-#endif
 
 #include <wx/dialog.h>
 #include <wx/textctrl.h>
@@ -112,6 +111,7 @@
 #include "slic3r/GUI/FlashForge/ReLoginDialog.hpp"
 #include "slic3r/GUI/FlashForge/MultiComHelper.hpp"
 #include "slic3r/GUI/FlashForge/MultiComMgr.hpp"
+#include "slic3r/GUI/FlashForge/MultiComUtils.hpp"
 #include "slic3r/GUI/FlashForge/DeviceData.hpp"
 #include "slic3r/GUI/FlashForge/ModelApiDialog.hpp"
 #include "slic3r/GUI/FlashForge/PromoShareDlg.hpp"
@@ -210,12 +210,25 @@ namespace GUI {
 
 struct AsyncLoginFinishedEvent : public wxCommandEvent {
     AsyncLoginFinishedEvent(wxEventType type, ComErrno _ret, const com_token_data_t &_token_data,
-        const com_add_wan_dev_data_t &_add_dev_data)
-        : wxCommandEvent(type), ret(_ret), token_data(_token_data), add_dev_data(_add_dev_data) {
+        const com_add_wan_dev_data_t &_add_dev_data, ComSessionInitStage _stage,
+        bool _token_refreshed, bool _refresh_failed, uint64_t _generation)
+        : wxCommandEvent(type)
+        , ret(_ret)
+        , token_data(_token_data)
+        , add_dev_data(_add_dev_data)
+        , stage(_stage)
+        , token_refreshed(_token_refreshed)
+        , refresh_failed(_refresh_failed)
+        , generation(_generation)
+    {
     }
     ComErrno ret;
     com_token_data_t token_data;
     com_add_wan_dev_data_t add_dev_data;
+    ComSessionInitStage stage;
+    bool token_refreshed;
+    bool refresh_failed;
+    uint64_t generation;
 };
 
 wxDEFINE_EVENT(EVT_ASYNC_LOGIN_FINISHED, AsyncLoginFinishedEvent);
@@ -229,6 +242,46 @@ wxDEFINE_EVENT(EVT_UPDATE_PRESET_BUNDLE, wxCommandEvent);
 wxDEFINE_EVENT(EVT_UPDATE_BUNDLE_COMPLETE, wxCommandEvent);
 
 namespace {
+
+constexpr int FLASH_TOKEN_REFRESH_SKEW_SECONDS = 5 * 60;
+
+bool parse_config_integer(const std::string& value, long long& result)
+{
+    if (value.empty())
+        return false;
+    try {
+        size_t parsed = 0;
+        result = std::stoll(value, &parsed);
+        return parsed == value.size();
+    } catch (const std::exception&) {
+        return false;
+    }
+}
+
+bool flash_token_needs_refresh(const com_token_data_t& token_data)
+{
+    if (token_data.accessToken.empty() || token_data.refreshToken.empty() || token_data.expiresIn <= 0 || token_data.startTime <= 0)
+        return true;
+
+    const long long now = static_cast<long long>(std::time(nullptr));
+    const long long start = static_cast<long long>(token_data.startTime);
+    const long long expires = static_cast<long long>(token_data.expiresIn);
+    if (start > std::numeric_limits<long long>::max() - expires)
+        return true;
+    return start + expires - FLASH_TOKEN_REFRESH_SKEW_SECONDS <= now;
+}
+
+const char* session_init_stage_name(ComSessionInitStage stage)
+{
+    switch (stage) {
+    case ComSessionInitStage::NetworkInterface: return "network_interface";
+    case ComSessionInitStage::ExistingSession: return "existing_session";
+    case ComSessionInitStage::UserProfile: return "user_profile";
+    case ComSessionInitStage::AccountBinding: return "account_binding";
+    case ComSessionInitStage::None: return "none";
+    }
+    return "unknown";
+}
 
 bool uses_flash_cloud_agent(const NetworkAgent* agent)
 {
@@ -1197,6 +1250,8 @@ GUI_App::GUI_App()
     this->init_app_config();
     this->init_download_path();
     this->init_flashnetwork();
+    m_auto_login_retry_timer = std::make_unique<wxTimer>(this);
+    Bind(wxEVT_TIMER, &GUI_App::on_flashforge_session_retry_timer, this, m_auto_login_retry_timer->GetId());
 #if wxUSE_WEBVIEW_EDGE
     this->init_webview_runtime();
 #endif
@@ -2380,6 +2435,12 @@ GUI_App::~GUI_App()
 {
     //boost::mutex::scoped_lock lock(m_mutex);
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": enter");
+    if (m_auto_login_retry_timer)
+        m_auto_login_retry_timer->Stop();
+    ++m_auto_login_generation;
+    if (m_auto_login_thread.joinable())
+        m_auto_login_thread.join();
+
     if (app_config != nullptr) {
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": destroy app_config");
         delete app_config;
@@ -2402,9 +2463,6 @@ GUI_App::~GUI_App()
 
     if (m_download_tool.get() != nullptr) {
         m_download_tool->wait(true);
-    }
-    if (m_auto_login_thread.joinable()) {
-        m_auto_login_thread.join();
     }
     LoginDialog::waitGetSmsCode();
     Slic3r::GUI::MultiComMgr::inst()->uninitalize();
@@ -3056,6 +3114,53 @@ bool GUI_App::on_init_inner()
     }
 #endif
 	Bind(EVT_START_LOGIN, &GUI_App::onAutoStartLogin,this);
+    Bind(EVT_ASYNC_LOGIN_FINISHED, [this](const AsyncLoginFinishedEvent& event) {
+        if (m_auto_login_thread.joinable())
+            m_auto_login_thread.join();
+
+        if (event.generation != m_auto_login_generation) {
+            BOOST_LOG_TRIVIAL(info) << "Ignore stale FlashForge login result, generation=" << event.generation;
+            return;
+        }
+
+        if (event.token_refreshed)
+            save_flashforge_token(event.token_data);
+
+        if (event.ret == COM_OK) {
+            m_auto_login_state = FlashLoginRecoveryState::LoggedIn;
+            m_auto_login_retry_count = 0;
+            LoginDialog::SetToken(event.token_data.accessToken, event.token_data.refreshToken);
+            handle_show_user_points(event.add_dev_data);
+
+            wxCommandEvent success_event(EVT_LOGIN_SUCCEED);
+            success_event.SetEventObject(this);
+            wxPostEvent(this, success_event);
+            return;
+        }
+
+        if (event.refresh_failed && event.ret == COM_UNAUTHORIZED) {
+            BOOST_LOG_TRIVIAL(warning) << "FlashForge session recovery rejected the stored refresh token";
+            m_auto_login_state = FlashLoginRecoveryState::InvalidCredential;
+            m_login_success = false;
+            if (app_config) {
+                app_config->set("access_token", "");
+                app_config->set("refresh_token", "");
+                app_config->set("token_expire_time", "");
+                app_config->set("token_start_time", "");
+                app_config->save();
+            }
+            LoginDialog::SetToken({}, {});
+            LoginDialog::SetUsrLogin(false);
+
+            wxCommandEvent failed_event(EVT_LOGIN_FAILED);
+            failed_event.SetInt(1); // Stored refresh credential is invalid.
+            failed_event.SetEventObject(this);
+            wxPostEvent(this, failed_event);
+            return;
+        }
+
+        schedule_flashforge_session_retry(event.ret, event.stage);
+    });
     Bind(EVT_LOGIN_SUCCEED, [this](auto &event) {
         m_auto_connecting = false;
         if (m_logout_tip && m_logout_tip->IsShown()) {
@@ -3074,7 +3179,8 @@ bool GUI_App::on_init_inner()
 #endif
     });
     Bind(EVT_LOGIN_FAILED, [this](auto &event) {
-       if (m_auto_connecting) {
+       const bool invalid_credential = event.GetInt() == 1;
+       if (m_auto_connecting || invalid_credential) {
            /*if (!m_logout_tip) {
                m_logout_tip = new ShowTip(_L("Account Auto Connect Failed!"));
            }
@@ -3086,7 +3192,9 @@ bool GUI_App::on_init_inner()
            }*/
            json json;
            json["command"]                  = "studio_loginfailed";
-           json["data"]["message"]          = _L("Account Auto Connect Failed!").utf8_string();
+           json["data"]["message"]          = invalid_credential ?
+                                                     _L("Login information expired. Please login again.").utf8_string() :
+                                                     _L("Account Auto Connect Failed!").utf8_string();
            json["sequence_id"]              = "10001";
            std::string jsonStr              = json.dump();
            wxString    strJS                = wxString::Format("window.postMessage(%s)", wxString::FromUTF8(jsonStr));
@@ -4087,43 +4195,7 @@ void GUI_App::init_label_colours()
 
 void GUI_App::get_token_info(const com_token_data_t& token_data)
 {
-    AppConfig *app_config = wxGetApp().app_config;
-    bool is_check_version_on_test_server = false;
-    if (app_config != nullptr) {
-        is_check_version_on_test_server = app_config->get_bool("check_version_test");
-    }
-    com_add_wan_dev_data_t add_dev_data;
-    ComErrno add_dev_result = MultiComMgr::inst()->addWanDev(token_data, is_check_version_on_test_server, add_dev_data, 2, 200);
-    if (add_dev_result == COM_OK) {
-        //m_usr_name                = usrname.ToStdString();
-        //LoginDialog::m_token_data = token_data;
-        on_connect_event();
-        wxGetApp().handle_login_result(token_data.accessToken, add_dev_data);
-        BOOST_LOG_TRIVIAL(info) << "usr login succeed 111 : LoginDialog::onPage1Login";
-        //m_login1_pressed = true;
-        if (app_config) {
-            // click login btn，set token
-            //app_config->set("usr_input_name", usrname.ToStdString());
-            app_config->set("access_token", token_data.accessToken);
-            app_config->set("refresh_token", token_data.refreshToken);
-            app_config->set("token_expire_time", std::to_string(token_data.expiresIn));
-            app_config->set("token_start_time", std::to_string(token_data.startTime));
-            app_config->set("usr_email", add_dev_data.userProfile.email);
-            app_config->set("show_user_points", add_dev_data.showUserPoints ? "true" : "false");
-        }
-
-        // wxGetApp().check_new_version_sf(0, true);
-    } else {
-        json json;
-        json["command"]         = "studio_loginfailed";
-        json["data"]["message"] = _L("Server connection exception").utf8_string();
-        json["sequence_id"]     = "10001";
-        std::string jsonStr     = json.dump();
-        wxString    strJS       = wxString::Format("window.postMessage(%s)", wxString::FromUTF8(jsonStr));
-        GUI::wxGetApp().run_script(strJS);
-        BOOST_LOG_TRIVIAL(error) << "Server connection exception : addWanDev interface failed !";
-        flush_logs();
-    }
+    begin_flashforge_login(token_data);
 }
 
 void GUI_App::update_label_colours_from_appconfig()
@@ -5080,72 +5152,206 @@ void GUI_App::banner_update(bool hasToken)
 
 bool GUI_App::auto_login_flashforge()
 {
-    std::string access_token = app_config->get("access_token");
-    std::string refresh_token = app_config->get("refresh_token");
-    std::string token_expire_time = app_config->get("token_expire_time");
-    std::string token_start_time = app_config->get("token_start_time");
-    std::string usr_eamil = app_config->get("usr_email");
-    std::string show_user_points = app_config->get("show_user_points");
-    std::string usr_uid = app_config->get("usr_uid");
-    std::string usr_pic = app_config->get("usr_pic");
-    std::string usr_name = app_config->get("usr_name");
-    bool is_check_version_on_test_server = app_config->get_bool("check_version_test");
-    if (usr_name.empty()) {
-        usr_name = app_config->get("usr_input_name");
-    }
-    // 切换语言或重新加载首页时此接口也会被调用，这种情况不做处理或直接显示已登录状态
-    if (!m_first_auto_login) {
-        if (m_login_success) {
-            com_add_wan_dev_data_t add_wan_dev_data;
-            add_wan_dev_data.userProfile.uid = usr_uid;
-            add_wan_dev_data.userProfile.nickname = usr_name;
-            add_wan_dev_data.userProfile.headImgUrl = usr_pic;
-            add_wan_dev_data.userProfile.email = usr_eamil;
-            add_wan_dev_data.showUserPoints = show_user_points == "true";
-            handle_login_result(access_token, add_wan_dev_data, 0);
-            LoginDialog::SetToken(access_token, refresh_token);
-            LoginDialog::SetUsrInfo(com_user_profile_t{ usr_uid, usr_name, usr_pic });
-        }
+    if (!app_config)
+        return false;
+
+    const std::string access_token = app_config->get("access_token");
+    const std::string refresh_token = app_config->get("refresh_token");
+    if (m_login_success) {
+        std::string user_name = app_config->get("usr_name");
+        if (user_name.empty())
+            user_name = app_config->get("usr_input_name");
+        com_add_wan_dev_data_t add_wan_dev_data;
+        add_wan_dev_data.userProfile.uid = app_config->get("usr_uid");
+        add_wan_dev_data.userProfile.nickname = user_name;
+        add_wan_dev_data.userProfile.headImgUrl = app_config->get("usr_pic");
+        add_wan_dev_data.userProfile.email = app_config->get("usr_email");
+        add_wan_dev_data.showUserPoints = app_config->get("show_user_points") == "true";
+        handle_login_result(access_token, add_wan_dev_data, false);
+        LoginDialog::SetToken(access_token, refresh_token);
+        LoginDialog::SetUsrInfo(add_wan_dev_data.userProfile);
         return false;
     }
-    m_first_auto_login = false;
-    // 没有保存登录状态，不做处理
-    if (access_token.empty() || refresh_token.empty()) {
+
+    if (m_auto_login_state == FlashLoginRecoveryState::InProgress ||
+        m_auto_login_state == FlashLoginRecoveryState::RetryScheduled)
+        return true;
+    if (m_auto_login_state == FlashLoginRecoveryState::InvalidCredential)
         return false;
-    }
-    m_auto_connecting = true;
-    wxCommandEvent event(EVT_START_LOGIN);
-    event.SetEventObject(this);
-    wxPostEvent(this, event);
-    Bind(EVT_ASYNC_LOGIN_FINISHED, // 只在软件打开时执行一次，否则会重复Bind
-        [this](const AsyncLoginFinishedEvent &event) {
-            if (event.ret == COM_OK) {
-                BOOST_LOG_TRIVIAL(info) << "user login succeed";
-                LoginDialog::SetToken(event.token_data.accessToken, event.token_data.refreshToken);
-                handle_show_user_points(event.add_dev_data);
-                wxCommandEvent event(EVT_LOGIN_SUCCEED);
-                event.SetEventObject(this);
-                wxPostEvent(this, event);
-            } else {
-                BOOST_LOG_TRIVIAL(warning) << boost::format("user login failed");
-                wxCommandEvent event(EVT_LOGIN_FAILED);
-                event.SetEventObject(this);
-                wxPostEvent(this, event);
-            }
-        });
-    on_connect_event();
-    m_auto_login_thread = Slic3r::create_thread([=] {
-        com_token_data_t token_data;
-        token_data.expiresIn = atoi(token_expire_time.c_str());
-        token_data.accessToken = access_token;
-        token_data.refreshToken = refresh_token;
-        token_data.startTime = atoll(token_start_time.c_str());
-        com_add_wan_dev_data_t add_dev_data;
-        ComErrno ret = Slic3r::GUI::MultiComMgr::inst()->addWanDev(token_data, is_check_version_on_test_server, add_dev_data, 2, 200);
-        wxQueueEvent(this, new AsyncLoginFinishedEvent(EVT_ASYNC_LOGIN_FINISHED, ret, token_data, add_dev_data));
-        BOOST_LOG_TRIVIAL(warning) << boost::format("MultiComMgr::inst()->addWanDev: %d") % ret;
-    });
+    if (access_token.empty() || refresh_token.empty())
+        return false;
+
+    m_auto_login_retry_count = 0;
+    start_flashforge_session_attempt();
     return true;
+}
+
+bool GUI_App::begin_flashforge_login(const com_token_data_t& token_data, const std::string& username)
+{
+    if (!app_config || token_data.accessToken.empty() || token_data.refreshToken.empty()) {
+        BOOST_LOG_TRIVIAL(error) << "Reject incomplete FlashForge authentication result";
+        return false;
+    }
+    if (m_auto_login_state == FlashLoginRecoveryState::InProgress) {
+        BOOST_LOG_TRIVIAL(warning) << "Ignore duplicate FlashForge authentication result while session initialization is running";
+        return false;
+    }
+
+    if (m_auto_login_retry_timer)
+        m_auto_login_retry_timer->Stop();
+    ++m_auto_login_generation;
+    m_auto_login_retry_count = 0;
+    m_auto_login_state = FlashLoginRecoveryState::Idle;
+    save_flashforge_token(token_data, username);
+    LoginDialog::SetToken(token_data.accessToken, token_data.refreshToken);
+    on_connect_event();
+    notify_flashforge_login_progress(_L("Account verified. Connecting to cloud services..."));
+    start_flashforge_session_attempt();
+    return true;
+}
+
+void GUI_App::save_flashforge_token(const com_token_data_t& token_data, const std::string& username)
+{
+    if (!app_config)
+        return;
+    app_config->set("access_token", token_data.accessToken);
+    app_config->set("refresh_token", token_data.refreshToken);
+    app_config->set("token_expire_time", std::to_string(token_data.expiresIn));
+    app_config->set("token_start_time", std::to_string(token_data.startTime));
+    if (!username.empty())
+        app_config->set("usr_input_name", username);
+    app_config->save();
+}
+
+void GUI_App::start_flashforge_session_attempt()
+{
+    if (!app_config || m_auto_login_state == FlashLoginRecoveryState::InProgress ||
+        m_auto_login_state == FlashLoginRecoveryState::LoggedIn)
+        return;
+
+    com_token_data_t token_data;
+    token_data.accessToken = app_config->get("access_token");
+    token_data.refreshToken = app_config->get("refresh_token");
+    long long expires_in = 0;
+    long long start_time = 0;
+    parse_config_integer(app_config->get("token_expire_time"), expires_in);
+    parse_config_integer(app_config->get("token_start_time"), start_time);
+    if (expires_in > 0 && expires_in <= std::numeric_limits<int>::max())
+        token_data.expiresIn = static_cast<int>(expires_in);
+    else
+        token_data.expiresIn = 0;
+    token_data.startTime = start_time > 0 ? static_cast<time_t>(start_time) : 0;
+
+    if (token_data.accessToken.empty() || token_data.refreshToken.empty()) {
+        m_auto_login_state = FlashLoginRecoveryState::Idle;
+        m_auto_connecting = false;
+        return;
+    }
+    if (MultiComMgr::inst()->isLoggedIn()) {
+        m_auto_login_state = FlashLoginRecoveryState::LoggedIn;
+        m_auto_connecting = false;
+        return;
+    }
+    if (m_auto_login_thread.joinable())
+        m_auto_login_thread.join();
+
+    const uint64_t generation = m_auto_login_generation;
+    const bool refresh_before_restore = flash_token_needs_refresh(token_data);
+    const bool check_test_server = app_config->get_bool("check_version_test");
+    m_auto_login_state = FlashLoginRecoveryState::InProgress;
+    m_auto_connecting = true;
+
+    wxCommandEvent start_event(EVT_START_LOGIN);
+    start_event.SetEventObject(this);
+    wxPostEvent(this, start_event);
+
+    m_auto_login_thread = Slic3r::create_thread([this, generation, token_data, refresh_before_restore, check_test_server]() mutable {
+        com_add_wan_dev_data_t add_dev_data;
+        bool token_refreshed = false;
+
+        auto finish = [this, generation, &token_data, &add_dev_data, &token_refreshed](
+                          ComErrno ret, ComSessionInitStage stage, bool refresh_failed) {
+            wxQueueEvent(this, new AsyncLoginFinishedEvent(EVT_ASYNC_LOGIN_FINISHED, ret, token_data,
+                add_dev_data, stage, token_refreshed, refresh_failed, generation));
+        };
+
+        if (refresh_before_restore) {
+            const ComErrno refresh_result = MultiComUtils::refreshToken(
+                token_data.refreshToken, token_data, ComTimeoutWanB);
+            if (refresh_result != COM_OK) {
+                finish(refresh_result, ComSessionInitStage::None, true);
+                return;
+            }
+            token_refreshed = true;
+        }
+
+        ComSessionInitStage failed_stage = ComSessionInitStage::None;
+        ComErrno result = MultiComMgr::inst()->addWanDev(
+            token_data, check_test_server, add_dev_data, 2, 200, &failed_stage);
+
+        // A stored access token may be rejected even when its local expiry says it
+        // is valid. Refresh once, then retry session initialization without asking
+        // the user for credentials again.
+        if (result == COM_UNAUTHORIZED && !token_refreshed) {
+            const ComErrno refresh_result = MultiComUtils::refreshToken(
+                token_data.refreshToken, token_data, ComTimeoutWanB);
+            if (refresh_result != COM_OK) {
+                finish(refresh_result, ComSessionInitStage::None, true);
+                return;
+            }
+            token_refreshed = true;
+            failed_stage = ComSessionInitStage::None;
+            result = MultiComMgr::inst()->addWanDev(
+                token_data, check_test_server, add_dev_data, 2, 200, &failed_stage);
+        }
+
+        finish(result, failed_stage, false);
+    });
+}
+
+void GUI_App::schedule_flashforge_session_retry(ComErrno error, ComSessionInitStage stage)
+{
+    static constexpr int retry_delays_seconds[] = {2, 5, 10, 30, 60};
+    const size_t delay_index = std::min<size_t>(m_auto_login_retry_count, std::size(retry_delays_seconds) - 1);
+    const int delay_seconds = retry_delays_seconds[delay_index];
+    ++m_auto_login_retry_count;
+    m_auto_login_state = FlashLoginRecoveryState::RetryScheduled;
+    m_auto_connecting = true;
+
+    BOOST_LOG_TRIVIAL(warning) << "FlashForge cloud session initialization failed, stage="
+                               << session_init_stage_name(stage) << ", error=" << static_cast<int>(error)
+                               << ", retry_in_seconds=" << delay_seconds;
+    notify_flashforge_login_progress(_L("Account verified. Cloud service initialization failed; retrying automatically..."));
+    if (m_auto_login_retry_timer)
+        m_auto_login_retry_timer->StartOnce(delay_seconds * 1000);
+}
+
+void GUI_App::on_flashforge_session_retry_timer(wxTimerEvent& event)
+{
+    event.Skip();
+    if (m_auto_login_state != FlashLoginRecoveryState::RetryScheduled || m_is_closing)
+        return;
+    m_auto_login_state = FlashLoginRecoveryState::Idle;
+    start_flashforge_session_attempt();
+}
+
+void GUI_App::cancel_flashforge_session_recovery()
+{
+    if (m_auto_login_retry_timer)
+        m_auto_login_retry_timer->Stop();
+    ++m_auto_login_generation;
+    m_auto_login_retry_count = 0;
+    m_auto_login_state = FlashLoginRecoveryState::Idle;
+    m_auto_connecting = false;
+}
+
+void GUI_App::notify_flashforge_login_progress(const wxString& message)
+{
+    json payload;
+    payload["command"] = "studio_autoconnecting";
+    payload["data"]["message"] = message.utf8_string();
+    payload["sequence_id"] = "10001";
+    run_script(wxString::Format("window.postMessage(%s)", wxString::FromUTF8(payload.dump())));
 }
 
 bool GUI_App::is_flashforge_login()
@@ -5847,6 +6053,7 @@ void GUI_App::handle_login_result(const std::string &token, const com_add_wan_de
 
 void GUI_App::handle_login_out()
 {
+    cancel_flashforge_session_recovery();
     // 关闭窗口后执行 GUI::wxGetApp().run_script 可能出现崩溃
     if (mainframe == nullptr || mainframe->is_shutdown()) {
         return;

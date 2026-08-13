@@ -275,8 +275,11 @@ void MultiComMgr::removeLanDev(com_id_t id)
 }
 
 ComErrno MultiComMgr::addWanDev(const com_token_data_t &tokenData, bool isCheckVersionOnTestServer,
-    com_add_wan_dev_data_t &addDevData, int tryCnt, int tryMsInterval)
+    com_add_wan_dev_data_t &addDevData, int tryCnt, int tryMsInterval, ComSessionInitStage *failedStage)
 {
+    if (failedStage)
+        *failedStage = ComSessionInitStage::None;
+
     auto tryDo = [tryCnt, tryMsInterval](const std::function<ComErrno()> &func) {
         ComErrno ret = COM_ERROR;
         for (int i = 0; i < tryCnt; ++i) {
@@ -290,16 +293,27 @@ ComErrno MultiComMgr::addWanDev(const com_token_data_t &tokenData, bool isCheckV
         return ret;
     };
     BOOST_LOG_TRIVIAL(info) << "MultiComMgr::addWanDev";
-    if (networkIntfc() == nullptr || m_login) {
+    if (networkIntfc() == nullptr) {
+        if (failedStage)
+            *failedStage = ComSessionInitStage::NetworkInterface;
+        return COM_ERROR;
+    }
+    if (m_login) {
+        if (failedStage)
+            *failedStage = ComSessionInitStage::ExistingSession;
         return COM_ERROR;
     }
     m_clientId = generateClientId();
+    if (failedStage)
+        *failedStage = ComSessionInitStage::UserProfile;
     ComErrno ret = tryDo([&]() {
         return MultiComUtils::getUserProfile(tokenData.accessToken, addDevData.userProfile, ComTimeoutWanA);
     });
     if (ret != COM_OK) {
         return ret;
     }
+    if (failedStage)
+        *failedStage = ComSessionInitStage::AccountBinding;
     ret = tryDo([&]() {
         return MultiComUtils::bindAccountRelp(m_clientId, tokenData.accessToken, addDevData.userProfile.email,
             addDevData.showUserPoints, ComTimeoutWanA);
@@ -327,6 +341,8 @@ ComErrno MultiComMgr::addWanDev(const com_token_data_t &tokenData, bool isCheckV
     startFeedbackLogSession();
     initWanConnAsync(tokenData.accessToken);
     QueueEvent(new ComGetUserProfileEvent(COM_GET_USER_PROFILE_EVENT, addDevData.userProfile, ret));
+    if (failedStage)
+        *failedStage = ComSessionInitStage::None;
     return ret;
 }
 

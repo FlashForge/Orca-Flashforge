@@ -49,7 +49,8 @@ public:
     void removeLanDev(com_id_t id);
 
     ComErrno addWanDev(const com_token_data_t &tokenData, bool isCheckVersionOnTestServer,
-        com_add_wan_dev_data_t &addDevData, int tryCnt, int tryMsInterval);
+        com_add_wan_dev_data_t &addDevData, int tryCnt, int tryMsInterval,
+        ComSessionInitStage *failedStage = nullptr);
 
     void removeWanDev();
 
