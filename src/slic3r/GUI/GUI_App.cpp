@@ -3163,6 +3163,9 @@ bool GUI_App::on_init_inner()
     });
     Bind(EVT_LOGIN_SUCCEED, [this](auto &event) {
         m_auto_connecting = false;
+        // The account session is already usable. MQTT is an optional service
+        // started afterwards and cannot turn this login into a failure.
+        MultiComMgr::inst()->startWanMqtt();
         if (m_logout_tip && m_logout_tip->IsShown()) {
           m_logout_tip->Close();
         }
@@ -6285,14 +6288,16 @@ void GUI_App::on_connect_event()
 void GUI_App::get_usr_profile(ComGetUserProfileEvent &event) 
 {
     event.Skip();
+    if (!MultiComMgr::inst()->isLoggedIn()
+        || event.sessionGeneration != MultiComMgr::inst()->wanSessionGeneration()) {
+        BOOST_LOG_TRIVIAL(info) << "Ignore stale FlashForge user profile event, generation="
+                                << event.sessionGeneration;
+        return;
+    }
     log_flash_preset_sync("LOGIN_PROFILE result=" + std::to_string(static_cast<int>(event.ret))
                           + " user_id=" + event.userProfile.uid);
     if (event.ret == ComErrno::COM_OK) {
-        std::string access_token;
-        bool show_user_points = false;
         if (app_config != nullptr) {
-            access_token = app_config->get("access_token");
-            show_user_points = app_config->get("show_user_points") == "true";
             app_config->set("usr_uid", event.userProfile.uid);
             app_config->set("usr_pic", event.userProfile.headImgUrl);
             app_config->set("usr_name", event.userProfile.nickname);
@@ -6300,7 +6305,6 @@ void GUI_App::get_usr_profile(ComGetUserProfileEvent &event)
             app_config->save();
         }
         LoginDialog::SetUsrInfo(event.userProfile);
-        handle_login_result(access_token, com_add_wan_dev_data_t{ event.userProfile, show_user_points }, 0);
 
         // FlashForge login owns the preset-sync lifecycle in the current single-agent architecture.
         if (m_agent && preset_bundle && mainframe && m_agent->is_user_login()) {
@@ -6593,6 +6597,12 @@ void GUI_App::restore_gl_canvas_after_repeat_logout(const char* /*phase*/, int r
 
 void GUI_App::refresh_access_token(ComRefreshTokenEvent &event)
 {
+    if (!MultiComMgr::inst()->isLoggedIn()
+        || event.sessionGeneration != MultiComMgr::inst()->wanSessionGeneration()) {
+        BOOST_LOG_TRIVIAL(info) << "Ignore stale FlashForge token refresh event, generation="
+                                << event.sessionGeneration;
+        return;
+    }
     app_config->set("access_token", event.tokenData.accessToken);
     app_config->set("refresh_token", event.tokenData.refreshToken);
     app_config->set("token_expire_time", std::to_string(event.tokenData.expiresIn));

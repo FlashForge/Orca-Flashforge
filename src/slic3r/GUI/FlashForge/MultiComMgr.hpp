@@ -40,6 +40,7 @@ public:
 
     const std::string &clientId() const { return m_clientId; }
     bool isLoggedIn() const { return m_login; }
+    uint64_t wanSessionGeneration() const { return m_wanSessionGeneration.load(); }
     const std::string &userId() const { return m_userId; }
 
     std::string homePageUrl();
@@ -53,6 +54,10 @@ public:
         ComSessionInitStage *failedStage = nullptr);
 
     void removeWanDev();
+
+    // Starts the optional MQTT subsystem after the account session has been
+    // published as logged in. Must be called on the wx event thread.
+    void startWanMqtt();
 
     ComErrno bindWanDev(const std::string &ip, unsigned short port, const std::string &serialNumber,
         unsigned short pid, const std::string &name, unsigned short bindType);
@@ -75,6 +80,14 @@ public:
     const std::unordered_map<std::string, std::vector<std::string>>& getDevUnupdateList();
 
 private:
+    enum class MqttRecoveryState {
+        Disabled,
+        FetchingConfig,
+        Connecting,
+        Online,
+        RetryScheduled
+    };
+
     using std_precise_clock = std::chrono::high_resolution_clock;
 
     typedef std::shared_ptr<ComConnection> com_ptr_t;
@@ -109,7 +122,7 @@ private:
 
     void onWanConnRead(const WanConnReadEvent &event);
 
-    void onWanConnUnauthorized(wxCommandEvent &event);
+    void onWanConnUnauthorized(const WanConnUnauthorizedEvent &event);
 
     void onRefreshToken(const ComRefreshTokenEvent &event);
 
@@ -119,7 +132,9 @@ private:
 
     void scheduleMqttConfigRefreshRetry();
 
-    void clearRejectedMqttConnection(ComErrno ret);
+    void startMqttRecovery();
+
+    void disableMqtt();
 
     std::string generateClientId();
 
@@ -136,7 +151,6 @@ private:
 
     void setMaintainThdReqHeader(bool isCheckVersionTestServer);
 
-    void initWanConnAsync(const std::string &accessToken);
     void subscribeWanDevTopic();
 
     void updateWanDevDetail();
@@ -149,15 +163,17 @@ private:
 
 private:
     int                                                       m_idNum;
-    bool                                                      m_login;
+    std::atomic_bool                                          m_login;
     bool                                                      m_httpOnline;
     bool                                                      m_connOnline;
-    std::atomic<uint64_t>                                     m_mqttGeneration { 0 };
-    std::atomic_bool                                          m_mqttConfigRefreshInFlight { false };
-    bool                                                      m_mqttReconnectAllowed { false };
-    bool                                                      m_mqttRecoveryInProgress { false };
+    std::atomic<uint64_t>                                     m_wanSessionGeneration { 0 };
+    MqttRecoveryState                                         m_mqttState { MqttRecoveryState::Disabled };
+    uint64_t                                                  m_mqttRequestGeneration { 0 };
+    uint64_t                                                  m_mqttConnectionGeneration { 0 };
+    uint64_t                                                  m_mqttBlockedRefreshTokenRevision { 0 };
     unsigned int                                              m_mqttConfigRefreshRetryCount { 0 };
     std::chrono::steady_clock::time_point                     m_nextMqttConfigRefreshTime {};
+    std::chrono::steady_clock::time_point                     m_mqttConnectDeadline {};
     std::string                                               m_clientId;
     std::string                                               m_userId;
     std::string                                               m_dataDir;

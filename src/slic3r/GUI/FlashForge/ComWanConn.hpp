@@ -1,6 +1,8 @@
 #ifndef slic3r_GUI_ComWanConn_hpp_
 #define slic3r_GUI_ComWanConn_hpp_
 
+#include <cstdint>
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
@@ -16,20 +18,29 @@ namespace Slic3r { namespace GUI {
 
 struct WanConnStatusEvent : public wxCommandEvent {
     fnet_conn_status_t status;
+    uint64_t sessionGeneration { 0 };
+    uint64_t connectionGeneration { 0 };
 };
 struct WanConnReadEvent : public wxCommandEvent {
     fnet_conn_read_data_t readData;
+    uint64_t sessionGeneration { 0 };
+    uint64_t connectionGeneration { 0 };
+};
+struct WanConnUnauthorizedEvent : public wxCommandEvent {
+    uint64_t sessionGeneration { 0 };
+    uint64_t connectionGeneration { 0 };
 };
 wxDECLARE_EVENT(WAN_CONN_STATUS_EVENT, WanConnStatusEvent);
 wxDECLARE_EVENT(WAN_CONN_READ_EVENT, WanConnReadEvent);
-wxDECLARE_EVENT(WAN_CONN_HTTP_UNAUTHORIZED, wxCommandEvent);
+wxDECLARE_EVENT(WAN_CONN_HTTP_UNAUTHORIZED, WanConnUnauthorizedEvent);
 
 class ComWanConn : public wxEvtHandler, public Singleton<ComWanConn>
 {
 public:
     ComWanConn();
 
-    ComErrno createConn(fnet::FlashNetworkIntfc *networkIntfc, const char *clientId);
+    ComErrno createConn(fnet::FlashNetworkIntfc *networkIntfc, const char *clientId,
+        uint64_t sessionGeneration, uint64_t connectionGeneration);
 
     void freeConn();
 
@@ -84,6 +95,12 @@ public:
     ComErrno sendIndepMatlConfig(const char *topic, const fnet_indep_matl_config_t &indepMatlConfig);
 
 private:
+    struct ConnectionCallbackContext {
+        ComWanConn *owner;
+        uint64_t sessionGeneration;
+        uint64_t connectionGeneration;
+    };
+
     static void statusCallback(fnet_conn_status_t status, void *data);
 
     static int updateCallback(const char **clientId, void *data);
@@ -94,6 +111,7 @@ private:
     fnet::FlashNetworkIntfc *m_networkIntfc;
     std::string              m_clientId;
     void                    *m_conn;
+    std::unique_ptr<ConnectionCallbackContext> m_callbackContext;
     boost::shared_mutex      m_connMutex;
     ComThreadPool            m_threadPool;
     WaitEvent                m_threadExitEvent;

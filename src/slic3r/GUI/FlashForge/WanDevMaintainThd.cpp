@@ -28,12 +28,14 @@ void WanDevMaintainThd::exit()
     m_thread.join();
 }
 
-void WanDevMaintainThd::setReqHeaders(const std::string &clientId, int64_t appId, int64_t platId)
+void WanDevMaintainThd::setReqHeaders(const std::string &clientId, int64_t appId, int64_t platId,
+    uint64_t sessionGeneration)
 {
     boost::mutex::scoped_lock lock(m_reqHeadersMutex);
     m_clientId = clientId;
     m_appId = appId;
     m_platId = platId;
+    m_sessionGeneration = sessionGeneration;
 }
 
 void WanDevMaintainThd::setReloginHttp()
@@ -71,36 +73,39 @@ void WanDevMaintainThd::run()
         }
         std::string clientId;
         int64_t appId, platId;
-        getReqHeaders(clientId, appId, platId);
+        uint64_t sessionGeneration = 0;
+        getReqHeaders(clientId, appId, platId, sessionGeneration);
         if (m_reloginHttp) {
             ScopedWanDevToken token = WanDevTokenMgr::inst()->getScopedToken();
-            if (reloginHttp(clientId, appId, platId, token)) {
+            if (reloginHttp(clientId, appId, platId, sessionGeneration, token)) {
                 m_reloginHttp = false;
             }
         } else {
             ScopedWanDevToken token = WanDevTokenMgr::inst()->getScopedToken();
             if (m_updateWanDev) {
                 m_updateWanDev = false;
-                updateWanDev(clientId, appId, platId, token.accessToken());
+                updateWanDev(clientId, appId, platId, sessionGeneration, token.accessToken());
             }
             if (m_updateUserProfile) {
                 m_updateUserProfile = false;
-                updateUserProfile(token.accessToken());
+                updateUserProfile(sessionGeneration, token.accessToken());
             }
         }
     }
 }
 
-void WanDevMaintainThd::getReqHeaders(std::string &clientId, int64_t &appId, int64_t &platId)
+void WanDevMaintainThd::getReqHeaders(std::string &clientId, int64_t &appId, int64_t &platId,
+    uint64_t &sessionGeneration)
 {
     boost::mutex::scoped_lock lock(m_reqHeadersMutex);
     clientId = m_clientId;
     appId = m_appId;
     platId = m_platId;
+    sessionGeneration = m_sessionGeneration;
 }
 
 bool WanDevMaintainThd::reloginHttp(const std::string &clientId, int64_t &appId, int64_t &platId,
-    ScopedWanDevToken &scopedToken)
+    uint64_t sessionGeneration, ScopedWanDevToken &scopedToken)
 {
     com_user_profile_t userProfile;
     ComErrno ret = MultiComUtils::getUserProfile(scopedToken.accessToken(), userProfile, ComTimeoutWanB);
@@ -120,13 +125,25 @@ bool WanDevMaintainThd::reloginHttp(const std::string &clientId, int64_t &appId,
         ReloginHttpEvent *event = new ReloginHttpEvent;
         event->SetEventType(RELOGIN_HTTP_EVENT);
         event->ret = ret;
+        event->sessionGeneration = sessionGeneration;
         event->clientId = clientId;
         event->accessToken = scopedToken.accessToken();
         event->userProfile = userProfile;
         event->devInfos = devInfos;
         event->devCnt = devCnt;
         QueueEvent(event);
-        return ret == COM_OK;
+        // A new account may have started while this request was in flight.
+        // Do not let the old request clear the new session's relogin flag.
+        std::string currentClientId;
+        int64_t currentAppId = 0;
+        int64_t currentPlatId = 0;
+        uint64_t currentSessionGeneration = 0;
+        getReqHeaders(currentClientId, currentAppId, currentPlatId, currentSessionGeneration);
+        (void) currentClientId;
+        (void) currentAppId;
+        (void) currentPlatId;
+        return ret == COM_OK && scopedToken.sessionGeneration() == sessionGeneration
+            && currentSessionGeneration == sessionGeneration;
     } else {
         m_networkIntfc->freeWanDevList(devInfos, devCnt);
         return false;
@@ -134,7 +151,7 @@ bool WanDevMaintainThd::reloginHttp(const std::string &clientId, int64_t &appId,
 }
 
 void WanDevMaintainThd::updateWanDev(const std::string &clientId, int64_t &appId, int64_t &platId,
-    const std::string &accessToken)
+    uint64_t sessionGeneration, const std::string &accessToken)
 {
     int tryCnt = 3;
     int fnetRet = FNET_OK;
@@ -155,6 +172,7 @@ void WanDevMaintainThd::updateWanDev(const std::string &clientId, int64_t &appId
         GetWanDevEvent *event = new GetWanDevEvent;
         event->SetEventType(GET_WAN_DEV_EVENT);
         event->ret = MultiComUtils::fnetRet2ComErrno(fnetRet);
+        event->sessionGeneration = sessionGeneration;
         event->clientId = clientId;
         event->devInfos = devInfos;
         event->devCnt = devCnt;
@@ -164,7 +182,7 @@ void WanDevMaintainThd::updateWanDev(const std::string &clientId, int64_t &appId
     }
 }
 
-void WanDevMaintainThd::updateUserProfile(const std::string &accessToken)
+void WanDevMaintainThd::updateUserProfile(uint64_t sessionGeneration, const std::string &accessToken)
 {
     int tryCnt = 3;
     ComErrno ret = COM_OK;
@@ -179,7 +197,8 @@ void WanDevMaintainThd::updateUserProfile(const std::string &accessToken)
         }
     }
     if (!m_exitThread) {
-        QueueEvent(new ComGetUserProfileEvent(COM_GET_USER_PROFILE_EVENT, userProfile, ret));
+        QueueEvent(new ComGetUserProfileEvent(
+            COM_GET_USER_PROFILE_EVENT, userProfile, ret, sessionGeneration));
     }
 }
 

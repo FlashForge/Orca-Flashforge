@@ -167,7 +167,6 @@ ComErrno ComConnection::initialize(fnet_dev_product_t **product, fnet_dev_detail
             ScopedWanDevToken token = WanDevTokenMgr::inst()->getScopedToken();
             m_cmdExecData.accessToken = token.accessToken().c_str();
             ret = getDevProductDetail.exec(m_cmdExecData);
-            token.unlockToken();
             if (ret == COM_OK || ret == COM_UNAUTHORIZED || m_exitThreadEvent.get()) {
                 break;
             } else if (i + 1 < tryCnt) {

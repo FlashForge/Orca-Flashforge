@@ -242,52 +242,74 @@ struct ComWanDevMaintainEvent : public wxCommandEvent
 
 struct ComGetUserProfileEvent : public wxCommandEvent
 {
-    ComGetUserProfileEvent(wxEventType type, const com_user_profile_t &_userProfile, ComErrno _ret)
+    ComGetUserProfileEvent(wxEventType type, const com_user_profile_t &_userProfile, ComErrno _ret,
+        uint64_t _sessionGeneration)
         : wxCommandEvent(type)
         , userProfile(_userProfile)
         , ret(_ret)
+        , sessionGeneration(_sessionGeneration)
     {
     }
     ComGetUserProfileEvent *Clone() const
     {
-        return new ComGetUserProfileEvent(GetEventType(), userProfile, ret);
+        return new ComGetUserProfileEvent(GetEventType(), userProfile, ret, sessionGeneration);
     }
     com_user_profile_t userProfile;
     ComErrno ret;
+    uint64_t sessionGeneration;
 };
 
 struct ComRefreshTokenEvent : public wxCommandEvent
 {
-    ComRefreshTokenEvent(wxEventType type, const com_token_data_t &_tokenData, ComErrno _ret)
+    ComRefreshTokenEvent(wxEventType type, const com_token_data_t &_tokenData, ComErrno _ret,
+        uint64_t _sessionGeneration, uint64_t _previousRevision, uint64_t _tokenRevision)
         : wxCommandEvent(type)
         , tokenData(_tokenData)
         , ret(_ret)
+        , sessionGeneration(_sessionGeneration)
+        , previousRevision(_previousRevision)
+        , tokenRevision(_tokenRevision)
     {
     }
     ComRefreshTokenEvent *Clone() const
     {
-        return new ComRefreshTokenEvent(GetEventType(), tokenData, ret);
+        return new ComRefreshTokenEvent(
+            GetEventType(), tokenData, ret, sessionGeneration, previousRevision, tokenRevision);
     }
     com_token_data_t tokenData;
     ComErrno ret;
+    uint64_t sessionGeneration;
+    uint64_t previousRevision;
+    uint64_t tokenRevision;
 };
 
 struct ComMqttConfigRefreshEvent : public wxCommandEvent
 {
-    ComMqttConfigRefreshEvent(wxEventType type, const com_mqtt_config_t &_config, ComErrno _ret, uint64_t _generation)
+    ComMqttConfigRefreshEvent(wxEventType type, const com_mqtt_config_t &_config, ComErrno _ret,
+        uint64_t _sessionGeneration, uint64_t _requestGeneration, uint64_t _tokenRevision,
+        bool _tokenRefreshAttempted, bool _tokenRefreshSucceeded)
         : wxCommandEvent(type)
         , config(_config)
         , ret(_ret)
-        , generation(_generation)
+        , sessionGeneration(_sessionGeneration)
+        , requestGeneration(_requestGeneration)
+        , tokenRevision(_tokenRevision)
+        , tokenRefreshAttempted(_tokenRefreshAttempted)
+        , tokenRefreshSucceeded(_tokenRefreshSucceeded)
     {
     }
     ComMqttConfigRefreshEvent *Clone() const
     {
-        return new ComMqttConfigRefreshEvent(GetEventType(), config, ret, generation);
+        return new ComMqttConfigRefreshEvent(GetEventType(), config, ret, sessionGeneration,
+            requestGeneration, tokenRevision, tokenRefreshAttempted, tokenRefreshSucceeded);
     }
     com_mqtt_config_t config;
     ComErrno ret;
-    uint64_t generation;
+    uint64_t sessionGeneration;
+    uint64_t requestGeneration;
+    uint64_t tokenRevision;
+    bool tokenRefreshAttempted;
+    bool tokenRefreshSucceeded;
 };
 
 struct ComBusRequestEvent : public wxCommandEvent
