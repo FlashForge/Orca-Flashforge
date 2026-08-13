@@ -106,7 +106,10 @@ FFRTMPVideoCtrl::FFRTMPVideoCtrl(wxWindow *parent)
     : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxFULL_REPAINT_ON_RESIZE)
 {
     SetBackgroundColour(*wxBLACK);
-    SetMinSize(wxSize(FromDIP(621), FromDIP(466)));
+    // Match the responsive device-page column. 621 DIP makes the two-column
+    // layout wider than a 1080p client area when Windows scaling is 125%.
+    constexpr int inline_camera_min_width = 580;
+    SetMinSize(wxSize(FromDIP(inline_camera_min_width), FromDIP(466)));
 
     // 记录内联时的父窗口，弹窗（全屏预览）关闭后需归还，否则控件会被孤立、内联区域永久空白
     m_inline_parent = parent;
@@ -1693,6 +1696,12 @@ void FFRTMPVideoCtrl::setPlayState(PlayState s)
 
 wxString FFRTMPVideoCtrl::statusText() const
 {
+    // A removed/unbound device may still retain the previous stream type until
+    // the decoder is fully reaped. It is not a reconnecting WAN stream, so do
+    // not expose a stale "Loading video..." status in the no-device state.
+    if (m_curComId == ComInvalidId)
+        return wxString();
+
     // 多语言：msgid 用英文，各语言译文见 localization/flashforge/{lang}/flashforge_{lang}.po。
     switch (m_play_state.load()) {
     case PlayState::Initializing: return _L("Initializing camera...");

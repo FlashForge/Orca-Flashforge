@@ -203,8 +203,7 @@ TimeLapseVideoPanel::TimeLapseVideoPanel(wxWindow *parent)
     SetDoubleBuffered(true);
 
     m_scr = new wxScrolledWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL);
-    m_scr->SetMinSize(wxSize(FromDIP(680), FromDIP(224)));
-    m_scr->SetMaxSize(wxSize(FromDIP(680), FromDIP(224)));
+    m_scr->SetMinSize(wxSize(0, FromDIP(224)));
     m_scr->SetScrollRate(0, 30);
 
     m_deleteBtn = new FFButton(this);
@@ -250,12 +249,12 @@ TimeLapseVideoPanel::TimeLapseVideoPanel(wxWindow *parent)
     m_scr->SetSizer(scrSizer);
 
     wxSizer *sizer = new wxBoxSizer(wxVERTICAL);
-    sizer->Add(m_scr);
+    sizer->Add(m_scr, 0, wxEXPAND);
     sizer->AddStretchSpacer(1);
     sizer->Add(m_btnSizer, 0, wxEXPAND | wxRIGHT, FromDIP(14));
     sizer->AddSpacer(FromDIP(5));
     SetSizer(sizer);
-    Fit();
+    SetMinSize(wxSize(0, FromDIP(255)));
 
     m_deleteBtn->Bind(wxEVT_BUTTON, &TimeLapseVideoPanel::onDelete, this);
     m_downloadBtn->Bind(wxEVT_BUTTON, &TimeLapseVideoPanel::onDownload, this);
