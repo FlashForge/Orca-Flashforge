@@ -5592,6 +5592,20 @@ msgstr ""
 "Se han detectado filamentos PLA y PETG mezclados. Ajuste los parámetros "
 "según la Wiki para garantizar la calidad de impresión."
 
+msgid ""
+"Prime tower is disabled because the current plate prints multiple objects by "
+"object. Change the plate print sequence to by layer to enable it."
+msgstr ""
+"La torre de purga está desactivada porque la cama actual imprime varios "
+"objetos de forma secuencial. Cambie la secuencia de impresión de la cama a "
+"«Por capa» para activarla."
+
+msgid "The plate print sequence overrides the global setting."
+msgstr "La secuencia de impresión de la cama anula la configuración global."
+
+msgid "Open plate settings"
+msgstr "Abrir la configuración de la cama"
+
 msgid "The prime tower extends beyond the plate boundary."
 msgstr "La torre de purga se extiende más allá del límite de la cama."
 
@@ -7506,6 +7520,12 @@ msgstr "Mover cama al frente"
 
 msgid "Customize current plate"
 msgstr "Personalizar cama actual"
+
+msgid "Print sequence: By object (plate override)"
+msgstr "Secuencia de impresión: Por objeto (la cama tiene prioridad)"
+
+msgid "Print sequence: By layer (plate override)"
+msgstr "Secuencia de impresión: Por capa (la cama tiene prioridad)"
 
 #, c-format
 msgid "The %s nozzle can not print %s."

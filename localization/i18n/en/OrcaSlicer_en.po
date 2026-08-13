@@ -5163,6 +5163,19 @@ msgid ""
 "to the Wiki to ensure print quality."
 msgstr ""
 
+msgid ""
+"Prime tower is disabled because the current plate prints multiple objects by "
+"object. Change the plate print sequence to by layer to enable it."
+msgstr ""
+"Prime tower is disabled because the current plate prints multiple objects by "
+"object. Change the plate print sequence to by layer to enable it."
+
+msgid "The plate print sequence overrides the global setting."
+msgstr "The plate print sequence overrides the global setting."
+
+msgid "Open plate settings"
+msgstr "Open plate settings"
+
 msgid "The prime tower extends beyond the plate boundary."
 msgstr ""
 
@@ -6962,6 +6975,12 @@ msgstr ""
 
 msgid "Customize current plate"
 msgstr ""
+
+msgid "Print sequence: By object (plate override)"
+msgstr "Print sequence: By object (plate override)"
+
+msgid "Print sequence: By layer (plate override)"
+msgstr "Print sequence: By layer (plate override)"
 
 #, c-format
 msgid "The %s nozzle can not print %s."

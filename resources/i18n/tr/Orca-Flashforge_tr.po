@@ -5211,6 +5211,20 @@ msgid ""
 "to the Wiki to ensure print quality."
 msgstr "Karışımda PLA ve PETG filamentleri tespit edildi. Baskı kalitesini sağlamak için parametreleri Wiki'ye göre ayarlayın."
 
+msgid ""
+"Prime tower is disabled because the current plate prints multiple objects by "
+"object. Change the plate print sequence to by layer to enable it."
+msgstr ""
+"Ana kule devre dışı bırakıldı çünkü mevcut plaka birden fazla nesneyi nesneye "
+"göre yazdırıyor. Etkinleştirmek için plaka yazdırma sırasını katmana göre "
+"olarak değiştirin."
+
+msgid "The plate print sequence overrides the global setting."
+msgstr "Plaka yazdırma sırası genel ayarı geçersiz kılar."
+
+msgid "Open plate settings"
+msgstr "Plaka ayarlarını aç"
+
 msgid "The prime tower extends beyond the plate boundary."
 msgstr "Ana kule plaka sınırının ötesine uzanır."
 
@@ -7039,6 +7053,12 @@ msgstr "Plakayı öne doğru hareket ettirin"
 
 msgid "Customize current plate"
 msgstr "Mevcut plakayı özelleştir"
+
+msgid "Print sequence: By object (plate override)"
+msgstr "Yazdırma sırası: Nesneye göre (plaka ayarı öncelikli)"
+
+msgid "Print sequence: By layer (plate override)"
+msgstr "Yazdırma sırası: Katmana göre (plaka ayarı öncelikli)"
 
 #, c-format
 msgid "The %s nozzle can not print %s."
