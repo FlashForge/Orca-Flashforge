@@ -269,49 +269,58 @@ wxBoxSizer *PreferencesDialog::create_item_language_combobox(wxString title, wxS
     });
 
     combobox->Bind(wxEVT_COMBOBOX, [this, param, vlist, combobox](wxCommandEvent &e) {
-        if (combobox->GetSelection() == m_current_language_selected)
+        const int selected_language_index = combobox->GetSelection();
+        if (selected_language_index == m_current_language_selected)
             return;
 
-        if (e.GetString().ToStdString() != app_config->get(param)) {
-            {
-                //check if the project has changed
-                if (wxGetApp().plater()->is_project_dirty()) {
-                    auto result = MessageDialog(static_cast<wxWindow*>(this), _L("The current project has unsaved changes, save it before continue?"),
-                        wxString(SLIC3R_APP_FULL_NAME) + " - " + _L("Save"), wxYES_NO | wxCANCEL | wxYES_DEFAULT | wxCENTRE).ShowModal();
+        if (selected_language_index < 0 || selected_language_index >= static_cast<int>(vlist.size())) {
+            e.Skip();
+            return;
+        }
 
-                    if (result == wxID_YES) {
-                        wxGetApp().plater()->save_project();
-                    }
+        const std::string selected_language = vlist[selected_language_index]->CanonicalName.ToUTF8().data();
+        if (selected_language == app_config->get(param)) {
+            e.Skip();
+            return;
+        }
+
+        const int previous_language = m_current_language_selected;
+
+        // DropDown sends wxEVT_COMBOBOX synchronously before it dismisses its popup. Defer
+        // modal dialogs until the mouse event completes, otherwise the popup remains visible
+        // behind the dialogs on macOS.
+        CallAfter([this, combobox, selected_language_index, previous_language, selected_language]() {
+            // Check if the project has changed.
+            if (wxGetApp().plater()->is_project_dirty()) {
+                const int result = MessageDialog(static_cast<wxWindow *>(this),
+                    _L("The current project has unsaved changes, save it before continue?"),
+                    wxString(SLIC3R_APP_FULL_NAME) + " - " + _L("Save"),
+                    wxYES_NO | wxCANCEL | wxYES_DEFAULT | wxCENTRE).ShowModal();
+
+                if (result == wxID_CANCEL ||
+                    (result == wxID_YES && wxGetApp().plater()->save_project() != wxID_YES)) {
+                    combobox->SetSelection(previous_language);
+                    return;
                 }
+            }
 
-
+            {
                 // the dialog needs to be destroyed before the call to switch_language()
                 // or sometimes the application crashes into wxDialogBase() destructor
                 // so we put it into an inner scope
                 MessageDialog msg_wingow(nullptr, _L("Switching the language requires application restart.\n") + "\n" + _L("Do you want to continue?"),
                                          L("Language selection"), wxICON_QUESTION | wxOK | wxCANCEL);
                 if (msg_wingow.ShowModal() == wxID_CANCEL) {
-                    combobox->SetSelection(m_current_language_selected);
+                    combobox->SetSelection(previous_language);
                     return;
                 }
             }
 
-            auto check = [this](bool yes_or_no) {
-                // if (yes_or_no)
-                //    return true;
-                int act_btns = ActionButtons::SAVE;
-                return wxGetApp().check_and_keep_current_preset_changes(_L("Switching application language"),
-                                                                        _L("Switching application language while some presets are modified."), act_btns);
-            };
-
-            m_current_language_selected = combobox->GetSelection();
-            if (m_current_language_selected >= 0 && m_current_language_selected < vlist.size()) {
-                m_pending_language = vlist[m_current_language_selected]->CanonicalName.ToUTF8().data();
-                m_recreate_GUI = true;
-                EndModal(wxID_OK);
-                return;
-            }
-        }
+            m_current_language_selected = selected_language_index;
+            m_pending_language          = selected_language;
+            m_recreate_GUI              = true;
+            EndModal(wxID_OK);
+        });
 
         e.Skip();
     });
