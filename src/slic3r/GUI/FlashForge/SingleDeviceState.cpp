@@ -4451,7 +4451,7 @@ void SingleDeviceState::refreshCameraStream()
         && (data.devDetail->pid == ADVENTURER_5M || data.devDetail->pid == ADVENTURER_5M_PRO);
     // Adventurer 5M series uses the presence of a stream URL as the availability
     // signal in LAN mode. All other cases use the explicit camera field.
-    const bool camera_available = uses_stream_url_capability ? stream_url_present : data.devDetail->camera == 1;
+    bool camera_available = uses_stream_url_capability ? stream_url_present : data.devDetail->camera == 1;
 
     if (data.devDetail->pid == GUIDER_3_ULTRA) {
         camera_available = true;
