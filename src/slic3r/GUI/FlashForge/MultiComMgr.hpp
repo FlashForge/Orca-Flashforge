@@ -64,6 +64,10 @@ public:
     // COM_ACCESS_TOKEN_REFRESH_RESULT_EVENT.
     bool requestAccessTokenRefresh(uint64_t requestGeneration);
 
+    // Requests the latest WAN device list immediately. The protected request
+    // also drives the existing Unauthorized -> refresh -> retry recovery path.
+    void requestWanDeviceListRefresh();
+
     ComErrno bindWanDev(const std::string &ip, unsigned short port, const std::string &serialNumber,
         unsigned short pid, const std::string &name, unsigned short bindType);
 

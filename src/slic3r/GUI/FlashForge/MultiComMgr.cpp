@@ -415,6 +415,16 @@ bool MultiComMgr::requestAccessTokenRefresh(uint64_t requestGeneration)
     return true;
 }
 
+void MultiComMgr::requestWanDeviceListRefresh()
+{
+    if (!m_login || !m_wanDevMaintainThd) {
+        return;
+    }
+    BOOST_LOG_TRIVIAL(info) << "Request WAN device list refresh, session="
+                            << m_wanSessionGeneration.load();
+    m_wanDevMaintainThd->setUpdateWanDev();
+}
+
 void MultiComMgr::startFeedbackLogSession()
 {
     stopFeedbackLogSession();
@@ -722,12 +732,15 @@ void MultiComMgr::onReloginHttp(ReloginHttpEvent &event)
 void MultiComMgr::onUpdateWanDev(const GetWanDevEvent &event)
 {
     fnet::FreeInDestructorArg freeDevInfos(event.devInfos, m_networkIntfc->freeWanDevList, event.devCnt);
-    if (event.sessionGeneration != m_wanSessionGeneration.load()
-        || m_clientId != event.clientId || !m_httpOnline || !m_connOnline) {
+    if (!m_login || event.sessionGeneration != m_wanSessionGeneration.load()
+        || m_clientId != event.clientId) {
         return;
     }
     if (event.ret != COM_OK) {
         maintianWanDev(event.ret);
+        return;
+    }
+    if (!m_httpOnline || !m_connOnline) {
         return;
     }
     m_unUpdateDevList.clear();
