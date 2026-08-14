@@ -97,6 +97,32 @@ bool is_same_device_client_id(const std::string &lhs, const std::string &rhs)
     return !lhs_prefix.empty() && lhs_prefix == client_id_device_prefix(rhs);
 }
 
+template<typename Request>
+ComErrno execute_authenticated_wan_request(const char *operation, Request &&request)
+{
+    ScopedWanDevToken token = WanDevTokenMgr::inst()->getScopedToken();
+    ComErrno ret = request(token.accessToken());
+    if (ret != COM_UNAUTHORIZED) {
+        return ret;
+    }
+
+    BOOST_LOG_TRIVIAL(warning) << operation << " was unauthorized; refreshing access token"
+                               << ", session=" << token.sessionGeneration()
+                               << ", token_revision=" << token.tokenRevision();
+    ret = WanDevTokenMgr::inst()->refreshToken(token);
+    if (ret != COM_OK) {
+        BOOST_LOG_TRIVIAL(warning) << operation << " token refresh failed: " << static_cast<int>(ret);
+        return ret;
+    }
+
+    // The protected operation is retried exactly once. A concurrent refresh is
+    // reused by refreshToken(), so parallel requests do not rotate the token twice.
+    ret = request(token.accessToken());
+    BOOST_LOG_TRIVIAL(info) << operation << " retry completed: " << static_cast<int>(ret)
+                            << ", token_revision=" << token.tokenRevision();
+    return ret;
+}
+
 const char *wan_device_status_source_name(WanDeviceStatusSource source)
 {
     switch (source) {
@@ -459,54 +485,73 @@ void MultiComMgr::stopFeedbackLogSession()
 ComErrno MultiComMgr::bindWanDev(const std::string &ip, unsigned short port, const std::string &serialNumber,
     unsigned short pid, const std::string &name, unsigned short bindType)
 {
-    if (!m_httpOnline || !m_connOnline) {
+    if (!m_login || !m_httpOnline) {
         return COM_ERROR;
     }
-    ScopedWanDevToken token = WanDevTokenMgr::inst()->getScopedToken();
-    fnet_wan_dev_bind_data_t *bindData;
-    int ret = m_networkIntfc->bindWanDev(m_clientId.c_str(), token.accessToken().c_str(),
-        serialNumber.c_str(), pid, name.c_str(), bindType, &bindData, ComTimeoutWanA);
-    fnet::FreeInDestructor freeBinData(bindData, m_networkIntfc->freeBindData);
-    if (ret == FNET_OK) {
-        m_threadPool->post([this, ip, port, serialNumber]() {
-            for (int i = 0; i < 3 && !m_threadExitEvent.get(); ++i) {
-                int ret = m_networkIntfc->notifyLanDevWanBind(
-                    ip.c_str(), port, serialNumber.c_str(), ComTimeoutLanA);
-                if (ret == FNET_OK) {
-                    break;
-                }
-                m_threadExitEvent.waitTrue(3000);
-            }
-        });
-        m_pendingSetUpdateWanDevTime = std_precise_clock::now();
+
+    const uint64_t sessionGeneration = m_wanSessionGeneration.load();
+    const ComErrno ret = execute_authenticated_wan_request("Bind WAN device", [&](const std::string &accessToken) {
+        fnet_wan_dev_bind_data_t *bindData = nullptr;
+        const int networkRet = m_networkIntfc->bindWanDev(m_clientId.c_str(), accessToken.c_str(),
+            serialNumber.c_str(), pid, name.c_str(), bindType, &bindData, ComTimeoutWanA);
+        if (bindData != nullptr) {
+            m_networkIntfc->freeBindData(bindData);
+        }
+        return MultiComUtils::fnetRet2ComErrno(networkRet);
+    });
+    if (ret != COM_OK) {
+        return ret;
     }
-    return MultiComUtils::fnetRet2ComErrno(ret);
+    if (!m_login || sessionGeneration != m_wanSessionGeneration.load()) {
+        return COM_ABORTED_BY_USER;
+    }
+
+    m_threadPool->post([this, ip, port, serialNumber]() {
+        for (int i = 0; i < 3 && !m_threadExitEvent.get(); ++i) {
+            int ret = m_networkIntfc->notifyLanDevWanBind(
+                ip.c_str(), port, serialNumber.c_str(), ComTimeoutLanA);
+            if (ret == FNET_OK) {
+                break;
+            }
+            m_threadExitEvent.waitTrue(3000);
+        }
+    });
+    m_pendingSetUpdateWanDevTime = std_precise_clock::now();
+    return COM_OK;
 }
 
 ComErrno MultiComMgr::unbindWanDev(const std::string &serialNumber, const std::string &devId)
 {
-    if (!m_httpOnline || !m_connOnline) {
+    if (!m_login || !m_httpOnline) {
         return COM_ERROR;
     }
-    ScopedWanDevToken token = WanDevTokenMgr::inst()->getScopedToken();
-    int ret = m_networkIntfc->unbindWanDev(
-        m_clientId.c_str(), token.accessToken().c_str(), devId.c_str(), ComTimeoutWanA);
-    if (ret == FNET_OK) {
-        std::string devTopic = getDevTopic(devId);
-        if (!devTopic.empty()) {
-            ComWanConn::inst()->unsubscribe(std::vector<std::string>(1, devTopic));
-        }
-        for (auto &comPtr : m_comPtrs) {
-            if (comPtr->devId() == devId) {
-                if (m_readyIdSet.find(comPtr->id()) != m_readyIdSet.end()) {
-                    BOOST_LOG_TRIVIAL(info) << "unbind disconnect";
-                }
-                comPtr->disconnect(0);
-                break;
+
+    const uint64_t sessionGeneration = m_wanSessionGeneration.load();
+    const ComErrno ret = execute_authenticated_wan_request("Unbind WAN device", [&](const std::string &accessToken) {
+        return MultiComUtils::fnetRet2ComErrno(m_networkIntfc->unbindWanDev(
+            m_clientId.c_str(), accessToken.c_str(), devId.c_str(), ComTimeoutWanA));
+    });
+    if (ret != COM_OK) {
+        return ret;
+    }
+    if (!m_login || sessionGeneration != m_wanSessionGeneration.load()) {
+        return COM_ABORTED_BY_USER;
+    }
+
+    std::string devTopic = getDevTopic(devId);
+    if (!devTopic.empty()) {
+        ComWanConn::inst()->unsubscribe(std::vector<std::string>(1, devTopic));
+    }
+    for (auto &comPtr : m_comPtrs) {
+        if (comPtr->devId() == devId) {
+            if (m_readyIdSet.find(comPtr->id()) != m_readyIdSet.end()) {
+                BOOST_LOG_TRIVIAL(info) << "unbind disconnect";
             }
+            comPtr->disconnect(0);
+            break;
         }
     }
-    return MultiComUtils::fnetRet2ComErrno(ret);
+    return COM_OK;
 }
 
 com_id_list_t MultiComMgr::getReadyDevList()
