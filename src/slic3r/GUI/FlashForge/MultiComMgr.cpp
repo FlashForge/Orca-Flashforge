@@ -348,13 +348,32 @@ ComErrno MultiComMgr::addWanDev(const com_token_data_t &tokenData, bool isCheckV
 
 void MultiComMgr::removeWanDev()
 {
-    BOOST_LOG_TRIVIAL(info) << "MultiComMgr::removeWanDev";
-    ++m_wanSessionGeneration;
-    disableMqtt();
-    stopFeedbackLogSession();
+    invalidateWanSession(WanLogoutReason::UserRequested, COM_OK);
+}
+
+void MultiComMgr::invalidateWanSession(WanLogoutReason reason, ComErrno ret)
+{
+    // Several asynchronous sources may discover an invalid session at nearly
+    // the same time. Only the first one owns teardown and publishes logout.
     if (!m_login.exchange(false)) {
         return;
     }
+
+    const uint64_t sessionGeneration = ++m_wanSessionGeneration;
+    BOOST_LOG_TRIVIAL(info) << "MultiComMgr::invalidateWanSession reason=" << static_cast<int>(reason)
+                            << ", ret=" << static_cast<int>(ret)
+                            << ", generation=" << sessionGeneration;
+
+    teardownWanSession();
+    QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, false, false, ret,
+        WanServiceState::LoggedOut, reason, sessionGeneration));
+}
+
+void MultiComMgr::teardownWanSession()
+{
+    BOOST_LOG_TRIVIAL(info) << "MultiComMgr::teardownWanSession";
+    disableMqtt();
+    stopFeedbackLogSession();
     for (auto &comPtr : m_comPtrs) {
         if (comPtr->connectMode() == COM_CONNECT_WAN) {
             comPtr->disconnect(0);
@@ -365,7 +384,6 @@ void MultiComMgr::removeWanDev()
     m_connOnline = false;
     m_wanDevMaintainThd->stop();
     WanDevTokenMgr::inst()->exit();
-    QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, false, false, COM_OK, WanServiceState::LoggedOut));
 }
 
 void MultiComMgr::startWanMqtt()
@@ -582,7 +600,8 @@ void MultiComMgr::onTimer(const wxTimerEvent &event)
         ComWanConn::inst()->freeConn();
         scheduleMqttConfigRefreshRetry();
         QueueEvent(new ComWanDevMaintainEvent(
-            COM_WAN_DEV_MAINTAIN_EVENT, true, false, COM_ERROR, WanServiceState::Reconnecting));
+            COM_WAN_DEV_MAINTAIN_EVENT, true, false, COM_ERROR, WanServiceState::Reconnecting,
+            WanLogoutReason::Unknown, m_wanSessionGeneration.load()));
     }
     if (!m_pendingWanDevDatas.empty()) {
         if (!m_connOnline) {
@@ -656,7 +675,10 @@ void MultiComMgr::onReloginHttp(ReloginHttpEvent &event)
     }
     if (event.ret == COM_UNAUTHORIZED) {
         m_networkIntfc->freeWanDevList(event.devInfos, event.devCnt);
-        maintianWanDev(event.ret, true);
+        // This event may represent either a rejected refresh token or a newly
+        // issued access token rejected by the profile API. The token manager's
+        // own event carries the precise RefreshTokenRejected reason.
+        invalidateWanSession(WanLogoutReason::ServerForcedLogout, event.ret);
         return;
     }
     m_httpOnline = true;
@@ -671,7 +693,9 @@ void MultiComMgr::onReloginHttp(ReloginHttpEvent &event)
     updateWanDevEvent.devCnt = event.devCnt;
     onUpdateWanDev(updateWanDevEvent);
 
-    QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, m_connOnline, COM_OK, m_connOnline ? WanServiceState::Connected : WanServiceState::Reconnecting));
+    QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, m_connOnline, COM_OK,
+        m_connOnline ? WanServiceState::Connected : WanServiceState::Reconnecting,
+        WanLogoutReason::Unknown, event.sessionGeneration));
     QueueEvent(new ComGetUserProfileEvent(
         COM_GET_USER_PROFILE_EVENT, event.userProfile, COM_OK, event.sessionGeneration));
 }
@@ -684,7 +708,7 @@ void MultiComMgr::onUpdateWanDev(const GetWanDevEvent &event)
         return;
     }
     if (event.ret != COM_OK) {
-        maintianWanDev(event.ret, false);
+        maintianWanDev(event.ret);
         return;
     }
     m_unUpdateDevList.clear();
@@ -758,7 +782,7 @@ void MultiComMgr::onUpdateUserProfile(const ComGetUserProfileEvent &event)
         return;
     }
     if (event.ret == COM_UNAUTHORIZED) {
-        maintianWanDev(event.ret, false);
+        maintianWanDev(event.ret);
     } else if (event.ret != COM_OK) {
         m_wanDevMaintainThd->setUpdateUserProfile();
     } else {
@@ -882,7 +906,7 @@ void MultiComMgr::onCommandFailed(const CommandFailedEvent &event)
         return;
     }
     if (event.fatalError || event.ret == COM_UNAUTHORIZED) {
-        maintianWanDev(event.ret, false);
+        maintianWanDev(event.ret);
     } else if (!m_blockCommandFailedUpdate) {
         m_blockCommandFailedUpdate = true;
         m_threadPool->post([this]() {
@@ -920,7 +944,8 @@ void MultiComMgr::onWanConnStatus(const WanConnStatusEvent &event)
         m_mqttConfigRefreshRetryCount = 0;
         m_nextMqttConfigRefreshTime = {};
         m_mqttConnectDeadline = {};
-        QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, m_httpOnline, COM_OK, WanServiceState::Connected));
+        QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, m_httpOnline, COM_OK,
+            WanServiceState::Connected, WanLogoutReason::Unknown, event.sessionGeneration));
         // cleanSession subscriptions are not retained. Restore all topics and
         // resynchronize cached data after both the first connection and reconnects.
         ComWanConn::inst()->subscribe(std::vector<std::string>(1, m_mqttConfig.userTopic));
@@ -941,7 +966,8 @@ void MultiComMgr::onWanConnStatus(const WanConnStatusEvent &event)
                                    << ", connection=" << event.connectionGeneration;
         ComWanConn::inst()->freeConn();
         scheduleMqttConfigRefreshRetry();
-        QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, false, COM_ERROR, WanServiceState::Reconnecting));
+        QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, false, COM_ERROR,
+            WanServiceState::Reconnecting, WanLogoutReason::Unknown, event.sessionGeneration));
         break;
     }
 }
@@ -969,7 +995,7 @@ void MultiComMgr::onWanConnRead(const WanConnReadEvent& event)
                 BOOST_LOG_TRIVIAL(info) << "Ignore repeated pc login from same device, client_id=" << other_client_id;
                 return;
             }
-            maintianWanDev(COM_OK, true);
+            invalidateWanSession(WanLogoutReason::RepeatedLogin, COM_OK);
         }
     };
     auto procDevOffline = [this](const fnet_conn_read_data_t &readData) {
@@ -1170,7 +1196,7 @@ void MultiComMgr::onWanConnRead(const WanConnReadEvent& event)
         m_wanDevMaintainThd->setUpdateUserProfile();
         break;
     case FNET_CONN_READ_SYNC_UNREGISTER_USER:
-        maintianWanDev(COM_OK, true);
+        invalidateWanSession(WanLogoutReason::UserUnregistered, COM_OK);
         break;
     case FNET_CONN_READ_SYNC_LOGIN:
         procRepeatLogin(event.readData);
@@ -1292,7 +1318,8 @@ void MultiComMgr::startMqttRecovery()
     m_mqttConfig = {};
     ComWanConn::inst()->freeConn();
     QueueEvent(new ComWanDevMaintainEvent(
-        COM_WAN_DEV_MAINTAIN_EVENT, true, false, COM_OK, WanServiceState::Reconnecting));
+        COM_WAN_DEV_MAINTAIN_EVENT, true, false, COM_OK, WanServiceState::Reconnecting,
+        WanLogoutReason::Unknown, m_wanSessionGeneration.load()));
     requestMqttConfigRefresh();
 }
 
@@ -1325,7 +1352,8 @@ void MultiComMgr::onMqttConfigRefresh(const ComMqttConfigRefreshEvent &event)
         BOOST_LOG_TRIVIAL(warning) << "MQTT config request failed: " << (int) event.ret;
         scheduleMqttConfigRefreshRetry();
         QueueEvent(new ComWanDevMaintainEvent(
-            COM_WAN_DEV_MAINTAIN_EVENT, true, false, event.ret, WanServiceState::Reconnecting));
+            COM_WAN_DEV_MAINTAIN_EVENT, true, false, event.ret, WanServiceState::Reconnecting,
+            WanLogoutReason::Unknown, event.sessionGeneration));
         return;
     }
     m_mqttBlockedRefreshTokenRevision = 0;
@@ -1345,7 +1373,8 @@ void MultiComMgr::onMqttConfigRefresh(const ComMqttConfigRefreshEvent &event)
         BOOST_LOG_TRIVIAL(warning) << "MQTT connection creation failed: " << (int) createRet;
         scheduleMqttConfigRefreshRetry();
         QueueEvent(new ComWanDevMaintainEvent(
-            COM_WAN_DEV_MAINTAIN_EVENT, true, false, createRet, WanServiceState::Reconnecting));
+            COM_WAN_DEV_MAINTAIN_EVENT, true, false, createRet, WanServiceState::Reconnecting,
+            WanLogoutReason::Unknown, event.sessionGeneration));
     }
 }
 void MultiComMgr::onRefreshToken(const ComRefreshTokenEvent &event)
@@ -1355,7 +1384,7 @@ void MultiComMgr::onRefreshToken(const ComRefreshTokenEvent &event)
         return;
     }
     if (event.ret == COM_UNAUTHORIZED) {
-        maintianWanDev(event.ret, true);
+        invalidateWanSession(WanLogoutReason::RefreshTokenRejected, event.ret);
         return;
     }
     QueueEvent(event.Clone());
@@ -1515,23 +1544,19 @@ com_dev_data_t MultiComMgr::makeWanDevData(const fnet_wan_dev_info_t *wanDevInfo
     return devData;
 }
 
-void MultiComMgr::maintianWanDev(ComErrno ret, bool needLogout)
+void MultiComMgr::maintianWanDev(ComErrno ret)
 {
     if (!m_login) {
         return;
     }
     BOOST_LOG_TRIVIAL(info) << "MultiComMgr::maintianWanDev " << (int)ret;
-    if (needLogout) {
-        removeWanDev();
-        QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, false, false, ret, WanServiceState::LoggedOut));
-        return;
-    }
     if (ret != COM_OK && m_httpOnline) {
         m_httpOnline = false;
         m_wanDevMaintainThd->setReloginHttp();
         // HTTP maintenance failure does not prove that any printer is offline.
         // Keep the last device states while the HTTP session recovers.
-        QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, false, ret, WanServiceState::ApiUnavailable));
+        QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, false, ret,
+            WanServiceState::ApiUnavailable, WanLogoutReason::Unknown, m_wanSessionGeneration.load()));
     }
 }
 

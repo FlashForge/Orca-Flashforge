@@ -147,7 +147,11 @@ private:
 
     bool mergeWanDeviceInfo(com_id_t id, const fnet_wan_dev_info_t &wanDevInfo);
 
-    void maintianWanDev(ComErrno ret, bool needLogout);
+    void maintianWanDev(ComErrno ret);
+
+    void invalidateWanSession(WanLogoutReason reason, ComErrno ret);
+
+    void teardownWanSession();
 
     void setMaintainThdReqHeader(bool isCheckVersionTestServer);
 

@@ -222,22 +222,30 @@ struct ComSendGcodeFinishEvent : public ComConnectionEvent
 
 struct ComWanDevMaintainEvent : public wxCommandEvent
 {
-    ComWanDevMaintainEvent(wxEventType type, bool _login, bool _online, ComErrno _ret, WanServiceState _serviceState = WanServiceState::Unknown)
+    ComWanDevMaintainEvent(wxEventType type, bool _login, bool _online, ComErrno _ret,
+        WanServiceState _serviceState = WanServiceState::Unknown,
+        WanLogoutReason _logoutReason = WanLogoutReason::Unknown,
+        uint64_t _sessionGeneration = 0)
         : wxCommandEvent(type)
         , login(_login)
         , online(_online)
         , ret(_ret)
         , serviceState(_serviceState)
+        , logoutReason(_logoutReason)
+        , sessionGeneration(_sessionGeneration)
     {
     }
     ComWanDevMaintainEvent *Clone() const
     {
-        return new ComWanDevMaintainEvent(GetEventType(), login, online, ret, serviceState);
+        return new ComWanDevMaintainEvent(
+            GetEventType(), login, online, ret, serviceState, logoutReason, sessionGeneration);
     }
     bool login;
     bool online;
     ComErrno ret;
     WanServiceState serviceState;
+    WanLogoutReason logoutReason;
+    uint64_t sessionGeneration;
 };
 
 struct ComGetUserProfileEvent : public wxCommandEvent

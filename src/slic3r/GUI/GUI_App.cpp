@@ -6057,15 +6057,17 @@ void GUI_App::handle_login_result(const std::string &token, const com_add_wan_de
 void GUI_App::handle_login_out()
 {
     cancel_flashforge_session_recovery();
-    // 关闭窗口后执行 GUI::wxGetApp().run_script 可能出现崩溃
-    if (mainframe == nullptr || mainframe->is_shutdown()) {
-        return;
-    }
+    // Clear account state before any window-dependent work so shutdown cannot
+    // leave the process reporting a logged-in user.
     m_login_success = false;
     m_sync_prompted_user_id.clear();
     m_usr_pic_image.Destroy();
     LoginDialog::SetUsrLogin(false);
-
+    LoginDialog::SetToken({}, {});
+    // 关闭窗口后执行 GUI::wxGetApp().run_script 可能出现崩溃
+    if (mainframe == nullptr || mainframe->is_shutdown()) {
+        return;
+    }
     std::string jsonStr = R"({"command":"studio_useroffline","sequence_id":"10001"})";
     wxString strJS = wxString::Format("window.postMessage(%s)", jsonStr);
     GUI::wxGetApp().run_script(strJS);
@@ -6454,7 +6456,39 @@ void GUI_App::wan_dev_maintain(ComWanDevMaintainEvent& event)
     event.Skip();
     log_flash_preset_sync("ACCOUNT_STATE login=" + std::string(event.login ? "true" : "false")
                           + " gui_login_success=" + (m_login_success ? "true" : "false"));
-    if (!event.login && m_login_success) {
+    if (!event.login) {
+        if (event.sessionGeneration != 0
+            && event.sessionGeneration != MultiComMgr::inst()->wanSessionGeneration()) {
+            BOOST_LOG_TRIVIAL(info) << "Ignore stale FlashForge logout event, generation="
+                                    << event.sessionGeneration;
+            return;
+        }
+        // Existing user-driven flows already clean the GUI before removing the
+        // WAN session. Their queued event only needs to update other listeners.
+        if (event.logoutReason == WanLogoutReason::UserRequested && !m_login_success) {
+            return;
+        }
+        m_login_success = false;
+        LoginDialog::SetUsrLogin(false);
+        LoginDialog::SetToken({}, {});
+
+        if (app_config) {
+            app_config->set("access_token", "");
+            app_config->set("refresh_token", "");
+            app_config->set("token_expire_time", "");
+            app_config->set("token_start_time", "");
+            app_config->set("usr_email", "");
+            app_config->set("show_user_points", "");
+            app_config->set("usr_name", "");
+            app_config->set("usr_pic", "");
+            app_config->set("usr_uid", "");
+            app_config->save();
+        }
+
+        if (mainframe == nullptr || mainframe->is_shutdown()) {
+            handle_login_out();
+            return;
+        }
 #ifdef __WXGTK__
         const bool restore_gl_after_logout_tip = mainframe && mainframe->IsIconized() && mainframe->m_tabpanel &&
                                                  (mainframe->m_tabpanel->GetSelection() == MainFrame::tp3DEditor ||
@@ -6479,28 +6513,21 @@ void GUI_App::wan_dev_maintain(ComWanDevMaintainEvent& event)
 
         if (m_agent)
             m_agent->set_user_selected_machine("");
+        if (app_config)
+            app_config->save();
 
-        if (app_config) {
-            app_config->set("access_token", "");
-            app_config->set("refresh_token", "");
-            app_config->set("token_expire_time", "");
-            app_config->set("token_start_time", "");
-            app_config->set("usr_email", "");
-            app_config->set("show_user_points", "");
-            app_config->set("usr_name", "");
-            app_config->set("usr_pic", "");
-            app_config->set("usr_uid", "");
-        }
-
-        MultiComMgr::inst()->removeWanDev();
         handle_login_out();
 
+        wxString logout_message = _L("The current account has been logged out!");
+        if (event.logoutReason == WanLogoutReason::RefreshTokenRejected) {
+            logout_message = _L("Login information expired. Please login again.");
+        }
         if (!m_logout_tip) {
-            m_logout_tip = new ShowTip(_L("The current account has been logged out!"));
+            m_logout_tip = new ShowTip(logout_message);
         } else {
             delete m_logout_tip;
             m_logout_tip = nullptr;
-            m_logout_tip = new ShowTip(_L("The current account has been logged out!"));
+            m_logout_tip = new ShowTip(logout_message);
         }
         m_logout_tip->Show();
 #ifdef __WXGTK__

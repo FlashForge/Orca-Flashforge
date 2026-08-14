@@ -68,6 +68,17 @@ enum class WanServiceState {
     LoggedOut,
 };
 
+// Describes why an authenticated WAN session ended. Views use this only to
+// select the appropriate message; MultiComMgr remains the session owner.
+enum class WanLogoutReason {
+    Unknown,
+    UserRequested,
+    RepeatedLogin,
+    RefreshTokenRejected,
+    UserUnregistered,
+    ServerForcedLogout,
+};
+
 enum class WanDeviceStatusSource {
     Initial,
     HttpDeviceList,

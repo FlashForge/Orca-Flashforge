@@ -3302,6 +3302,10 @@ void SingleDeviceState::onConnectExit(ComConnectionExitEvent &event)
 void SingleDeviceState::onComWanDevMaintain(ComWanDevMaintainEvent &event)
 {
     event.Skip();
+    if (event.sessionGeneration != 0
+        && event.sessionGeneration != MultiComMgr::inst()->wanSessionGeneration()) {
+        return;
+    }
     if (m_camera_panel) m_camera_panel->logPanelState("onComWanDevMaintain enter");
     if (event.serviceState == WanServiceState::Reconnecting) {
         camdbg_log("WAN service reconnecting; keep device page and last device state");

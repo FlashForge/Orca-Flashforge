@@ -156,8 +156,9 @@ wxDEFINE_EVENT(EVT_SWITCH_TO_DEVICE_STATUS, wxCommandEvent);
     Slic3r::GUI::MultiComMgr::inst()->Bind(COM_WAN_DEV_MAINTAIN_EVENT, &MonitorPanel::onComWanDevMaintainEvent, this);
     wxGetApp().Bind(EVT_LOGIN_OUT, [this](wxCommandEvent& event) {
         if (m_side_tools) {
-            m_side_tools->setAccountState(true);
+            m_side_tools->setAccountState(false);
         }
+        event.Skip();
     });
 }
 
@@ -369,18 +370,21 @@ void MonitorPanel::on_size(wxSizeEvent& event) { Layout(); }
 
 void MonitorPanel::onComWanDevMaintainEvent(ComWanDevMaintainEvent& event) 
 {
-    std::lock_guard<std::mutex> guard(m_mutex);
-    if (event.login && !event.online) {
+    if (event.sessionGeneration != 0
+        && event.sessionGeneration != MultiComMgr::inst()->wanSessionGeneration()) {
+        event.Skip();
+        return;
+    }
+    {
+        std::lock_guard<std::mutex> guard(m_mutex);
         if (m_side_tools) {
-            m_side_tools->setAccountState(false);
-        }
-    } else if (event.login && event.online) {
-        if (m_side_tools) {
-            m_side_tools->setAccountState(true);
+            m_side_tools->setAccountState(
+                event.login && event.online && event.serviceState == WanServiceState::Connected);
         }
     }
-    //event.Skip();
-    //Refresh();
+    // GUI_App owns the global account transition. Monitor only updates its
+    // local state and must not consume this shared command event.
+    event.Skip();
 }
 
 void MonitorPanel::update_all()
