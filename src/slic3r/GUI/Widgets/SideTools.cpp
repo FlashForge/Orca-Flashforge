@@ -530,7 +530,7 @@ void SideTools::show_status(int status)
         m_more_button->Show();
 
     } 
-    else if ((status & (int) MonitorStatus::MONITOR_LOGIN_OFFLINE) != 0) {
+    else if ((status & (int) MonitorStatus::MONITOR_ACCOUNT_RECONNECTING) != 0) {
         m_hyperlink->Hide();
         m_connection_info->SetLabel(_L("Account Offline,Connecting..."));
         m_connection_info->SetBackgroundColor(0xF6CBC6);
@@ -589,20 +589,6 @@ int SideTools::getConnectInfoHeight()
     if (m_connection_info->IsShown())
         return m_connection_info->GetSize().y;
     return 0;
-}
-
-void SideTools::setAccountState(bool state) 
-{
-    try {
-        m_account_online = state;
-    } catch (...) {
-        //BOOST_LOG_TRIVIAL(error) << "SideTools::setAccountState ERROR!";
-    } 
-}
-
-bool SideTools::getAccountState() 
-{ 
-    return m_account_online; 
 }
 
 SideTools::~SideTools() 

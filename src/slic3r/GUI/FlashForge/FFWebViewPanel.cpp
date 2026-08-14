@@ -2040,6 +2040,10 @@ void FFWebViewPanel::OnMainFrameSize(wxSizeEvent &evt)
 void FFWebViewPanel::OnComMaintain(ComWanDevMaintainEvent &evt)
 {
     evt.Skip();
+    if (evt.sessionGeneration != 0
+        && evt.sessionGeneration != MultiComMgr::inst()->wanSessionGeneration()) {
+        return;
+    }
     if (evt.login) {
         CheckGetOnlineConfig();
     } else {

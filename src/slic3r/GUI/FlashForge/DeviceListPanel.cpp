@@ -828,6 +828,7 @@ void DeviceListPanel::build()
 void DeviceListPanel::OnActivate()
 {
     updateDeviceList();
+    MultiComMgr::inst()->requestWanDeviceListRefresh();
 }
 
 void DeviceListPanel::connectEvent()

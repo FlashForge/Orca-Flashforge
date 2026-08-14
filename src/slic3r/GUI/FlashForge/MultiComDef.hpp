@@ -38,6 +38,17 @@ enum ComErrno {
     COM_CONN_SEND_ERROR,
 };
 
+// Identifies which post-authentication step failed while restoring a cloud
+// session. Obtaining a token is authentication; these stages initialize the
+// account-backed cloud session and must not be reported as bad credentials.
+enum class ComSessionInitStage {
+    None,
+    NetworkInterface,
+    ExistingSession,
+    UserProfile,
+    AccountBinding,
+};
+
 enum ComConnectMode {
     COM_CONNECT_LAN,
     COM_CONNECT_WAN,
@@ -55,6 +66,17 @@ enum class WanServiceState {
     Reconnecting,
     ApiUnavailable,
     LoggedOut,
+};
+
+// Describes why an authenticated WAN session ended. Views use this only to
+// select the appropriate message; MultiComMgr remains the session owner.
+enum class WanLogoutReason {
+    Unknown,
+    UserRequested,
+    RepeatedLogin,
+    RefreshTokenRejected,
+    UserUnregistered,
+    ServerForcedLogout,
 };
 
 enum class WanDeviceStatusSource {

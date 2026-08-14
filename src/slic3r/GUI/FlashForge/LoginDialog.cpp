@@ -10,7 +10,6 @@
 #include "slic3r/GUI/Widgets/Button.hpp"
 #include "slic3r/GUI/FFUtils.hpp"
 #include "MultiComUtils.hpp"
-#include "MultiComMgr.hpp"
 
 #include <wx/clipbrd.h>
 #include <wx/dcgraph.h>
@@ -1038,42 +1037,19 @@ void LoginDialog::onPage1Login(wxMouseEvent& event)
 	}
     ComErrno login_result = MultiComUtils::getTokenBySMSCode(usrname.ToStdString(), verify_code.ToStdString(), language, token_data,message, ComTimeoutWanA);
     if(login_result == ComErrno::COM_OK){
-        AppConfig *app_config = wxGetApp().app_config;
-        bool is_check_version_on_test_server = false;
-        if (app_config != nullptr) {
-            is_check_version_on_test_server = app_config->get_bool("check_version_test");
+        m_usr_name = usrname.ToStdString();
+        LoginDialog::m_token_data = token_data;
+        if (!wxGetApp().begin_flashforge_login(token_data, m_usr_name)) {
+            page1ShowErrorLabel(_L("Account verified, but cloud session initialization could not be started."));
+            return;
         }
-        com_add_wan_dev_data_t add_dev_data;
-        ComErrno add_dev_result = MultiComMgr::inst()->addWanDev(token_data, is_check_version_on_test_server, add_dev_data, 2, 200);
-        if (add_dev_result == COM_OK) {
-             m_usr_name = usrname.ToStdString();
-             LoginDialog::m_token_data = token_data;
-             wxGetApp().handle_login_result(token_data.accessToken, add_dev_data);
-             BOOST_LOG_TRIVIAL(info) << "usr login succeed 111 : LoginDialog::onPage1Login";
-            m_login1_pressed = true;
 #ifdef _WIN32
-             //Hide();
-             Close();
+        Close();
 #elif defined(__APPLE__)
-             Close();
+        Close();
+#elif defined(__linux__)
+        Close();
 #endif
-             if (app_config) {
-                // click login btn，set token
-                app_config->set("usr_input_name", usrname.ToStdString());
-                app_config->set("access_token", token_data.accessToken);
-                app_config->set("refresh_token", token_data.refreshToken);
-                app_config->set("token_expire_time", std::to_string(token_data.expiresIn));
-                app_config->set("token_start_time", std::to_string(token_data.startTime));
-                app_config->set("usr_email", add_dev_data.userProfile.email);
-                app_config->set("show_user_points", add_dev_data.showUserPoints ? "true" : "false");
-             }
-
-             //wxGetApp().check_new_version_sf(0, true);
-        } else {
-             page1ShowErrorLabel(_L("Server connection exception"));
-             BOOST_LOG_TRIVIAL(error) << "Server connection exception : addWanDev interface failed !";
-             flush_logs();
-        }
     } else {
         if (!message.empty()) {
              page1ShowErrorLabel(wxString::FromUTF8(message));
@@ -1202,43 +1178,20 @@ void LoginDialog::onPage2Login(wxMouseEvent& event)
         }
     }
     if (login_result == ComErrno::COM_OK) {
-        AppConfig *app_config = wxGetApp().app_config;
-        bool is_check_version_on_test_server = false;
-        if (app_config != nullptr) {
-            is_check_version_on_test_server = app_config->get_bool("check_version_test");
+        m_usr_name = usrname.ToStdString();
+        LoginDialog::m_token_data = token_data;
+        if (!wxGetApp().begin_flashforge_login(token_data, m_usr_name)) {
+            page2ShowErrorLabel(_L("Account verified, but cloud session initialization could not be started."));
+            return;
         }
-        com_add_wan_dev_data_t add_dev_data;
-        ComErrno add_dev_result = MultiComMgr::inst()->addWanDev(token_data, is_check_version_on_test_server, add_dev_data, 2, 200);
-        if (add_dev_result == COM_OK) {
-            m_usr_name = usrname.ToStdString();
-            LoginDialog::m_token_data = token_data;
-            wxGetApp().handle_login_result(token_data.accessToken, add_dev_data);
-            BOOST_LOG_TRIVIAL(info) << "usr login succeed 222 : LoginDialog::onPage2Login";
-            m_login2_pressed = false;
+        m_login2_pressed = false;
 #ifdef _WIN32
-            //Hide();
-            Close();
-            BOOST_LOG_TRIVIAL(info) << "usr login succeed , hide window!";
+        Close();
 #elif defined(__APPLE__)
-            Close();
+        Close();
+#elif defined(__linux__)
+        Close();
 #endif
-            if (app_config) {
-                // click login btn，set token
-                app_config->set("usr_input_name", usrname.ToStdString());
-                app_config->set("access_token", token_data.accessToken);
-                app_config->set("refresh_token", token_data.refreshToken);
-                app_config->set("token_expire_time", std::to_string(token_data.expiresIn));
-                app_config->set("token_start_time", std::to_string(token_data.startTime));
-                app_config->set("usr_email", add_dev_data.userProfile.email);
-                app_config->set("show_user_points", add_dev_data.showUserPoints ? "true" : "false");
-            }
-
-            //wxGetApp().check_new_version_sf(0, true);
-        } else {
-            page2ShowErrorLabel(_L("Server connection exception"));
-            BOOST_LOG_TRIVIAL(error) << "Server connection exception : addWanDev interface failed !";
-            flush_logs();
-        }
     } else {
         if (!message.empty()) {
             page2ShowErrorLabel(wxString::FromUTF8(message));

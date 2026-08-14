@@ -15,6 +15,7 @@ namespace Slic3r { namespace GUI {
 
 struct ReloginHttpEvent : public wxCommandEvent {
     ComErrno ret;
+    uint64_t sessionGeneration;
     std::string clientId;
     std::string accessToken;
     com_user_profile_t userProfile;
@@ -24,6 +25,7 @@ struct ReloginHttpEvent : public wxCommandEvent {
 
 struct GetWanDevEvent : public wxCommandEvent {
     ComErrno ret;
+    uint64_t sessionGeneration;
     std::string clientId;
     fnet_wan_dev_info_t *devInfos;
     int devCnt;
@@ -39,7 +41,8 @@ public:
 
     void exit();
 
-    void setReqHeaders(const std::string &clientId, int64_t appId, int64_t platId);
+    void setReqHeaders(const std::string &clientId, int64_t appId, int64_t platId,
+        uint64_t sessionGeneration);
 
     void setReloginHttp();
 
@@ -52,20 +55,22 @@ public:
 private:
     void run();
 
-    void getReqHeaders(std::string &clientId, int64_t &appId, int64_t &platId);
+    void getReqHeaders(std::string &clientId, int64_t &appId, int64_t &platId,
+        uint64_t &sessionGeneration);
 
     bool reloginHttp(const std::string &clientId, int64_t &appId, int64_t &platId,
-        ScopedWanDevToken &scopedToken);
+        uint64_t sessionGeneration, ScopedWanDevToken &scopedToken);
 
     void updateWanDev(const std::string &clientId, int64_t &appId, int64_t &platId,
-        const std::string &accessToken);
+        uint64_t sessionGeneration, const std::string &accessToken);
 
-    void updateUserProfile(const std::string &accessToken);
+    void updateUserProfile(uint64_t sessionGeneration, const std::string &accessToken);
 
 private:
     std::string             m_clientId;
     int64_t                 m_appId;
     int64_t                 m_platId;
+    uint64_t                m_sessionGeneration { 0 };
     boost::mutex            m_reqHeadersMutex;
     WaitEvent               m_loopWaitEvent;
     std::atomic_bool        m_reloginHttp;

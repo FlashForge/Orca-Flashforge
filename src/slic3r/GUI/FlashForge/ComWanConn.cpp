@@ -7,7 +7,7 @@ namespace Slic3r { namespace GUI {
 
 wxDEFINE_EVENT(WAN_CONN_STATUS_EVENT, WanConnStatusEvent);
 wxDEFINE_EVENT(WAN_CONN_READ_EVENT, WanConnReadEvent);
-wxDEFINE_EVENT(WAN_CONN_HTTP_UNAUTHORIZED, wxCommandEvent);
+wxDEFINE_EVENT(WAN_CONN_HTTP_UNAUTHORIZED, WanConnUnauthorizedEvent);
 
 ComWanConn::ComWanConn()
     : m_networkIntfc(nullptr)
@@ -16,28 +16,32 @@ ComWanConn::ComWanConn()
 {
 }
 
-ComErrno ComWanConn::createConn(fnet::FlashNetworkIntfc *networkIntfc, const char *clientId)
+ComErrno ComWanConn::createConn(fnet::FlashNetworkIntfc *networkIntfc, const char *clientId,
+    uint64_t sessionGeneration, uint64_t connectionGeneration)
 {
     boost::unique_lock<boost::shared_mutex> lock(m_connMutex);
     if (m_conn != nullptr) {
         return COM_ERROR;
     }
+    std::unique_ptr<ConnectionCallbackContext> callbackContext(new ConnectionCallbackContext {
+        this, sessionGeneration, connectionGeneration });
+    m_networkIntfc = networkIntfc;
+    m_clientId = clientId;
     void *conn;
     fnet_conn_settings_t settings;
     settings.clientId = clientId;
     settings.statusCallback = statusCallback;
-    settings.statusCallbackData = this;
+    settings.statusCallbackData = callbackContext.get();
     settings.updateCallback = updateCallback;
-    settings.updateCallbackData = this;
+    settings.updateCallbackData = callbackContext.get();
     settings.readCallback = readCallback;
-    settings.readCallbackData = this;
+    settings.readCallbackData = callbackContext.get();
     ComErrno ret = MultiComUtils::fnetRet2ComErrno(networkIntfc->createConnection(&conn, &settings));
     if (ret != COM_OK) {
         return ret;
     }
-    m_networkIntfc = networkIntfc;
-    m_clientId = clientId;
     m_conn = conn;
+    m_callbackContext = std::move(callbackContext);
     m_threadExitEvent.set(false);
     return COM_OK;
 }
@@ -57,6 +61,7 @@ void ComWanConn::freeConn()
     boost::unique_lock<boost::shared_mutex> uniqueLock(m_connMutex);
     m_networkIntfc->freeConnection(m_conn);
     m_conn = nullptr;
+    m_callbackContext.reset();
 }
 
 void ComWanConn::syncLogin(const std::string &topic)
@@ -379,26 +384,34 @@ ComErrno ComWanConn::sendIndepMatlConfig(const char *topic, const fnet_indep_mat
 
 void ComWanConn::statusCallback(fnet_conn_status_t status, void *data)
 {
+    ConnectionCallbackContext *context = static_cast<ConnectionCallbackContext *>(data);
     WanConnStatusEvent *event = new WanConnStatusEvent;
     event->SetEventType(WAN_CONN_STATUS_EVENT);
     event->status = status;
-    ((ComWanConn *)data)->QueueEvent(event);
+    event->sessionGeneration = context->sessionGeneration;
+    event->connectionGeneration = context->connectionGeneration;
+    context->owner->QueueEvent(event);
 }
 
 int ComWanConn::updateCallback(const char **clientId, void *data)
 {
-    ComWanConn *self = (ComWanConn *)data;
+    ConnectionCallbackContext *context = static_cast<ConnectionCallbackContext *>(data);
+    ComWanConn *self = context->owner;
     ScopedWanDevToken token = WanDevTokenMgr::inst()->getScopedToken();
     com_mqtt_config_t mqttConfig;
     ComErrno ret = MultiComUtils::getMqttConfig(self->m_clientId, token.accessToken(), mqttConfig, ComTimeoutWanB);
     if (ret == COM_UNAUTHORIZED) {
-        self->QueueEvent(new wxCommandEvent(WAN_CONN_HTTP_UNAUTHORIZED));
+        WanConnUnauthorizedEvent *event = new WanConnUnauthorizedEvent;
+        event->SetEventType(WAN_CONN_HTTP_UNAUTHORIZED);
+        event->sessionGeneration = context->sessionGeneration;
+        event->connectionGeneration = context->connectionGeneration;
+        self->QueueEvent(event);
         return 1;
     } else if (ret != COM_OK) {
         return 1;
     }
     *clientId = self->m_networkIntfc->allocString(self->m_clientId.c_str(), self->m_clientId.size());
-    if (clientId == nullptr) {
+    if (*clientId == nullptr) {
         return 1;
     }
     return 0;
@@ -406,10 +419,13 @@ int ComWanConn::updateCallback(const char **clientId, void *data)
 
 void ComWanConn::readCallback(fnet_conn_read_data_t *readData, void *data)
 {
+    ConnectionCallbackContext *context = static_cast<ConnectionCallbackContext *>(data);
     WanConnReadEvent *event = new WanConnReadEvent;
     event->SetEventType(WAN_CONN_READ_EVENT);
     event->readData = *readData;
-    ((ComWanConn *)data)->QueueEvent(event);
+    event->sessionGeneration = context->sessionGeneration;
+    event->connectionGeneration = context->connectionGeneration;
+    context->owner->QueueEvent(event);
 }
 
 }} // namespace Slic3r::GUI

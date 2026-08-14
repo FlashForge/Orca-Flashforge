@@ -769,6 +769,11 @@ bool ModelBaseDialog::BindMsgDialog(wxDialog* dlg)
 
 void ModelBaseDialog::bindConnEvent(ComWanDevMaintainEvent& event)
 {
+    if (event.sessionGeneration != 0
+        && event.sessionGeneration != MultiComMgr::inst()->wanSessionGeneration()) {
+        event.Skip();
+        return;
+    }
     if (event.login) {
         event.Skip();
         return;

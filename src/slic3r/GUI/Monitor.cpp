@@ -154,20 +154,17 @@ wxDEFINE_EVENT(EVT_SWITCH_TO_DEVICE_STATUS, wxCommandEvent);
         event.Skip();
     });
     Slic3r::GUI::MultiComMgr::inst()->Bind(COM_WAN_DEV_MAINTAIN_EVENT, &MonitorPanel::onComWanDevMaintainEvent, this);
-    wxGetApp().Bind(EVT_LOGIN_OUT, [this](wxCommandEvent& event) {
-        if (m_side_tools) {
-            m_side_tools->setAccountState(true);
-        }
-    });
+    wxGetApp().Bind(EVT_LOGIN_OUT, &MonitorPanel::on_login_out, this);
 }
 
 MonitorPanel::~MonitorPanel()
 {
     //m_side_tools->get_panel()->Disconnect(wxEVT_LEFT_DOWN, wxMouseEventHandler(MonitorPanel::on_printer_clicked), NULL, this);
     m_side_tools->get_panel()->Disconnect(EVT_DEV_LIST_BTN_CLICKED, wxMouseEventHandler(MonitorPanel::on_printer_clicked), NULL, this);
+    Slic3r::GUI::MultiComMgr::inst()->Unbind(COM_WAN_DEV_MAINTAIN_EVENT, &MonitorPanel::onComWanDevMaintainEvent, this);
+    wxGetApp().Unbind(EVT_LOGIN_OUT, &MonitorPanel::on_login_out, this);
     delete m_side_tools;
     m_side_tools = nullptr;
-    Slic3r::GUI::MultiComMgr::inst()->Unbind(COM_WAN_DEV_MAINTAIN_EVENT, &MonitorPanel::onComWanDevMaintainEvent, this);
     if (m_refresh_timer)
         m_refresh_timer->Stop();
     delete m_refresh_timer;
@@ -369,18 +366,35 @@ void MonitorPanel::on_size(wxSizeEvent& event) { Layout(); }
 
 void MonitorPanel::onComWanDevMaintainEvent(ComWanDevMaintainEvent& event) 
 {
-    std::lock_guard<std::mutex> guard(m_mutex);
-    if (event.login && !event.online) {
-        if (m_side_tools) {
-            m_side_tools->setAccountState(false);
-        }
-    } else if (event.login && event.online) {
-        if (m_side_tools) {
-            m_side_tools->setAccountState(true);
-        }
+    if (event.sessionGeneration != 0
+        && event.sessionGeneration != MultiComMgr::inst()->wanSessionGeneration()) {
+        event.Skip();
+        return;
     }
-    //event.Skip();
-    //Refresh();
+    if (!event.login || event.serviceState == WanServiceState::LoggedOut) {
+        m_wan_service_state = WanServiceState::LoggedOut;
+        m_connect_fail_time0 = 0;
+        m_connect_fail_time1 = 0;
+    } else if (event.serviceState == WanServiceState::Connected) {
+        m_wan_service_state = WanServiceState::Connected;
+    } else {
+        m_wan_service_state = event.serviceState == WanServiceState::ApiUnavailable
+            ? WanServiceState::ApiUnavailable
+            : WanServiceState::Reconnecting;
+    }
+    update_all();
+    // GUI_App owns the global account transition. Monitor only updates its
+    // local state and must not consume this shared command event.
+    event.Skip();
+}
+
+void MonitorPanel::on_login_out(wxCommandEvent& event)
+{
+    m_wan_service_state = WanServiceState::LoggedOut;
+    m_connect_fail_time0 = 0;
+    m_connect_fail_time1 = 0;
+    update_all();
+    event.Skip();
 }
 
 void MonitorPanel::update_all()
@@ -416,12 +430,25 @@ void MonitorPanel::update_all()
     m_side_tools->update_status(obj);
 #endif
 
-    if (!obj && m_side_tools && !m_side_tools->getAccountState()) {
-        show_status((int) MONITOR_LOGIN_OFFLINE);
+    const bool account_reconnecting = m_wan_service_state == WanServiceState::Reconnecting
+        || m_wan_service_state == WanServiceState::ApiUnavailable;
+    const bool selected_cloud_device = obj && obj->connection_type() == "cloud";
+
+    // A server-side logout may be delivered before the WAN connection exit
+    // removes the selected cloud device. Do not present that stale object as a
+    // reconnecting account. LAN devices remain available without an account.
+    if (m_wan_service_state == WanServiceState::LoggedOut && selected_cloud_device) {
+        m_side_tools->update_device_status(nullptr);
+        show_status(MONITOR_NO_PRINTER);
+        return;
+    }
+    if (account_reconnecting && selected_cloud_device) {
+        m_side_tools->update_device_status(nullptr);
+        show_status(MONITOR_ACCOUNT_RECONNECTING);
         return;
     }
     if (!obj) {
-        show_status((int) MONITOR_NO_PRINTER);
+        show_status(account_reconnecting ? MONITOR_ACCOUNT_RECONNECTING : MONITOR_NO_PRINTER);
 #if 0
         m_hms_panel->clear_hms_tag();
         m_tabpanel->GetBtnsListCtrl()->showNewTag(3, false);
@@ -460,11 +487,7 @@ void MonitorPanel::update_all()
     }else {
         m_connect_fail_time0 = 0;
         m_side_tools->update_device_status(nullptr);
-        if (!m_side_tools->getAccountState()) {
-            show_status(MONITOR_LOGIN_OFFLINE);
-        } else {
-            show_status(MONITOR_NORMAL);
-        }
+        show_status(MONITOR_NORMAL);
         return;
     }
 
