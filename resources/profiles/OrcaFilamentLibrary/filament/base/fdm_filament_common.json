@@ -183,5 +183,6 @@
 	"filament_end_gcode": [
 		"; filament end gcode\n"
 	],
+	"compatible_printers_condition": "not ((printer_model == \"Flashforge Creator 5\" or printer_model == \"Flashforge Creator 5 Pro\") and printer_variant == \"0.25\")",
 	"compatible_printers": []
 }
