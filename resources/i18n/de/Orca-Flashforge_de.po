@@ -5602,6 +5602,20 @@ msgstr ""
 "PLA- und PETG-Filamente wurden in der Mischung erkannt. Passen Sie die "
 "Parameter gemäß dem Wiki an, um die Druckqualität zu gewährleisten."
 
+msgid ""
+"Prime tower is disabled because the current plate prints multiple objects by "
+"object. Change the plate print sequence to by layer to enable it."
+msgstr ""
+"Der Prime-Turm ist deaktiviert, da die aktuelle Druckplatte mehrere Objekte "
+"objektweise druckt. Ändern Sie die Druckreihenfolge der Platte auf „Nach "
+"Ebene“, um ihn zu aktivieren."
+
+msgid "The plate print sequence overrides the global setting."
+msgstr "Die Druckreihenfolge der Platte überschreibt die globale Einstellung."
+
+msgid "Open plate settings"
+msgstr "Platteneinstellungen öffnen"
+
 msgid "The prime tower extends beyond the plate boundary."
 msgstr "Der Prime-Turm ragt über die Begrenzung der Druckplatte hinaus."
 
@@ -7524,6 +7538,12 @@ msgstr "Bewege die Platte nach vorne"
 
 msgid "Customize current plate"
 msgstr "Aktuelle Platte anpassen"
+
+msgid "Print sequence: By object (plate override)"
+msgstr "Druckreihenfolge: Nach Objekt (Platteneinstellung hat Vorrang)"
+
+msgid "Print sequence: By layer (plate override)"
+msgstr "Druckreihenfolge: Nach Ebene (Platteneinstellung hat Vorrang)"
 
 #, c-format
 msgid "The %s nozzle can not print %s."

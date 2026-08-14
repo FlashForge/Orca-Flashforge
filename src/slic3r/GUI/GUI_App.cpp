@@ -4726,33 +4726,6 @@ void GUI_App::recreate_GUI(const wxString &msg_name)
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << "recreate_GUI exit";
 }
 
-bool GUI_App::restart_application()
-{
-    const wxString executable_path = wxStandardPaths::Get().GetExecutablePath();
-    if (executable_path.empty()) {
-        BOOST_LOG_TRIVIAL(error) << "restart_application failed: executable path is empty";
-        return false;
-    }
-
-    const wxString command = wxString::Format("\"%s\"", executable_path);
-    const long pid = wxExecute(command, wxEXEC_ASYNC, nullptr);
-    if (pid == 0) {
-        BOOST_LOG_TRIVIAL(error) << "restart_application failed: wxExecute returned 0, executable="
-                                 << executable_path.ToUTF8().data();
-        return false;
-    }
-
-    BOOST_LOG_TRIVIAL(info) << "restart_application launched new process, pid=" << pid
-                            << ", executable=" << executable_path.ToUTF8().data();
-
-    if (mainframe != nullptr)
-        mainframe->Close(false);
-    else
-        ExitMainLoop();
-
-    return true;
-}
-
 void GUI_App::system_info()
 {
     //SysInfoDialog dlg;
@@ -8248,9 +8221,7 @@ void GUI_App::switch_staff_pick(bool on)
 bool GUI_App::switch_language()
 {
     if (select_language()) {
-        app_config->save();
-        if (!restart_application())
-            MessageDialog(mainframe, _L("Please restart the application to apply the language change."), _L("Language"), wxICON_WARNING | wxOK).ShowModal();
+        recreate_GUI(_L("Switching application language") + dots);
         return true;
     } else {
         return false;
@@ -8977,11 +8948,14 @@ void GUI_App::open_preferences(size_t open_on_tab, const std::string& highlight_
     }
 
     if (!pending_language.empty()) {
+        const std::string previous_language = app_config->get("language");
         app_config->set("language", pending_language);
-        app_config->save();
-        if (!restart_application())
-            MessageDialog(mainframe, _L("Please restart the application to apply the language change."), _L("Language"), wxICON_WARNING | wxOK).ShowModal();
-        return;
+        if (!load_language(wxString::FromUTF8(pending_language), false)) {
+            app_config->set("language", previous_language);
+            if (this->plater_)
+                this->plater_->get_current_canvas3D()->force_set_focus();
+            return;
+        }
     }
 
     if (need_recreate_gui)

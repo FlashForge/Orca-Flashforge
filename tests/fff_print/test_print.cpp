@@ -9,6 +9,18 @@
 using namespace Slic3r;
 using namespace Slic3r::Test;
 
+TEST_CASE("Wipe tower clamp correction does not overwrite a user move", "[Print][WipeTower]")
+{
+    const Vec2d original(190., 190.);
+    const Vec2d corrected(139.95, 139.95);
+    const Vec2d user_position(80., 70.);
+
+    CHECK(is_approx(Print::resolve_wipe_tower_position(original, true, original, corrected), corrected));
+    CHECK(is_approx(Print::resolve_wipe_tower_position(corrected, true, original, corrected), corrected));
+    CHECK(is_approx(Print::resolve_wipe_tower_position(user_position, true, original, corrected), user_position));
+    CHECK(is_approx(Print::resolve_wipe_tower_position(original, false, original, corrected), original));
+}
+
 SCENARIO("PrintObject: Perimeter generation", "[PrintObject][.]") {
     GIVEN("20mm cube and default config") {
         WHEN("make_perimeters() is called")  {

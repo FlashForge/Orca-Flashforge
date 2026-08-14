@@ -2901,6 +2901,10 @@ void Print::process(long long *time_cost_with_cache, bool use_cache)
 
     if (this->set_started(psWipeTower)) {
         {
+            std::scoped_lock lock(m_wipe_tower_position_mutex);
+            m_wipe_tower_position_clamped = false;
+        }
+        {
             std::vector<std::set<int>> geometric_unprintables(m_config.nozzle_diameter.size());
             for (PrintObject* obj : m_objects) {
                 std::vector<std::set<int>> obj_geometric_unprintables = obj->detect_extruder_geometric_unprintables();
@@ -3485,15 +3489,18 @@ bool Print::_clamp_generated_wipe_tower_to_printable_area()
     if (!outside.empty())
         return false;
 
-    m_config.wipe_tower_x.get_at(m_plate_index) += offset.x();
-    m_config.wipe_tower_y.get_at(m_plate_index) += offset.y();
-    m_wipe_tower_position_clamped   = true;
-    m_wipe_tower_clamp_original     = Vec2d(old_wipe_tower_x, old_wipe_tower_y);
-    m_wipe_tower_clamp_corrected    = Vec2d(m_config.wipe_tower_x.get_at(m_plate_index), m_config.wipe_tower_y.get_at(m_plate_index));
-    if (ConfigOptionFloats *full_wipe_tower_x = m_full_print_config.option<ConfigOptionFloats>("wipe_tower_x", true))
-        full_wipe_tower_x->values = m_config.wipe_tower_x.values;
-    if (ConfigOptionFloats *full_wipe_tower_y = m_full_print_config.option<ConfigOptionFloats>("wipe_tower_y", true))
-        full_wipe_tower_y->values = m_config.wipe_tower_y.values;
+    {
+        std::scoped_lock lock(m_wipe_tower_position_mutex);
+        m_config.wipe_tower_x.get_at(m_plate_index) += offset.x();
+        m_config.wipe_tower_y.get_at(m_plate_index) += offset.y();
+        m_wipe_tower_position_clamped = true;
+        m_wipe_tower_clamp_original   = Vec2d(old_wipe_tower_x, old_wipe_tower_y);
+        m_wipe_tower_clamp_corrected  = Vec2d(m_config.wipe_tower_x.get_at(m_plate_index), m_config.wipe_tower_y.get_at(m_plate_index));
+        if (ConfigOptionFloats *full_wipe_tower_x = m_full_print_config.option<ConfigOptionFloats>("wipe_tower_x", true))
+            full_wipe_tower_x->values = m_config.wipe_tower_x.values;
+        if (ConfigOptionFloats *full_wipe_tower_y = m_full_print_config.option<ConfigOptionFloats>("wipe_tower_y", true))
+            full_wipe_tower_y->values = m_config.wipe_tower_y.values;
+    }
 
     return true;
 }
@@ -3758,6 +3765,32 @@ bool Print::has_wipe_tower() const
         return !m_config.spiral_mode.value && m_config.filament_diameter.values.size() > 1;
     }
     return false;
+}
+
+Vec2d Print::resolve_wipe_tower_position(const Vec2d &project_position, bool position_clamped,
+                                         const Vec2d &clamp_original, const Vec2d &clamp_corrected)
+{
+    return position_clamped && is_approx(project_position, clamp_original) ? clamp_corrected : project_position;
+}
+
+Vec2d Print::resolve_wipe_tower_position(const Vec2d &project_position) const
+{
+    std::scoped_lock lock(state_mutex(), m_wipe_tower_position_mutex);
+    if (!is_step_done_unguarded(psWipeTower))
+        return project_position;
+
+    if (!m_wipe_tower_position_clamped || m_plate_index < 0 ||
+        m_plate_index >= int(m_config.wipe_tower_x.values.size()) ||
+        m_plate_index >= int(m_config.wipe_tower_y.values.size()))
+        return project_position;
+
+    const Vec2d generated_position(m_config.wipe_tower_x.get_at(m_plate_index),
+                                   m_config.wipe_tower_y.get_at(m_plate_index));
+    if (!is_approx(generated_position, m_wipe_tower_clamp_corrected))
+        return project_position;
+
+    return resolve_wipe_tower_position(project_position, true, m_wipe_tower_clamp_original,
+                                       m_wipe_tower_clamp_corrected);
 }
 
 const WipeTowerData &Print::wipe_tower_data(size_t filaments_cnt) const

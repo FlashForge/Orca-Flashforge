@@ -67,13 +67,6 @@ function HandleModelList( pVal )
 		return;
 
     pModel=pVal['model'];
-
-	// ORCA ensure list correctly ordered
-	pModel = pModel.sort((a, b)=>(a["vendor"].localeCompare(b["vendor"])))
-	pModel = [ // move custom printers to top
-		...pModel.filter(i=>i.vendor === "Custom"),
-		...pModel.filter(i=>i.vendor !== "Custom")
-	];
 	
 	let nTotal=pModel.length;
 	let ModelHtml={};
@@ -97,14 +90,10 @@ function HandleModelList( pVal )
 			let HtmlNewVendor='<div class="OneVendorBlock" Vendor="'+strVendor+'">'+
 '<div class="BlockBanner">'+
 '	<a>'+sVV+'</a>'+
-'	<div class="BannerBtns" onClick="ChooseVendor('+"\'"+strVendor+"\'"+')">'+
-'		<div class="modelCount"></div>' +
-'		<input type="checkbox" class="VendorCheckbox"/>'+
-'	</div>'+		
-//'	<div class="BannerBtns">'+
-//'		<div class="ButtonStyleConfirm ButtonTypeWindow trans" tid="t11" onClick="SelectPrinterAll('+"\'"+strVendor+"\'"+')">all</div>'+
-//'		<div class="ButtonStyleRegular ButtonTypeWindow trans" tid="t12" onClick="SelectPrinterNone('+"\'"+strVendor+"\'"+')">none</div>'+
-//'	</div>'+
+'	<div class="BannerBtns">'+
+'		<div class="ButtonStyleConfirm ButtonTypeWindow trans" tid="t11" onClick="SelectPrinterAll('+"\'"+strVendor+"\'"+')">all</div>'+
+'		<div class="ButtonStyleRegular ButtonTypeWindow trans" tid="t12" onClick="SelectPrinterNone('+"\'"+strVendor+"\'"+')">none</div>'+
+'	</div>'+
 '</div>'+
 '<div class="PrinterArea">	'+
 '</div>'+
@@ -141,14 +130,6 @@ function HandleModelList( pVal )
 		}
 	}	
 
-	const $SidebarVendors = $('#SidebarVendors');
-	let SidebarHTML = "";
-	$(`.OneVendorBlock`).each((i, el)=>{
-		UpdateVendorCheckbox(el.getAttribute("vendor"));
-		SidebarHTML +=`<div class="SidebarItem" onclick="scrollToVendor(this.textContent)">${el.getAttribute('vendor')}</div>`;
-	});
-	$SidebarVendors.html(SidebarHTML)
-
 	// let AlreadySelect=$(".ModelCheckBoxSelected");
 	// let nSelect=AlreadySelect.length;
 	// if(nSelect==0)
@@ -157,14 +138,6 @@ function HandleModelList( pVal )
 	// }
 	
 	TranslatePage();
-}
-
-function scrollToVendor(vendor) {
-	const el = $(".OneVendorBlock[vendor='"+vendor+"']")[0];
-	if (el){
-		document.getElementById('SidebarContainer').setAttribute('open', '0');
-		document.getElementById('Content').scrollTo({top: el.offsetTop, behavior: "smooth"});
-	}
 }
 
 function SetModelSelect(vendor, model, checked) {
@@ -180,8 +153,6 @@ function SetModelSelect(vendor, model, checked) {
 	if (oVendor.hasOwnProperty(model) || checked) {
 		oVendor[model] = checked;
 	}
-
-	UpdateVendorCheckbox(vendor)
 }
 
 function GetModelSelect(vendor, model) {
@@ -211,8 +182,6 @@ function FilterModelList(keyword) {
 		SetModelSelect(strVendor, strModel, $(OneItem).hasClass('ModelCheckBoxSelected'));
 	}
 
-	$('.search')[0].setAttribute("hasvalue", keyword ? "1" : "0")
-
 	let nTotal = pModel.length;
 	let ModelHtml = {};
 	let kwSplit = keyword.toLowerCase().match(/\S+/g) || [];
@@ -240,14 +209,10 @@ function FilterModelList(keyword) {
 			let HtmlNewVendor = '<div class="OneVendorBlock" Vendor="' + strVendor + '">' +
 				'<div class="BlockBanner">' +
 				'	<a>' + sVV + '</a>' +
-				'	<div class="BannerBtns" onClick="ChooseVendor('+"\'"+strVendor+"\'"+')">'+
-				'		<div class="modelCount"></div>' +
-				'		<input type="checkbox" class="VendorCheckbox"/>'+
-				'	</div>'+	
-				//'	<div class="BannerBtns">' +
-				//'		<div class="ButtonStyleConfirm ButtonTypeWindow trans" tid="t11" onClick="SelectPrinterAll(' + "\'" + strVendor + "\'" + ')">all</div>' +
-				//'		<div class="ButtonStyleRegular ButtonTypeWindow trans" tid="t12" onClick="SelectPrinterNone(' + "\'" + strVendor + "\'" + ')">none</div>' +
-				//'	</div>' +
+				'	<div class="BannerBtns">' +
+				'		<div class="ButtonStyleConfirm ButtonTypeWindow trans" tid="t11" onClick="SelectPrinterAll(' + "\'" + strVendor + "\'" + ')">all</div>' +
+				'		<div class="ButtonStyleRegular ButtonTypeWindow trans" tid="t12" onClick="SelectPrinterNone(' + "\'" + strVendor + "\'" + ')">none</div>' +
+				'	</div>' +
 				'</div>' +
 				'<div class="PrinterArea">	' +
 				'</div>' +
@@ -287,17 +252,6 @@ function FilterModelList(keyword) {
 			$(OneItem).removeClass('ModelCheckBoxSelected');
 	}
 
-	const $SidebarVendors = $('#SidebarVendors');
-	let SidebarHTML = "";
-	$(`.OneVendorBlock`).each((i, el)=>{
-		UpdateVendorCheckbox(el.getAttribute("vendor"));
-		SidebarHTML +=`<div class="SidebarItem" onclick="scrollToVendor(this.textContent)">${el.getAttribute('vendor')}</div>`;
-	});
-	$SidebarVendors.html(SidebarHTML)
-
-	const $content = $('#Content');
-	$content.css("padding-right",  $content[0].scrollHeight > $content[0].clientHeight ? "10px" : "20px");
-
 	// let AlreadySelect=$(".ModelCheckBoxSelected");
 	// let nSelect=AlreadySelect.length;
 	// if(nSelect==0)
@@ -333,16 +287,9 @@ function CreatePrinterBlock(OneModel)
 	'<div class="PImg">'+
 	'<img class="ModelThumbnail" src="' + OneModel['cover'] + '" />'+
 	'</div>'+
-	'<div class="PrinterInfoMark">?</div>'+
-	'<div class="PrinterInfo">'+
-	//'	<div class="title trans">Print volume</div>'+
-	//'	<div class="value">' + OneModel['printable_height'] + '</div>'+
-	'	<div class="title trans">Nozzle</div>'+
-	'	<div class="value">' + OneModel['nozzle_diameter'].replaceAll(";", " · ") + '</div>'+
-	'</div>'+
 	'<div style="display: flex;">'+
 	'	<div class="ModelCheckBox" vendor="' +vendor+ '" model="'+OneModel['model']+'"></div>'+
-	'	<div class="PName">'+ modelName +'</div>'+ // ><p>'+ vendorName +'</p>
+	'	<div class="PName"><p>'+ vendorName +'</p><p>' + modelName +'</p></div>'+
 	'</div>'+
 	'</div>';
 }
@@ -364,30 +311,6 @@ function SelectPrinterNone( sVendor )
     	let strModel = this.getAttribute("model");
 		SetModelSelect(sVendor, strModel, false);
 	});
-}
-
-function ChooseVendor(sVendor) {
-	const $cbs = $(`.OneVendorBlock[vendor='${sVendor}'] .ModelCheckBox`);
-	const sel  = $cbs.length && $cbs.not('.ModelCheckBoxSelected').length;
-
-	sel ? $cbs.addClass('ModelCheckBoxSelected')
-		: $cbs.removeClass('ModelCheckBoxSelected');
-
-	$cbs.each((i, el)=>{SetModelSelect(sVendor, el.getAttribute('model'), sel)});
-}
-
-function UpdateVendorCheckbox(sVendor) {
-	const $vb  = $(`.OneVendorBlock[vendor='${sVendor}']`);
-	const $cbs = $vb.find(`.ModelCheckBox`);
-	const $vcb = $vb.find(`.VendorCheckbox`);
-
-	const selCount = $cbs.filter('.ModelCheckBoxSelected').length;
-	const allSel   = selCount === $cbs.length && selCount > 0;
-	const nonSel   = selCount === 0;
-
-	$vcb.prop({checked: allSel , indeterminate: !allSel && !nonSel});
-
-	$vb.find(".modelCount").text(selCount + " / " + $cbs.length);
 }
 
 function OnExitFilter() {
@@ -505,16 +428,6 @@ function ConfirmSelect()
 		
 		SendWXMessage( JSON.stringify(tSend) );			
 	}
-}
-
-function CreateNewPrinter()
-{
-	var tSend={};
-	tSend['sequence_id']=Math.round(new Date() / 1000);
-	tSend['command']="user_guide_create_printer";
-	tSend['data']={};
-		
-	SendWXMessage( JSON.stringify(tSend) );			
 }
 
 

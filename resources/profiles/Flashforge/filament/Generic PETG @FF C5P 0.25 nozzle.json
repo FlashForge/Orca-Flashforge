@@ -1,0 +1,96 @@
+{
+  "activate_air_filtration": [
+    "1"
+  ],
+  "additional_cooling_fan_speed": [
+    "0"
+  ],
+  "close_fan_the_first_x_layers": [
+    "2"
+  ],
+  "compatible_printers": [
+    "Flashforge Creator 5 Pro 0.25 nozzle"
+  ],
+  "complete_print_exhaust_fan_speed": [
+    "40"
+  ],
+  "during_print_exhaust_fan_speed": [
+    "40"
+  ],
+  "eng_plate_temp": [
+    "70"
+  ],
+  "eng_plate_temp_initial_layer": [
+    "70"
+  ],
+  "fan_max_speed": [
+    "70"
+  ],
+  "fan_min_speed": [
+    "70"
+  ],
+  "filament_max_volumetric_speed": [
+    "2"
+  ],
+  "filament_settings_id": [
+    "Generic PETG @FF C5P 0.25 nozzle"
+  ],
+  "from": "system",
+  "hot_plate_temp": [
+    "70"
+  ],
+  "hot_plate_temp_initial_layer": [
+    "70"
+  ],
+  "inherits": "Generic PETG @FF C5P",
+  "name": "Generic PETG @FF C5P 0.25 nozzle",
+  "nozzle_temperature": [
+    "255"
+  ],
+  "nozzle_temperature_initial_layer": [
+    "255"
+  ],
+  "pressure_advance": [
+    "0.1"
+  ],
+  "slow_down_min_speed": [
+    "15"
+  ],
+  "supertack_plate_temp": [
+    "0"
+  ],
+  "supertack_plate_temp_initial_layer": [
+    "0"
+  ],
+  "support_material_interface_fan_speed": [
+    "-1"
+  ],
+  "textured_cool_plate_temp": [
+    "0"
+  ],
+  "textured_cool_plate_temp_initial_layer": [
+    "0"
+  ],
+  "textured_plate_temp": [
+    "70"
+  ],
+  "textured_plate_temp_initial_layer": [
+    "70"
+  ],
+  "version": "2.1.1.0",
+  "instantiation": "true",
+  "is_custom_defined": "0",
+  "setting_id": "45FF1C8FA934A140",
+  "cool_plate_temp": [
+    "0"
+  ],
+  "cool_plate_temp_initial_layer": [
+    "0"
+  ],
+  "filament_flow_ratio": [
+    "0.98"
+  ],
+  "slow_down_layer_time": [
+    "8"
+  ]
+}

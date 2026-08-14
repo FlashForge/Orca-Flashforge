@@ -5379,6 +5379,18 @@ msgstr ""
 "PLA와 PETG 필라멘트의 혼합이 감지되었습니다. 인쇄 품질을 보장하기 위해 위키"
 "에 따라 매개변수를 조정하세요."
 
+msgid ""
+"Prime tower is disabled because the current plate prints multiple objects by "
+"object. Change the plate print sequence to by layer to enable it."
+msgstr ""
+"현재 플레이트가 여러 객체를 객체별로 출력하도록 설정되어 프라임 타워가 비활성화되었습니다. 활성화하려면 플레이트 출력 순서를 레이어별로 변경하십시오."
+
+msgid "The plate print sequence overrides the global setting."
+msgstr "플레이트 출력 순서가 전역 설정보다 우선 적용됩니다."
+
+msgid "Open plate settings"
+msgstr "플레이트 설정 열기"
+
 msgid "The prime tower extends beyond the plate boundary."
 msgstr "프라임 타워가 플레이트 경계를 초과합니다."
 
@@ -7232,6 +7244,12 @@ msgstr "플레이트를 앞쪽으로 이동"
 
 msgid "Customize current plate"
 msgstr "사용자 정의 플레이트"
+
+msgid "Print sequence: By object (plate override)"
+msgstr "출력 순서: 객체별(플레이트 설정 우선)"
+
+msgid "Print sequence: By layer (plate override)"
+msgstr "출력 순서: 레이어별(플레이트 설정 우선)"
 
 #, c-format
 msgid "The %s nozzle can not print %s."

@@ -530,7 +530,6 @@ private:
     void            check_printer_presets();
 
     void            recreate_GUI(const wxString& message);
-    bool            restart_application();
     void            system_info();
     void            keyboard_shortcuts();
     void            load_project(wxWindow *parent, wxString& input_file) const;

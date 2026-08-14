@@ -5409,6 +5409,18 @@ msgstr ""
 "PLAとPETGフィラメントの混合が検出されました。印刷品質を確保するためにWikiに"
 "従ってパラメータを調整してください。"
 
+msgid ""
+"Prime tower is disabled because the current plate prints multiple objects by "
+"object. Change the plate print sequence to by layer to enable it."
+msgstr ""
+"現在のプレートが複数のオブジェクトをオブジェクト順で造形するため、プライムタワーは無効です。有効にするには、プレートの造形シーケンスを積層順に変更してください。"
+
+msgid "The plate print sequence overrides the global setting."
+msgstr "プレートの造形シーケンスがグローバル設定より優先されています。"
+
+msgid "Open plate settings"
+msgstr "プレート設定を開く"
+
 msgid "The prime tower extends beyond the plate boundary."
 msgstr "プライムタワーがプレートの境界を超えています。"
 
@@ -7263,6 +7275,12 @@ msgstr "プレートを前面に移動"
 
 msgid "Customize current plate"
 msgstr "現在のプレートをカスタマイズ"
+
+msgid "Print sequence: By object (plate override)"
+msgstr "造形シーケンス：オブジェクト順（プレート設定優先）"
+
+msgid "Print sequence: By layer (plate override)"
+msgstr "造形シーケンス：積層順（プレート設定優先）"
 
 #, c-format
 msgid "The %s nozzle can not print %s."

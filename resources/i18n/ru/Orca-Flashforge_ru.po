@@ -5583,6 +5583,20 @@ msgstr ""
 "В смеси обнаружены филаменты PLA и PETG. Отрегулируйте параметры в "
 "соответствии с вики-страницей, чтобы обеспечить качество печати."
 
+msgid ""
+"Prime tower is disabled because the current plate prints multiple objects by "
+"object. Change the plate print sequence to by layer to enable it."
+msgstr ""
+"Прайм-башня отключена, поскольку на текущей платформе несколько объектов "
+"печатаются по очереди. Чтобы включить её, измените последовательность печати "
+"для платформы на «Одновременно»."
+
+msgid "The plate print sequence overrides the global setting."
+msgstr "Последовательность печати для платформы переопределяет глобальную настройку."
+
+msgid "Open plate settings"
+msgstr "Открыть настройки платформы"
+
 msgid "The prime tower extends beyond the plate boundary."
 msgstr "Прайм-башня выходит за пределы платформы."
 
@@ -7499,6 +7513,12 @@ msgstr "Переместить пластину вперед"
 
 msgid "Customize current plate"
 msgstr "Настроить текущую печатную пластину"
+
+msgid "Print sequence: By object (plate override)"
+msgstr "Последовательность печати: По очереди (настройка платформы имеет приоритет)"
+
+msgid "Print sequence: By layer (plate override)"
+msgstr "Последовательность печати: Одновременно (настройка платформы имеет приоритет)"
 
 #, c-format
 msgid "The %s nozzle can not print %s."

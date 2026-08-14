@@ -113,6 +113,25 @@ SCENARIO("Placeholder parser scripting", "[PlaceholderParser]") {
     SECTION("complex expression3") { REQUIRE(! boolean_expression("printer_notes=~/.*PRINTER_VEwerfNDOR_PRUSA3D.*/ or printer_notes=~/.*PRINTertER_MODEL_MK2.*/ or (nozzle_diameter[0]==0.3 and num_extruders>1)")); }
 }
 
+TEST_CASE("C5 0.25 generic filament compatibility condition", "[PlaceholderParser][profiles]")
+{
+    static constexpr const char *condition =
+        "not ((printer_model == \"Flashforge Creator 5\" or printer_model == \"Flashforge Creator 5 Pro\") and printer_variant == \"0.25\")";
+    auto config = DynamicPrintConfig::full_print_config();
+
+    const auto is_compatible = [&config](const std::string &model, const std::string &variant) {
+        config.set_deserialize_strict({{"printer_model", model}, {"printer_variant", variant}});
+        return PlaceholderParser::evaluate_boolean_expression(condition, config);
+    };
+
+    CHECK_FALSE(is_compatible("Flashforge Creator 5", "0.25"));
+    CHECK_FALSE(is_compatible("Flashforge Creator 5 Pro", "0.25"));
+    for (const std::string &model : {"Flashforge Creator 5", "Flashforge Creator 5 Pro"})
+        for (const std::string &variant : {"0.4", "0.6", "0.8"})
+            CHECK(is_compatible(model, variant));
+    CHECK(is_compatible("Flashforge Adventurer 5M Pro", "0.25"));
+}
+
 SCENARIO("Placeholder parser variables", "[PlaceholderParser]") {
     PlaceholderParser 	parser;
     auto 				config = DynamicPrintConfig::full_print_config();

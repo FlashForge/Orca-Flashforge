@@ -5602,6 +5602,20 @@ msgstr ""
 "Des filaments PLA et PETG ont été détectés dans le mélange. Ajustez les "
 "paramètres selon le Wiki pour garantir la qualité d'impression."
 
+msgid ""
+"Prime tower is disabled because the current plate prints multiple objects by "
+"object. Change the plate print sequence to by layer to enable it."
+msgstr ""
+"La tour d’amorçage est désactivée, car le plateau actuel imprime plusieurs "
+"objets séparément. Définissez la séquence d’impression du plateau sur « Par "
+"couche » pour l’activer."
+
+msgid "The plate print sequence overrides the global setting."
+msgstr "La séquence d’impression du plateau remplace le paramètre global."
+
+msgid "Open plate settings"
+msgstr "Ouvrir les paramètres du plateau"
+
 msgid "The prime tower extends beyond the plate boundary."
 msgstr "La tour d'amorçage dépasse les limites de la plaque."
 
@@ -7521,6 +7535,12 @@ msgstr "Déplacer le plateau vers l’avant"
 
 msgid "Customize current plate"
 msgstr "Personnaliser le plateau actuel"
+
+msgid "Print sequence: By object (plate override)"
+msgstr "Séquence d’impression : Par objet (priorité au plateau)"
+
+msgid "Print sequence: By layer (plate override)"
+msgstr "Séquence d’impression : Par couche (priorité au plateau)"
 
 #, c-format
 msgid "The %s nozzle can not print %s."

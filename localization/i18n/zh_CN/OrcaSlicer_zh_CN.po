@@ -5251,6 +5251,17 @@ msgid ""
 "to the Wiki to ensure print quality."
 msgstr "混合物中检测到 PLA 和 PETG 耗材。根据 Wiki 调整参数以保证打印质量。"
 
+msgid ""
+"Prime tower is disabled because the current plate prints multiple objects by "
+"object. Change the plate print sequence to by layer to enable it."
+msgstr "当前打印盘逐件打印多个对象，因此已禁用擦拭塔。若要启用，请将打印盘的打印顺序改为逐层。"
+
+msgid "The plate print sequence overrides the global setting."
+msgstr "打印盘的打印顺序将覆盖全局设置。"
+
+msgid "Open plate settings"
+msgstr "打开打印盘设置"
+
 msgid "The prime tower extends beyond the plate boundary."
 msgstr "主塔延伸到板块边界之外。"
 
@@ -7053,6 +7064,12 @@ msgstr "将当前盘移到最前面"
 
 msgid "Customize current plate"
 msgstr "自定义当前盘"
+
+msgid "Print sequence: By object (plate override)"
+msgstr "打印顺序：逐件（打印盘覆盖）"
+
+msgid "Print sequence: By layer (plate override)"
+msgstr "打印顺序：逐层（打印盘覆盖）"
 
 #, c-format
 msgid "The %s nozzle can not print %s."
