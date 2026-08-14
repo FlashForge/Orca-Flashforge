@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <map>
+#include <utility>
 #include <wx/event.h>
 #include "MultiComDef.hpp"
 
@@ -291,6 +292,30 @@ struct ComRefreshTokenEvent : public wxCommandEvent
     uint64_t tokenRevision;
 };
 
+struct ComAccessTokenRefreshResultEvent : public wxCommandEvent
+{
+    ComAccessTokenRefreshResultEvent(wxEventType type, ComErrno _ret, std::string _accessToken,
+        uint64_t _sessionGeneration, uint64_t _requestGeneration, uint64_t _tokenRevision)
+        : wxCommandEvent(type)
+        , ret(_ret)
+        , accessToken(std::move(_accessToken))
+        , sessionGeneration(_sessionGeneration)
+        , requestGeneration(_requestGeneration)
+        , tokenRevision(_tokenRevision)
+    {
+    }
+    ComAccessTokenRefreshResultEvent *Clone() const
+    {
+        return new ComAccessTokenRefreshResultEvent(
+            GetEventType(), ret, accessToken, sessionGeneration, requestGeneration, tokenRevision);
+    }
+    ComErrno ret;
+    std::string accessToken;
+    uint64_t sessionGeneration;
+    uint64_t requestGeneration;
+    uint64_t tokenRevision;
+};
+
 struct ComMqttConfigRefreshEvent : public wxCommandEvent
 {
     ComMqttConfigRefreshEvent(wxEventType type, const com_mqtt_config_t &_config, ComErrno _ret,
@@ -396,6 +421,7 @@ wxDECLARE_EVENT(COM_SEND_GCODE_FINISH_EVENT, ComSendGcodeFinishEvent);
 wxDECLARE_EVENT(COM_WAN_DEV_MAINTAIN_EVENT, ComWanDevMaintainEvent);
 wxDECLARE_EVENT(COM_GET_USER_PROFILE_EVENT, ComGetUserProfileEvent);
 wxDECLARE_EVENT(COM_REFRESH_TOKEN_EVENT, ComRefreshTokenEvent);
+wxDECLARE_EVENT(COM_ACCESS_TOKEN_REFRESH_RESULT_EVENT, ComAccessTokenRefreshResultEvent);
 wxDECLARE_EVENT(COM_MQTT_CONFIG_REFRESH_EVENT, ComMqttConfigRefreshEvent);
 wxDECLARE_EVENT(COM_ADD_PRINT_LIST_MODEL_EVENT, ComBusRequestEvent);
 wxDECLARE_EVENT(COM_REMOVE_PRINT_LIST_MODEL_EVENT, ComBusRequestEvent);

@@ -59,6 +59,11 @@ public:
     // published as logged in. Must be called on the wx event thread.
     void startWanMqtt();
 
+    // Refreshes the active account token without rebuilding the WAN session.
+    // Completion is reported asynchronously through
+    // COM_ACCESS_TOKEN_REFRESH_RESULT_EVENT.
+    bool requestAccessTokenRefresh(uint64_t requestGeneration);
+
     ComErrno bindWanDev(const std::string &ip, unsigned short port, const std::string &serialNumber,
         unsigned short pid, const std::string &name, unsigned short bindType);
 

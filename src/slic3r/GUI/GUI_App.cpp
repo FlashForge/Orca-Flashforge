@@ -5170,7 +5170,7 @@ void GUI_App::banner_update(bool hasToken)
     wxQueueEvent(this, evt);
 }
 
-bool GUI_App::auto_login_flashforge()
+bool GUI_App::auto_login_flashforge(bool force_refresh)
 {
     if (!app_config)
         return false;
@@ -5178,18 +5178,12 @@ bool GUI_App::auto_login_flashforge()
     const std::string access_token = app_config->get("access_token");
     const std::string refresh_token = app_config->get("refresh_token");
     if (m_login_success) {
-        std::string user_name = app_config->get("usr_name");
-        if (user_name.empty())
-            user_name = app_config->get("usr_input_name");
-        com_add_wan_dev_data_t add_wan_dev_data;
-        add_wan_dev_data.userProfile.uid = app_config->get("usr_uid");
-        add_wan_dev_data.userProfile.nickname = user_name;
-        add_wan_dev_data.userProfile.headImgUrl = app_config->get("usr_pic");
-        add_wan_dev_data.userProfile.email = app_config->get("usr_email");
-        add_wan_dev_data.showUserPoints = app_config->get("show_user_points") == "true";
-        handle_login_result(access_token, add_wan_dev_data, false);
+        if (force_refresh) {
+            request_flashforge_access_token_refresh();
+            return false;
+        }
+        send_flashforge_login_info(access_token);
         LoginDialog::SetToken(access_token, refresh_token);
-        LoginDialog::SetUsrInfo(add_wan_dev_data.userProfile);
         return false;
     }
 
@@ -5204,6 +5198,53 @@ bool GUI_App::auto_login_flashforge()
     m_auto_login_retry_count = 0;
     start_flashforge_session_attempt();
     return true;
+}
+
+void GUI_App::send_flashforge_login_info(const std::string& access_token)
+{
+    if (!app_config || access_token.empty())
+        return;
+
+    std::string user_name = app_config->get("usr_name");
+    if (user_name.empty())
+        user_name = app_config->get("usr_input_name");
+    com_add_wan_dev_data_t add_wan_dev_data;
+    add_wan_dev_data.userProfile.uid = app_config->get("usr_uid");
+    add_wan_dev_data.userProfile.nickname = user_name;
+    add_wan_dev_data.userProfile.headImgUrl = app_config->get("usr_pic");
+    add_wan_dev_data.userProfile.email = app_config->get("usr_email");
+    add_wan_dev_data.showUserPoints = app_config->get("show_user_points") == "true";
+    handle_login_result(access_token, add_wan_dev_data, false);
+    LoginDialog::SetUsrInfo(add_wan_dev_data.userProfile);
+}
+
+void GUI_App::request_flashforge_access_token_refresh()
+{
+    if (m_web_token_refresh_pending) {
+        BOOST_LOG_TRIVIAL(info) << "Coalesce duplicate homepage access token refresh request";
+        return;
+    }
+    if (!m_login_success || !MultiComMgr::inst()->isLoggedIn()) {
+        notify_flashforge_token_refresh_failed(false);
+        return;
+    }
+
+    const uint64_t request_generation = ++m_web_token_refresh_generation;
+    m_web_token_refresh_pending = true;
+    if (!MultiComMgr::inst()->requestAccessTokenRefresh(request_generation)) {
+        m_web_token_refresh_pending = false;
+        notify_flashforge_token_refresh_failed(true);
+    }
+}
+
+void GUI_App::notify_flashforge_token_refresh_failed(bool retryable)
+{
+    json payload;
+    payload["command"] = "studio_token_refresh_failed";
+    payload["data"]["retryable"] = retryable;
+    payload["data"]["message"] = _L("Server connection exception").utf8_string();
+    payload["sequence_id"] = "10001";
+    run_script(wxString::Format("window.postMessage(%s)", wxString::FromUTF8(payload.dump())));
 }
 
 bool GUI_App::begin_flashforge_login(const com_token_data_t& token_data, const std::string& username)
@@ -5366,6 +5407,8 @@ void GUI_App::cancel_flashforge_session_recovery()
     if (m_auto_login_retry_timer)
         m_auto_login_retry_timer->Stop();
     ++m_auto_login_generation;
+    ++m_web_token_refresh_generation;
+    m_web_token_refresh_pending = false;
     m_auto_login_retry_count = 0;
     m_auto_login_state = FlashLoginRecoveryState::Idle;
     m_auto_connecting = false;
@@ -5569,7 +5612,12 @@ std::string GUI_App::handle_web_request(std::string cmd, const std::vector<std::
                     wxGetApp().set_user_region();
                     wxGetApp().set_app_version();
                 });
-                bool use_uid = wxGetApp().auto_login_flashforge();
+                bool force_refresh = root.get("force_refresh", false);
+                if (root.get_child_optional("data") != boost::none) {
+                    force_refresh = root.get_child("data").get("force_refresh", force_refresh);
+                }
+                BOOST_LOG_TRIVIAL(info) << "Homepage requested login info, force_refresh=" << force_refresh;
+                bool use_uid = wxGetApp().auto_login_flashforge(force_refresh);
                 check_new_version_sf(0, use_uid);
             }
             else if (command_str.compare("get_app_version") == 0) {
@@ -6302,11 +6350,13 @@ void GUI_App::on_connect_event()
     Slic3r::GUI::MultiComMgr::inst()->Unbind(COM_GET_USER_PROFILE_EVENT, &GUI_App::get_usr_profile, this);
     Slic3r::GUI::MultiComMgr::inst()->Unbind(COM_WAN_DEV_MAINTAIN_EVENT, &GUI_App::wan_dev_maintain, this);
     Slic3r::GUI::MultiComMgr::inst()->Unbind(COM_REFRESH_TOKEN_EVENT, &GUI_App::refresh_access_token, this);
+    Slic3r::GUI::MultiComMgr::inst()->Unbind(COM_ACCESS_TOKEN_REFRESH_RESULT_EVENT, &GUI_App::access_token_refresh_result, this);
     Slic3r::GUI::MultiComMgr::inst()->Unbind(COM_CONN_SYS_NOTIFY_EVENT, &GUI_App::connect_sys_notify, this);
     Slic3r::GUI::MultiComMgr::inst()->Unbind(COM_CONN_UPDATE_NOTIFY_EVENT, &GUI_App::connect_update_notify, this);
     Slic3r::GUI::MultiComMgr::inst()->Bind(COM_GET_USER_PROFILE_EVENT, &GUI_App::get_usr_profile,this);
     Slic3r::GUI::MultiComMgr::inst()->Bind(COM_WAN_DEV_MAINTAIN_EVENT, &GUI_App::wan_dev_maintain,this);
     Slic3r::GUI::MultiComMgr::inst()->Bind(COM_REFRESH_TOKEN_EVENT, &GUI_App::refresh_access_token, this);
+    Slic3r::GUI::MultiComMgr::inst()->Bind(COM_ACCESS_TOKEN_REFRESH_RESULT_EVENT, &GUI_App::access_token_refresh_result, this);
     Slic3r::GUI::MultiComMgr::inst()->Bind(COM_CONN_SYS_NOTIFY_EVENT, &GUI_App::connect_sys_notify, this);
     Slic3r::GUI::MultiComMgr::inst()->Bind(COM_CONN_UPDATE_NOTIFY_EVENT, &GUI_App::connect_update_notify, this);
 }
@@ -6654,7 +6704,43 @@ void GUI_App::refresh_access_token(ComRefreshTokenEvent &event)
                                 << event.sessionGeneration;
         return;
     }
+    if (event.ret != COM_OK) {
+        return;
+    }
     save_flashforge_token(event.tokenData);
+    LoginDialog::SetToken(event.tokenData.accessToken, event.tokenData.refreshToken);
+}
+
+void GUI_App::access_token_refresh_result(ComAccessTokenRefreshResultEvent &event)
+{
+    event.Skip();
+    if (event.requestGeneration != m_web_token_refresh_generation) {
+        BOOST_LOG_TRIVIAL(info) << "Ignore stale homepage token refresh result, request="
+                                << event.requestGeneration;
+        return;
+    }
+    if (!m_web_token_refresh_pending) {
+        return;
+    }
+
+    m_web_token_refresh_pending = false;
+    if (!MultiComMgr::inst()->isLoggedIn()
+        || event.sessionGeneration != MultiComMgr::inst()->wanSessionGeneration()) {
+        return;
+    }
+
+    BOOST_LOG_TRIVIAL(info) << "Homepage access token refresh completed, ret="
+                            << static_cast<int>(event.ret)
+                            << ", session=" << event.sessionGeneration
+                            << ", request=" << event.requestGeneration
+                            << ", token_revision=" << event.tokenRevision;
+    if (event.ret == COM_OK && !event.accessToken.empty()) {
+        send_flashforge_login_info(event.accessToken);
+        return;
+    }
+    if (event.ret != COM_UNAUTHORIZED) {
+        notify_flashforge_token_refresh_failed(true);
+    }
 }
 
 void GUI_App::connect_sys_notify(ComConnSysNotifyEvent& event)

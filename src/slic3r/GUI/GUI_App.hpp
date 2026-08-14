@@ -84,6 +84,7 @@ struct com_add_wan_dev_data_t;
 struct ComGetUserProfileEvent;
 struct ComWanDevMaintainEvent;
 struct ComRefreshTokenEvent;
+struct ComAccessTokenRefreshResultEvent;
 struct ComBusGetRequestEvent;
 struct ComBusPostRequestEvent;
 struct ComConnSysNotifyEvent;
@@ -354,6 +355,8 @@ private:
     FlashLoginRecoveryState  m_auto_login_state{FlashLoginRecoveryState::Idle};
     unsigned int             m_auto_login_retry_count{0};
     uint64_t                 m_auto_login_generation{0};
+    bool                     m_web_token_refresh_pending{false};
+    uint64_t                 m_web_token_refresh_generation{0};
     wxString        m_cur_title;
 
     VersionInfo version_info;
@@ -548,7 +551,7 @@ private:
     
     wxString        get_homepage_url();
     void            banner_update(bool hasToken);
-    bool            auto_login_flashforge();
+    bool            auto_login_flashforge(bool force_refresh = false);
     bool            begin_flashforge_login(const com_token_data_t& token_data, const std::string& username = {});
     bool            is_flashforge_login();
     void            set_user_region();
@@ -584,6 +587,7 @@ private:
     void            request_restore_gl_canvas_after_repeat_logout();
 #endif
     void            refresh_access_token(ComRefreshTokenEvent &event);
+    void            access_token_refresh_result(ComAccessTokenRefreshResultEvent &event);
     void            connect_sys_notify(ComConnSysNotifyEvent& event);
     void            connect_update_notify(ComConnSysNotifyEvent& event);
     void            bus_get_request(ComBusGetRequestEvent &event);
@@ -840,6 +844,9 @@ private:
     void            cancel_flashforge_session_recovery();
     void            on_flashforge_session_retry_timer(wxTimerEvent& event);
     void            save_flashforge_token(const com_token_data_t& token_data, const std::string& username = {});
+    void            send_flashforge_login_info(const std::string& access_token);
+    void            request_flashforge_access_token_refresh();
+    void            notify_flashforge_token_refresh_failed(bool retryable);
     void            notify_flashforge_login_progress(const wxString& message);
 #ifdef __WXGTK__
     void            restore_gl_canvas_after_repeat_logout(const char* /*phase*/, int retries_left);

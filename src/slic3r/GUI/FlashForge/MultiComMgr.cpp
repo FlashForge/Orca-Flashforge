@@ -396,6 +396,25 @@ void MultiComMgr::startWanMqtt()
     startMqttRecovery();
 }
 
+bool MultiComMgr::requestAccessTokenRefresh(uint64_t requestGeneration)
+{
+    if (!m_login || !m_threadPool) {
+        return false;
+    }
+
+    const uint64_t sessionGeneration = m_wanSessionGeneration.load();
+    ScopedWanDevToken token = WanDevTokenMgr::inst()->getScopedToken();
+    BOOST_LOG_TRIVIAL(info) << "Request access token refresh, session=" << sessionGeneration
+                            << ", request=" << requestGeneration
+                            << ", token_revision=" << token.tokenRevision();
+    m_threadPool->post([this, sessionGeneration, requestGeneration, token = std::move(token)]() mutable {
+        const ComErrno ret = WanDevTokenMgr::inst()->refreshToken(token);
+        QueueEvent(new ComAccessTokenRefreshResultEvent(COM_ACCESS_TOKEN_REFRESH_RESULT_EVENT, ret,
+            token.accessToken(), sessionGeneration, requestGeneration, token.tokenRevision()));
+    });
+    return true;
+}
+
 void MultiComMgr::startFeedbackLogSession()
 {
     stopFeedbackLogSession();
