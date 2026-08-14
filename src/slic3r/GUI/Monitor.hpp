@@ -48,9 +48,9 @@
 #include "slic3r/GUI/UpgradePanel.hpp"
 #include "slic3r/GUI/HMSPanel.hpp"
 #include "slic3r/GUI/AmsWidgets.hpp"
+#include "FlashForge/MultiComEvent.hpp"
 #include "Widgets/SideTools.hpp"
 #include "FFSelectMachine.hpp"
-#include <mutex>
 
 namespace Slic3r {
 namespace GUI {
@@ -93,7 +93,6 @@ private:
     //UpgradePanel*       m_upgrade_panel;
     //HMSPanel*           m_hms_panel;
 
-    std::mutex m_mutex;
 	/* side tools */
     SideTools*      m_side_tools{nullptr};
     wxStaticBitmap* m_bitmap_printer_type;
@@ -110,6 +109,7 @@ private:
     wxTimer* m_refresh_timer = nullptr;
     time_t m_connect_fail_time1;
     time_t   m_connect_fail_time0;
+    WanServiceState m_wan_service_state { WanServiceState::LoggedOut };
 
 public:
     MonitorPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
@@ -143,6 +143,7 @@ public:
     void on_printer_clicked(wxMouseEvent &event);
     void on_size(wxSizeEvent &event);
     void onComWanDevMaintainEvent(ComWanDevMaintainEvent& event);
+    void on_login_out(wxCommandEvent& event);
 
     /* update apis */
     //void update_ams(MachineObject* obj);

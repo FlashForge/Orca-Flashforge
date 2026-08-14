@@ -945,7 +945,8 @@ void MultiComMgr::onWanConnStatus(const WanConnStatusEvent &event)
         m_nextMqttConfigRefreshTime = {};
         m_mqttConnectDeadline = {};
         QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, m_httpOnline, COM_OK,
-            WanServiceState::Connected, WanLogoutReason::Unknown, event.sessionGeneration));
+            m_httpOnline ? WanServiceState::Connected : WanServiceState::ApiUnavailable,
+            WanLogoutReason::Unknown, event.sessionGeneration));
         // cleanSession subscriptions are not retained. Restore all topics and
         // resynchronize cached data after both the first connection and reconnects.
         ComWanConn::inst()->subscribe(std::vector<std::string>(1, m_mqttConfig.userTopic));
