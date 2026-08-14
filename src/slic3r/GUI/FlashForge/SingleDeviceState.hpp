@@ -246,7 +246,13 @@ private:
 class SingleDeviceState : public wxScrolledWindow
 {
 public:
-    SingleDeviceState(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, 
+    enum class DevicePageState {
+        NoDevice,
+        Offline,
+        Connected
+    };
+
+    SingleDeviceState(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition,
             const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString);
     ~SingleDeviceState();
 
@@ -283,6 +289,8 @@ public:
 
 
 private:
+    void setDevicePageState(DevicePageState state);
+    void clearCurrentDevice();
     void OnScrollWinSize(wxSizeEvent& evt);
     void onConnectWanDevInfoUpdate(ComWanDevInfoUpdateEvent& event);
     void onComDevDetailUpdate(ComDevDetailUpdateEvent &event);
@@ -339,6 +347,7 @@ protected:
 
     com_id_t m_cur_id = ComInvalidId;
 
+    DevicePageState m_device_page_state = DevicePageState::NoDevice;
 //UI
     LampToolBar* m_idle_lamp_bar{nullptr};
     LampToolBar* m_busy_lamp_bar{nullptr};

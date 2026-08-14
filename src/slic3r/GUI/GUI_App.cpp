@@ -1794,7 +1794,7 @@ void GUI_App::restart_networking()
 
 // Network plugin hot reload timeout constants (in milliseconds)
 namespace {
-    constexpr bool FLASH_PRESET_SYNC_LOG_ENABLED = true;
+    constexpr bool FLASH_PRESET_SYNC_LOG_ENABLED = false;
 
     void log_flash_preset_sync(const std::string &message)
     {
