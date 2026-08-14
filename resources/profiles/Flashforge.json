@@ -3112,6 +3112,214 @@
     {
         "name": "Generic PVA @FF C5P",
         "sub_path": "filament/Generic PVA @FF C5P.json"
+    },
+    {
+        "name": "Flashforge ABS Basic @FF C5 0.25 nozzle",
+        "sub_path": "filament/Flashforge ABS Basic @FF C5 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge ASA Basic @FF C5 0.25 nozzle",
+        "sub_path": "filament/Flashforge ASA Basic @FF C5 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge HIPS @FF C5 0.25 nozzle",
+        "sub_path": "filament/Flashforge HIPS @FF C5 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge HS PETG @FF C5 0.25 nozzle",
+        "sub_path": "filament/Flashforge HS PETG @FF C5 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge HS PLA @FF C5 0.25 nozzle",
+        "sub_path": "filament/Flashforge HS PLA @FF C5 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge PETG Basic @FF C5 0.25 nozzle",
+        "sub_path": "filament/Flashforge PETG Basic @FF C5 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge PETG Pro @FF C5 0.25 nozzle",
+        "sub_path": "filament/Flashforge PETG Pro @FF C5 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge PETG Transparent @FF C5 0.25 nozzle",
+        "sub_path": "filament/Flashforge PETG Transparent @FF C5 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge PLA Basic @FF C5 0.25 nozzle",
+        "sub_path": "filament/Flashforge PLA Basic @FF C5 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge PLA Color Change @FF C5 0.25 nozzle",
+        "sub_path": "filament/Flashforge PLA Color Change @FF C5 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge PLA Galaxy @FF C5 0.25 nozzle",
+        "sub_path": "filament/Flashforge PLA Galaxy @FF C5 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge PLA Luminous @FF C5 0.25 nozzle",
+        "sub_path": "filament/Flashforge PLA Luminous @FF C5 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge PLA Matte @FF C5 0.25 nozzle",
+        "sub_path": "filament/Flashforge PLA Matte @FF C5 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge PLA Metal @FF C5 0.25 nozzle",
+        "sub_path": "filament/Flashforge PLA Metal @FF C5 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge PLA Pro @FF C5 0.25 nozzle",
+        "sub_path": "filament/Flashforge PLA Pro @FF C5 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge PLA Silk @FF C5 0.25 nozzle",
+        "sub_path": "filament/Flashforge PLA Silk @FF C5 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge PLA Sparkle @FF C5 0.25 nozzle",
+        "sub_path": "filament/Flashforge PLA Sparkle @FF C5 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge PVA @FF C5 0.25 nozzle",
+        "sub_path": "filament/Flashforge PVA @FF C5 0.25 nozzle.json"
+    },
+    {
+        "name": "Generic ABS @FF C5 0.25 nozzle",
+        "sub_path": "filament/Generic ABS @FF C5 0.25 nozzle.json"
+    },
+    {
+        "name": "Generic ASA @FF C5 0.25 nozzle",
+        "sub_path": "filament/Generic ASA @FF C5 0.25 nozzle.json"
+    },
+    {
+        "name": "Generic HIPS @FF C5 0.25 nozzle",
+        "sub_path": "filament/Generic HIPS @FF C5 0.25 nozzle.json"
+    },
+    {
+        "name": "Generic HS PETG @FF C5 0.25 nozzle",
+        "sub_path": "filament/Generic HS PETG @FF C5 0.25 nozzle.json"
+    },
+    {
+        "name": "Generic HS PLA @FF C5 0.25 nozzle",
+        "sub_path": "filament/Generic HS PLA @FF C5 0.25 nozzle.json"
+    },
+    {
+        "name": "Generic PETG @FF C5 0.25 nozzle",
+        "sub_path": "filament/Generic PETG @FF C5 0.25 nozzle.json"
+    },
+    {
+        "name": "Generic PLA Silk @FF C5 0.25 nozzle",
+        "sub_path": "filament/Generic PLA Silk @FF C5 0.25 nozzle.json"
+    },
+    {
+        "name": "Generic PVA @FF C5 0.25 nozzle",
+        "sub_path": "filament/Generic PVA @FF C5 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge ABS Basic @FF C5P 0.25 nozzle",
+        "sub_path": "filament/Flashforge ABS Basic @FF C5P 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge ASA Basic @FF C5P 0.25 nozzle",
+        "sub_path": "filament/Flashforge ASA Basic @FF C5P 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge HIPS @FF C5P 0.25 nozzle",
+        "sub_path": "filament/Flashforge HIPS @FF C5P 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge HS PETG @FF C5P 0.25 nozzle",
+        "sub_path": "filament/Flashforge HS PETG @FF C5P 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge HS PLA @FF C5P 0.25 nozzle",
+        "sub_path": "filament/Flashforge HS PLA @FF C5P 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge PETG Basic @FF C5P 0.25 nozzle",
+        "sub_path": "filament/Flashforge PETG Basic @FF C5P 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge PETG Pro @FF C5P 0.25 nozzle",
+        "sub_path": "filament/Flashforge PETG Pro @FF C5P 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge PETG Transparent @FF C5P 0.25 nozzle",
+        "sub_path": "filament/Flashforge PETG Transparent @FF C5P 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge PLA Basic @FF C5P 0.25 nozzle",
+        "sub_path": "filament/Flashforge PLA Basic @FF C5P 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge PLA Color Change @FF C5P 0.25 nozzle",
+        "sub_path": "filament/Flashforge PLA Color Change @FF C5P 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge PLA Galaxy @FF C5P 0.25 nozzle",
+        "sub_path": "filament/Flashforge PLA Galaxy @FF C5P 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge PLA Luminous @FF C5P 0.25 nozzle",
+        "sub_path": "filament/Flashforge PLA Luminous @FF C5P 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge PLA Matte @FF C5P 0.25 nozzle",
+        "sub_path": "filament/Flashforge PLA Matte @FF C5P 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge PLA Metal @FF C5P 0.25 nozzle",
+        "sub_path": "filament/Flashforge PLA Metal @FF C5P 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge PLA Pro @FF C5P 0.25 nozzle",
+        "sub_path": "filament/Flashforge PLA Pro @FF C5P 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge PLA Silk @FF C5P 0.25 nozzle",
+        "sub_path": "filament/Flashforge PLA Silk @FF C5P 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge PLA Sparkle @FF C5P 0.25 nozzle",
+        "sub_path": "filament/Flashforge PLA Sparkle @FF C5P 0.25 nozzle.json"
+    },
+    {
+        "name": "Flashforge PVA @FF C5P 0.25 nozzle",
+        "sub_path": "filament/Flashforge PVA @FF C5P 0.25 nozzle.json"
+    },
+    {
+        "name": "Generic ABS @FF C5P 0.25 nozzle",
+        "sub_path": "filament/Generic ABS @FF C5P 0.25 nozzle.json"
+    },
+    {
+        "name": "Generic ASA @FF C5P 0.25 nozzle",
+        "sub_path": "filament/Generic ASA @FF C5P 0.25 nozzle.json"
+    },
+    {
+        "name": "Generic HIPS @FF C5P 0.25 nozzle",
+        "sub_path": "filament/Generic HIPS @FF C5P 0.25 nozzle.json"
+    },
+    {
+        "name": "Generic HS PETG @FF C5P 0.25 nozzle",
+        "sub_path": "filament/Generic HS PETG @FF C5P 0.25 nozzle.json"
+    },
+    {
+        "name": "Generic HS PLA @FF C5P 0.25 nozzle",
+        "sub_path": "filament/Generic HS PLA @FF C5P 0.25 nozzle.json"
+    },
+    {
+        "name": "Generic PETG @FF C5P 0.25 nozzle",
+        "sub_path": "filament/Generic PETG @FF C5P 0.25 nozzle.json"
+    },
+    {
+        "name": "Generic PLA Silk @FF C5P 0.25 nozzle",
+        "sub_path": "filament/Generic PLA Silk @FF C5P 0.25 nozzle.json"
+    },
+    {
+        "name": "Generic PVA @FF C5P 0.25 nozzle",
+        "sub_path": "filament/Generic PVA @FF C5P 0.25 nozzle.json"
     }
   ],
   "machine_list": [

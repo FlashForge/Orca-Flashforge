@@ -1,0 +1,87 @@
+{
+    "activate_air_filtration": [
+        "0"
+    ],
+    "additional_cooling_fan_speed": [
+        "40"
+    ],
+    "compatible_printers": [
+        "Flashforge Creator 5 0.25 nozzle"
+    ],
+    "complete_print_exhaust_fan_speed": [
+        "40"
+    ],
+    "cool_plate_temp": [
+        "35"
+    ],
+    "cool_plate_temp_initial_layer": [
+        "35"
+    ],
+    "during_print_exhaust_fan_speed": [
+        "40"
+    ],
+    "eng_plate_temp": [
+        "65"
+    ],
+    "eng_plate_temp_initial_layer": [
+        "65"
+    ],
+    "fan_max_speed": [
+        "70"
+    ],
+    "fan_min_speed": [
+        "70"
+    ],
+    "filament_flow_ratio": [
+        "0.98"
+    ],
+    "filament_max_volumetric_speed": [
+        "2.8"
+    ],
+    "filament_settings_id": [
+        "Flashforge HS PLA @FF C5 0.25 nozzle"
+    ],
+    "from": "system",
+    "hot_plate_temp": [
+        "65"
+    ],
+    "hot_plate_temp_initial_layer": [
+        "65"
+    ],
+    "inherits": "Flashforge HS PLA @FF C5",
+    "instantiation": "true",
+    "is_custom_defined": "0",
+    "name": "Flashforge HS PLA @FF C5 0.25 nozzle",
+    "nozzle_temperature": [
+        "220"
+    ],
+    "nozzle_temperature_initial_layer": [
+        "220"
+    ],
+    "pressure_advance": [
+        "0.1"
+    ],
+    "setting_id": "C5q250544e2a67b5",
+    "slow_down_layer_time": [
+        "8"
+    ],
+    "slow_down_min_speed": [
+        "15"
+    ],
+    "support_material_interface_fan_speed": [
+        "-1"
+    ],
+    "textured_cool_plate_temp": [
+        "35"
+    ],
+    "textured_cool_plate_temp_initial_layer": [
+        "35"
+    ],
+    "textured_plate_temp": [
+        "65"
+    ],
+    "textured_plate_temp_initial_layer": [
+        "65"
+    ],
+    "version": "2.1.1.0"
+}
