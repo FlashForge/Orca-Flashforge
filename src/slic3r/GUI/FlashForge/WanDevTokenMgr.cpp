@@ -84,9 +84,13 @@ void WanDevTokenMgr::run()
             sessionGeneration = m_sessionGeneration;
             tokenRevision = m_tokenRevision;
         }
-        time_t elapsedSecond = time(nullptr) - tokenData.startTime;
-        if (tokenData.expiresIn - elapsedSecond > 300) {
-            continue;
+        const time_t now = time(nullptr);
+        const bool invalid_time = tokenData.startTime <= 0 || tokenData.expiresIn <= 0
+            || tokenData.startTime > now + 300;
+        if (!invalid_time) {
+            const time_t elapsed_seconds = now - tokenData.startTime;
+            if (tokenData.expiresIn - elapsed_seconds > 300)
+                continue;
         }
         doRefreshToken(sessionGeneration, tokenRevision);
     }

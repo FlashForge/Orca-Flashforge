@@ -244,6 +244,7 @@ wxDEFINE_EVENT(EVT_UPDATE_BUNDLE_COMPLETE, wxCommandEvent);
 namespace {
 
 constexpr int FLASH_TOKEN_REFRESH_SKEW_SECONDS = 5 * 60;
+constexpr long long FLASH_TOKEN_MILLISECOND_TIMESTAMP_THRESHOLD = 100'000'000'000LL;
 
 bool parse_config_integer(const std::string& value, long long& result)
 {
@@ -258,6 +259,20 @@ bool parse_config_integer(const std::string& value, long long& result)
     }
 }
 
+time_t normalize_flash_token_start_time(long long start_time)
+{
+    if (start_time <= 0)
+        return 0;
+
+    // Web login returns Unix milliseconds, while the native login and refresh
+    // APIs use Unix seconds. Keep the internal representation in seconds.
+    while (start_time >= FLASH_TOKEN_MILLISECOND_TIMESTAMP_THRESHOLD)
+        start_time /= 1000;
+
+    const time_t normalized = static_cast<time_t>(start_time);
+    return normalized > 0 && static_cast<long long>(normalized) == start_time ? normalized : 0;
+}
+
 bool flash_token_needs_refresh(const com_token_data_t& token_data)
 {
     if (token_data.accessToken.empty() || token_data.refreshToken.empty() || token_data.expiresIn <= 0 || token_data.startTime <= 0)
@@ -266,6 +281,8 @@ bool flash_token_needs_refresh(const com_token_data_t& token_data)
     const long long now = static_cast<long long>(std::time(nullptr));
     const long long start = static_cast<long long>(token_data.startTime);
     const long long expires = static_cast<long long>(token_data.expiresIn);
+    if (start > now + FLASH_TOKEN_REFRESH_SKEW_SECONDS)
+        return true;
     if (start > std::numeric_limits<long long>::max() - expires)
         return true;
     return start + expires - FLASH_TOKEN_REFRESH_SKEW_SECONDS <= now;
@@ -5220,7 +5237,8 @@ void GUI_App::save_flashforge_token(const com_token_data_t& token_data, const st
     app_config->set("access_token", token_data.accessToken);
     app_config->set("refresh_token", token_data.refreshToken);
     app_config->set("token_expire_time", std::to_string(token_data.expiresIn));
-    app_config->set("token_start_time", std::to_string(token_data.startTime));
+    app_config->set("token_start_time", std::to_string(
+        normalize_flash_token_start_time(static_cast<long long>(token_data.startTime))));
     if (!username.empty())
         app_config->set("usr_input_name", username);
     app_config->save();
@@ -5243,7 +5261,12 @@ void GUI_App::start_flashforge_session_attempt()
         token_data.expiresIn = static_cast<int>(expires_in);
     else
         token_data.expiresIn = 0;
-    token_data.startTime = start_time > 0 ? static_cast<time_t>(start_time) : 0;
+    token_data.startTime = normalize_flash_token_start_time(start_time);
+    if (token_data.startTime > 0 && start_time != static_cast<long long>(token_data.startTime)) {
+        BOOST_LOG_TRIVIAL(info) << "Normalize FlashForge token_start_time to Unix seconds";
+        app_config->set("token_start_time", std::to_string(token_data.startTime));
+        app_config->save();
+    }
 
     if (token_data.accessToken.empty() || token_data.refreshToken.empty()) {
         m_auto_login_state = FlashLoginRecoveryState::Idle;
@@ -5565,7 +5588,8 @@ std::string GUI_App::handle_web_request(std::string cmd, const std::vector<std::
                     json             j = json::parse(cmd);
                     try {
                         token_data.expiresIn = j["data"]["expires_in"];
-                        token_data.startTime = j["data"]["start_time"];
+                        token_data.startTime = normalize_flash_token_start_time(
+                            j["data"]["start_time"].get<long long>());
                         token_data.accessToken = j["data"]["access_token"];
                         token_data.refreshToken = j["data"]["refresh_token"];
                         on_connect_event();
@@ -6630,11 +6654,7 @@ void GUI_App::refresh_access_token(ComRefreshTokenEvent &event)
                                 << event.sessionGeneration;
         return;
     }
-    app_config->set("access_token", event.tokenData.accessToken);
-    app_config->set("refresh_token", event.tokenData.refreshToken);
-    app_config->set("token_expire_time", std::to_string(event.tokenData.expiresIn));
-    app_config->set("token_start_time", std::to_string(event.tokenData.startTime));
-    app_config->save();
+    save_flashforge_token(event.tokenData);
 }
 
 void GUI_App::connect_sys_notify(ComConnSysNotifyEvent& event)
