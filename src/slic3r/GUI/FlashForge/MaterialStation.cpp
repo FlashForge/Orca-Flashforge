@@ -2403,7 +2403,11 @@ void MaterialPanel::setup_layout(wxWindow* parent)
     //整体布局
     panel_sizer->Add(operate_area, 0, wxEXPAND | wxALL, 0);
     panel_sizer->AddSpacer(FromDIP(1));
-    panel_sizer->Add(m_tips_area, 0, wxEXPAND | wxALL, 0);
+    // Let the tips area consume the remaining width of the device-page column.
+    // Keeping both halves fixed-width leaves a blank strip on wide/high-DPI
+    // windows and makes the IFS panel look truncated.
+    m_tips_area->SetMinSize(wxSize(FromDIP(310), -1));
+    panel_sizer->Add(m_tips_area, 1, wxEXPAND | wxALL, 0);
     SetSizer(panel_sizer);
     Layout();
     panel_sizer->Fit(this);
@@ -3319,7 +3323,8 @@ void MaterialPanelU1::setup_layout(wxWindow* parent)
     // 整体布局
     panel_sizer->Add(operate_area, 0, wxEXPAND | wxALL, 0);
     panel_sizer->AddSpacer(FromDIP(1));
-    panel_sizer->Add(m_tips_area, 0, wxEXPAND | wxALL, 0);
+    m_tips_area->SetMinSize(wxSize(FromDIP(375), -1));
+    panel_sizer->Add(m_tips_area, 1, wxEXPAND | wxALL, 0);
     SetSizer(panel_sizer);
     Layout();
     panel_sizer->Fit(this);

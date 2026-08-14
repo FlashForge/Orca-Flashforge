@@ -1256,12 +1256,12 @@ void FileItem::on_mouse_left_up(wxMouseEvent& evt)
 
 SingleDeviceState::SingleDeviceState(wxWindow* parent, wxWindowID id, const wxPoint& pos, 
         const wxSize& size, long style, const wxString& name)
-        : wxScrolledWindow(parent, id, pos, size, wxHSCROLL | wxVSCROLL)
+        : wxScrolledWindow(parent, id, pos, size, wxVSCROLL)
         , m_cur_printing_ctrl(0)
         , m_download_tool(5, 15000)
         , m_download_title_image_task_id(FFDownloadTool::InvalidTaskId)
 {
-    this->SetScrollRate(30, 30);
+    this->SetScrollRate(0, 30);
     // Keep the vertical scrollbar gutter reserved. At display sizes such as
     // 1920x1080 the time-lapse panel can put the page exactly on the scrolling
     // threshold: showing the scrollbar narrows the camera, the camera then gets
@@ -3189,10 +3189,10 @@ void SingleDeviceState::UpdateScrollVirtualSize()
     // 获取滚动窗口当前可视区域大小
     wxSize clientSize = GetClientSize();
 
-    // 规则�?
-    // 可视宽度 >= 内容最小宽�?�?虚拟宽度=可视宽度（无滚动，自适应拉伸�?
-    // 可视宽度 < 内容最小宽�?�?虚拟宽度=最小宽度（出现水平滚动条）
-    int virtW = wxMax(minContentSize.x, clientSize.x);
+    // This page is horizontally responsive and only scrolls vertically.
+    // Printing controls can slightly increase CalcMin() (often by the
+    // scrollbar gutter width), but that must not widen the virtual canvas.
+    int virtW = clientSize.x;
     int virtH = wxMax(minContentSize.y, clientSize.y);
 
     // 设置滚动窗口虚拟画布大小
@@ -3776,11 +3776,11 @@ void SingleDeviceState::onDevStateChanged(std::string devState, const com_dev_da
         double estimatedTime = data.devDetail->estimatedTime; // 剩余时间
         m_staticText_count_time->SetLabel(convertSecondsToHMS(estimatedTime));
     }
-    UpdateScrollVirtualSize();
     // 仅在设备状态真正切换时重排布局，避免每�?Layout() 造成的抖�?闪烁
     if (devStateChanged) {
         Layout();
     }
+    UpdateScrollVirtualSize();
 }
 
 void SingleDeviceState::onCancelPrint(wxCommandEvent &event)
