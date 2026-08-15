@@ -22,6 +22,8 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <fstream>
+#include <iterator>
 #include <map>
 #include <set>
 #include <string>
@@ -368,6 +370,8 @@ TEST_CASE("Snapmaker perimeter groups emit different physical tools for differen
     config.option<ConfigOptionFloats>("nozzle_diameter")->values   = {0.4, 0.4};
     config.option<ConfigOptionFloats>("filament_diameter")->values = {1.75, 1.75};
     config.option<ConfigOptionStrings>("filament_colour")->values = colors;
+    config.option<ConfigOptionStrings>("filament_ids")->values    = {"physical-red", "physical-blue"};
+    config.option<ConfigOptionStrings>("filament_type")->values   = {"PLA", "PETG"};
     config.option<ConfigOptionFloats>("flush_volumes_matrix")->values = {0., 280., 280., 0.};
     config.option<ConfigOptionInts>("filament_map")->values       = {1, 2};
     config.option<ConfigOptionInts>("filament_printable")->values = {3, 3};
@@ -435,6 +439,15 @@ TEST_CASE("Snapmaker perimeter groups emit different physical tools for differen
         boost::filesystem::unique_path("orca-grouped-perimeters-%%%%-%%%%.gcode");
     GCodeProcessorResult result;
     REQUIRE_NOTHROW(print.export_gcode(gcode_path.string(), &result, nullptr));
+
+    std::ifstream gcode_file(gcode_path.string());
+    REQUIRE(gcode_file.good());
+    const std::string gcode((std::istreambuf_iterator<char>(gcode_file)),
+                            std::istreambuf_iterator<char>());
+    gcode_file.close();
+    CHECK(gcode.find("; <filament id=\"1\" tray_info_idx=\"physical-red\" type=\"PLA\" color=\"#E53935\" used_m=\"") != std::string::npos);
+    CHECK(gcode.find("; <filament id=\"2\" tray_info_idx=\"physical-blue\" type=\"PETG\" color=\"#1E88E5\" used_m=\"") != std::string::npos);
+    CHECK(gcode.find("; <filament id=\"3\"") == std::string::npos);
 
     std::map<unsigned int, std::set<unsigned int>> perimeter_tools_by_layer;
     std::map<unsigned int, std::vector<unsigned int>> perimeter_order_by_layer;

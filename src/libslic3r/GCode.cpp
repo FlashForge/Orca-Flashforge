@@ -29,6 +29,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <chrono>
+#include <iomanip>
 #include <iostream>
 #include <iterator>
 #include <limits>
@@ -2462,10 +2463,20 @@ namespace DoExport {
         const bool                   has_wipe_tower,
 	    const WipeTowerData         &wipe_tower_data,
 	    const std::vector<Extruder> &extruders,
+	    const DynamicPrintConfig    &print_config,
+	    const size_t                 physical_filament_count,
 		PrintStatistics 		    &print_statistics,
         const ToolOrdering          &tool_ordering)
     {
-		std::string filament_stats_string_out;
+		std::string        filament_stats_string_out;
+		std::ostringstream filament_info_out;
+		DynamicPrintConfig config          = print_config;
+		const auto        *filament_ids    = config.option<ConfigOptionStrings>("filament_ids");
+		const auto        *filament_types  = config.option<ConfigOptionStrings>("filament_type");
+		const auto        *filament_colors = config.option<ConfigOptionStrings>("filament_colour");
+		auto               get_string_at   = [](const ConfigOptionStrings *option, size_t index, const std::string &fallback) {
+			return option != nullptr && index < option->values.size() ? option->values[index] : fallback;
+		};
 
 	    print_statistics.clear();
         print_statistics.total_toolchanges = resolve_total_toolchanges(wipe_tower_data, tool_ordering);
@@ -2479,6 +2490,20 @@ namespace DoExport {
 	            double extruded_volume = extruder.extruded_volume() + (has_wipe_tower ? wipe_tower_data.used_filament[extruder.id()] * 2.4052f : 0.f); // assumes 1.75mm filament diameter
 	            double filament_weight = extruded_volume * extruder.filament_density() * 0.001;
 	            double filament_cost   = filament_weight * extruder.filament_cost()    * 0.001;
+				// Mixed/virtual filaments are resolved to physical filaments before they reach
+				// GCodeWriter. Keep an explicit bound here so project-only virtual IDs can never
+				// leak into the exported physical-filament metadata.
+				if (extruder.id() < physical_filament_count && used_filament > 0.) {
+					std::string displayed_filament_type;
+					std::string filament_type = get_string_at(filament_types, extruder.id(), "");
+					if (filament_types != nullptr && extruder.id() < filament_types->values.size())
+						filament_type = config.get_filament_type(displayed_filament_type, extruder.id());
+					filament_info_out << std::fixed << std::setprecision(2) << "; <filament id=\"" << extruder.id() + 1
+					                  << "\" tray_info_idx=\"" << xml_escape(get_string_at(filament_ids, extruder.id(), "")) << "\" type=\""
+					                  << xml_escape(filament_type) << "\" color=\""
+					                  << xml_escape(get_string_at(filament_colors, extruder.id(), "#FFFFFF")) << "\" used_m=\""
+					                  << used_filament * 0.001 << "\" used_g=\"" << filament_weight << "\" />\n";
+				}
                 auto append = [&extruder](std::pair<std::string, unsigned int> &dst, const char *tmpl, double value) {
                     assert(is_decimal_separator_point());
 	                while (dst.second < extruder.id()) {
@@ -2515,6 +2540,7 @@ namespace DoExport {
             if (out_filament_cost.second)
                filament_stats_string_out += "\n" + out_filament_cost.first;
             filament_stats_string_out += "\n";
+			filament_stats_string_out += filament_info_out.str();
         }
         return filament_stats_string_out;
     }
@@ -3670,6 +3696,8 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
     	// Const inputs
         has_wipe_tower, print.wipe_tower_data(),
         m_writer.extruders(),
+		print.full_print_config(),
+		print.config().filament_diameter.size(),
         // Modifies
         print.m_print_statistics,
         // Const input (tool-change fallback for non-wipe-tower prints)
