@@ -5169,6 +5169,10 @@ bool GUI_App::auto_login_flashforge(bool force_refresh)
         return false;
 
     m_auto_login_retry_count = 0;
+    // Auto-login must subscribe to the same account events as an explicit login.
+    // COM_GET_USER_PROFILE_EVENT switches to the user's preset directory before
+    // starting preset synchronization.
+    on_connect_event();
     start_flashforge_session_attempt();
     return true;
 }
