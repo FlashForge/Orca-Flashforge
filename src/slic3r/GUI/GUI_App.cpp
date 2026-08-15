@@ -123,6 +123,9 @@
 #include "Mouse3DController.hpp"
 #include "RemovableDriveManager.hpp"
 #include "InstanceCheck.hpp"
+#ifdef __APPLE__
+#include "DeepLinkHandlerMac.h"
+#endif
 #include "NotificationManager.hpp"
 #include "UnsavedChangesDialog.hpp"
 #include "SavePresetDialog.hpp"
@@ -3016,6 +3019,11 @@ std::string get_system_info()
 
 bool GUI_App::on_init_inner()
 {
+#ifdef __APPLE__
+    // wxWidgets 3.3.2 may register a kAEGetURL handler that never delivers
+    // deep links to MacOpenURL(). Override it after wxWidgets initialization.
+    register_mac_deep_link_handler();
+#endif
 
     if (app_config->get("flashforge_profile_version") != Orca_Flashforge_VERSION
      || app_config->get("version") != SLIC3R_VERSION) {
