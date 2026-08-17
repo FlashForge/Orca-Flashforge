@@ -1869,7 +1869,11 @@ void GUI_App::restart_networking()
 
 // Network plugin hot reload timeout constants (in milliseconds)
 namespace {
-    constexpr bool FLASH_PRESET_SYNC_LOG_ENABLED = true;
+    constexpr bool FLASH_PRESET_SYNC_LOG_ENABLED = false;
+    constexpr unsigned int MAX_PRESET_SYNC_RETRIES = 5;
+    std::mutex s_preset_sync_retry_mutex;
+    std::map<std::string, unsigned int> s_preset_sync_retry_counts;
+    std::map<std::string, unsigned int> s_preset_delete_retry_counts;
 
     void log_flash_preset_sync(const std::string &message)
     {
@@ -7921,6 +7925,17 @@ void GUI_App::sync_preset(Preset* preset)
     // only sync user's preset
     if (!preset->is_user()) return;
 
+    const std::string retry_key = std::to_string(static_cast<int>(preset->type)) + ":" +
+                                  (preset->setting_id.empty() ? preset->name : preset->setting_id);
+    {
+        std::scoped_lock lock(s_preset_sync_retry_mutex);
+        if (s_preset_sync_retry_counts[retry_key] >= MAX_PRESET_SYNC_RETRIES) {
+            log_flash_preset_sync("PRESET_RETRY_LIMIT name=" + preset->name + " attempts=" +
+                                  std::to_string(MAX_PRESET_SYNC_RETRIES));
+            return;
+        }
+    }
+
     auto setting_id = preset->setting_id;
     std::map<std::string, std::string> values_map;
     log_flash_preset_sync("PRESET_BEGIN name=" + preset->name
@@ -8086,8 +8101,22 @@ void GUI_App::sync_preset(Preset* preset)
         log_flash_preset_sync("PRESET_END name=" + preset->name + " status=local_state_updated"
                               + " http_code=" + std::to_string(http_code));
     } else {
+        unsigned int retry_count = 0;
+        {
+            std::scoped_lock lock(s_preset_sync_retry_mutex);
+            retry_count = ++s_preset_sync_retry_counts[retry_key];
+        }
         log_flash_preset_sync("PRESET_END name=" + preset->name + " status=failed result="
-                              + std::to_string(result) + " http_code=" + std::to_string(http_code));
+                              + std::to_string(result) + " http_code=" + std::to_string(http_code)
+                              + " retry_count=" + std::to_string(retry_count));
+        if (retry_count == MAX_PRESET_SYNC_RETRIES) {
+            BOOST_LOG_TRIVIAL(warning) << "Preset sync retry limit reached, preset=" << preset->name
+                                       << ", attempts=" << retry_count;
+        }
+    }
+    if (result == 0) {
+        std::scoped_lock lock(s_preset_sync_retry_mutex);
+        s_preset_sync_retry_counts.erase(retry_key);
     }
 }
 
@@ -8123,6 +8152,11 @@ void GUI_App::start_sync_user_preset(bool with_progress_dlg)
     std::function<void(bool)> finishFn;
 
     BOOST_LOG_TRIVIAL(info) << "start_sync_service...";
+    {
+        std::scoped_lock lock(s_preset_sync_retry_mutex);
+        s_preset_sync_retry_counts.clear();
+        s_preset_delete_retry_counts.clear();
+    }
     // BBS
     m_user_sync_token.reset(new int(0));
     if (with_progress_dlg) {
@@ -9348,15 +9382,36 @@ void GUI_App::process_delete_presets()
         const std::string &setting_id = entry.first;
         if (setting_id.empty())
             continue;
+        {
+            std::scoped_lock lock(s_preset_sync_retry_mutex);
+            if (s_preset_delete_retry_counts[setting_id] >= MAX_PRESET_SYNC_RETRIES) {
+                log_flash_preset_sync("DELETE_RETRY_LIMIT setting_id=" + setting_id + " attempts=" +
+                                      std::to_string(MAX_PRESET_SYNC_RETRIES));
+                continue;
+            }
+        }
         log_flash_preset_sync("DELETE_REQUEST setting_id=" + setting_id);
         int result = m_agent->delete_setting(setting_id);
         log_flash_preset_sync("DELETE_RESPONSE setting_id=" + setting_id + " result=" + std::to_string(result));
         if (result == 0) {
+            {
+                std::scoped_lock lock(s_preset_sync_retry_mutex);
+                s_preset_delete_retry_counts.erase(setting_id);
+            }
             preset_deleted_from_cloud(setting_id);
             m_create_preset_blocked = {false, false, false, false, false, false};
             BOOST_LOG_TRIVIAL(trace) << "sync_preset: delete success, setting id = " << setting_id;
         } else {
-            BOOST_LOG_TRIVIAL(info) << "delete setting = " << setting_id << " failed";
+            unsigned int retry_count = 0;
+            {
+                std::scoped_lock lock(s_preset_sync_retry_mutex);
+                retry_count = ++s_preset_delete_retry_counts[setting_id];
+            }
+            BOOST_LOG_TRIVIAL(info) << "delete setting = " << setting_id << " failed, retry_count=" << retry_count;
+            if (retry_count == MAX_PRESET_SYNC_RETRIES) {
+                BOOST_LOG_TRIVIAL(warning) << "Preset delete retry limit reached, setting_id=" << setting_id
+                                           << ", attempts=" << retry_count;
+            }
         }
     }
     log_flash_preset_sync("DELETE_QUEUE_END");
