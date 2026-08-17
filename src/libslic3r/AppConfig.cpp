@@ -403,9 +403,6 @@ void AppConfig::set_defaults()
         set_bool("allow_abnormal_storage", false);
     }
 
-    if (get("preset_bundle_auto_update").empty()) {
-        set_bool("preset_bundle_auto_update", false);
-    }
 
 #ifdef __linux__
     if (get(SETTING_USE_ENCRYPTED_TOKEN_FILE).empty())

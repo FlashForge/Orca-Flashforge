@@ -1144,7 +1144,8 @@ void GUI_App::post_init()
     }
 
     // Start preset sync after project opened, otherwise we could have preset change during project opening which could cause crash 
-    if (app_config->get("sync_user_preset") == "true") {
+    if (m_agent && m_agent->is_user_login() &&
+        app_config->get("user_preset_sync", m_agent->get_user_id()) == "true") {
         // BBS loading user preset
         // Always async, not such startup step
         // BOOST_LOG_TRIVIAL(info) << "Loading user presets...";
@@ -1857,7 +1858,8 @@ void GUI_App::restart_networking()
             mainframe->update_side_preset_ui();
         }
 
-        if (app_config->get("sync_user_preset") == "true") {
+        if (m_agent && m_agent->is_user_login() &&
+            app_config->get("user_preset_sync", m_agent->get_user_id()) == "true") {
             start_sync_user_preset();
         }
         // if (mainframe && this->app_config->get("staff_pick_switch") == "true") {
@@ -1870,6 +1872,10 @@ void GUI_App::restart_networking()
 // Network plugin hot reload timeout constants (in milliseconds)
 namespace {
     constexpr bool FLASH_PRESET_SYNC_LOG_ENABLED = false;
+    constexpr unsigned int MAX_PRESET_SYNC_RETRIES = 5;
+    std::mutex s_preset_sync_retry_mutex;
+    std::map<std::string, unsigned int> s_preset_sync_retry_counts;
+    std::map<std::string, unsigned int> s_preset_delete_retry_counts;
 
     void log_flash_preset_sync(const std::string &message)
     {
@@ -3155,6 +3161,15 @@ bool GUI_App::on_init_inner()
             m_auto_login_state = FlashLoginRecoveryState::LoggedIn;
             m_auto_login_retry_count = 0;
             LoginDialog::SetToken(event.token_data.accessToken, event.token_data.refreshToken);
+            const std::string user_id = event.add_dev_data.userProfile.uid;
+            if (!user_id.empty() && m_agent && preset_bundle && mainframe &&
+                m_agent->is_user_login() && m_agent->get_user_id() == user_id &&
+                app_config->get("preset_folder") != user_id) {
+                remove_user_presets();
+                enable_user_preset_folder(true);
+                preset_bundle->load_user_presets(user_id, ForwardCompatibilitySubstitutionRule::Enable);
+                mainframe->update_side_preset_ui();
+            }
             handle_show_user_points(event.add_dev_data);
 
             wxCommandEvent success_event(EVT_LOGIN_SUCCEED);
@@ -6344,10 +6359,74 @@ void GUI_App::on_http_error(wxCommandEvent &evt)
     }
 }
 
+static void migrate_legacy_user_presets(AppConfig* app_config, const std::string& user_id)
+{
+    namespace fs = boost::filesystem;
+
+    if (user_id.empty() || app_config == nullptr)
+        return;
+
+    static const std::string migration_key = "legacy_preset_migration_user";
+    if (!app_config->get(migration_key).empty())
+        return;
+
+    const fs::path user_root  = fs::path(data_dir()) / PRESET_USER_DIR;
+    const fs::path legacy_dir = user_root / DEFAULT_USER_FOLDER_NAME;
+    const fs::path target_dir = user_root / user_id;
+    if (!fs::is_directory(legacy_dir))
+        return;
+
+    boost::system::error_code ec;
+    fs::create_directories(target_dir, ec);
+    if (ec) {
+        BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": failed to create " << target_dir.string()
+                                 << ": " << ec.message();
+        return;
+    }
+
+    bool found_legacy_preset = false;
+    for (fs::recursive_directory_iterator it(legacy_dir, ec), end; it != end && !ec; it.increment(ec)) {
+        const fs::path relative_path = it->path().lexically_relative(legacy_dir);
+        const fs::path destination   = target_dir / relative_path;
+
+        if (fs::is_directory(it->path())) {
+            fs::create_directories(destination, ec);
+        } else if (fs::is_regular_file(it->path())) {
+            found_legacy_preset = true;
+            if (!fs::exists(destination)) {
+                fs::create_directories(destination.parent_path(), ec);
+                if (!ec)
+                    fs::copy_file(it->path(), destination, ec);
+            }
+        }
+
+        if (ec) {
+            BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": failed to migrate " << it->path().string()
+                                     << ": " << ec.message();
+            return;
+        }
+    }
+
+    if (ec) {
+        BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": failed while scanning " << legacy_dir.string()
+                                 << ": " << ec.message();
+        return;
+    }
+
+    // Associate legacy presets with the first account that successfully migrates them.
+    // Keep the source directory intact so the upgrade remains recoverable.
+    if (found_legacy_preset) {
+        app_config->set(migration_key, user_id);
+        app_config->save();
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": migrated legacy presets from "
+                                << legacy_dir.string() << " to " << target_dir.string();
+    }
+}
 void GUI_App::enable_user_preset_folder(bool enable)
 {
     if (enable) {
         std::string user_id = m_agent->get_user_id();
+        migrate_legacy_user_presets(app_config, user_id);
         app_config->set("preset_folder", user_id);
         GUI::wxGetApp().preset_bundle->update_user_presets_directory(user_id);
     } else {
@@ -7838,8 +7917,9 @@ void GUI_App::handle_user_preset_sync_on_login(const std::string& user_id)
     if (user_id.empty() || !m_agent || !m_agent->is_user_login() || !app_config || !mainframe)
         return;
 
-    if (app_config->get_bool("sync_user_preset")) {
-        start_sync_user_preset();
+    if (app_config->has("user_preset_sync", user_id)) {
+        if (app_config->get("user_preset_sync", user_id) == "true")
+            start_sync_user_preset();
         return;
     }
 
@@ -7874,6 +7954,17 @@ void GUI_App::sync_preset(Preset* preset)
     bool preserve_cloud_metadata = false;
     // only sync user's preset
     if (!preset->is_user()) return;
+
+    const std::string retry_key = std::to_string(static_cast<int>(preset->type)) + ":" +
+                                  (preset->setting_id.empty() ? preset->name : preset->setting_id);
+    {
+        std::scoped_lock lock(s_preset_sync_retry_mutex);
+        if (s_preset_sync_retry_counts[retry_key] >= MAX_PRESET_SYNC_RETRIES) {
+            log_flash_preset_sync("PRESET_RETRY_LIMIT name=" + preset->name + " attempts=" +
+                                  std::to_string(MAX_PRESET_SYNC_RETRIES));
+            return;
+        }
+    }
 
     auto setting_id = preset->setting_id;
     std::map<std::string, std::string> values_map;
@@ -8040,8 +8131,22 @@ void GUI_App::sync_preset(Preset* preset)
         log_flash_preset_sync("PRESET_END name=" + preset->name + " status=local_state_updated"
                               + " http_code=" + std::to_string(http_code));
     } else {
+        unsigned int retry_count = 0;
+        {
+            std::scoped_lock lock(s_preset_sync_retry_mutex);
+            retry_count = ++s_preset_sync_retry_counts[retry_key];
+        }
         log_flash_preset_sync("PRESET_END name=" + preset->name + " status=failed result="
-                              + std::to_string(result) + " http_code=" + std::to_string(http_code));
+                              + std::to_string(result) + " http_code=" + std::to_string(http_code)
+                              + " retry_count=" + std::to_string(retry_count));
+        if (retry_count == MAX_PRESET_SYNC_RETRIES) {
+            BOOST_LOG_TRIVIAL(warning) << "Preset sync retry limit reached, preset=" << preset->name
+                                       << ", attempts=" << retry_count;
+        }
+    }
+    if (result == 0) {
+        std::scoped_lock lock(s_preset_sync_retry_mutex);
+        s_preset_sync_retry_counts.erase(retry_key);
     }
 }
 
@@ -8077,6 +8182,11 @@ void GUI_App::start_sync_user_preset(bool with_progress_dlg)
     std::function<void(bool)> finishFn;
 
     BOOST_LOG_TRIVIAL(info) << "start_sync_service...";
+    {
+        std::scoped_lock lock(s_preset_sync_retry_mutex);
+        s_preset_sync_retry_counts.clear();
+        s_preset_delete_retry_counts.clear();
+    }
     // BBS
     m_user_sync_token.reset(new int(0));
     if (with_progress_dlg) {
@@ -9301,15 +9411,36 @@ void GUI_App::process_delete_presets()
         const std::string &setting_id = entry.first;
         if (setting_id.empty())
             continue;
+        {
+            std::scoped_lock lock(s_preset_sync_retry_mutex);
+            if (s_preset_delete_retry_counts[setting_id] >= MAX_PRESET_SYNC_RETRIES) {
+                log_flash_preset_sync("DELETE_RETRY_LIMIT setting_id=" + setting_id + " attempts=" +
+                                      std::to_string(MAX_PRESET_SYNC_RETRIES));
+                continue;
+            }
+        }
         log_flash_preset_sync("DELETE_REQUEST setting_id=" + setting_id);
         int result = m_agent->delete_setting(setting_id);
         log_flash_preset_sync("DELETE_RESPONSE setting_id=" + setting_id + " result=" + std::to_string(result));
         if (result == 0) {
+            {
+                std::scoped_lock lock(s_preset_sync_retry_mutex);
+                s_preset_delete_retry_counts.erase(setting_id);
+            }
             preset_deleted_from_cloud(setting_id);
             m_create_preset_blocked = {false, false, false, false, false, false};
             BOOST_LOG_TRIVIAL(trace) << "sync_preset: delete success, setting id = " << setting_id;
         } else {
-            BOOST_LOG_TRIVIAL(info) << "delete setting = " << setting_id << " failed";
+            unsigned int retry_count = 0;
+            {
+                std::scoped_lock lock(s_preset_sync_retry_mutex);
+                retry_count = ++s_preset_delete_retry_counts[setting_id];
+            }
+            BOOST_LOG_TRIVIAL(info) << "delete setting = " << setting_id << " failed, retry_count=" << retry_count;
+            if (retry_count == MAX_PRESET_SYNC_RETRIES) {
+                BOOST_LOG_TRIVIAL(warning) << "Preset delete retry limit reached, setting_id=" << setting_id
+                                           << ", attempts=" << retry_count;
+            }
         }
     }
     log_flash_preset_sync("DELETE_QUEUE_END");

@@ -98,6 +98,9 @@ TEST_CASE("Legacy bundle import without bundle metadata stays in the user preset
     CHECK_FALSE(imported->is_from_bundle());
     // Detached user presets (no inherits) are saved in the "base" subfolder of the user preset root.
     CHECK(fs::equivalent(fs::path(imported->file).parent_path().parent_path(), user_root / PRESET_PRINT_NAME));
+    fs::path info_file(imported->file);
+    info_file.replace_extension(".info");
+    CHECK(fs::exists(info_file));
 }
 
 TEST_CASE("Current vendor type tolerates missing printer model", "[Preset][Bundle]")

@@ -599,6 +599,32 @@ void PresetBundle::copy_files(const std::string& from)
 PresetsConfigSubstitutions PresetBundle::load_presets(AppConfig &config, ForwardCompatibilitySubstitutionRule substitution_rule,
                                                       const PresetPreferences& preferred_selection/* = PresetPreferences()*/)
 {
+    // A damaged or cleaned data directory may be missing system preset bundles while
+    // AppConfig still contains the user's enabled printers. Restore only those missing
+    // bundles from the resources shipped with the application before loading presets.
+    namespace fs = boost::filesystem;
+    const fs::path system_dir   = (fs::path(data_dir()) / PRESET_SYSTEM_DIR).make_preferred();
+    const fs::path resource_dir = (fs::path(resources_dir()) / "profiles").make_preferred();
+    std::vector<std::string> missing_bundles;
+    for (const auto &[vendor, models] : config.vendors()) {
+        if (models.empty())
+            continue;
+
+        const fs::path vendor_json          = system_dir / (vendor + ".json");
+        const fs::path vendor_presets       = system_dir / vendor;
+        const fs::path resource_presets_dir = resource_dir / vendor;
+        if (!fs::exists(vendor_json) ||
+            (fs::exists(resource_presets_dir) && !fs::exists(vendor_presets)))
+            missing_bundles.emplace_back(vendor);
+    }
+
+    if (!missing_bundles.empty()) {
+        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": restoring " << missing_bundles.size()
+                                   << " missing system preset bundle(s) from resources";
+        if (!Slic3r::install_vendor_bundles_from_resources(missing_bundles))
+            BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": failed to restore one or more system preset bundles";
+    }
+
     // First load the vendor specific system presets.
     PresetsConfigSubstitutions substitutions;
     std::string errors_cummulative;
@@ -1100,7 +1126,7 @@ PresetsConfigSubstitutions PresetBundle::load_user_presets(std::string user, For
 
     // Load bundle metadata from _local directory first
     fs::path local_dir(folder / PRESET_LOCAL_DIR);
-    if (fs::exists(local_dir)) {
+    if (false && fs::exists(local_dir)) {
         dir_user_presets_local = local_dir;
         for (auto& entry : fs::directory_iterator(local_dir)) {
             if (!fs::is_directory(entry.path())) continue;
@@ -1137,7 +1163,7 @@ PresetsConfigSubstitutions PresetBundle::load_user_presets(std::string user, For
 
     // Load bundle metadata from _subscribed directory
     fs::path subscribed_dir(folder / PRESET_SUBSCRIBED_DIR);
-    if (fs::exists(subscribed_dir)) {
+    if (false && fs::exists(subscribed_dir)) {
         for (auto& entry : fs::directory_iterator(subscribed_dir)) {
             if (!fs::is_directory(entry.path())) continue;
 
@@ -1465,7 +1491,6 @@ PresetsConfigSubstitutions PresetBundle::import_presets(std::vector<std::string>
                                                         ForwardCompatibilitySubstitutionRule    rule,
                                                         AppConfig&                            config)
 {
-    bundles.PauseRead(); // Pause threads from reading
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " entry";
     PresetsConfigSubstitutions substitutions;
     int overwrite = 0;
@@ -1479,7 +1504,7 @@ PresetsConfigSubstitutions PresetBundle::import_presets(std::vector<std::string>
             import_json_presets(substitutions, file, override_confirm, rule, overwrite, result);
         }
         // Determine if it is a preset bundle
-        if (boost::iends_with(file, ".orca_printer") || boost::iends_with(file, ".orca_bundle") || boost::iends_with(file, ".orca_filament") || boost::iends_with(file, ".zip")) {
+        if (boost::iends_with(file, ".orca_printer") || boost::iends_with(file, ".orca_filament") || boost::iends_with(file, ".zip")) {
             boost::system::error_code ec;
             // create user folder
             fs::path user_folder(data_dir() + "/" + PRESET_USER_DIR);
@@ -1520,7 +1545,9 @@ PresetsConfigSubstitutions PresetBundle::import_presets(std::vector<std::string>
             if (status) {
                 if (metadata.load_from_json(metadata_path.string())) {
                     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " Found bundle_id: " << metadata.id << " from " << BUNDLE_STRUCTURE_JSON_NAME;
-                    has_bundle_structure = true;
+                    // Keep the manifest for archive compatibility, but import its
+                    // contents as ordinary user presets (release_0715 behavior).
+                    has_bundle_structure = false;
                 }
             }
 
@@ -1601,7 +1628,6 @@ PresetsConfigSubstitutions PresetBundle::import_presets(std::vector<std::string>
             if (ec) BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << " remove directory failed: " << ec.message();
         }
     }
-    bundles.UnpauseRead();
     files = result;
     return substitutions;
 }
