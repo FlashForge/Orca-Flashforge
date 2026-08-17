@@ -1869,7 +1869,7 @@ void GUI_App::restart_networking()
 
 // Network plugin hot reload timeout constants (in milliseconds)
 namespace {
-    constexpr bool FLASH_PRESET_SYNC_LOG_ENABLED = false;
+    constexpr bool FLASH_PRESET_SYNC_LOG_ENABLED = true;
 
     void log_flash_preset_sync(const std::string &message)
     {
@@ -6317,10 +6317,74 @@ void GUI_App::on_http_error(wxCommandEvent &evt)
     }
 }
 
+static void migrate_legacy_user_presets(AppConfig* app_config, const std::string& user_id)
+{
+    namespace fs = boost::filesystem;
+
+    if (user_id.empty() || app_config == nullptr)
+        return;
+
+    static const std::string migration_key = "legacy_preset_migration_user";
+    if (!app_config->get(migration_key).empty())
+        return;
+
+    const fs::path user_root  = fs::path(data_dir()) / PRESET_USER_DIR;
+    const fs::path legacy_dir = user_root / DEFAULT_USER_FOLDER_NAME;
+    const fs::path target_dir = user_root / user_id;
+    if (!fs::is_directory(legacy_dir))
+        return;
+
+    boost::system::error_code ec;
+    fs::create_directories(target_dir, ec);
+    if (ec) {
+        BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": failed to create " << target_dir.string()
+                                 << ": " << ec.message();
+        return;
+    }
+
+    bool found_legacy_preset = false;
+    for (fs::recursive_directory_iterator it(legacy_dir, ec), end; it != end && !ec; it.increment(ec)) {
+        const fs::path relative_path = it->path().lexically_relative(legacy_dir);
+        const fs::path destination   = target_dir / relative_path;
+
+        if (fs::is_directory(it->path())) {
+            fs::create_directories(destination, ec);
+        } else if (fs::is_regular_file(it->path())) {
+            found_legacy_preset = true;
+            if (!fs::exists(destination)) {
+                fs::create_directories(destination.parent_path(), ec);
+                if (!ec)
+                    fs::copy_file(it->path(), destination, ec);
+            }
+        }
+
+        if (ec) {
+            BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": failed to migrate " << it->path().string()
+                                     << ": " << ec.message();
+            return;
+        }
+    }
+
+    if (ec) {
+        BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": failed while scanning " << legacy_dir.string()
+                                 << ": " << ec.message();
+        return;
+    }
+
+    // Associate legacy presets with the first account that successfully migrates them.
+    // Keep the source directory intact so the upgrade remains recoverable.
+    if (found_legacy_preset) {
+        app_config->set(migration_key, user_id);
+        app_config->save();
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": migrated legacy presets from "
+                                << legacy_dir.string() << " to " << target_dir.string();
+    }
+}
 void GUI_App::enable_user_preset_folder(bool enable)
 {
     if (enable) {
         std::string user_id = m_agent->get_user_id();
+        migrate_legacy_user_presets(app_config, user_id);
         app_config->set("preset_folder", user_id);
         GUI::wxGetApp().preset_bundle->update_user_presets_directory(user_id);
     } else {
