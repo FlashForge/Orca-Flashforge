@@ -3155,6 +3155,15 @@ bool GUI_App::on_init_inner()
             m_auto_login_state = FlashLoginRecoveryState::LoggedIn;
             m_auto_login_retry_count = 0;
             LoginDialog::SetToken(event.token_data.accessToken, event.token_data.refreshToken);
+            const std::string user_id = event.add_dev_data.userProfile.uid;
+            if (!user_id.empty() && m_agent && preset_bundle && mainframe &&
+                m_agent->is_user_login() && m_agent->get_user_id() == user_id &&
+                app_config->get("preset_folder") != user_id) {
+                remove_user_presets();
+                enable_user_preset_folder(true);
+                preset_bundle->load_user_presets(user_id, ForwardCompatibilitySubstitutionRule::Enable);
+                mainframe->update_side_preset_ui();
+            }
             handle_show_user_points(event.add_dev_data);
 
             wxCommandEvent success_event(EVT_LOGIN_SUCCEED);
