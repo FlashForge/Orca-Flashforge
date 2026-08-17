@@ -16,6 +16,8 @@
 
 namespace Slic3r {
 
+static constexpr size_t kMaxPaintableFilaments = 32;
+
 static uint64_t canonical_pair_key(unsigned int a, unsigned int b)
 {
     const unsigned int lo = std::min(a, b);
@@ -2762,6 +2764,17 @@ void MixedFilamentManager::load_custom_entries(const std::string &serialized, co
         MixedFilament mf = *auto_mf_ptr;
         const unsigned int lo = std::min(mf.component_a, mf.component_b);
         const unsigned int hi = std::max(mf.component_a, mf.component_b);
+        if (lo == 0 || hi > n || lo == hi ||
+            (mf.ui_mode == 1 && !mf.manual_pattern.empty() &&
+             !snapmaker_pattern_is_valid_for_physical(mf, n))) {
+            ++skipped_rows;
+            BOOST_LOG_TRIVIAL(warning) << "MixedFilamentManager::load_custom_entries stale legacy row rejected"
+                                       << ", stable_id=" << mf.stable_id
+                                       << ", a=" << mf.component_a
+                                       << ", b=" << mf.component_b
+                                       << ", physical_count=" << n;
+            continue;
+        }
         mf.component_a = lo;
         mf.component_b = hi;
         mf.stable_id = dedupe_stable_id(mf.stable_id);
@@ -2769,6 +2782,41 @@ void MixedFilamentManager::load_custom_entries(const std::string &serialized, co
         mf.origin_auto = true;
         rebuilt.push_back(std::move(mf));
         ++appended_legacy_auto;
+    }
+
+    // Triangle painting serializes at most ExtruderMax distinct filament
+    // states. Keep every row for legacy project round-tripping, but only the
+    // leading rows that fit remain enabled. Disabling an enabled tail avoids
+    // renumbering any earlier valid virtual filament ID.
+    const size_t enabled_capacity = n < kMaxPaintableFilaments ? kMaxPaintableFilaments - n : 0;
+    size_t enabled_rows = 0;
+    size_t disabled_over_limit = 0;
+    size_t first_disabled_row = rebuilt.size();
+    uint64_t first_disabled_stable_id = 0;
+    for (size_t row_idx = 0; row_idx < rebuilt.size(); ++row_idx) {
+        MixedFilament &mf = rebuilt[row_idx];
+        if (!mf.enabled || mf.deleted)
+            continue;
+        if (enabled_rows < enabled_capacity) {
+            ++enabled_rows;
+            continue;
+        }
+
+        mf.enabled = false;
+        if (disabled_over_limit == 0) {
+            first_disabled_row = row_idx;
+            first_disabled_stable_id = mf.stable_id;
+        }
+        ++disabled_over_limit;
+    }
+    if (disabled_over_limit != 0) {
+        BOOST_LOG_TRIVIAL(warning) << "MixedFilamentManager::load_custom_entries disabled mixed rows over paint limit"
+                                   << ", physical_count=" << n
+                                   << ", max_total=" << kMaxPaintableFilaments
+                                   << ", enabled_capacity=" << enabled_capacity
+                                   << ", disabled_rows=" << disabled_over_limit
+                                   << ", first_disabled_row=" << first_disabled_row
+                                   << ", first_disabled_stable_id=" << first_disabled_stable_id;
     }
 
     m_mixed = std::move(rebuilt);
@@ -2780,7 +2828,9 @@ void MixedFilamentManager::load_custom_entries(const std::string &serialized, co
                             << ", updated_legacy_auto_rows=" << updated_legacy_auto
                             << ", appended_legacy_auto_rows=" << appended_legacy_auto
                             << ", skipped_rows=" << skipped_rows
-                            << ", mixed_total=" << m_mixed.size();
+                            << ", disabled_over_limit=" << disabled_over_limit
+                            << ", mixed_total=" << m_mixed.size()
+                            << ", mixed_enabled=" << enabled_count();
 }
 
 unsigned int MixedFilamentManager::resolve(unsigned int filament_id,
