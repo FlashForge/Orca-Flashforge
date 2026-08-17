@@ -7,7 +7,7 @@ set(SLIC3R_APP_KEY "Orca-Flashforge")
 if(NOT DEFINED BBL_INTERNAL_TESTING)
 set(BBL_INTERNAL_TESTING "0")
 endif()
-set(Orca_Flashforge_VERSION "1.7.14")
+set(Orca_Flashforge_VERSION "1.7.15")
 string(REGEX MATCH "^([0-9]+)\\.([0-9]+)\\.([0-9]+)"
        Orca_Flashforge_VERSION_MATCH ${Orca_Flashforge_VERSION})
 set(Orca_Flashforge_VERSION_MAJOR ${CMAKE_MATCH_1})
