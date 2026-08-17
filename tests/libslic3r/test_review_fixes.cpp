@@ -1,6 +1,8 @@
 #include <catch2/catch_all.hpp>
 
 #include "libslic3r/MixedFilament.hpp"
+#include "libslic3r/Exception.hpp"
+#include "libslic3r/GCode/ToolOrdering.hpp"
 #include "libslic3r/Print.hpp"
 #include "libslic3r/PrintConfig.hpp"
 #include "libslic3r/Model.hpp"
@@ -99,6 +101,67 @@ TEST_CASE("[review-fixes] resolve_mixed_1based passthrough on physical id",
     // Virtual id (3 = 2 physical + 1 mixed) must resolve to 1 or 2 depending on cadence.
     const unsigned int resolved = mgr.resolve(3u, num_physical, 0, 0.f, 0.2f);
     REQUIRE((resolved == 1u || resolved == 2u));
+}
+
+TEST_CASE("[review-fixes] stale painted mixed ids are rejected before indexing",
+          "[review-fixes][mixed-filament][crash]")
+{
+    MixedFilamentManager mgr;
+    const std::vector<std::string> colors = {"#FF0000", "#00FF00"};
+    mgr.add_custom_filament(1u, 2u, 50, colors);
+    REQUIRE(mgr.mixed_filaments().size() == 1);
+
+    LayerTools layer(0.2);
+    layer.mixed_mgr    = &mgr;
+    layer.num_physical = colors.size();
+    REQUIRE_NOTHROW(layer.resolve_mixed_1based(3u));
+
+    // Removing/disabling a mixed definition must not let a painted virtual ID
+    // survive as if it were a physical vector index.
+    mgr.mixed_filaments().front().enabled = false;
+    REQUIRE_THROWS_AS(layer.resolve_mixed_1based(3u), SlicingError);
+    REQUIRE_THROWS_AS(layer.resolve_mixed_1based(99u), SlicingError);
+}
+
+TEST_CASE("[review-fixes] nozzle mapping validates painted filament ids",
+          "[review-fixes][mixed-filament][crash]")
+{
+    FullPrintConfig config;
+    config.nozzle_diameter.values = {0.4, 0.4};
+    config.filament_diameter.values = {1.75, 1.75};
+
+    ToolOrdering ordering;
+    ordering.layer_tools().emplace_back(0.2);
+
+    SECTION("filament id beyond a short map") {
+        config.filament_map.values = {1};
+        ordering.layer_tools().front().extruders = {1u};
+        REQUIRE_THROWS_AS(ordering.cal_most_used_extruder(config), SlicingError);
+    }
+
+    SECTION("mapped nozzle beyond the installed nozzle count") {
+        config.filament_map.values = {3, 1};
+        ordering.layer_tools().front().extruders = {0u};
+        REQUIRE_THROWS_AS(ordering.cal_most_used_extruder(config), SlicingError);
+    }
+
+    SECTION("legacy single-nozzle project without a map remains supported") {
+        config.nozzle_diameter.values = {0.4};
+        config.filament_diameter.values = {1.75};
+        config.filament_map.values.clear();
+        ordering.layer_tools().front().extruders = {0u};
+        REQUIRE_NOTHROW(ordering.cal_most_used_extruder(config));
+        REQUIRE(ordering.get_most_used_extruder() == 0);
+    }
+
+    SECTION("single-nozzle project normalizes a stale multi-slot map") {
+        config.nozzle_diameter.values = {0.4};
+        config.filament_diameter.values = {1.75};
+        config.filament_map.values = {7};
+        ordering.layer_tools().front().extruders = {0u};
+        REQUIRE_NOTHROW(ordering.cal_most_used_extruder(config));
+        REQUIRE(ordering.get_most_used_extruder() == 0);
+    }
 }
 
 TEST_CASE("[review-fixes] mixed/dithering option keys exist in PrintConfig",

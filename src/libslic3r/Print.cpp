@@ -3687,21 +3687,20 @@ std::vector<std::set<int>> Print::get_physical_unprintable_filaments(const std::
         return physical_unprintables;
 
     auto get_unprintable_extruder_id = [&](unsigned int filament_idx) -> int {
-        int status = m_config.filament_printable.values[filament_idx];
+        const unsigned int all_printable =
+            extruder_num >= int(std::numeric_limits<unsigned int>::digits) ?
+            std::numeric_limits<unsigned int>::max() :
+            (1U << unsigned(extruder_num)) - 1U;
+        const unsigned int status = m_config.filament_printable.values.empty() ?
+            all_printable : unsigned(m_config.filament_printable.get_at(filament_idx));
         for (int i = 0; i < extruder_num; ++i) {
-            if (!(status >> i & 1)) {
+            if (i >= int(std::numeric_limits<unsigned int>::digits) ||
+                !((status >> unsigned(i)) & 1U)) {
                 return i;
             }
         }
         return -1;
     };
-
-
-    std::set<int> tpu_filaments;
-    for (auto f : used_filaments) {
-        if (m_config.filament_type.get_at(f) == "TPU")
-            tpu_filaments.insert(f);
-    }
 
     for (auto f : used_filaments) {
         int extruder_id = get_unprintable_extruder_id(f);
@@ -3745,10 +3744,19 @@ std::vector<Polygons> Print::get_extruder_unprintable_polygons() const
 
 size_t Print::get_extruder_id(unsigned int filament_id) const
 {
-    std::vector<int> filament_map = get_filament_maps();
-    if (filament_id < filament_map.size()) {
-        return filament_map[filament_id] - 1;
-    }
+    const size_t nozzle_count = m_config.nozzle_diameter.size();
+    if (nozzle_count <= 1)
+        return 0;
+
+    const std::vector<int> filament_map = get_filament_maps();
+    if (filament_id < filament_map.size() && filament_map[filament_id] >= 1 &&
+        size_t(filament_map[filament_id]) <= nozzle_count)
+        return size_t(filament_map[filament_id] - 1);
+
+    BOOST_LOG_TRIVIAL(debug) << "Print::get_extruder_id using nozzle 0 fallback"
+                             << ", filament_id=" << filament_id
+                             << ", filament_map_size=" << filament_map.size()
+                             << ", nozzle_count=" << nozzle_count;
     return 0;
 }
 
@@ -3960,6 +3968,15 @@ void Print::_make_wipe_tower()
         std::vector<FlushMatrix> multi_extruder_flush;
         for (size_t nozzle_id = 0; nozzle_id < nozzle_nums; ++nozzle_id) {
             std::vector<float> flush_matrix(cast<float>(get_flush_volumes_matrix(m_config.flush_volumes_matrix.values, nozzle_id, nozzle_nums)));
+            const size_t expected_flush_values = size_t(number_of_extruders) * number_of_extruders;
+            if (flush_matrix.size() < expected_flush_values) {
+                BOOST_LOG_TRIVIAL(warning) << "Short flush matrix; using prime-volume fallback"
+                                           << ", context=wipe_tower_type1"
+                                           << ", nozzle=" << nozzle_id
+                                           << ", matrix_size=" << flush_matrix.size()
+                                           << ", expected_size=" << expected_flush_values;
+                flush_matrix.assign(expected_flush_values, float(m_config.prime_volume.value));
+            }
             std::vector<std::vector<float>> wipe_volumes;
             for (unsigned int i = 0; i < number_of_extruders; ++i)
                 wipe_volumes.push_back(std::vector<float>(flush_matrix.begin() + i * number_of_extruders, flush_matrix.begin() + (i + 1) * number_of_extruders));
@@ -4115,6 +4132,14 @@ void Print::_make_wipe_tower()
     } else {
         // Get wiping matrix to get number of extruders and convert vector<double> to vector<float>:
         std::vector<float> flush_matrix(cast<float>(m_config.flush_volumes_matrix.values));
+        const size_t expected_flush_values = size_t(number_of_extruders) * number_of_extruders;
+        if (flush_matrix.size() < expected_flush_values) {
+            BOOST_LOG_TRIVIAL(warning) << "Short flush matrix; using prime-volume fallback"
+                                       << ", context=wipe_tower_type2"
+                                       << ", matrix_size=" << flush_matrix.size()
+                                       << ", expected_size=" << expected_flush_values;
+            flush_matrix.assign(expected_flush_values, float(m_config.prime_volume.value));
+        }
         // Extract purging volumes for each extruder pair:
         std::vector<std::vector<float>> wipe_volumes;
         for (unsigned int i = 0; i<number_of_extruders; ++i)

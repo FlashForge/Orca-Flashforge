@@ -34,6 +34,7 @@
 #include <iterator>
 #include <limits>
 #include <numeric>
+#include <set>
 #include <math.h>
 #include <stdlib.h>
 #include <string>
@@ -3748,11 +3749,50 @@ void GCode::export_layer_filaments(GCodeProcessorResult* result)
     if (result == nullptr)
         return;
 
-    const std::vector<int>filament_map = m_config.filament_map.values; // 1 based
-    std::vector<int>prev_filament(m_config.nozzle_diameter.size(), -1);
+    const std::vector<int> filament_map = m_config.filament_map.values; // 1 based
+    const size_t           nozzle_count = m_config.nozzle_diameter.size();
+    const size_t           filament_count = m_config.filament_diameter.size();
+    std::vector<int>       prev_filament(nozzle_count, -1);
+    std::vector<std::vector<unsigned int>> valid_layer_filaments;
+    valid_layer_filaments.reserve(m_sorted_layer_filaments.size());
+
+    size_t                 invalid_record_count = 0;
+    std::set<unsigned int> invalid_filaments;
+    auto valid_nozzle_index = [&](unsigned int filament_id, size_t layer_idx, size_t &nozzle_idx) {
+        if (nozzle_count == 1 && filament_id < filament_count) {
+            nozzle_idx = 0;
+            return true;
+        }
+
+        const bool filament_in_range = filament_id < filament_count &&
+                                       filament_id < filament_map.size();
+        const int  mapped_nozzle     = filament_in_range ? filament_map[filament_id] : 0;
+        if (filament_in_range && mapped_nozzle > 0 && static_cast<size_t>(mapped_nozzle) <= nozzle_count) {
+            nozzle_idx = static_cast<size_t>(mapped_nozzle - 1);
+            return true;
+        }
+
+        ++invalid_record_count;
+        if (invalid_filaments.emplace(filament_id).second) {
+            BOOST_LOG_TRIVIAL(warning) << "GCode::export_layer_filaments: skipping invalid layer filament record"
+                                       << ", layer=" << layer_idx
+                                       << ", filament_id=" << filament_id
+                                       << ", mapped_nozzle=" << (filament_in_range ? mapped_nozzle : -1)
+                                       << ", filament_map_size=" << filament_map.size()
+                                       << ", nozzle_count=" << nozzle_count;
+        }
+        return false;
+    };
+
     for (size_t idx = 0; idx < m_sorted_layer_filaments.size(); ++idx) {
-        for (auto f : m_sorted_layer_filaments[idx]) {
-            int extruder_idx = filament_map[f] - 1;
+        auto &valid_filaments = valid_layer_filaments.emplace_back();
+        valid_filaments.reserve(m_sorted_layer_filaments[idx].size());
+        for (unsigned int f : m_sorted_layer_filaments[idx]) {
+            size_t extruder_idx = 0;
+            if (!valid_nozzle_index(f, idx, extruder_idx))
+                continue;
+
+            valid_filaments.emplace_back(f);
             if (prev_filament[extruder_idx] != -1 && f != prev_filament[extruder_idx]) {
                 std::pair<int, int> from_to_pair = { prev_filament[extruder_idx],f };
                 auto iter = result->filament_change_count_map.find(from_to_pair);
@@ -3765,7 +3805,7 @@ void GCode::export_layer_filaments(GCodeProcessorResult* result)
         }
 
         // now we do not need sorted data, so we sort the filaments in id order
-        auto layer_filaments = m_sorted_layer_filaments[idx];
+        auto layer_filaments = valid_filaments;
         std::sort(layer_filaments.begin(), layer_filaments.end());
         auto iter = result->layer_filaments.find(layer_filaments);
         if (iter == result->layer_filaments.end()) {
@@ -3780,16 +3820,19 @@ void GCode::export_layer_filaments(GCodeProcessorResult* result)
         }
     }
 
+    if (invalid_record_count > 0)
+        BOOST_LOG_TRIVIAL(warning) << "GCode::export_layer_filaments: skipped " << invalid_record_count
+                                   << " invalid layer filament record(s) across " << invalid_filaments.size()
+                                   << " filament id(s)";
+
     result->filament_change_sequence.clear();
     result->nozzle_change_sequence.clear();
 
     int prev_sequence_filament = -1;
     int prev_sequence_nozzle = -1;
-    for (size_t layer_idx = 0; layer_idx < m_sorted_layer_filaments.size(); ++layer_idx) {
-        for (unsigned int filament_id : m_sorted_layer_filaments[layer_idx]) {
-            int nozzle_id = 0;
-            if (filament_id < filament_map.size() && filament_map[filament_id] > 0)
-                nozzle_id = filament_map[filament_id] - 1;
+    for (size_t layer_idx = 0; layer_idx < valid_layer_filaments.size(); ++layer_idx) {
+        for (unsigned int filament_id : valid_layer_filaments[layer_idx]) {
+            const int nozzle_id = nozzle_count == 1 ? 0 : filament_map[filament_id] - 1;
             if (prev_sequence_nozzle != nozzle_id || prev_sequence_filament != static_cast<int>(filament_id)) {
                 result->nozzle_change_sequence.emplace_back(static_cast<unsigned int>(nozzle_id));
                 result->filament_change_sequence.emplace_back(filament_id);
@@ -3800,9 +3843,25 @@ void GCode::export_layer_filaments(GCodeProcessorResult* result)
     }
 
     result->optimal_assignment.clear();
-    result->optimal_assignment.reserve(filament_map.size());
-    for (int nozzle_id : filament_map)
-        result->optimal_assignment.emplace_back(nozzle_id > 0 ? nozzle_id - 1 : 0);
+    const size_t assignment_count = nozzle_count == 1 ?
+        std::max(filament_map.size(), filament_count) : filament_map.size();
+    result->optimal_assignment.reserve(assignment_count);
+    for (size_t filament_id = 0; filament_id < assignment_count; ++filament_id) {
+        if (nozzle_count == 1) {
+            result->optimal_assignment.emplace_back(0);
+            continue;
+        }
+        const int nozzle_id = filament_map[filament_id];
+        if (nozzle_id > 0 && static_cast<size_t>(nozzle_id) <= nozzle_count) {
+            result->optimal_assignment.emplace_back(nozzle_id - 1);
+        } else {
+            BOOST_LOG_TRIVIAL(warning) << "GCode::export_layer_filaments: invalid optimal assignment, using nozzle 0 fallback"
+                                       << ", filament_id=" << filament_id
+                                       << ", mapped_nozzle=" << nozzle_id
+                                       << ", nozzle_count=" << nozzle_count;
+            result->optimal_assignment.emplace_back(0);
+        }
+    }
 }
 
 //BBS
@@ -5544,21 +5603,58 @@ LayerResult GCode::process_layer(
     }
 
     // BBS: get next extruder according to flush and soluble
-    auto get_next_extruder = [&](int current_extruder,const std::vector<unsigned int>&extruders) {
-        std::vector<float> flush_matrix(cast<float>(get_flush_volumes_matrix(m_config.flush_volumes_matrix.values, 0, m_config.nozzle_diameter.values.size())));
-        const unsigned int number_of_extruders = (unsigned int)(sqrt(flush_matrix.size()) + EPSILON);
+    auto get_next_extruder = [&](int current_extruder, const std::vector<unsigned int> &extruders) {
+        const size_t filament_count = m_config.filament_diameter.size();
+        const size_t nozzle_count = m_config.nozzle_diameter.size();
+        unsigned int next_extruder = current_extruder >= 0 &&
+                                     size_t(current_extruder) < filament_count ?
+                                     unsigned(current_extruder) : 0;
+        const auto fallback = std::find_if(extruders.begin(), extruders.end(), [&](unsigned int filament_id) {
+            return filament_id < filament_count && filament_id != next_extruder &&
+                   (m_config.filament_soluble.values.empty() ||
+                    !m_config.filament_soluble.get_at(filament_id));
+        });
+        const unsigned int first_printable = fallback == extruders.end() ?
+            next_extruder : *fallback;
+        if (current_extruder < 0 || size_t(current_extruder) >= filament_count)
+            next_extruder = first_printable;
+
+        if (filament_count == 0 || nozzle_count == 0) {
+            BOOST_LOG_TRIVIAL(warning) << "Skipping flush-based next-filament selection"
+                                       << ", filament_count=" << filament_count
+                                       << ", nozzle_count=" << nozzle_count;
+            return first_printable;
+        }
+
+        std::vector<float> flush_matrix(cast<float>(
+            get_flush_volumes_matrix(m_config.flush_volumes_matrix.values, 0, nozzle_count)));
+        const size_t expected_flush_values = filament_count * filament_count;
+        if (flush_matrix.size() < expected_flush_values) {
+            BOOST_LOG_TRIVIAL(warning) << "Short flush matrix; using first printable filament"
+                                       << ", context=next_filament"
+                                       << ", matrix_size=" << flush_matrix.size()
+                                       << ", expected_size=" << expected_flush_values;
+            return next_extruder;
+        }
+
         // Extract purging volumes for each extruder pair:
         std::vector<std::vector<float>> wipe_volumes;
-        for (unsigned int i = 0; i < number_of_extruders; ++i)
-            wipe_volumes.push_back(std::vector<float>(flush_matrix.begin() + i * number_of_extruders, flush_matrix.begin() + (i + 1) * number_of_extruders));
-        unsigned int next_extruder = current_extruder;
+        for (size_t i = 0; i < filament_count; ++i)
+            wipe_volumes.emplace_back(flush_matrix.begin() + i * filament_count,
+                                      flush_matrix.begin() + (i + 1) * filament_count);
+        if (current_extruder < 0 || size_t(current_extruder) >= filament_count)
+            return next_extruder;
+
         float min_flush = std::numeric_limits<float>::max();
         for (auto extruder_id : extruders) {
-            if (print.config().filament_soluble.get_at(extruder_id) || extruder_id == current_extruder)
+            if (extruder_id >= filament_count ||
+                (!print.config().filament_soluble.values.empty() &&
+                 print.config().filament_soluble.get_at(extruder_id)) ||
+                extruder_id == unsigned(current_extruder))
                 continue;
-            if (wipe_volumes[current_extruder][extruder_id] < min_flush) {
+            if (wipe_volumes[size_t(current_extruder)][extruder_id] < min_flush) {
                 next_extruder = extruder_id;
-                min_flush = wipe_volumes[current_extruder][extruder_id];
+                min_flush = wipe_volumes[size_t(current_extruder)][extruder_id];
             }
         }
         return next_extruder;
@@ -9550,7 +9646,29 @@ std::string GCode::retract(bool toolchange, bool is_last_retraction, LiftType li
 
 std::string GCode::set_extruder(unsigned int new_filament_id, double print_z, bool by_object, int toolchange_temp_override)
 {
-    int new_extruder_id = get_extruder_id(new_filament_id);
+    const size_t filament_count = m_config.filament_diameter.size();
+    const size_t nozzle_count = m_config.nozzle_diameter.size();
+    if (new_filament_id >= filament_count || nozzle_count == 0) {
+        BOOST_LOG_TRIVIAL(error) << "Invalid filament assignment in GCode::set_extruder"
+                                 << ", filament_id=" << new_filament_id
+                                 << ", filament_count=" << filament_count
+                                 << ", nozzle_count=" << nozzle_count;
+        throw Slic3r::SlicingError(
+            _(L("The project contains an invalid or outdated filament assignment. "
+                "Please reassign the affected painted area or mixed filament and slice again.")));
+    }
+
+    const size_t mapped_extruder = get_extruder_id(new_filament_id);
+    if (mapped_extruder >= nozzle_count) {
+        BOOST_LOG_TRIVIAL(error) << "Invalid nozzle assignment in GCode::set_extruder"
+                                 << ", filament_id=" << new_filament_id
+                                 << ", mapped_nozzle=" << mapped_extruder
+                                 << ", nozzle_count=" << nozzle_count;
+        throw Slic3r::SlicingError(
+            _(L("The project contains an invalid or outdated filament assignment. "
+                "Please reassign the affected painted area or mixed filament and slice again.")));
+    }
+    const int new_extruder_id = int(mapped_extruder);
     if (!m_writer.need_toolchange(new_filament_id))
         return "";
 
@@ -9648,8 +9766,18 @@ std::string GCode::set_extruder(unsigned int new_filament_id, double print_z, bo
     int old_filament_id = -1;
     int old_extruder_id = -1;
     if (m_writer.filament() != nullptr || m_start_gcode_filament != -1) {
-        std::vector<float> flush_matrix(cast<float>(get_flush_volumes_matrix(m_config.flush_volumes_matrix.values, new_extruder_id, m_config.nozzle_diameter.values.size())));
         const unsigned int number_of_extruders = (unsigned int) m_config.filament_diameter.values.size(); // if is multi_extruder only use the fist extruder matrix
+        std::vector<float> flush_matrix(cast<float>(get_flush_volumes_matrix(
+            m_config.flush_volumes_matrix.values, size_t(new_extruder_id), nozzle_count)));
+        const size_t expected_flush_values = size_t(number_of_extruders) * number_of_extruders;
+        if (flush_matrix.size() < expected_flush_values) {
+            BOOST_LOG_TRIVIAL(warning) << "Short flush matrix; using prime-volume fallback"
+                                       << ", context=set_extruder"
+                                       << ", nozzle=" << new_extruder_id
+                                       << ", matrix_size=" << flush_matrix.size()
+                                       << ", expected_size=" << expected_flush_values;
+            flush_matrix.assign(expected_flush_values, float(m_config.prime_volume.value));
+        }
         if (m_writer.filament() != nullptr)
             assert(m_writer.filament()->id() < number_of_extruders);
         else
@@ -9663,20 +9791,28 @@ std::string GCode::set_extruder(unsigned int new_filament_id, double print_z, bo
         old_filament_temp = this->on_first_layer()? m_config.nozzle_temperature_initial_layer.get_at(old_filament_id) : m_config.nozzle_temperature.get_at(old_filament_id);
 
         //During the filament change, the extruder will extrude an extra length of grab_length for the corresponding detection, so the purge can reduce this length.
-        float grab_purge_volume = m_config.grab_length.get_at(new_extruder_id) * 2.4;
+        const float grab_purge_volume = (m_config.grab_length.values.empty() ?
+            0.f : m_config.grab_length.get_at(size_t(new_extruder_id))) * 2.4f;
+        const float flush_multiplier = m_config.flush_multiplier.values.empty() ?
+            1.f : m_config.flush_multiplier.get_at(size_t(new_extruder_id));
+        auto flush_volume_for = [&](int from_filament_id) {
+            if (from_filament_id < 0 || size_t(from_filament_id) >= filament_count)
+                return 0.f;
+            return flush_matrix[size_t(from_filament_id) * filament_count + new_filament_id];
+        };
         if (old_extruder_id != new_extruder_id) {
             //calc flush volume between the same extruder id
             int old_filament_id_in_new_extruder = m_writer.filament(new_extruder_id) != nullptr ? m_writer.filament(new_extruder_id)->id() : -1;
             if (old_filament_id_in_new_extruder == -1)
                 wipe_volume = 0;
             else {
-                wipe_volume = flush_matrix[old_filament_id_in_new_extruder * number_of_extruders + new_filament_id];
-                wipe_volume *= m_config.flush_multiplier.get_at(new_extruder_id);
+                wipe_volume = flush_volume_for(old_filament_id_in_new_extruder);
+                wipe_volume *= flush_multiplier;
             }
         }
         else {
-            wipe_volume = flush_matrix[old_filament_id * number_of_extruders + new_filament_id];
-            wipe_volume *= m_config.flush_multiplier.get_at(new_extruder_id);  // if is multi_extruder only use the fist extruder matrix
+            wipe_volume = flush_volume_for(old_filament_id);
+            wipe_volume *= flush_multiplier;  // if is multi_extruder only use the fist extruder matrix
         }
         wipe_volume = std::max(0.f, wipe_volume-grab_purge_volume);
 

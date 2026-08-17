@@ -20,6 +20,10 @@
 
 using namespace Slic3r;
 
+static constexpr size_t kMaxPaintableFilaments = 32;
+static_assert(kMaxPaintableFilaments == static_cast<size_t>(EnforcerBlockerType::ExtruderMax),
+              "Mixed-filament and TriangleSelector paint limits must stay aligned");
+
 namespace {
 
 static std::vector<std::string> split_rows(const std::string &serialized)
@@ -469,6 +473,98 @@ TEST_CASE("Mixed filament empty definitions clear previous rows", "[MixedFilamen
     mgr.load_custom_entries(serialized, {"#FF0000"});
     CHECK(mgr.mixed_filaments().empty());
     CHECK(mgr.enabled_count() == 0);
+}
+
+TEST_CASE("Mixed filament loading disables only the enabled tail beyond the paint limit",
+          "[MixedFilament][Compatibility][Limit]")
+{
+    const size_t max_paintable = kMaxPaintableFilaments;
+    const size_t num_physical = 13;
+    REQUIRE(max_paintable > num_physical);
+    const size_t mixed_capacity = max_paintable - num_physical;
+    const size_t row_count = mixed_capacity + 4;
+    const size_t predisabled_row = 4;
+
+    std::ostringstream definitions;
+    for (size_t row_idx = 0; row_idx < row_count; ++row_idx) {
+        if (row_idx != 0)
+            definitions << ';';
+        definitions << "1,2," << (row_idx == predisabled_row ? 0 : 1)
+                    << ",1,50,0,g,w,m2,z0,xa0,xb0,d0,o0,u" << (1000 + row_idx);
+    }
+
+    MixedFilamentManager mgr;
+    mgr.load_custom_entries(definitions.str(), std::vector<std::string>(num_physical, "#FFFFFF"));
+
+    const std::vector<MixedFilament> &rows = mgr.mixed_filaments();
+    REQUIRE(rows.size() == row_count);
+    CHECK(mgr.enabled_count() == mixed_capacity);
+    CHECK(mgr.total_filaments(num_physical) == max_paintable);
+
+    size_t enabled_seen = 0;
+    for (size_t row_idx = 0; row_idx < rows.size(); ++row_idx) {
+        CHECK(rows[row_idx].stable_id == 1000 + row_idx);
+        const bool initially_enabled = row_idx != predisabled_row;
+        const bool expected_enabled = initially_enabled && enabled_seen < mixed_capacity;
+        CHECK(rows[row_idx].enabled == expected_enabled);
+        if (initially_enabled && enabled_seen < mixed_capacity)
+            ++enabled_seen;
+    }
+
+    CHECK(virtual_id_for_stable_id(rows, num_physical, rows.front().stable_id) == num_physical + 1);
+    CHECK(virtual_id_for_stable_id(rows, num_physical, rows[row_count - 1].stable_id) == 0);
+    CHECK(mgr.mixed_index_from_filament_id(unsigned(max_paintable), num_physical) >= 0);
+    CHECK(mgr.mixed_index_from_filament_id(unsigned(max_paintable + 1), num_physical) == -1);
+
+    // Disabled overflow rows remain serialized for old-project round-tripping,
+    // and reloading must not reorder or re-enable them.
+    MixedFilamentManager reloaded;
+    reloaded.load_custom_entries(mgr.serialize_custom_entries(),
+                                 std::vector<std::string>(num_physical, "#FFFFFF"));
+    REQUIRE(reloaded.mixed_filaments().size() == rows.size());
+    CHECK(reloaded.enabled_count() == mixed_capacity);
+    for (size_t row_idx = 0; row_idx < rows.size(); ++row_idx) {
+        CHECK(reloaded.mixed_filaments()[row_idx].stable_id == rows[row_idx].stable_id);
+        CHECK(reloaded.mixed_filaments()[row_idx].enabled == rows[row_idx].enabled);
+    }
+}
+
+TEST_CASE("Mixed filament loading rejects stale carried legacy rows",
+          "[MixedFilament][Compatibility][Stale]")
+{
+    MixedFilamentManager mgr;
+    const std::vector<std::string> old_colors(4, "#FFFFFF");
+    mgr.add_custom_filament(3, 4, 50, old_colors);
+    REQUIRE(mgr.mixed_filaments().size() == 1);
+    mgr.mixed_filaments().front().custom = false;
+    mgr.mixed_filaments().front().origin_auto = true;
+
+    const std::string valid_current_definition =
+        "1,2,1,1,50,0,g,w,m2,z0,xa0,xb0,d0,o0,u5000";
+    mgr.load_custom_entries(valid_current_definition, {"#FF0000", "#0000FF"});
+
+    REQUIRE(mgr.mixed_filaments().size() == 1);
+    CHECK(mgr.mixed_filaments().front().stable_id == 5000);
+    CHECK(mgr.mixed_filaments().front().component_a == 1);
+    CHECK(mgr.mixed_filaments().front().component_b == 2);
+    CHECK(mgr.enabled_count() == 1);
+}
+
+TEST_CASE("Mixed filament loading preserves but disables rows when physical colors fill the paint limit",
+          "[MixedFilament][Compatibility][Limit]")
+{
+    const size_t max_paintable = kMaxPaintableFilaments;
+    const std::string definition =
+        "1,2,1,1,50,0,g,w,m2,z0,xa0,xb0,d0,o0,u6000";
+
+    MixedFilamentManager mgr;
+    mgr.load_custom_entries(definition, std::vector<std::string>(max_paintable, "#FFFFFF"));
+
+    REQUIRE(mgr.mixed_filaments().size() == 1);
+    CHECK_FALSE(mgr.mixed_filaments().front().enabled);
+    CHECK(mgr.mixed_filaments().front().stable_id == 6000);
+    CHECK(mgr.enabled_count() == 0);
+    CHECK(mgr.total_filaments(max_paintable) == max_paintable);
 }
 
 TEST_CASE("Mixed filament manual patterns resolve comma-separated physical IDs by layer", "[MixedFilament]")

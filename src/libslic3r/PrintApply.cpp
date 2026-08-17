@@ -1337,6 +1337,8 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
         if (print_diff_set.size() != print_diff.size())
             print_diff.assign(print_diff_set.begin(), print_diff_set.end());
     }
+    const bool mixed_filament_definitions_changed =
+        std::find(print_diff.begin(), print_diff.end(), "mixed_filament_definitions") != print_diff.end();
 
     // Do not use the ApplyStatus as we will use the max function when updating apply_status.
     unsigned int apply_status = APPLY_STATUS_UNCHANGED;
@@ -1653,6 +1655,15 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
                 update_apply_status(this->invalidate_all_steps());
             }
         }
+
+        // Painted regions cache the mixed-state expansion. Rebuild them after the
+        // definitions change; print_diff has already invalidated slicing above.
+        if (mixed_filament_definitions_changed && model_object_new.is_mm_painted() &&
+            model_object_status.print_object_regions_status == ModelObjectStatus::PrintObjectRegionsStatus::Valid) {
+            model_object_status.print_object_regions_status = ModelObjectStatus::PrintObjectRegionsStatus::PartiallyValid;
+            print_regions_reshuffled = true;
+        }
+
         if (! solid_or_modifier_differ) {
             // Synchronize Object's config.
             bool object_config_changed = ! model_object.config.timestamp_matches(model_object_new.config);
