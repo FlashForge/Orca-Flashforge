@@ -599,6 +599,32 @@ void PresetBundle::copy_files(const std::string& from)
 PresetsConfigSubstitutions PresetBundle::load_presets(AppConfig &config, ForwardCompatibilitySubstitutionRule substitution_rule,
                                                       const PresetPreferences& preferred_selection/* = PresetPreferences()*/)
 {
+    // A damaged or cleaned data directory may be missing system preset bundles while
+    // AppConfig still contains the user's enabled printers. Restore only those missing
+    // bundles from the resources shipped with the application before loading presets.
+    namespace fs = boost::filesystem;
+    const fs::path system_dir   = (fs::path(data_dir()) / PRESET_SYSTEM_DIR).make_preferred();
+    const fs::path resource_dir = (fs::path(resources_dir()) / "profiles").make_preferred();
+    std::vector<std::string> missing_bundles;
+    for (const auto &[vendor, models] : config.vendors()) {
+        if (models.empty())
+            continue;
+
+        const fs::path vendor_json          = system_dir / (vendor + ".json");
+        const fs::path vendor_presets       = system_dir / vendor;
+        const fs::path resource_presets_dir = resource_dir / vendor;
+        if (!fs::exists(vendor_json) ||
+            (fs::exists(resource_presets_dir) && !fs::exists(vendor_presets)))
+            missing_bundles.emplace_back(vendor);
+    }
+
+    if (!missing_bundles.empty()) {
+        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": restoring " << missing_bundles.size()
+                                   << " missing system preset bundle(s) from resources";
+        if (!Slic3r::install_vendor_bundles_from_resources(missing_bundles))
+            BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": failed to restore one or more system preset bundles";
+    }
+
     // First load the vendor specific system presets.
     PresetsConfigSubstitutions substitutions;
     std::string errors_cummulative;

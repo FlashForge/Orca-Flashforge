@@ -3472,7 +3472,10 @@ CreatePresetSuccessfulDialog::CreatePresetSuccessfulDialog(wxWindow *parent, con
     wxBoxSizer *success_text_sizer = new wxBoxSizer(wxVERTICAL);
     wxStaticText *success_text = nullptr;
     wxStaticText *next_step_text = nullptr;
-    bool          sync_user_preset_need_enabled = wxGetApp().getAgent() && wxGetApp().app_config->get("sync_user_preset") == "false";
+    NetworkAgent* agent = wxGetApp().getAgent();
+    const std::string user_id = agent && agent->is_user_login() ? agent->get_user_id() : std::string();
+    bool sync_user_preset_need_enabled = !user_id.empty() &&
+                                         wxGetApp().app_config->get("user_preset_sync", user_id) != "true";
     switch (create_success_type) {
     case PRINTER:
         success_text = new wxStaticText(this, wxID_ANY, _L("Printer Created"));
@@ -3505,9 +3508,10 @@ CreatePresetSuccessfulDialog::CreatePresetSuccessfulDialog(wxWindow *parent, con
     else if (create_success_type == FILAMENT && sync_user_preset_need_enabled)
         dlg_btns->GetOK()->SetLabel(_L("Sync user presets"));
 
-    dlg_btns->GetOK()->Bind(wxEVT_BUTTON, [this, sync_user_preset_need_enabled](wxCommandEvent &e) {
+    dlg_btns->GetOK()->Bind(wxEVT_BUTTON, [this, sync_user_preset_need_enabled, user_id](wxCommandEvent &e) {
         if (sync_user_preset_need_enabled) {
-            wxGetApp().app_config->set("sync_user_preset", "true");
+            wxGetApp().app_config->set("user_preset_sync", user_id, true);
+            wxGetApp().app_config->save();
             wxGetApp().start_sync_user_preset();
         }
         EndModal(wxID_OK);

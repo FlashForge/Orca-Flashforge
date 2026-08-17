@@ -918,7 +918,13 @@ wxBoxSizer *PreferencesDialog::create_item_checkbox(wxString title, wxString too
     checkbox_title->SetToolTip(tip);
 
     auto checkbox = new ::CheckBox(m_parent);
-    checkbox->SetValue(app_config->get_bool(param));
+    if (param == "user_preset_sync") {
+        NetworkAgent* agent = wxGetApp().getAgent();
+        const std::string user_id = agent && agent->is_user_login() ? agent->get_user_id() : std::string();
+        checkbox->SetValue(!user_id.empty() && app_config->get("user_preset_sync", user_id) == "true");
+    } else {
+        checkbox->SetValue(app_config->get_bool(param));
+    }
     checkbox->SetToolTip(tip);
 
     m_sizer_checkbox->Add(checkbox_title, 0, wxALIGN_CENTER | wxTOP | wxBOTTOM, FromDIP(3));
@@ -935,7 +941,13 @@ wxBoxSizer *PreferencesDialog::create_item_checkbox(wxString title, wxString too
 
      //// save config
     checkbox->Bind(wxEVT_TOGGLEBUTTON, [this, checkbox, param](wxCommandEvent &e) {
-        app_config->set_bool(param, checkbox->GetValue());
+        if (param == "user_preset_sync") {
+            NetworkAgent* agent = wxGetApp().getAgent();
+            if (agent && agent->is_user_login() && !agent->get_user_id().empty())
+                app_config->set("user_preset_sync", agent->get_user_id(), checkbox->GetValue());
+        } else {
+            app_config->set_bool(param, checkbox->GetValue());
+        }
         app_config->save();
 
         // if (param == "staff_pick_switch") {
@@ -943,8 +955,8 @@ wxBoxSizer *PreferencesDialog::create_item_checkbox(wxString title, wxString too
         //     wxGetApp().switch_staff_pick(pbool);
         // }
 
-        if (param == "sync_user_preset") {
-            bool sync = app_config->get("sync_user_preset") == "true" ? true : false;
+        if (param == "user_preset_sync") {
+            bool sync = checkbox->GetValue();
             if (sync) {
                 wxGetApp().start_sync_user_preset();
             } else {
@@ -1589,7 +1601,7 @@ void PreferencesDialog::create_items()
 
     auto item_user_sync = create_item_checkbox(_L("Auto sync user presets (Printer/Filament/Process)"),
                                                   _L("Synchronize user presets with FlashForge Cloud after login"),
-                                                  "sync_user_preset");
+                                                  "user_preset_sync");
     g_sizer->Add(item_user_sync);
 
     auto item_system_sync      = create_item_checkbox(_L("Update built-in Presets automatically."), "", "sync_system_preset");

@@ -3862,6 +3862,7 @@ struct ConfigsOverwriteConfirmDialog : MessageDialog
     {
         add_button(wxID_YESTOALL, false, _L("Yes to All"));
         add_button(wxID_NOTOALL, false, _L("No to All"));
+        finalize();
     }
 };
 
@@ -4541,7 +4542,7 @@ void MainFrame::on_select_default_preset(wxCommandEvent& evt)
         return;
     if (agent->get_user_id() != user_id)
         return;
-    if (wxGetApp().app_config->get_bool("sync_user_preset"))
+    if (wxGetApp().app_config->has("user_preset_sync", user_id))
         return;
 
     MessageDialog dialog(this,
@@ -4558,14 +4559,14 @@ void MainFrame::on_select_default_preset(wxCommandEvent& evt)
     switch ( dialog.ShowModal() )
     {
         case wxID_YES: {
-            wxGetApp().app_config->set_bool("sync_user_preset", true);
+            wxGetApp().app_config->set("user_preset_sync", user_id, true);
             wxGetApp().app_config->save();
             wxGetApp().start_sync_user_preset(true);
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " sync_user_preset: true";
             break;
         }
         case wxID_NO:
-            wxGetApp().app_config->set_bool("sync_user_preset", false);
+            wxGetApp().app_config->set("user_preset_sync", user_id, false);
             wxGetApp().app_config->save();
             wxGetApp().stop_sync_user_preset();
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " sync_user_preset: false";

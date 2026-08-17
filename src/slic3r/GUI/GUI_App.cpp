@@ -1144,7 +1144,8 @@ void GUI_App::post_init()
     }
 
     // Start preset sync after project opened, otherwise we could have preset change during project opening which could cause crash 
-    if (app_config->get("sync_user_preset") == "true") {
+    if (m_agent && m_agent->is_user_login() &&
+        app_config->get("user_preset_sync", m_agent->get_user_id()) == "true") {
         // BBS loading user preset
         // Always async, not such startup step
         // BOOST_LOG_TRIVIAL(info) << "Loading user presets...";
@@ -1857,7 +1858,8 @@ void GUI_App::restart_networking()
             mainframe->update_side_preset_ui();
         }
 
-        if (app_config->get("sync_user_preset") == "true") {
+        if (m_agent && m_agent->is_user_login() &&
+            app_config->get("user_preset_sync", m_agent->get_user_id()) == "true") {
             start_sync_user_preset();
         }
         // if (mainframe && this->app_config->get("staff_pick_switch") == "true") {
@@ -7888,8 +7890,9 @@ void GUI_App::handle_user_preset_sync_on_login(const std::string& user_id)
     if (user_id.empty() || !m_agent || !m_agent->is_user_login() || !app_config || !mainframe)
         return;
 
-    if (app_config->get_bool("sync_user_preset")) {
-        start_sync_user_preset();
+    if (app_config->has("user_preset_sync", user_id)) {
+        if (app_config->get("user_preset_sync", user_id) == "true")
+            start_sync_user_preset();
         return;
     }
 
