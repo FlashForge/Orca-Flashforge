@@ -39,7 +39,9 @@ public:
     std::string get_cloud_login_url(const std::string & = "") override { return {}; }
     int connect_server() override { return is_user_login() ? 0 : -1; }
     bool is_server_connected() override { return is_user_login(); }
-    int refresh_connection() override { return ensure_token_fresh("refresh_connection") ? 0 : -1; }
+    // FlashForge WAN connection recovery is owned by MultiComMgr. This generic
+    // device heartbeat runs every five seconds, so it must not rotate OAuth tokens.
+    int refresh_connection() override { return is_user_login() ? 0 : -1; }
     int start_subscribe(std::string) override { return -1; }
     int stop_subscribe(std::string) override { return -1; }
     int add_subscribe(std::vector<std::string>) override { return -1; }
