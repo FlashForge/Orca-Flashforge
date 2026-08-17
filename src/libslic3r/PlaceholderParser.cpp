@@ -837,7 +837,8 @@ namespace client
         static std::map<std::string, std::string> tag_to_error_message;
 
         size_t get_extruder_id() const {
-            const ConfigOptionInts * filament_map_opt = external_config->option<ConfigOptionInts>("filament_map");
+            const ConfigOptionInts *filament_map_opt = external_config == nullptr ? nullptr :
+                external_config->option<ConfigOptionInts>("filament_map");
             if (filament_map_opt && current_extruder_id < filament_map_opt->values.size()) {
                 return filament_map_opt->values[current_extruder_id];
             }
@@ -2426,7 +2427,7 @@ static std::string placeholder_log_preview(std::string text)
 
 static std::string process_macro(const std::string &templ, client::MyContext &context)
 {
-    BOOST_LOG_TRIVIAL(error) << "FF_CRASH_TRACE PlaceholderParser::process_macro begin"
+    BOOST_LOG_TRIVIAL(debug) << "FF_CRASH_TRACE PlaceholderParser::process_macro begin"
                              << ", ctx=" << &context
                              << ", len=" << templ.size()
                              << ", just_boolean=" << context.just_boolean_expression
@@ -2438,15 +2439,19 @@ static std::string process_macro(const std::string &templ, client::MyContext &co
                              << ", preview=\"" << placeholder_log_preview(templ) << "\"";
     std::string output;
     phrase_parse(templ.begin(), templ.end(), g_macro_processor_instance(&context), client::skipper{}, output);
-    BOOST_LOG_TRIVIAL(error) << "FF_CRASH_TRACE PlaceholderParser::process_macro end"
-                             << ", ctx=" << &context
-                             << ", output_len=" << output.size()
-                             << ", error_len=" << context.error_message.size();
 	if (! context.error_message.empty()) {
+        BOOST_LOG_TRIVIAL(error) << "FF_CRASH_TRACE PlaceholderParser::process_macro end"
+                                 << ", ctx=" << &context
+                                 << ", output_len=" << output.size()
+                                 << ", error_len=" << context.error_message.size();
         if (context.error_message.back() != '\n' && context.error_message.back() != '\r')
             context.error_message += '\n';
         throw Slic3r::PlaceholderParserError(context.error_message);
     }
+    BOOST_LOG_TRIVIAL(debug) << "FF_CRASH_TRACE PlaceholderParser::process_macro end"
+                             << ", ctx=" << &context
+                             << ", output_len=" << output.size()
+                             << ", error_len=0";
     return output;
 }
 
