@@ -2808,6 +2808,11 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
 
     file.write_format("; HEADER_BLOCK_END\n\n");
     }
+
+    // Filament statistics and the non-Bambu config block are only known after
+    // G-code generation. Remember where they have to be inserted so printers
+    // can read this metadata before the executable block.
+    file.setInsertPos();
     
       // BBS: write global config at the beginning of gcode file because printer
       // need these config information
@@ -3692,6 +3697,8 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
 
     print.throw_if_canceled();
 
+    file.setCommentPos();
+
     // Get filament stats.
     file.write(DoExport::update_print_stats_and_format_filament_stats(
     	// Const inputs
@@ -3739,6 +3746,7 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
 
     }
     file.write("\n");
+    file.writeCache();
 
     print.throw_if_canceled();
 }
@@ -8173,13 +8181,8 @@ void GCode::GCodeOutputStream::close()
 
 void GCode::GCodeOutputStream::write(const char *what)
 {
-    if (what != nullptr) {
-        const char* gcode = what;
-        // writes string to file
-        fwrite(gcode, 1, ::strlen(gcode), this->f);
-        //FIXME don't allocate a string, maybe process a batch of lines?
-        m_processor.process_buffer(std::string(gcode));
-    }
+    if (what != nullptr)
+        m_cache.emplace_back(what);
 }
 
 void GCode::GCodeOutputStream::writeln(const std::string &what)
@@ -8218,6 +8221,27 @@ void GCode::GCodeOutputStream::write_format(const char* format, ...)
         free(bufptr);
 
     va_end(args);
+}
+
+void GCode::GCodeOutputStream::writeCache()
+{
+    auto write_range = [this](size_t begin, size_t end) {
+        for (size_t i = begin; i < end; ++i) {
+            const std::string &gcode = m_cache[i];
+            fwrite(gcode.data(), 1, gcode.size(), this->f);
+            m_processor.process_buffer(gcode);
+        }
+    };
+
+    if (m_insertPos >= 0 && m_commentPos >= m_insertPos) {
+        const size_t insert_pos  = static_cast<size_t>(m_insertPos);
+        const size_t comment_pos = static_cast<size_t>(m_commentPos);
+        write_range(0, insert_pos);
+        write_range(comment_pos, m_cache.size());
+        write_range(insert_pos, comment_pos);
+    } else {
+        write_range(0, m_cache.size());
+    }
 }
 
 bool GCode::_needSAFC(const ExtrusionPath &path)
