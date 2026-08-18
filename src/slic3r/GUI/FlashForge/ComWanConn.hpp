@@ -42,7 +42,10 @@ public:
     ComErrno createConn(fnet::FlashNetworkIntfc *networkIntfc, const char *clientId,
         uint64_t sessionGeneration, uint64_t connectionGeneration);
 
-    void freeConn();
+    // Stops the native connection and waits for all outstanding WAN tasks.
+    // This may block in third-party network code and must never run on the wx
+    // event thread.
+    void freeConnBlocking();
 
     void syncLogin(const std::string &topic);
 

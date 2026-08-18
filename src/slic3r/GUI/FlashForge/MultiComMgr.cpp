@@ -216,6 +216,7 @@ bool MultiComMgr::initalize(const std::string &dllPath, const std::string &dataD
     m_sendGcodeThd->Bind(COM_SEND_GCODE_FINISH_EVENT, queueEvent);
 
     m_threadPool.reset(new ComThreadPool(5, 30000));
+    m_connectionStopThreadPool.reset(new ComThreadPool(1, 30000));
     m_logUploadThreadPool.reset(new ComThreadPool(1, 30000));
     m_threadExitEvent.set(false);
     m_loopCheckTimer.Start(1000);
@@ -224,6 +225,7 @@ bool MultiComMgr::initalize(const std::string &dllPath, const std::string &dataD
     ComWanConn::inst()->Bind(WAN_CONN_READ_EVENT, &MultiComMgr::onWanConnRead, this);
     ComWanConn::inst()->Bind(WAN_CONN_HTTP_UNAUTHORIZED, &MultiComMgr::onWanConnUnauthorized, this);
     Bind(COM_MQTT_CONFIG_REFRESH_EVENT, &MultiComMgr::onMqttConfigRefresh, this);
+    Bind(COM_MQTT_CONNECTION_STOPPED_EVENT, &MultiComMgr::onMqttConnectionStopped, this);
     WanDevTokenMgr::inst()->Bind(COM_REFRESH_TOKEN_EVENT, &MultiComMgr::onRefreshToken, this);
     return true;
 }
@@ -247,8 +249,13 @@ void MultiComMgr::uninitalize()
     ComWanConn::inst()->Unbind(WAN_CONN_READ_EVENT, &MultiComMgr::onWanConnRead, this);
     ComWanConn::inst()->Unbind(WAN_CONN_HTTP_UNAUTHORIZED, &MultiComMgr::onWanConnUnauthorized, this);
     Unbind(COM_MQTT_CONFIG_REFRESH_EVENT, &MultiComMgr::onMqttConfigRefresh, this);
+    Unbind(COM_MQTT_CONNECTION_STOPPED_EVENT, &MultiComMgr::onMqttConnectionStopped, this);
     m_logUploadThreadPool.reset();
+    m_connectionStopThreadPool.reset();
     m_threadPool.reset();
+    m_mqttStopInFlight = false;
+    m_mqttStopContinuation = MqttStopContinuation::None;
+    ++m_mqttStopGeneration;
     m_sendGcodeThd->exit();
     m_sendGcodeThd.reset();
     m_wanDevMaintainThd->exit();
@@ -670,9 +677,7 @@ void MultiComMgr::onTimer(const wxTimerEvent &event)
         && m_mqttConnectDeadline != std::chrono::steady_clock::time_point {}
         && now >= m_mqttConnectDeadline) {
         BOOST_LOG_TRIVIAL(warning) << "MQTT connection timed out";
-        ++m_mqttConnectionGeneration;
-        ComWanConn::inst()->freeConn();
-        scheduleMqttConfigRefreshRetry();
+        stopMqttConnectionAsync(MqttStopContinuation::ScheduleRetry);
         QueueEvent(new ComWanDevMaintainEvent(
             COM_WAN_DEV_MAINTAIN_EVENT, true, false, COM_ERROR, WanServiceState::Reconnecting,
             WanLogoutReason::Unknown, m_wanSessionGeneration.load()));
@@ -1039,11 +1044,9 @@ void MultiComMgr::onWanConnStatus(const WanConnStatusEvent &event)
         if (m_mqttState == MqttRecoveryState::Disabled) {
             break;
         }
-        ++m_mqttConnectionGeneration;
         BOOST_LOG_TRIVIAL(warning) << "MQTT disconnected, session=" << event.sessionGeneration
                                    << ", connection=" << event.connectionGeneration;
-        ComWanConn::inst()->freeConn();
-        scheduleMqttConfigRefreshRetry();
+        stopMqttConnectionAsync(MqttStopContinuation::ScheduleRetry);
         QueueEvent(new ComWanDevMaintainEvent(COM_WAN_DEV_MAINTAIN_EVENT, true, false, COM_ERROR,
             WanServiceState::Reconnecting, WanLogoutReason::Unknown, event.sessionGeneration));
         break;
@@ -1326,7 +1329,8 @@ void MultiComMgr::onWanConnUnauthorized(const WanConnUnauthorizedEvent &event)
 
 void MultiComMgr::requestMqttConfigRefresh()
 {
-    if (!m_login || m_mqttState == MqttRecoveryState::Disabled || !m_threadPool) {
+    if (!m_login || m_mqttState != MqttRecoveryState::RetryScheduled
+        || m_mqttStopInFlight || !m_threadPool) {
         return;
     }
     m_mqttState = MqttRecoveryState::FetchingConfig;
@@ -1383,36 +1387,82 @@ void MultiComMgr::startMqttRecovery()
     if (!m_login) {
         return;
     }
-    // requestMqttConfigRefresh() deliberately rejects Disabled so a late timer
-    // or callback cannot restart MQTT after logout. Explicitly enter the
-    // recovery state before starting the first request.
+    // Config refreshes are accepted only after the old connection is fully
+    // stopped, so a late timer or callback cannot race connection teardown.
     m_mqttState = MqttRecoveryState::RetryScheduled;
-    ++m_mqttRequestGeneration;
-    ++m_mqttConnectionGeneration;
     m_mqttConfigRefreshRetryCount = 0;
-    m_nextMqttConfigRefreshTime = {};
-    m_mqttConnectDeadline = {};
-    m_connOnline = false;
     m_mqttConfig = {};
-    ComWanConn::inst()->freeConn();
+    stopMqttConnectionAsync(MqttStopContinuation::RefreshConfig);
     QueueEvent(new ComWanDevMaintainEvent(
         COM_WAN_DEV_MAINTAIN_EVENT, true, false, COM_OK, WanServiceState::Reconnecting,
         WanLogoutReason::Unknown, m_wanSessionGeneration.load()));
-    requestMqttConfigRefresh();
 }
 
 void MultiComMgr::disableMqtt()
 {
     m_mqttState = MqttRecoveryState::Disabled;
+    m_mqttConfigRefreshRetryCount = 0;
+    m_mqttBlockedRefreshTokenRevision = 0;
+    m_mqttConfig = {};
+    stopMqttConnectionAsync(MqttStopContinuation::None);
+}
+
+void MultiComMgr::stopMqttConnectionAsync(MqttStopContinuation continuation)
+{
     ++m_mqttRequestGeneration;
     ++m_mqttConnectionGeneration;
-    m_mqttConfigRefreshRetryCount = 0;
+    m_connOnline = false;
     m_nextMqttConfigRefreshTime = {};
     m_mqttConnectDeadline = {};
-    m_mqttBlockedRefreshTokenRevision = 0;
-    m_connOnline = false;
-    m_mqttConfig = {};
-    ComWanConn::inst()->freeConn();
+    m_mqttStopContinuation = continuation;
+    m_mqttState = continuation == MqttStopContinuation::None
+        ? MqttRecoveryState::Disabled : MqttRecoveryState::Stopping;
+
+    if (m_mqttStopInFlight) {
+        return;
+    }
+    if (!m_connectionStopThreadPool) {
+        BOOST_LOG_TRIVIAL(error) << "Unable to stop MQTT connection: worker pool is unavailable";
+        return;
+    }
+
+    m_mqttStopInFlight = true;
+    const uint64_t stopGeneration = ++m_mqttStopGeneration;
+    BOOST_LOG_TRIVIAL(info) << "MQTT state=Stopping, stop=" << stopGeneration
+                            << ", session=" << m_wanSessionGeneration.load();
+    m_connectionStopThreadPool->post([this, stopGeneration]() {
+        ComWanConn::inst()->freeConnBlocking();
+        QueueEvent(new ComMqttConnectionStoppedEvent(
+            COM_MQTT_CONNECTION_STOPPED_EVENT, stopGeneration));
+    });
+}
+
+void MultiComMgr::onMqttConnectionStopped(const ComMqttConnectionStoppedEvent &event)
+{
+    if (!m_mqttStopInFlight || event.stopGeneration != m_mqttStopGeneration) {
+        return;
+    }
+
+    m_mqttStopInFlight = false;
+    const MqttStopContinuation continuation = m_mqttStopContinuation;
+    m_mqttStopContinuation = MqttStopContinuation::None;
+    BOOST_LOG_TRIVIAL(info) << "MQTT connection stopped, stop=" << event.stopGeneration
+                            << ", session=" << m_wanSessionGeneration.load();
+
+    if (!m_login || continuation == MqttStopContinuation::None) {
+        m_mqttState = MqttRecoveryState::Disabled;
+        return;
+    }
+
+    // Both continuations enter RetryScheduled first because config requests
+    // are accepted only from that state. A disconnect preserves the existing
+    // backoff, while an explicit recovery starts immediately.
+    m_mqttState = MqttRecoveryState::RetryScheduled;
+    if (continuation == MqttStopContinuation::ScheduleRetry) {
+        scheduleMqttConfigRefreshRetry();
+    } else {
+        requestMqttConfigRefresh();
+    }
 }
 
 void MultiComMgr::onMqttConfigRefresh(const ComMqttConfigRefreshEvent &event)

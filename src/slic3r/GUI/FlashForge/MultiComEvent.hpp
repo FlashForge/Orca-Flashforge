@@ -345,6 +345,19 @@ struct ComMqttConfigRefreshEvent : public wxCommandEvent
     bool tokenRefreshSucceeded;
 };
 
+struct ComMqttConnectionStoppedEvent : public wxCommandEvent
+{
+    ComMqttConnectionStoppedEvent(wxEventType type, uint64_t _stopGeneration)
+        : wxCommandEvent(type), stopGeneration(_stopGeneration)
+    {
+    }
+    ComMqttConnectionStoppedEvent *Clone() const
+    {
+        return new ComMqttConnectionStoppedEvent(GetEventType(), stopGeneration);
+    }
+    uint64_t stopGeneration;
+};
+
 struct ComBusRequestEvent : public wxCommandEvent
 {
     ComBusRequestEvent(wxEventType type, int64_t _requestId, const std::string &_message, ComErrno _ret)
@@ -423,6 +436,7 @@ wxDECLARE_EVENT(COM_GET_USER_PROFILE_EVENT, ComGetUserProfileEvent);
 wxDECLARE_EVENT(COM_REFRESH_TOKEN_EVENT, ComRefreshTokenEvent);
 wxDECLARE_EVENT(COM_ACCESS_TOKEN_REFRESH_RESULT_EVENT, ComAccessTokenRefreshResultEvent);
 wxDECLARE_EVENT(COM_MQTT_CONFIG_REFRESH_EVENT, ComMqttConfigRefreshEvent);
+wxDECLARE_EVENT(COM_MQTT_CONNECTION_STOPPED_EVENT, ComMqttConnectionStoppedEvent);
 wxDECLARE_EVENT(COM_ADD_PRINT_LIST_MODEL_EVENT, ComBusRequestEvent);
 wxDECLARE_EVENT(COM_REMOVE_PRINT_LIST_MODEL_EVENT, ComBusRequestEvent);
 wxDECLARE_EVENT(COM_LIKE_MODEL_EVENT, ComBusRequestEvent);

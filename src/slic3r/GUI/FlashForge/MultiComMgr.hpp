@@ -91,10 +91,17 @@ public:
 private:
     enum class MqttRecoveryState {
         Disabled,
+        Stopping,
         FetchingConfig,
         Connecting,
         Online,
         RetryScheduled
+    };
+
+    enum class MqttStopContinuation {
+        None,
+        RefreshConfig,
+        ScheduleRetry
     };
 
     using std_precise_clock = std::chrono::high_resolution_clock;
@@ -137,6 +144,8 @@ private:
 
     void onMqttConfigRefresh(const ComMqttConfigRefreshEvent &event);
 
+    void onMqttConnectionStopped(const ComMqttConnectionStoppedEvent &event);
+
     void requestMqttConfigRefresh();
 
     void scheduleMqttConfigRefreshRetry();
@@ -144,6 +153,8 @@ private:
     void startMqttRecovery();
 
     void disableMqtt();
+
+    void stopMqttConnectionAsync(MqttStopContinuation continuation);
 
     std::string generateClientId();
 
@@ -183,6 +194,9 @@ private:
     MqttRecoveryState                                         m_mqttState { MqttRecoveryState::Disabled };
     uint64_t                                                  m_mqttRequestGeneration { 0 };
     uint64_t                                                  m_mqttConnectionGeneration { 0 };
+    uint64_t                                                  m_mqttStopGeneration { 0 };
+    bool                                                      m_mqttStopInFlight { false };
+    MqttStopContinuation                                      m_mqttStopContinuation { MqttStopContinuation::None };
     uint64_t                                                  m_mqttBlockedRefreshTokenRevision { 0 };
     unsigned int                                              m_mqttConfigRefreshRetryCount { 0 };
     std::chrono::steady_clock::time_point                     m_nextMqttConfigRefreshTime {};
@@ -212,6 +226,7 @@ private:
     std::unique_ptr<WanDevSendGcodeThd>                       m_sendGcodeThd;
     std::unique_ptr<fnet::FlashNetworkIntfc>                  m_networkIntfc;
     std::unique_ptr<ComThreadPool>                            m_threadPool;
+    std::unique_ptr<ComThreadPool>                            m_connectionStopThreadPool;
     std::unique_ptr<ComThreadPool>                            m_logUploadThreadPool;
     WaitEvent                                                 m_threadExitEvent;
 };
