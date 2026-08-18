@@ -369,6 +369,8 @@ TEST_CASE("Snapmaker perimeter groups emit different physical tools for differen
     const std::vector<std::string> colors = {"#E53935", "#1E88E5"};
     config.option<ConfigOptionFloats>("nozzle_diameter")->values   = {0.4, 0.4};
     config.option<ConfigOptionFloats>("filament_diameter")->values = {1.75, 1.75};
+    config.option<ConfigOptionFloats>("filament_density")->values = {1.24, 1.27};
+    config.option<ConfigOptionFloats>("filament_cost")->values    = {20., 25.};
     config.option<ConfigOptionStrings>("filament_colour")->values = colors;
     config.option<ConfigOptionStrings>("filament_ids")->values    = {"physical-red", "physical-blue"};
     config.option<ConfigOptionStrings>("filament_type")->values   = {"PLA", "PETG"};
@@ -445,7 +447,25 @@ TEST_CASE("Snapmaker perimeter groups emit different physical tools for differen
     const std::string gcode((std::istreambuf_iterator<char>(gcode_file)),
                             std::istreambuf_iterator<char>());
     gcode_file.close();
-    CHECK(gcode.find("; <filament id=\"1\" tray_info_idx=\"physical-red\" type=\"PLA\" color=\"#E53935\" used_m=\"") != std::string::npos);
+    const size_t executable_block = gcode.find("; EXECUTABLE_BLOCK_START");
+    const size_t filament_stats   = gcode.find("; filament used [g] =");
+    const size_t total_weight     = gcode.find("; total filament used [g] =");
+    const size_t estimated_time   = gcode.find("; estimated printing time (normal mode) =");
+    const size_t config_block     = gcode.find("; CONFIG_BLOCK_START");
+    const size_t filament_metadata = gcode.find(
+        "; <filament id=\"1\" tray_info_idx=\"physical-red\" type=\"PLA\" color=\"#E53935\" used_m=\"");
+
+    REQUIRE(executable_block != std::string::npos);
+    REQUIRE(filament_stats != std::string::npos);
+    REQUIRE(total_weight != std::string::npos);
+    REQUIRE(estimated_time != std::string::npos);
+    REQUIRE(config_block != std::string::npos);
+    REQUIRE(filament_metadata != std::string::npos);
+    CHECK(filament_stats < executable_block);
+    CHECK(total_weight < executable_block);
+    CHECK(estimated_time < executable_block);
+    CHECK(config_block < executable_block);
+    CHECK(filament_metadata < executable_block);
     CHECK(gcode.find("; <filament id=\"2\" tray_info_idx=\"physical-blue\" type=\"PETG\" color=\"#1E88E5\" used_m=\"") != std::string::npos);
     CHECK(gcode.find("; <filament id=\"3\"") == std::string::npos);
 
