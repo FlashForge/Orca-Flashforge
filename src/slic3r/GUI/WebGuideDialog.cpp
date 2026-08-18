@@ -12,6 +12,7 @@
 #include "libslic3r/PresetBundle.hpp"
 #include "slic3r/GUI/wxExtensions.hpp"
 #include "slic3r/GUI/GUI_App.hpp"
+#include "slic3r/Utils/FlashCloudServiceAgent.hpp"
 #include "libslic3r_version.h"
 
 #include <wx/sizer.h>
@@ -496,9 +497,9 @@ void GuideFrame::OnScriptMessage(wxWebViewEvent &evt)
                 NetworkAgent* agent = wxGetApp().getAgent();
                 if (agent) {
                     agent->set_country_code(country_code);
-                    if (wxGetApp().is_user_login()) {
+                    const bool is_flashforge_cloud = dynamic_cast<FlashCloudServiceAgent*>(agent->get_cloud_agent().get()) != nullptr;
+                    if (!is_flashforge_cloud && wxGetApp().is_user_login()) {
                         BOOST_LOG_TRIVIAL(info) << "logout: user_logout on user_guide_finish";
-                        // agent->user_logout();
                         wxGetApp().request_user_logout();
                     }
                 }
