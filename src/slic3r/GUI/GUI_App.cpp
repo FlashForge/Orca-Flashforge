@@ -6359,76 +6359,66 @@ void GUI_App::on_http_error(wxCommandEvent &evt)
     }
 }
 
-static void migrate_legacy_user_presets(AppConfig* app_config, const std::string& user_id)
+static void migrate_legacy_user_presets(AppConfig* app_config, PresetBundle* preset_bundle, const std::string& user_id)
 {
     namespace fs = boost::filesystem;
 
-    if (user_id.empty() || app_config == nullptr)
+    if (user_id.empty() || app_config == nullptr || preset_bundle == nullptr)
         return;
 
     static const std::string migration_key = "legacy_preset_migration_user";
     if (!app_config->get(migration_key).empty())
         return;
 
-    const fs::path user_root  = fs::path(data_dir()) / PRESET_USER_DIR;
-    const fs::path legacy_dir = user_root / DEFAULT_USER_FOLDER_NAME;
-    const fs::path target_dir = user_root / user_id;
+    const fs::path legacy_dir = fs::path(data_dir()) / PRESET_USER_DIR / DEFAULT_USER_FOLDER_NAME;
     if (!fs::is_directory(legacy_dir))
         return;
 
     boost::system::error_code ec;
-    fs::create_directories(target_dir, ec);
-    if (ec) {
-        BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": failed to create " << target_dir.string()
-                                 << ": " << ec.message();
-        return;
-    }
-
-    bool found_legacy_preset = false;
-    for (fs::recursive_directory_iterator it(legacy_dir, ec), end; it != end && !ec; it.increment(ec)) {
-        const fs::path relative_path = it->path().lexically_relative(legacy_dir);
-        const fs::path destination   = target_dir / relative_path;
-
-        if (fs::is_directory(it->path())) {
-            fs::create_directories(destination, ec);
-        } else if (fs::is_regular_file(it->path())) {
-            found_legacy_preset = true;
-            if (!fs::exists(destination)) {
-                fs::create_directories(destination.parent_path(), ec);
-                if (!ec)
-                    fs::copy_file(it->path(), destination, ec);
+    std::vector<std::string> legacy_presets;
+    const char* preset_dirs[] = {PRESET_PRINT_NAME, PRESET_PRINTER_NAME, PRESET_FILAMENT_NAME};
+    for (const char* preset_dir_name : preset_dirs) {
+        const fs::path preset_dir = legacy_dir / preset_dir_name;
+        if (!fs::is_directory(preset_dir, ec)) {
+            if (ec) {
+                BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": failed to inspect " << preset_dir.string()
+                                         << ": " << ec.message();
+                return;
             }
+            continue;
+        }
+
+        for (fs::recursive_directory_iterator it(preset_dir, ec), end; it != end && !ec; it.increment(ec)) {
+            if (fs::is_regular_file(it->path()) && Slic3r::is_json_file(it->path().string()))
+                legacy_presets.emplace_back(it->path().string());
         }
 
         if (ec) {
-            BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": failed to migrate " << it->path().string()
+            BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": failed while scanning " << preset_dir.string()
                                      << ": " << ec.message();
             return;
         }
     }
 
-    if (ec) {
-        BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": failed while scanning " << legacy_dir.string()
-                                 << ": " << ec.message();
+    if (legacy_presets.empty())
         return;
-    }
 
-    // Associate legacy presets with the first account that successfully migrates them.
-    // Keep the source directory intact so the upgrade remains recoverable.
-    if (found_legacy_preset) {
-        app_config->set(migration_key, user_id);
-        app_config->save();
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": migrated legacy presets from "
-                                << legacy_dir.string() << " to " << target_dir.string();
-    }
+    const size_t preset_count = legacy_presets.size();
+    preset_bundle->import_presets(legacy_presets, [](const std::string&) { return 0; },
+                                  ForwardCompatibilitySubstitutionRule::Enable, *app_config);
+
+    app_config->set(migration_key, user_id);
+    app_config->save();
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": imported " << legacy_presets.size() << " of "
+                            << preset_count << " legacy presets for user " << user_id;
 }
 void GUI_App::enable_user_preset_folder(bool enable)
 {
     if (enable) {
         std::string user_id = m_agent->get_user_id();
-        migrate_legacy_user_presets(app_config, user_id);
         app_config->set("preset_folder", user_id);
         GUI::wxGetApp().preset_bundle->update_user_presets_directory(user_id);
+        migrate_legacy_user_presets(app_config, preset_bundle, user_id);
     } else {
         BOOST_LOG_TRIVIAL(info) << "preset_folder: set to empty";
         app_config->set("preset_folder", "");
