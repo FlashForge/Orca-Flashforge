@@ -21546,6 +21546,48 @@ msgstr "카메라가 감지되지 않았습니다"
 #~ "ABS와 같이 뒤틀림이 발생하기 쉬운 소재를 출력할 때, 히트베드 온도를 적절하"
 #~ "게 높이면 뒤틀림 가능성을 줄일 수 있다는 사실을 알고 계셨나요?"
 
+#, c-format, boost-format
+msgid ""
+" - %s:\n"
+"    %s first layer %d %s, other layers %d %s\n"
+"    %s max delta %d %s, current delta %d %s\n"
+msgstr ""
+" - %s:\n"
+"    %s 첫 번째 레이어 %d %s, 기타 레이어 %d %s\n"
+"    %s 최대 온도 차이 %d %s, 현재 온도 차이 %d %s\n"
+
+msgid "Some first-layer and other-layer temperature pairs exceed safety limits.\n"
+msgstr "일부 첫 번째 레이어와 기타 레이어의 온도 쌍이 안전 한계를 초과합니다.\n"
+
+msgid ""
+"\n"
+"Invalid pairs:\n"
+msgstr ""
+"\n"
+"잘못된 온도 쌍:\n"
+
+msgid ""
+"\n"
+"You can go back to edit values, or continue if this is intentional."
+msgstr ""
+"\n"
+"값을 수정하려면 돌아가거나, 의도한 설정이라면 계속할 수 있습니다."
+
+msgid ""
+"\n"
+"\n"
+"Continue anyway?"
+msgstr ""
+"\n"
+"\n"
+"그래도 계속하시겠습니까?"
+
+msgid "Temperature Safety Check"
+msgstr "온도 안전 검사"
+
+msgid "Don't warn again for this preset"
+msgstr "이 프리셋에 대해 다시 경고하지 않기"
+
 msgid "Based on BambuStudio and PrusaSlicer"
 msgstr "BambuStudio 및 PrusaSlicer 기반"
 

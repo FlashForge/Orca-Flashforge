@@ -20634,6 +20634,48 @@ msgstr "Kamera algılanmadı"
 #~ "maksimum akıştan küçük olanı ile sınırlanır. Devre dışı bırakıldığında "
 #~ "yalnızca kullanıcı tanımlı maksimum akış uygulanır."
 
+#, c-format, boost-format
+msgid ""
+" - %s:\n"
+"    %s first layer %d %s, other layers %d %s\n"
+"    %s max delta %d %s, current delta %d %s\n"
+msgstr ""
+" - %s:\n"
+"    %s ilk katman %d %s, diğer katmanlar %d %s\n"
+"    %s azami fark %d %s, geçerli fark %d %s\n"
+
+msgid "Some first-layer and other-layer temperature pairs exceed safety limits.\n"
+msgstr "Bazı ilk katman ve diğer katman sıcaklık çiftleri güvenlik sınırlarını aşıyor.\n"
+
+msgid ""
+"\n"
+"Invalid pairs:\n"
+msgstr ""
+"\n"
+"Geçersiz çiftler:\n"
+
+msgid ""
+"\n"
+"You can go back to edit values, or continue if this is intentional."
+msgstr ""
+"\n"
+"Değerleri düzenlemek için geri dönebilir veya bu ayar bilinçliyse devam edebilirsiniz."
+
+msgid ""
+"\n"
+"\n"
+"Continue anyway?"
+msgstr ""
+"\n"
+"\n"
+"Yine de devam edilsin mi?"
+
+msgid "Temperature Safety Check"
+msgstr "Sıcaklık Güvenliği Kontrolü"
+
+msgid "Don't warn again for this preset"
+msgstr "Bu ön ayar için tekrar uyarma"
+
 msgid "Based on BambuStudio and PrusaSlicer"
 msgstr "BambuStudio ve PrusaSlicer temel alınarak geliştirilmiştir."
 

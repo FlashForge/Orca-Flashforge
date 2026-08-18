@@ -23676,6 +23676,48 @@ msgstr "Aucune caméra détectée"
 #~ "déformer, tels que l’ABS, une augmentation appropriée de la température "
 #~ "du plateau chauffant peut réduire la probabilité de déformation?"
 
+#, c-format, boost-format
+msgid ""
+" - %s:\n"
+"    %s first layer %d %s, other layers %d %s\n"
+"    %s max delta %d %s, current delta %d %s\n"
+msgstr ""
+" - %s :\n"
+"    %s première couche %d %s, autres couches %d %s\n"
+"    %s écart maximal %d %s, écart actuel %d %s\n"
+
+msgid "Some first-layer and other-layer temperature pairs exceed safety limits.\n"
+msgstr "Certaines paires de températures de la première couche et des autres couches dépassent les limites de sécurité.\n"
+
+msgid ""
+"\n"
+"Invalid pairs:\n"
+msgstr ""
+"\n"
+"Paires non valides :\n"
+
+msgid ""
+"\n"
+"You can go back to edit values, or continue if this is intentional."
+msgstr ""
+"\n"
+"Vous pouvez revenir modifier les valeurs ou continuer si ce réglage est intentionnel."
+
+msgid ""
+"\n"
+"\n"
+"Continue anyway?"
+msgstr ""
+"\n"
+"\n"
+"Continuer quand même ?"
+
+msgid "Temperature Safety Check"
+msgstr "Contrôle de sécurité de la température"
+
+msgid "Don't warn again for this preset"
+msgstr "Ne plus avertir pour ce préréglage"
+
 msgid "Based on BambuStudio and PrusaSlicer"
 msgstr "Sur la base de BambuStudio et PrusaSlicer"
 

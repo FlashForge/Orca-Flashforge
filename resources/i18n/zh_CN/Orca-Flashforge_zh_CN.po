@@ -21100,6 +21100,48 @@ msgstr "未检测到摄像头"
 #~ "避免翘曲\n"
 #~ "您知道吗？打印ABS这类易翘曲材料时，适当提高热床温度可以降低翘曲的概率。"
 
+#, c-format, boost-format
+msgid ""
+" - %s:\n"
+"    %s first layer %d %s, other layers %d %s\n"
+"    %s max delta %d %s, current delta %d %s\n"
+msgstr ""
+" - %s：\n"
+"    %s 首层 %d %s，其他层 %d %s\n"
+"    %s 最大温差 %d %s，当前温差 %d %s\n"
+
+msgid "Some first-layer and other-layer temperature pairs exceed safety limits.\n"
+msgstr "部分首层与其他层的温度组合超出了安全范围。\n"
+
+msgid ""
+"\n"
+"Invalid pairs:\n"
+msgstr ""
+"\n"
+"无效的温度组合：\n"
+
+msgid ""
+"\n"
+"You can go back to edit values, or continue if this is intentional."
+msgstr ""
+"\n"
+"您可以返回修改数值；如果这是有意设置，也可以继续。"
+
+msgid ""
+"\n"
+"\n"
+"Continue anyway?"
+msgstr ""
+"\n"
+"\n"
+"仍要继续吗？"
+
+msgid "Temperature Safety Check"
+msgstr "温度安全检查"
+
+msgid "Don't warn again for this preset"
+msgstr "不再对此预设发出警告"
+
 msgid "Based on BambuStudio and PrusaSlicer"
 msgstr "基于BambuStudio与PrusaSlicer。"
 
