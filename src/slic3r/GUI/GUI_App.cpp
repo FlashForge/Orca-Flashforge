@@ -1871,7 +1871,7 @@ void GUI_App::restart_networking()
 
 // Network plugin hot reload timeout constants (in milliseconds)
 namespace {
-    constexpr bool FLASH_PRESET_SYNC_LOG_ENABLED = true;
+    constexpr bool FLASH_PRESET_SYNC_LOG_ENABLED = false;
     constexpr unsigned int MAX_PRESET_SYNC_RETRIES = 5;
     std::mutex s_preset_sync_retry_mutex;
     std::map<std::string, unsigned int> s_preset_sync_retry_counts;
