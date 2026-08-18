@@ -17,6 +17,7 @@
 #include "Widgets/RadioGroup.hpp"
 #include "slic3r/Utils/bambu_networking.hpp"
 #include "slic3r/Utils/NetworkAgent.hpp"
+#include "slic3r/Utils/FlashCloudServiceAgent.hpp"
 #include "DownloadProgressDialog.hpp"
 
 #ifdef __WINDOWS__
@@ -390,20 +391,20 @@ wxBoxSizer *PreferencesDialog::create_item_region_combobox(wxString title, wxStr
         NetworkAgent* agent = wxGetApp().getAgent();
         AppConfig* config = GUI::wxGetApp().app_config;
         if (agent) {
-            MessageDialog msg_wingow(this, _L("Changing the region will log out your account.\n") + "\n" + _L("Do you want to continue?"), _L("Region selection"),
-                                     wxICON_QUESTION | wxOK | wxCANCEL);
-            if (msg_wingow.ShowModal() == wxID_CANCEL) {
-                combobox->SetSelection(current_region);
-                return;
-            } else {
-                wxGetApp().request_user_logout();
-                config->set("region", region.ToStdString());
-                auto area = config->get_country_code();
-                if (agent) {
-                    agent->set_country_code(area);
+            const bool is_flashforge_cloud = dynamic_cast<FlashCloudServiceAgent*>(agent->get_cloud_agent().get()) != nullptr;
+            if (!is_flashforge_cloud) {
+                MessageDialog msg_wingow(this, _L("Changing the region will log out your account.\n") + "\n" + _L("Do you want to continue?"), _L("Region selection"),
+                                         wxICON_QUESTION | wxOK | wxCANCEL);
+                if (msg_wingow.ShowModal() == wxID_CANCEL) {
+                    combobox->SetSelection(current_region);
+                    return;
                 }
-                EndModal(wxID_CANCEL);
+                wxGetApp().request_user_logout();
             }
+            config->set("region", region.ToStdString());
+            auto area = config->get_country_code();
+            agent->set_country_code(area);
+            EndModal(wxID_CANCEL);
         } else {
             config->set("region", region.ToStdString());
         }
