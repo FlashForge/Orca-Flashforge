@@ -23549,6 +23549,48 @@ msgstr "Keine Kamera erkannt"
 #~ "Heizbetttemperatur die Wahrscheinlichkeit von Verwerfungen verringert "
 #~ "werden kann?"
 
+#, c-format, boost-format
+msgid ""
+" - %s:\n"
+"    %s first layer %d %s, other layers %d %s\n"
+"    %s max delta %d %s, current delta %d %s\n"
+msgstr ""
+" - %s:\n"
+"    %s erste Schicht %d %s, weitere Schichten %d %s\n"
+"    %s maximale Differenz %d %s, aktuelle Differenz %d %s\n"
+
+msgid "Some first-layer and other-layer temperature pairs exceed safety limits.\n"
+msgstr "Einige Temperaturpaare für die erste und die weiteren Schichten überschreiten die Sicherheitsgrenzen.\n"
+
+msgid ""
+"\n"
+"Invalid pairs:\n"
+msgstr ""
+"\n"
+"Ungültige Paare:\n"
+
+msgid ""
+"\n"
+"You can go back to edit values, or continue if this is intentional."
+msgstr ""
+"\n"
+"Sie können zurückgehen und die Werte bearbeiten oder fortfahren, wenn dies beabsichtigt ist."
+
+msgid ""
+"\n"
+"\n"
+"Continue anyway?"
+msgstr ""
+"\n"
+"\n"
+"Trotzdem fortfahren?"
+
+msgid "Temperature Safety Check"
+msgstr "Temperatur-Sicherheitsprüfung"
+
+msgid "Don't warn again for this preset"
+msgstr "Für dieses Preset nicht erneut warnen"
+
 msgid "Based on BambuStudio and PrusaSlicer"
 msgstr "Basierend auf BambuStudio und PrusaSlicer"
 

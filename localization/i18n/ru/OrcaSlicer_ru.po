@@ -29089,3 +29089,45 @@ msgstr "Камера не обнаружена"
 
 #~ msgid "Unselect"
 #~ msgstr "Отменить выбор"
+
+#, c-format, boost-format
+msgid ""
+" - %s:\n"
+"    %s first layer %d %s, other layers %d %s\n"
+"    %s max delta %d %s, current delta %d %s\n"
+msgstr ""
+" - %s:\n"
+"    %s первый слой %d %s, остальные слои %d %s\n"
+"    %s максимальная разница %d %s, текущая разница %d %s\n"
+
+msgid "Some first-layer and other-layer temperature pairs exceed safety limits.\n"
+msgstr "Некоторые пары температур первого и остальных слоёв превышают безопасные пределы.\n"
+
+msgid ""
+"\n"
+"Invalid pairs:\n"
+msgstr ""
+"\n"
+"Недопустимые пары:\n"
+
+msgid ""
+"\n"
+"You can go back to edit values, or continue if this is intentional."
+msgstr ""
+"\n"
+"Можно вернуться и изменить значения либо продолжить, если это сделано намеренно."
+
+msgid ""
+"\n"
+"\n"
+"Continue anyway?"
+msgstr ""
+"\n"
+"\n"
+"Всё равно продолжить?"
+
+msgid "Temperature Safety Check"
+msgstr "Проверка температурной безопасности"
+
+msgid "Don't warn again for this preset"
+msgstr "Больше не предупреждать для этого профиля"
