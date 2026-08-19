@@ -150,7 +150,7 @@ msgstr "サポートをブロックする"
 msgid "Erase"
 msgstr "消去"
 
-msgid "Erase all painting"
+msgid "Erase all"
 msgstr "全てを消去"
 
 msgid "Highlight overhang areas"

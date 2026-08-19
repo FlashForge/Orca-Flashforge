@@ -152,8 +152,8 @@ msgstr "서포트 차단"
 msgid "Erase"
 msgstr "지우기"
 
-msgid "Erase all painting"
-msgstr "모든 페인팅 삭제"
+msgid "Erase all"
+msgstr "모두 지우기"
 
 msgid "Highlight overhang areas"
 msgstr "오버행 영역 강조"

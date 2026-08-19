@@ -155,7 +155,7 @@ msgstr "Bloquer les supports"
 msgid "Erase"
 msgstr "Effacer"
 
-msgid "Erase all painting"
+msgid "Erase all"
 msgstr "Effacer tout"
 
 msgid "Highlight overhang areas"

@@ -158,7 +158,7 @@ msgstr "Блокировка поддержки"
 msgid "Erase"
 msgstr "Очистить"
 
-msgid "Erase all painting"
+msgid "Erase all"
 msgstr "Очистить всё"
 
 msgid "Highlight overhang areas"

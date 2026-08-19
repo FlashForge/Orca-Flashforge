@@ -140,8 +140,8 @@ msgstr "屏蔽支撑"
 msgid "Erase"
 msgstr "擦除"
 
-msgid "Erase all painting"
-msgstr "擦除所有绘制"
+msgid "Erase all"
+msgstr "全部擦除"
 
 msgid "Highlight overhang areas"
 msgstr "高亮悬垂区域"
