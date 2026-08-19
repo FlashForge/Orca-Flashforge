@@ -137,8 +137,8 @@ msgstr ""
 msgid "Erase"
 msgstr ""
 
-msgid "Erase all painting"
-msgstr ""
+msgid "Erase all"
+msgstr "Erase all"
 
 msgid "Highlight overhang areas"
 msgstr "Highlight overhangs"

@@ -137,8 +137,8 @@ msgstr "Blok destekleri"
 msgid "Erase"
 msgstr "Sil"
 
-msgid "Erase all painting"
-msgstr "Tüm boyamayı sil"
+msgid "Erase all"
+msgstr "Tümünü sil"
 
 msgid "Highlight overhang areas"
 msgstr "Çıkıntı alanlarını vurgulayın"

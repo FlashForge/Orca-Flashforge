@@ -151,8 +151,8 @@ msgstr "Support blockieren"
 msgid "Erase"
 msgstr "Löschen"
 
-msgid "Erase all painting"
-msgstr "Alles gemalte löschen"
+msgid "Erase all"
+msgstr "Alles löschen"
 
 msgid "Highlight overhang areas"
 msgstr "Bereiche mit Überhang hervorheben"
