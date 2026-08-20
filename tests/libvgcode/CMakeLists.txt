@@ -11,6 +11,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     add_library(libvgcode_layers STATIC
         ${CMAKE_CURRENT_LIST_DIR}/../../src/libvgcode/src/Layers.cpp
         ${CMAKE_CURRENT_LIST_DIR}/../../src/libvgcode/src/Range.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/../../src/libvgcode/src/Utils.cpp
     )
     target_include_directories(libvgcode_layers PUBLIC
         ${CMAKE_CURRENT_LIST_DIR}/../../src/libvgcode/include
@@ -28,8 +29,13 @@ endif()
 
 get_filename_component(_TEST_NAME ${CMAKE_CURRENT_LIST_DIR} NAME)
 
-add_executable(${_TEST_NAME}_tests
+set(_TEST_SOURCES
     test_layers.cpp
+    test_viewer_colors.cpp
+)
+
+add_executable(${_TEST_NAME}_tests
+    ${_TEST_SOURCES}
 )
 
 target_link_libraries(${_TEST_NAME}_tests PRIVATE

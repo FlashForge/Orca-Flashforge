@@ -25,6 +25,7 @@ extern bool operator != (const Vec3& v1, const Vec3& v2);
 extern Vec3 operator + (const Vec3& v1, const Vec3& v2);
 extern Vec3 operator - (const Vec3& v1, const Vec3& v2);
 extern Vec3 operator * (float f, const Vec3& v);
+extern const Color& get_palette_color(const Palette& colors, const Palette& fallback, std::size_t color_id);
 
 } // namespace libvgcode
 

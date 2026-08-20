@@ -64,5 +64,11 @@ Vec3 operator * (float f, const Vec3& v) {
     return { f * v[0], f * v[1], f * v[2] };
 }
 
+const Color& get_palette_color(const Palette& colors, const Palette& fallback, std::size_t color_id)
+{
+    const Palette& selected = colors.empty() ? fallback : colors;
+    return selected.empty() ? DUMMY_COLOR : selected[color_id % selected.size()];
+}
+
 } // namespace libvgcode
 
