@@ -44,7 +44,6 @@ static void unbind_ts(const std::string &tag)
 namespace {
 
 constexpr double WAN_DEVICE_STALE_TIMEOUT_SECONDS = 20.0;
-constexpr double WAN_DEVICE_REFRESH_RETRY_SECONDS = 20.0;
 constexpr int MQTT_CONNECT_TIMEOUT_SECONDS = 20;
 
 std::string sanitized_client_id_part(std::string value)
@@ -133,6 +132,7 @@ const char *wan_device_status_source_name(WanDeviceStatusSource source)
     case WanDeviceStatusSource::DeviceDetail:     return "device_detail";
     case WanDeviceStatusSource::KeepAlive:        return "keep_alive";
     case WanDeviceStatusSource::MessageActivity:  return "message_activity";
+    case WanDeviceStatusSource::StaleTimeout:     return "stale_timeout";
     }
     return "unknown";
 }
@@ -719,21 +719,15 @@ void MultiComMgr::onTimer(const wxTimerEvent &event)
                     continue;
                 }
                 const std::chrono::duration<double> aliveDuration = now - devData.wanLastMessageTime;
-                const bool refreshDue = devData.wanLastDetailRefreshTime == std::chrono::steady_clock::time_point {}
-                    || std::chrono::duration<double>(now - devData.wanLastDetailRefreshTime).count()
-                        > WAN_DEVICE_REFRESH_RETRY_SECONDS;
-                if (aliveDuration.count() > WAN_DEVICE_STALE_TIMEOUT_SECONDS && refreshDue) {
-                    staleDevTopics.push_back(devData.wanDevInfo.devTopic);
-                    devData.wanLastDetailRefreshTime = now;
-                    BOOST_LOG_TRIVIAL(warning) << "WAN device state is stale; requesting a detail refresh";
+                if (aliveDuration.count() > WAN_DEVICE_STALE_TIMEOUT_SECONDS) {
+                    BOOST_LOG_TRIVIAL(warning) << "WAN device has not sent a message for 20 seconds; marking it offline";
 #ifdef _WIN32
-                    OutputDebugStringA("[CAMDBG] MultiComMgr: stale WAN device state -> request detail refresh\n");
+                    OutputDebugStringA("[CAMDBG] MultiComMgr: WAN device message timeout -> offline\n");
 #endif
+                    updateWanDeviceState(comId, WanDevicePresence::Offline,
+                        WanDeviceStatusSource::StaleTimeout, nullptr, true);
                 }
             }
-        }
-        if (!staleDevTopics.empty()) {
-            ComWanConn::inst()->updateDetail(staleDevTopics);
         }
         if (m_pendingSetUpdateWanDevTime != std_precise_clock::time_point::max()) {
             std::chrono::duration<double> duration = std_precise_clock::now() - m_pendingSetUpdateWanDevTime;
@@ -1030,12 +1024,13 @@ void MultiComMgr::onWanConnStatus(const WanConnStatusEvent &event)
             m_httpOnline ? WanServiceState::Connected : WanServiceState::ApiUnavailable,
             WanLogoutReason::Unknown, event.sessionGeneration));
         // cleanSession subscriptions are not retained. Restore all topics and
-        // resynchronize cached data after both the first connection and reconnects.
+        // resynchronize MQTT session and device data after the first connection
+        // and reconnects. User profile initialization belongs to the HTTP login
+        // flow and is refreshed only by an explicit profile-change notification.
         ComWanConn::inst()->subscribe(std::vector<std::string>(1, m_mqttConfig.userTopic));
         ComWanConn::inst()->subscribe(m_mqttConfig.commonTopics);
         subscribeWanDevTopic();
         ComWanConn::inst()->syncLogin(m_mqttConfig.userTopic);
-        m_wanDevMaintainThd->setUpdateUserProfile();
         m_wanDevMaintainThd->setUpdateWanDev();
         updateWanDevDetail();
         break;
@@ -1570,6 +1565,7 @@ bool MultiComMgr::updateWanDeviceState(com_id_t id, WanDevicePresence presence, 
         break;
     case WanDeviceStatusSource::Initial:
     case WanDeviceStatusSource::HttpDeviceList:
+    case WanDeviceStatusSource::StaleTimeout:
         break;
     }
     if (source == WanDeviceStatusSource::DeviceDetail) {
