@@ -87,6 +87,7 @@ enum class WanDeviceStatusSource {
     DeviceDetail,
     KeepAlive,
     MessageActivity,
+    StaleTimeout,
 };
 
 enum ComCloundJobErrno {
