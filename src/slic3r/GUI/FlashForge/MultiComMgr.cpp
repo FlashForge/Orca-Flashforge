@@ -719,7 +719,8 @@ void MultiComMgr::onTimer(const wxTimerEvent &event)
                     continue;
                 }
                 const std::chrono::duration<double> aliveDuration = now - devData.wanLastMessageTime;
-                if (aliveDuration.count() > WAN_DEVICE_STALE_TIMEOUT_SECONDS) {
+                if (aliveDuration.count() > WAN_DEVICE_STALE_TIMEOUT_SECONDS
+                    && devData.wanDevInfo.status != "printing") {
                     BOOST_LOG_TRIVIAL(warning) << "WAN device has not sent a message for 20 seconds; marking it offline";
 #ifdef _WIN32
                     OutputDebugStringA("[CAMDBG] MultiComMgr: WAN device message timeout -> offline\n");
