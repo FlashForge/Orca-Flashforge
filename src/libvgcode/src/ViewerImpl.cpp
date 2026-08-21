@@ -1543,8 +1543,12 @@ Color ViewerImpl::get_vertex_color(const PathVertex& v) const
     case EViewType::Summary: // ORCA
     case EViewType::ColorPrint:
     {
-        return m_layers.layer_contains_colorprint_options(static_cast<size_t>(v.layer_id)) ? DUMMY_COLOR :
-            m_color_print_colors[static_cast<size_t>(v.color_id) % m_color_print_colors.size()];
+        if (m_layers.layer_contains_colorprint_options(static_cast<size_t>(v.layer_id)))
+            return DUMMY_COLOR;
+
+        // G-code-only projects without color changes may not provide a color-print palette.
+        // Fall back to tool colors, as the Bambu renderer does, and keep malformed files safe.
+        return get_palette_color(m_color_print_colors, m_tool_colors, static_cast<size_t>(v.color_id));
     }
     default: { break; }
     }
