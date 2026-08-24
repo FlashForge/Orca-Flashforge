@@ -7,6 +7,8 @@
 #include <memory>
 #include <utility>
 
+#include <boost/log/trivial.hpp>
+
 #include "libslic3r/BambuTexturePainting.hpp"
 
 namespace Slic3r { namespace GUI {
@@ -307,6 +309,11 @@ QuantizationResult BambuFullColorPipeline::quantize(std::shared_ptr<const FullCo
         return result;
     }
 
+    BOOST_LOG_TRIVIAL(info) << "FullColorQuantization: backend=Bambu stage=quantize source_faces="
+                            << result.source->triangles.size() << " quantized_faces="
+                            << result.quantized_preview.triangles.size() << " colors="
+                            << result.source_palette.size();
+
     result.artifact = std::move(artifact);
     return result;
 }
@@ -328,8 +335,15 @@ bool BambuFullColorPipeline::finalize(const QuantizationResult &result, const cv
         return set_error(error_message, "Bambu full-color pipeline result contains no PaintedMesh.");
 
     const cvt_colors_t &mapped_palette = target_colors.empty() ? result.source_palette : target_colors;
-    return painted_to_output(artifact->painted_mesh, result.source_palette, mapped_palette,
-        *result.source, result.settings.conversion, output, error_message);
+    if (!painted_to_output(artifact->painted_mesh, result.source_palette, mapped_palette,
+            *result.source, result.settings.conversion, output, error_message)) {
+        return false;
+    }
+
+    BOOST_LOG_TRIVIAL(info) << "FullColorQuantization: backend=Bambu stage=finalize source_faces="
+                            << result.source->triangles.size() << " finalized_faces="
+                            << output.triangles.size() << " colors=" << output.colors.size();
+    return true;
 }
 
 }} // namespace Slic3r::GUI

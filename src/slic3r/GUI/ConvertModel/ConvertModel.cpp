@@ -150,6 +150,15 @@ bool ConvertModel::makeMappedPreviewModel(const convert_model_data_t &convertMod
     return !outData.vertices.empty() && !outData.triangles.empty();
 }
 
+bool ConvertModel::makeGeometryOnlyModel(const convert_model_data_t &convertModelData, const cvt_color_t &color,
+    out_model_data_t &outData) const
+{
+    if (convertModelData.convertProc == nullptr || convertModelData.modelSource == nullptr)
+        return false;
+    convertModelData.convertProc->makeGeometryOnlyModel(*convertModelData.modelSource, color, outData);
+    return !outData.vertices.empty() && !outData.triangles.empty();
+}
+
 bool ConvertModel::makeOriginalTexturePreview(const convert_model_data_t &convertModelData,
     FullColorOriginalPreview &preview, std::string *error_message) const
 {

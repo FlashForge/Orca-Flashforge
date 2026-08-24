@@ -4,6 +4,7 @@
 #include <iterator>
 #include <boost/functional/hash.hpp>
 #include "ConvertModelUtils.hpp"
+#include "FullColorModelSource.hpp"
 #include "KMeansCluster.hpp"
 #include "MakeOutData.hpp"
 #include "MeshSubdivide.hpp"
@@ -296,6 +297,23 @@ void ConvertModelProc::makeMappedPreviewModel(out_model_data_t &outData, const c
 
     RemoveSmallPatches removeSmallPatches;
     removeSmallPatches.mergeSmallPatchesColor(outData, m_modelSize, m_params.colorMinAreaRatio);
+    transformModel(outData);
+}
+
+void ConvertModelProc::makeGeometryOnlyModel(const FullColorModelSource &source, const cvt_color_t &color,
+    out_model_data_t &outData) const
+{
+    outData.vertices = source.vertices;
+    outData.colors = { color };
+    outData.triangles.resize(source.triangles.size());
+    for (size_t face_idx = 0; face_idx < source.triangles.size(); ++face_idx) {
+        const FullColorModelSource::Triangle &source_face = source.triangles[face_idx];
+        out_triangle_data_t &output_face = outData.triangles[face_idx];
+        output_face.vertexIndices[0] = source_face[0];
+        output_face.vertexIndices[1] = source_face[1];
+        output_face.vertexIndices[2] = source_face[2];
+        output_face.colorIndex = 0;
+    }
     transformModel(outData);
 }
 

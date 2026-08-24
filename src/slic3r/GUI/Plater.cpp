@@ -9111,11 +9111,8 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                         continue;
                     }
 
-                    // A declined printer switch must not enter any later full-color dialog.
-                    if (full_color_import_choice == FullColorImportChoice::ImportDirectlyAsMono && prepared_data.initialized) {
-                        const cvt_colors_t target_colors { first_prepare_filament_color(wxGetApp().preset_bundle) };
-                        cvt_colors_t source_colors;
-
+                    auto import_geometry_only_model = [&](const cvt_color_t &target_color) {
+                        const cvt_colors_t target_colors { target_color };
                         convert_colors.clear();
                         glb_convert_colors = target_colors;
                         glb_convert_filament_ids = { 1 };
@@ -9123,15 +9120,18 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                         fs::path temp_obj_path = fs::temp_directory_path() / fs::unique_path("orca-full-color-import-%%%%-%%%%-%%%%.obj");
                         fs::path temp_mtl_path = temp_obj_path;
                         temp_mtl_path.replace_extension(".mtl");
+                        out_model_data_t converted_model;
                         const bool converted = run_full_color_import_task(dlg, FullColorImportStage::GeneratingModel,
                             [&](const std::atomic<bool> &canceled, const std::function<void(FullColorImportStage)> &) {
                                 if (canceled.load())
                                     return false;
-                                source_colors = cm.clusterColors(convert_model_data, 1);
-                                if (source_colors.empty())
-                                    source_colors = target_colors;
-                                if (!cm.doConvertMapped(convert_model_data, source_colors, target_colors,
-                                                        from_path(temp_obj_path.string()), from_path(temp_mtl_path.string())))
+                                if (!cm.makeGeometryOnlyModel(convert_model_data, target_color, converted_model))
+                                    throw Slic3r::RuntimeError("Loading of a full-color model file failed.");
+                                BOOST_LOG_TRIVIAL(info) << "FullColorImport: mode=geometry-only source_faces="
+                                                        << convert_model_data.modelSource->triangles.size()
+                                                        << " output_faces=" << converted_model.triangles.size();
+                                convert_model_data.convertProc.reset();
+                                if (!cm.saveObj(converted_model, from_path(temp_obj_path.string()), from_path(temp_mtl_path.string())))
                                     throw Slic3r::RuntimeError("Loading of a full-color model file failed.");
                                 return !canceled.load();
                             });
@@ -9139,9 +9139,9 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                             boost::system::error_code ec;
                             fs::remove(temp_obj_path, ec);
                             fs::remove(temp_mtl_path, ec);
-                            is_user_cancel = true;
-                            continue;
+                            return false;
                         }
+
                         model = Slic3r::Model::read_from_file(
                             temp_obj_path.string(), nullptr, nullptr, strategy, &plate_data, &project_presets, &is_xxx, &file_version,
                             nullptr, nullptr, nullptr, 0, obj_color_fun);
@@ -9156,17 +9156,28 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                         boost::system::error_code ec;
                         fs::remove(temp_obj_path, ec);
                         fs::remove(temp_mtl_path, ec);
+                        return true;
+                    };
+
+                    // Match BambuStudio's geometry-only fallback: mono imports keep the source mesh
+                    // and do not enter texture quantization or oversampling.
+                    const bool import_as_geometry_only =
+                        full_color_import_choice == FullColorImportChoice::KeepCurrentPrinterAsMono ||
+                        full_color_import_choice == FullColorImportChoice::ImportDirectlyAsMono;
+                    if (import_as_geometry_only && prepared_data.initialized) {
+                        if (!import_geometry_only_model(first_prepare_filament_color(wxGetApp().preset_bundle))) {
+                            is_user_cancel = true;
+                            continue;
+                        }
                         skip_convert_pipeline = true;
                     }
 
                     if (is_textured_obj && !prepared_data.initialized) {
-                        const bool import_as_mono = full_color_import_choice == FullColorImportChoice::KeepCurrentPrinterAsMono ||
-                            full_color_import_choice == FullColorImportChoice::ImportDirectlyAsMono;
-                        ObjImportColorFn color_fn = (import_as_mono || is_obj_texture_import) ? ObjImportColorFn() : ObjImportColorFn(obj_color_fun);
+                        ObjImportColorFn color_fn = (import_as_geometry_only || is_obj_texture_import) ? ObjImportColorFn() : ObjImportColorFn(obj_color_fun);
                         model = Slic3r::Model::read_from_file(
                             path.string(), nullptr, nullptr, strategy, &plate_data, &project_presets, &is_xxx, &file_version, nullptr,
                             nullptr, nullptr, 0, color_fn);
-                        if (full_color_import_choice == FullColorImportChoice::ImportDirectlyAsMono) {
+                        if (import_as_geometry_only) {
                             for (ModelObject *obj : model.objects) {
                                 obj->config.set("extruder", 1);
                                 for (ModelVolume *volume : obj->volumes)
@@ -9185,10 +9196,10 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                         }
 
                         std::unique_ptr<IFullColorQuantizationPipeline> quantization_pipeline =
-                            std::make_unique<ClassicFullColorPipeline>();
+                            std::make_unique<BambuFullColorPipeline>();
 
-                        const int color_count =
-                            full_color_import_choice == FullColorImportChoice::KeepCurrentPrinterAsMono ? 1 : 4;
+                        const int color_count = 4;
+                        std::string quantization_error;
                         const bool preview_prepared = run_full_color_import_task(dlg, FullColorImportStage::PreparingColors,
                             [&](const std::atomic<bool> &canceled, const std::function<void(FullColorImportStage)> &set_stage) {
                                 set_stage(FullColorImportStage::GeneratingPreview);
@@ -9211,9 +9222,9 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                                 QuantizationResult quantization = quantization_pipeline->quantize(
                                     convert_model_data.modelSource, quantization_settings);
                                 if (!quantization.valid()) {
-                                    const std::string message = quantization.error_message.empty() ?
+                                    quantization_error = quantization.error_message.empty() ?
                                         "Full-color quantization failed." : quantization.error_message;
-                                    throw Slic3r::RuntimeError(message);
+                                    return true;
                                 }
                                 if (canceled.load())
                                     return false;
@@ -9232,112 +9243,131 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                             continue;
                         }
 
-                        if (full_color_import_choice == FullColorImportChoice::SwitchToMulticolorPrinter &&
-                            !pending_multicolor_printer_preset.empty()) {
-                            if (Tab *printer_tab = GUI::wxGetApp().get_tab(Preset::Type::TYPE_PRINTER)) {
-                                if (printer_tab->select_preset(pending_multicolor_printer_preset, false, "", true, true)) {
-                                    pending_multicolor_printer_preset.clear();
-                                    if (wxGetApp().preset_bundle != nullptr)
-                                        q->on_filament_count_change(wxGetApp().preset_bundle->filament_presets.size());
+                        if (!quantization_error.empty()) {
+                            BOOST_LOG_TRIVIAL(warning)
+                                << "FullColorImport: texture quantization failed, importing geometry only: " << quantization_error;
+                            MessageDialog(q,
+                                          _L("Texture import failed. The model appears to contain texture data, but the texture import "
+                                             "process could not be completed. The model will be imported as geometry only."),
+                                          _L("Texture Import Warning"), wxOK | wxICON_WARNING)
+                                .ShowModal();
+                            if (!import_geometry_only_model(first_prepare_filament_color(wxGetApp().preset_bundle))) {
+                                is_user_cancel = true;
+                                continue;
+                            }
+                        } else {
+                            if (full_color_import_choice == FullColorImportChoice::SwitchToMulticolorPrinter &&
+                                !pending_multicolor_printer_preset.empty()) {
+                                if (Tab* printer_tab = GUI::wxGetApp().get_tab(Preset::Type::TYPE_PRINTER)) {
+                                    if (printer_tab->select_preset(pending_multicolor_printer_preset, false, "", true, true)) {
+                                        pending_multicolor_printer_preset.clear();
+                                        if (wxGetApp().preset_bundle != nullptr)
+                                            q->on_filament_count_change(wxGetApp().preset_bundle->filament_presets.size());
+                                    }
                                 }
                             }
-                        }
-                        const int remaining_multicolor_slots = wxGetApp().sidebar().remaining_multicolor_import_filament_slots();
-                        if (color_count > remaining_multicolor_slots) {
-                            GUI::show_error(q, _L("多色耗材颜色已满，无法新增，请重新开启项目"));
-                            is_user_cancel = true;
-                            continue;
-                        }
+                            const int remaining_multicolor_slots = wxGetApp().sidebar().remaining_multicolor_import_filament_slots();
+                            if (color_count > remaining_multicolor_slots) {
+                                GUI::show_error(q, _L("多色耗材颜色已满，无法新增，请重新开启项目"));
+                                is_user_cancel = true;
+                                continue;
+                            }
 
-                        const int new_filament_start_index = wxGetApp().sidebar().next_multicolor_import_filament_slot();
-                        MulticolorModelDialog multicolor_dlg(
-                            &dlg, cm, convert_model_data, quantization_pipeline->backend(), color_count,
-                            new_filament_start_index, &prepared_data.preview_data);
-                        if (multicolor_dlg.ShowModal() != wxID_OK) {
-                            is_user_cancel = true;
-                            q->skip_thumbnail_invalid = false;
-                            return empty_result;
+                            const int new_filament_start_index = wxGetApp().sidebar().next_multicolor_import_filament_slot();
+                            MulticolorModelDialog multicolor_dlg(&dlg, cm, convert_model_data, quantization_pipeline->backend(),
+                                                                 color_count, new_filament_start_index, &prepared_data.preview_data);
+                            if (multicolor_dlg.ShowModal() != wxID_OK) {
+                                is_user_cancel            = true;
+                                q->skip_thumbnail_invalid = false;
+                                return empty_result;
+                            }
+
+                            const MulticolorImportResult& import_result = multicolor_dlg.import_result();
+                            if (import_result.quantization_result == nullptr)
+                                throw Slic3r::RuntimeError("Full-color quantization result is missing.");
+                            if (quantization_pipeline->backend() != import_result.quantization_result->backend) {
+                                if (import_result.quantization_result->backend == FullColorQuantizationBackend::Bambu)
+                                    quantization_pipeline = std::make_unique<BambuFullColorPipeline>();
+                                else
+                                    quantization_pipeline = std::make_unique<ClassicFullColorPipeline>();
+                            }
+                            cvt_colors_t colors = import_result.selected_colors;
+                            if (colors.empty() && import_result.quantization_result != nullptr)
+                                colors = import_result.quantization_result->source_palette;
+                            if (colors.empty())
+                                throw Slic3r::RuntimeError("Loading of a full-color model file failed.");
+                            const std::vector<int> remapped_filament_indices = wxGetApp().sidebar().apply_multicolor_import_filaments(
+                                import_result.filament_mappings);
+                            glb_convert_filament_ids.clear();
+                            if (!remapped_filament_indices.empty()) {
+                                for (int filament_index : remapped_filament_indices)
+                                    glb_convert_filament_ids.push_back(filament_index + 1);
+                            } else {
+                                for (const MulticolorFilamentMapping& mapping : import_result.filament_mappings)
+                                    glb_convert_filament_ids.push_back(mapping.target_filament_index + 1);
+                            }
+                            glb_convert_colors = colors;
+
+                            fs::path temp_obj_path = fs::temp_directory_path() /
+                                                     fs::unique_path("orca-full-color-import-%%%%-%%%%-%%%%.obj");
+                            fs::path temp_mtl_path = temp_obj_path;
+                            temp_mtl_path.replace_extension(".mtl");
+
+                            out_model_data_t converted_model;
+                            const bool converted = run_full_color_import_task(
+                                dlg, FullColorImportStage::GeneratingModel,
+                                [&](const std::atomic<bool>& canceled, const std::function<void(FullColorImportStage)>& set_stage) {
+                                    set_stage(FullColorImportStage::GeneratingModel);
+                                    if (canceled.load())
+                                        return false;
+                                    if (import_result.quantization_result == nullptr)
+                                        throw Slic3r::RuntimeError("Full-color quantization result is missing.");
+
+                                    std::string finalization_error;
+                                    if (!quantization_pipeline->finalize(*import_result.quantization_result, colors, converted_model,
+                                                                         &finalization_error)) {
+                                        throw Slic3r::RuntimeError(
+                                            finalization_error.empty() ? "Loading of a full-color model file failed." : finalization_error);
+                                    }
+                                    convert_model_data.convertProc.reset();
+                                    return !canceled.load();
+                                });
+                            if (!converted) {
+                                is_user_cancel = true;
+                                continue;
+                            }
+
+                            const bool saved = run_full_color_import_task(dlg, FullColorImportStage::SavingModel,
+                                                                          [&](const std::atomic<bool>& canceled,
+                                                                              const std::function<void(FullColorImportStage)>& set_stage) {
+                                                                              set_stage(FullColorImportStage::SavingModel);
+                                                                              if (canceled.load())
+                                                                                  return false;
+                                                                              if (!cm.saveObj(converted_model,
+                                                                                              from_path(temp_obj_path.string()),
+                                                                                              from_path(temp_mtl_path.string())))
+                                                                                  throw Slic3r::RuntimeError(
+                                                                                      "Loading of a full-color model file failed.");
+                                                                              return !canceled.load();
+                                                                          });
+                            if (!saved) {
+                                is_user_cancel = true;
+                                continue;
+                            }
+
+                            model = Slic3r::Model::read_from_file(temp_obj_path.string(), nullptr, nullptr, strategy, &plate_data,
+                                                                  &project_presets, &is_xxx, &file_version, nullptr, nullptr, nullptr, 0,
+                                                                  obj_color_fun);
+
+                            for (ModelObject* obj : model.objects) {
+                                obj->input_file = path.string();
+                                if (obj->name == temp_obj_path.filename().string())
+                                    obj->name = path.filename().string();
+                            }
+                            boost::system::error_code ec;
+                            fs::remove(temp_obj_path, ec);
+                            fs::remove(temp_mtl_path, ec);
                         }
-
-                        const MulticolorImportResult& import_result = multicolor_dlg.import_result();
-                        if (import_result.quantization_result == nullptr)
-                            throw Slic3r::RuntimeError("Full-color quantization result is missing.");
-                        if (quantization_pipeline->backend() != import_result.quantization_result->backend) {
-                            if (import_result.quantization_result->backend == FullColorQuantizationBackend::Bambu)
-                                quantization_pipeline = std::make_unique<BambuFullColorPipeline>();
-                            else
-                                quantization_pipeline = std::make_unique<ClassicFullColorPipeline>();
-                        }
-                        cvt_colors_t colors = import_result.selected_colors;
-                        if (colors.empty() && import_result.quantization_result != nullptr)
-                            colors = import_result.quantization_result->source_palette;
-                        if (colors.empty())
-                            throw Slic3r::RuntimeError("Loading of a full-color model file failed.");
-                        const std::vector<int> remapped_filament_indices =
-                            wxGetApp().sidebar().apply_multicolor_import_filaments(import_result.filament_mappings);
-                        glb_convert_filament_ids.clear();
-                        if (!remapped_filament_indices.empty()) {
-                            for (int filament_index : remapped_filament_indices)
-                                glb_convert_filament_ids.push_back(filament_index + 1);
-                        } else {
-                            for (const MulticolorFilamentMapping& mapping : import_result.filament_mappings)
-                                glb_convert_filament_ids.push_back(mapping.target_filament_index + 1);
-                        }
-                        glb_convert_colors = colors;
-
-                        fs::path temp_obj_path = fs::temp_directory_path() / fs::unique_path("orca-full-color-import-%%%%-%%%%-%%%%.obj");
-                        fs::path temp_mtl_path = temp_obj_path;
-                        temp_mtl_path.replace_extension(".mtl");
-
-                        out_model_data_t converted_model;
-                        const bool converted = run_full_color_import_task(dlg, FullColorImportStage::GeneratingModel,
-                            [&](const std::atomic<bool> &canceled, const std::function<void(FullColorImportStage)> &set_stage) {
-                                set_stage(FullColorImportStage::GeneratingModel);
-                                if (canceled.load())
-                                    return false;
-                                if (import_result.quantization_result == nullptr)
-                                    throw Slic3r::RuntimeError("Full-color quantization result is missing.");
-
-                                std::string finalization_error;
-                                if (!quantization_pipeline->finalize(
-                                        *import_result.quantization_result, colors, converted_model, &finalization_error)) {
-                                    throw Slic3r::RuntimeError(finalization_error.empty() ?
-                                        "Loading of a full-color model file failed." : finalization_error);
-                                }
-                                convert_model_data.convertProc.reset();
-                                return !canceled.load();
-                            });
-                        if (!converted) {
-                            is_user_cancel = true;
-                            continue;
-                        }
-
-                        const bool saved = run_full_color_import_task(dlg, FullColorImportStage::SavingModel,
-                            [&](const std::atomic<bool> &canceled, const std::function<void(FullColorImportStage)> &set_stage) {
-                                set_stage(FullColorImportStage::SavingModel);
-                                if (canceled.load())
-                                    return false;
-                                if (!cm.saveObj(converted_model, from_path(temp_obj_path.string()), from_path(temp_mtl_path.string())))
-                                    throw Slic3r::RuntimeError("Loading of a full-color model file failed.");
-                                return !canceled.load();
-                            });
-                        if (!saved) {
-                            is_user_cancel = true;
-                            continue;
-                        }
-
-                        model = Slic3r::Model::read_from_file(
-                            temp_obj_path.string(), nullptr, nullptr, strategy, &plate_data, &project_presets, &is_xxx, &file_version, nullptr,
-                            nullptr, nullptr, 0, obj_color_fun);
-
-                        for (ModelObject *obj : model.objects) {
-                            obj->input_file = path.string();
-                            if (obj->name == temp_obj_path.filename().string())
-                                obj->name = path.filename().string();
-                        }
-                        boost::system::error_code ec;
-                        fs::remove(temp_obj_path, ec);
-                        fs::remove(temp_mtl_path, ec);
                     }
                 } else {
                     model = Slic3r::Model::read_from_file(

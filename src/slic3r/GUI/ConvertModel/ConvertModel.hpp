@@ -47,6 +47,9 @@ public:
     bool makeMappedPreviewModel(const convert_model_data_t &convertModelData, out_model_data_t &outData,
         const cvt_colors_t &sourceColors, const cvt_colors_t &targetColors) const;
 
+    bool makeGeometryOnlyModel(const convert_model_data_t &convertModelData, const cvt_color_t &color,
+        out_model_data_t &outData) const;
+
     bool makeOriginalTexturePreview(const convert_model_data_t &convertModelData,
         FullColorOriginalPreview &preview, std::string *error_message = nullptr) const;
 

@@ -9,6 +9,8 @@
 #include <utility>
 #include <vector>
 
+#include <boost/log/trivial.hpp>
+
 #include "ConvertModelProc.hpp"
 
 namespace Slic3r { namespace GUI {
@@ -226,6 +228,11 @@ QuantizationResult ClassicFullColorPipeline::quantize(std::shared_ptr<const Full
     if (!canonicalize_preview_palette(result.quantized_preview, result.source_palette, &result.error_message))
         return result;
 
+    BOOST_LOG_TRIVIAL(info) << "FullColorQuantization: backend=Classic stage=quantize source_faces="
+                            << result.source->triangles.size() << " quantized_faces="
+                            << result.quantized_preview.triangles.size() << " colors="
+                            << result.source_palette.size();
+
     result.artifact = std::move(artifact);
     return result;
 }
@@ -252,6 +259,10 @@ bool ClassicFullColorPipeline::finalize(const QuantizationResult &result, const 
     processor->doConvertMapped(result.source_palette, target_colors, output);
     if (output.vertices.empty() || output.triangles.empty())
         return set_error(error_message, "Classic full-color pipeline final conversion produced no model.");
+
+    BOOST_LOG_TRIVIAL(info) << "FullColorQuantization: backend=Classic stage=finalize source_faces="
+                            << result.source->triangles.size() << " finalized_faces="
+                            << output.triangles.size() << " colors=" << output.colors.size();
     return true;
 }
 
