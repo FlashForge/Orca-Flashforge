@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <array>
 #include <deque>
-#include <iterator>
 #include <limits>
 #include <memory>
 #include <utility>
@@ -11,6 +10,7 @@
 
 #include <boost/log/trivial.hpp>
 
+#include "BambuFullColorPipeline.hpp"
 #include "ConvertModelProc.hpp"
 
 namespace Slic3r { namespace GUI {
@@ -24,23 +24,92 @@ bool set_error(std::string *error_message, const std::string &message)
     return false;
 }
 
-bool canonicalize_preview_palette(out_model_data_t &preview, const cvt_colors_t &palette,
-    std::string *error_message)
+int64_t color_distance_squared(const cvt_color_t &left, const cvt_color_t &right)
 {
-    std::vector<int32_t> color_index_remap(preview.colors.size(), -1);
-    for (size_t preview_color_idx = 0; preview_color_idx < preview.colors.size(); ++preview_color_idx) {
-        const auto palette_it = std::find(palette.begin(), palette.end(), preview.colors[preview_color_idx]);
-        if (palette_it == palette.end())
-            return set_error(error_message, "Classic preview contains a color outside its quantization palette.");
-        color_index_remap[preview_color_idx] = static_cast<int32_t>(std::distance(palette.begin(), palette_it));
+    int64_t distance = 0;
+    for (size_t channel = 0; channel < left.size(); ++channel) {
+        const int64_t difference = static_cast<int64_t>(left[channel]) - right[channel];
+        distance += difference * difference;
+    }
+    return distance;
+}
+
+bool match_palettes(const cvt_colors_t &bambu_palette, const cvt_colors_t &classic_palette,
+    std::vector<int32_t> &bambu_to_classic, std::string *error_message)
+{
+    if (bambu_palette.empty() || bambu_palette.size() != classic_palette.size())
+        return set_error(error_message, "Classic and Bambu quantization produced incompatible palette sizes.");
+
+    const size_t color_count = bambu_palette.size();
+    if (color_count > 20)
+        return set_error(error_message, "Classic palette is too large to match safely.");
+
+    const size_t state_count = size_t(1) << color_count;
+    const int64_t infinity = std::numeric_limits<int64_t>::max();
+    std::vector<int64_t> minimum_cost(state_count, infinity);
+    std::vector<int32_t> selected_classic_index(state_count, -1);
+    minimum_cost[0] = 0;
+
+    for (size_t mask = 0; mask + 1 < state_count; ++mask) {
+        if (minimum_cost[mask] == infinity)
+            continue;
+        size_t bambu_index = 0;
+        for (size_t bits = mask; bits != 0; bits &= bits - 1)
+            ++bambu_index;
+        for (size_t classic_index = 0; classic_index < color_count; ++classic_index) {
+            const size_t classic_bit = size_t(1) << classic_index;
+            if ((mask & classic_bit) != 0)
+                continue;
+            const size_t next_mask = mask | classic_bit;
+            const int64_t candidate = minimum_cost[mask] +
+                color_distance_squared(bambu_palette[bambu_index], classic_palette[classic_index]);
+            if (candidate < minimum_cost[next_mask]) {
+                minimum_cost[next_mask] = candidate;
+                selected_classic_index[next_mask] = static_cast<int32_t>(classic_index);
+            }
+        }
     }
 
-    for (out_triangle_data_t &triangle : preview.triangles) {
-        if (triangle.colorIndex < 0 || static_cast<size_t>(triangle.colorIndex) >= color_index_remap.size())
-            return set_error(error_message, "Classic preview contains an invalid face color index.");
-        triangle.colorIndex = color_index_remap[triangle.colorIndex];
+    bambu_to_classic.resize(color_count);
+    size_t mask = state_count - 1;
+    for (size_t bambu_count = color_count; bambu_count > 0; --bambu_count) {
+        const int32_t classic_index = selected_classic_index[mask];
+        if (classic_index < 0)
+            return set_error(error_message, "Classic and Bambu palettes could not be matched.");
+        bambu_to_classic[bambu_count - 1] = classic_index;
+        mask ^= size_t(1) << classic_index;
     }
-    preview.colors = palette;
+    return true;
+}
+
+cvt_colors_t reorder_classic_palette_for_bambu(const cvt_colors_t &classic_palette,
+    const std::vector<int32_t> &bambu_to_classic)
+{
+    cvt_colors_t reordered;
+    reordered.reserve(bambu_to_classic.size());
+    for (int32_t classic_index : bambu_to_classic)
+        reordered.push_back(classic_palette[classic_index]);
+    return reordered;
+}
+
+bool restore_classic_palette_order(out_model_data_t &model, const std::vector<int32_t> &bambu_to_classic,
+    const cvt_colors_t &classic_palette, std::string *error_message)
+{
+    if (classic_palette.size() == 1) {
+        for (out_triangle_data_t &triangle : model.triangles)
+            triangle.colorIndex = 0;
+        model.colors = classic_palette;
+        return true;
+    }
+    if (bambu_to_classic.size() != classic_palette.size())
+        return set_error(error_message, "Classic palette mapping has an invalid size.");
+
+    for (out_triangle_data_t &triangle : model.triangles) {
+        if (triangle.colorIndex < 0 || static_cast<size_t>(triangle.colorIndex) >= bambu_to_classic.size())
+            return set_error(error_message, "Bambu geometry contains an invalid face color index.");
+        triangle.colorIndex = bambu_to_classic[triangle.colorIndex];
+    }
+    model.colors = classic_palette;
     return true;
 }
 
@@ -95,6 +164,15 @@ public:
         input.faceIndexStride     = static_cast<int32_t>(sizeof(FullColorModelSource::Triangle));
         return std::make_unique<ConvertModelProc>(input, params);
     }
+
+    void set_bambu_geometry(QuantizationResult result, std::vector<int32_t> bambu_to_classic)
+    {
+        m_bambu_result = std::move(result);
+        m_bambu_to_classic = std::move(bambu_to_classic);
+    }
+
+    const QuantizationResult &bambu_result() const { return m_bambu_result; }
+    const std::vector<int32_t> &bambu_to_classic() const { return m_bambu_to_classic; }
 
 private:
     bool make_legacy_textures(std::string *error_message)
@@ -180,6 +258,8 @@ private:
     std::deque<std::array<uint8_t, 3>>          m_solid_color_pixels;
     std::deque<in_texture_data_t>               m_texture_views;
     std::vector<in_material_data_t>             m_material_ranges;
+    QuantizationResult                          m_bambu_result;
+    std::vector<int32_t>                        m_bambu_to_classic;
 };
 
 } // namespace
@@ -220,18 +300,38 @@ QuantizationResult ClassicFullColorPipeline::quantize(std::shared_ptr<const Full
         return result;
     }
 
-    processor->makePreviewModel(result.quantized_preview, result.source_palette);
-    if (result.quantized_preview.vertices.empty() || result.quantized_preview.triangles.empty()) {
-        result.error_message = "Classic full-color pipeline produced no quantized preview.";
+    QuantizationSettings bambu_settings = settings;
+    bambu_settings.color_count = static_cast<int32_t>(result.source_palette.size());
+    bambu_settings.repair_mesh = false;
+
+    // Keep Classic color clustering, but use Bambu's PaintedMesh for import geometry.
+    // The former Classic output path recursively subdivided textured faces.
+    BambuFullColorPipeline bambu_pipeline;
+    QuantizationResult bambu_result = bambu_pipeline.quantize(result.source, bambu_settings);
+    if (!bambu_result.valid()) {
+        result.error_message = bambu_result.error_message.empty() ?
+            "Classic full-color pipeline could not generate Bambu import geometry." : bambu_result.error_message;
         return result;
     }
-    if (!canonicalize_preview_palette(result.quantized_preview, result.source_palette, &result.error_message))
+
+    std::vector<int32_t> bambu_to_classic;
+    if (!match_palettes(bambu_result.source_palette, result.source_palette, bambu_to_classic, &result.error_message))
         return result;
+
+    // Bambu finalization does not consume its preview. Move it to avoid retaining
+    // a second copy of the generated mesh in the nested result.
+    result.quantized_preview = std::move(bambu_result.quantized_preview);
+    if (!restore_classic_palette_order(
+            result.quantized_preview, bambu_to_classic, result.source_palette, &result.error_message)) {
+        return result;
+    }
+
+    artifact->set_bambu_geometry(std::move(bambu_result), std::move(bambu_to_classic));
 
     BOOST_LOG_TRIVIAL(info) << "FullColorQuantization: backend=Classic stage=quantize source_faces="
                             << result.source->triangles.size() << " quantized_faces="
                             << result.quantized_preview.triangles.size() << " colors="
-                            << result.source_palette.size();
+                            << result.source_palette.size() << " geometry_backend=Bambu";
 
     result.artifact = std::move(artifact);
     return result;
@@ -253,16 +353,32 @@ bool ClassicFullColorPipeline::finalize(const QuantizationResult &result, const 
     if (artifact == nullptr)
         return set_error(error_message, "Classic full-color pipeline result contains no conversion state.");
 
-    std::unique_ptr<ConvertModelProc> processor = artifact->make_processor(result.settings.conversion, error_message);
-    if (processor == nullptr)
+    const QuantizationResult &bambu_result = artifact->bambu_result();
+    const std::vector<int32_t> &bambu_to_classic = artifact->bambu_to_classic();
+    if (bambu_result.backend != FullColorQuantizationBackend::Bambu || bambu_result.source == nullptr ||
+        bambu_result.source_palette.empty() || bambu_result.artifact == nullptr ||
+        bambu_result.artifact->backend() != FullColorQuantizationBackend::Bambu) {
+        return set_error(error_message, "Classic full-color pipeline contains no Bambu import geometry.");
+    }
+
+    const cvt_colors_t &classic_output_palette = target_colors.empty() ? result.source_palette : target_colors;
+    if (classic_output_palette.size() != 1 && classic_output_palette.size() != result.source_palette.size())
+        return set_error(error_message, "Classic target palette has an invalid size.");
+
+    const cvt_colors_t bambu_output_palette = classic_output_palette.size() == 1 ?
+        classic_output_palette : reorder_classic_palette_for_bambu(classic_output_palette, bambu_to_classic);
+    BambuFullColorPipeline bambu_pipeline;
+    if (!bambu_pipeline.finalize(bambu_result, bambu_output_palette, output, error_message))
         return false;
-    processor->doConvertMapped(result.source_palette, target_colors, output);
-    if (output.vertices.empty() || output.triangles.empty())
-        return set_error(error_message, "Classic full-color pipeline final conversion produced no model.");
+    if (!restore_classic_palette_order(output, bambu_to_classic, classic_output_palette, error_message))
+        return false;
+    if (output.triangles.size() != result.quantized_preview.triangles.size())
+        return set_error(error_message, "Classic finalization changed the Bambu geometry face count.");
 
     BOOST_LOG_TRIVIAL(info) << "FullColorQuantization: backend=Classic stage=finalize source_faces="
                             << result.source->triangles.size() << " finalized_faces="
-                            << output.triangles.size() << " colors=" << output.colors.size();
+                            << output.triangles.size() << " colors=" << output.colors.size()
+                            << " geometry_backend=Bambu";
     return true;
 }
 
