@@ -153,6 +153,11 @@ public:
 
     bool isOk() const { return m_isOk; }
 
+    // True when the loaded library is 3.4.0, the last one shipped for Linux (Flash Studio 1.7.9).
+    // It predates the cloud preset and feedback-log functions, so those pointers are null, and it
+    // allocates fnet_dev_detail_t without the trailing cumulativePrintTimeSecond fields.
+    bool isLegacyLibrary() const { return m_isLegacyLibrary; }
+
 private:
     library_handle_t loadLibrary(const char *libraryPath);
 
@@ -160,6 +165,7 @@ private:
 
 private:
     bool m_isOk;
+    bool m_isLegacyLibrary;
 };
 
 } // namespace fnet

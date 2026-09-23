@@ -434,7 +434,8 @@ ComErrno MultiComHelper::uploadFeedbackLogFileCloud(const std::string& clientId,
                                                     int                msTimeout)
 {
     fnet::FlashNetworkIntfc* intfc = MultiComMgr::inst()->networkIntfc();
-    if (intfc == nullptr || clientId.empty() || accessToken.empty() || feedbackId.empty()) {
+    if (intfc == nullptr || intfc->uploadLogFileCloudEx == nullptr || clientId.empty() || accessToken.empty()
+        || feedbackId.empty()) {
         return COM_ERROR;
     }
     fnet_upload_file_data_t uploadFileData;

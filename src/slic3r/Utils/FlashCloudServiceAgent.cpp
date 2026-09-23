@@ -162,7 +162,7 @@ int FlashCloudServiceAgent::get_user_presets(std::map<std::string, std::map<std:
         return FNET_INVALID_PARAMETER;
 
     auto* intfc = network_interface();
-    if (!intfc || !is_user_login())
+    if (!intfc || !intfc->getUserPresets || !is_user_login())
         return FNET_ERROR;
 
     auto token = GUI::WanDevTokenMgr::inst()->getScopedToken();
@@ -245,6 +245,10 @@ std::string FlashCloudServiceAgent::request_setting_id(std::string name,
         BOOST_LOG_TRIVIAL(error) << "FlashCloudServiceAgent::request_setting_id failed: user is not logged in";
         return {};
     }
+    if (!intfc->requestSettingId) {
+        BOOST_LOG_TRIVIAL(error) << "FlashCloudServiceAgent::request_setting_id failed: not in the loaded FlashNetwork library";
+        return {};
+    }
 
     const std::string user_id = get_user_id();
     const auto type_it        = values_map->find(BBL_JSON_KEY_TYPE);
@@ -311,6 +315,10 @@ int FlashCloudServiceAgent::put_setting(
         BOOST_LOG_TRIVIAL(error) << "FlashCloudServiceAgent::put_setting failed: user is not logged in";
         return FNET_ERROR;
     }
+    if (!intfc->putSetting) {
+        BOOST_LOG_TRIVIAL(error) << "FlashCloudServiceAgent::put_setting failed: not in the loaded FlashNetwork library";
+        return FNET_ERROR;
+    }
 
     const auto type_it        = values_map->find(BBL_JSON_KEY_TYPE);
     const auto update_time_it = values_map->find(ORCA_JSON_KEY_UPDATE_TIME);
@@ -364,7 +372,7 @@ int FlashCloudServiceAgent::put_setting(
 int FlashCloudServiceAgent::get_setting_list(std::string bundle_version, ProgressFn pro_fn, WasCancelledFn cancel_fn)
 {
     auto* intfc = network_interface();
-    if (!intfc || !is_user_login())
+    if (!intfc || !intfc->getSettingList || !is_user_login())
         return FNET_ERROR;
 
     auto token = GUI::WanDevTokenMgr::inst()->getScopedToken();
@@ -380,7 +388,7 @@ int FlashCloudServiceAgent::get_setting_list(std::string bundle_version, Progres
 int FlashCloudServiceAgent::get_setting_list2(std::string bundle_version, CheckFn chk_fn, ProgressFn pro_fn, WasCancelledFn cancel_fn)
 {
     auto* intfc = network_interface();
-    if (!intfc || !is_user_login())
+    if (!intfc || !intfc->getSettingList2 || !is_user_login())
         return FNET_ERROR;
 
     auto token = GUI::WanDevTokenMgr::inst()->getScopedToken();
@@ -400,7 +408,7 @@ int FlashCloudServiceAgent::delete_setting(std::string setting_id)
         return FNET_INVALID_PARAMETER;
 
     auto* intfc = network_interface();
-    if (!intfc || !is_user_login())
+    if (!intfc || !intfc->deleteSetting || !is_user_login())
         return FNET_ERROR;
 
     auto token             = GUI::WanDevTokenMgr::inst()->getScopedToken();
