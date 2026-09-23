@@ -2,6 +2,10 @@
 
 #include "../wxExtensions.hpp"
 
+#ifdef __WXGTK3__
+#include "../GUI_Utils.hpp"
+#endif
+
 FFCheckBox::FFCheckBox(wxWindow *parent, int id)
     : wxBitmapToggleButton(parent, id, wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE)
     , m_on(this, "ff_check_on", 16)
@@ -22,6 +26,12 @@ FFCheckBox::FFCheckBox(wxWindow *parent, int id)
     Bind(wxEVT_ENTER_WINDOW, &FFCheckBox::updateBitmap, this);
     Bind(wxEVT_LEAVE_WINDOW, &FFCheckBox::updateBitmap, this);
 #endif
+
+#ifdef __WXGTK3__
+    // Without this GTK3 pads the 16 px button so the bitmap gets no room and the check mark never shows
+    Slic3r::GUI::RemoveButtonBorder(this);
+#endif
+
 	SetSize(m_on.GetBmpSize());
 	SetMinSize(m_on.GetBmpSize());
 	update();

@@ -1765,7 +1765,9 @@ void MultiComMgr::freeConnReadData(const WanConnReadEvent &event)
         m_networkIntfc->freeSyncOnlineInfo((fnet_sync_online_info_t *)event.readData.data);
         break;
     case FNET_CONN_READ_UPLOAD_LOG:
-        m_networkIntfc->freeUploadLogInfo((fnet_upload_log_info_t *)event.readData.data);
+        if (m_networkIntfc->freeUploadLogInfo != nullptr) {
+            m_networkIntfc->freeUploadLogInfo((fnet_upload_log_info_t *)event.readData.data);
+        }
         break;
     }
     m_networkIntfc->freeString(event.readData.topic);

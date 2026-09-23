@@ -126,7 +126,8 @@ wxString format_cumulative_filament(double cumulative_filament, ComConnectMode c
 
 wxString format_cumulative_print_time(const fnet_dev_detail_t &detail, ComConnectMode connect_mode)
 {
-    if (detail.hasCumulativePrintTimeSecond != 0) {
+    const fnet::FlashNetworkIntfc *intfc = MultiComMgr::inst()->networkIntfc();
+    if (intfc != nullptr && !intfc->isLegacyLibrary() && detail.hasCumulativePrintTimeSecond != 0) {
         const double cumulative_seconds = detail.cumulativePrintTimeSecond > 0.0 ? detail.cumulativePrintTimeSecond : 0.0;
         const long long total_minutes   = static_cast<long long>(cumulative_seconds / 60.0);
         if (total_minutes < 60) {

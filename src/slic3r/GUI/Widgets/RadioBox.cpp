@@ -2,6 +2,10 @@
 
 #include "../wxExtensions.hpp"
 
+#ifdef __WXGTK3__
+#include "../GUI_Utils.hpp"
+#endif
+
 namespace Slic3r {
 namespace GUI {
 RadioBox::RadioBox(wxWindow *parent)
@@ -82,6 +86,10 @@ RadioButton::RadioButton(wxWindow* parent)
     // them, and re-apply on toggle / hover changes.
     SetSize(m_off_normal.GetBmpSize());
     SetMinSize(m_off_normal.GetBmpSize());
+#ifdef __WXGTK3__
+    // Without this GTK3 pads the 16 px button so the bitmap gets no room and is never drawn
+    RemoveButtonBorder(this);
+#endif
     update();
     Bind(wxEVT_TOGGLEBUTTON, [this](wxCommandEvent &e) { update(); e.Skip(); });
 #endif
