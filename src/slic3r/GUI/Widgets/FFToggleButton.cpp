@@ -1,5 +1,9 @@
 #include "FFToggleButton.hpp"
 
+#ifdef __WXGTK3__
+#include "../GUI_Utils.hpp"
+#endif
+
 
 FFToggleButton::FFToggleButton(wxWindow* parent, const wxString& label/*= ""*/, wxWindowID id/*= wxID_ANY*/)
 	: wxToggleButton(parent, id, label, wxDefaultPosition, wxDefaultSize, wxNO_BORDER)
@@ -86,6 +90,10 @@ FFBitmapToggleButton::FFBitmapToggleButton(wxWindow* parent, wxWindowID id/*=wxI
 	Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e) { m_pressFlag = true; updateState(); e.Skip(); });
 	Bind(wxEVT_LEFT_UP, [this](wxMouseEvent& e) { m_pressFlag = false; updateState(); e.Skip(); });
 	Bind(wxEVT_TOGGLEBUTTON, [this](wxCommandEvent& e) { updateState(); e.Skip(); });
+#ifdef __WXGTK3__
+	// Without this GTK3 pads the 16 px button so the bitmap gets no room and is never drawn
+	Slic3r::GUI::RemoveButtonBorder(this);
+#endif
 }
 
 void FFBitmapToggleButton::SetValue(bool state)
