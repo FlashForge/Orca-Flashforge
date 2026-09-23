@@ -7,7 +7,7 @@
     "family": "Flashforge",
     "bed_model": "flashforge_adventurer5m_series_buildplate_model.STL",
 	"bed_texture": "flashforge_ad5x_buildplate_texture.svg",
-    "hotend_model": "flashforge_adventurer_5m_series_hotend.STL",
+    "hotend_model": "flashforge_adventurer_5m_series_hotend.stl",
     "url":"",
     "default_materials": "Flashforge Generic ABS;Flashforge Generic PETG;Flashforge Generic PLA"
   }
