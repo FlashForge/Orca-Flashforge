@@ -2865,6 +2865,15 @@ void GUI_App::updateVenderInfo()
 {
     fs::path src_path = (fs::path(resources_dir()) / "profiles/Flashforge.json").make_preferred();
     const auto dst_path = (boost::filesystem::path(Slic3r::data_dir()) / PRESET_SYSTEM_DIR / "Flashforge.json").make_preferred();
+    // Ensure PRESET_SYSTEM_DIR exists: on a fresh install (first launch) this
+    // directory has not been created yet, so the copy below fails with
+    // ENOENT and the vendor profile index never lands in the data dir.
+    // updateFilamentInfo()/updateMachineInfo()/updateProcessInfo() create it
+    // later, so every subsequent launch works - but the first one is broken.
+    boost::system::error_code ec;
+    boost::filesystem::create_directories(dst_path.parent_path(), ec);
+    if (ec)
+        BOOST_LOG_TRIVIAL(error) << "create_directories for PRESET_SYSTEM_DIR failed: " << ec.message();
     std::string error_message;
     copy_file(src_path.string(), dst_path.string(), error_message, false);
 }
