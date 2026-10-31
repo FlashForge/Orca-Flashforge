@@ -3032,6 +3032,9 @@ void MainFrame::init_menubar_as_editor()
         append_submenu(fileMenu, export_menu, wxID_ANY, _L("Export"), "");
 
         fileMenu->AppendSeparator();
+        append_menu_item(fileMenu, wxID_ANY, _L("Sign in using default browser"),
+                         _L("Browser login"), [](wxCommandEvent &) { wxGetApp().ShowUserLogin(); });
+        fileMenu->AppendSeparator();
 
 #ifndef __APPLE__
         append_menu_item(fileMenu, wxID_EXIT, _L("Quit"), wxString::Format(_L("Quit")),

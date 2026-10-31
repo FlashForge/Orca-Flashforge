@@ -284,8 +284,8 @@ bool confirm_feedback_without_device_log(wxWindow* parent)
 
 FeedbackLogLabels get_feedback_log_labels()
 {
-    return {_L("To help us identify and resolve your issue more quickly, we recommend uploading your device and app logs. The logs are "
-               "used solely for troubleshooting and will not collect any of your personal information."),
+    return {_L("Logs can contain account, device, and project information. Review the logs before uploading. "
+               "Upload only the logs needed to investigate your issue."),
             _L("Slice Log"),
             _L("Slicing software operation log"),
             _L("App Log"),

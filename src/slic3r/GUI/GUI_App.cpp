@@ -108,6 +108,7 @@
 #include "slic3r/GUI/FlashForge/FFDownloadTool.hpp"
 #include "slic3r/GUI/FlashForge/FFWebViewPanel.hpp"
 #include "slic3r/GUI/FlashForge/LoginDialog.hpp"
+#include "slic3r/GUI/FlashForge/BrowserLoginDialog.hpp"
 #include "slic3r/GUI/FlashForge/ReLoginDialog.hpp"
 #include "slic3r/GUI/FlashForge/MultiComHelper.hpp"
 #include "slic3r/GUI/FlashForge/MultiComMgr.hpp"
@@ -4863,19 +4864,26 @@ void GUI_App::ShowUserLogin(bool show)
             return;
         }
 
-        // 正式登录
-        try {
-            if (!m_login_dlg) {
-                m_login_dlg = new LoginDialog();
-            } else {
-                delete m_login_dlg;
-                m_login_dlg = new LoginDialog();
-            }
-            on_connect_event();
-            m_login_dlg->ShowModal();
-        } catch (std::exception& e) {
-            ;
+        // All new authentication takes place in the system browser.
+        static bool browser_login_active = false;
+        if (browser_login_active) return;
+        struct LoginGuard {
+            bool &active;
+            explicit LoginGuard(bool &value) : active(value) { active = true; }
+            ~LoginGuard() { active = false; }
+        } login_guard(browser_login_active);
+        BrowserLoginDialog browser_login(mainframe);
+        if (browser_login.ShowModal() != wxID_OK && !is_flashforge_login()) {
+            // The hosted login UI started its own busy state before it invoked
+            // native login. Always release it when the native attempt closes.
+            json result;
+            result["command"] = "studio_loginfailed";
+            result["data"]["message"] = _L("Browser sign-in ended without completing authentication.").utf8_string();
+            result["sequence_id"] = "10001";
+            run_script(wxString::Format("window.postMessage(%s)", wxString::FromUTF8(result.dump())));
         }
+        return;
+
     } else {
         if (m_login_dlg) {
             m_login_dlg->EndModal(wxID_OK);
@@ -5405,6 +5413,15 @@ void GUI_App::start_flashforge_session_attempt()
 
 void GUI_App::schedule_flashforge_session_retry(ComErrno error, ComSessionInitStage stage)
 {
+    // A successful OAuth return does not guarantee a usable account session.
+    // Stop retrying after three attempts so the login UI cannot wait forever.
+    if (m_auto_login_retry_count >= 2) {
+        m_auto_login_state = FlashLoginRecoveryState::Idle;
+        wxCommandEvent failed_event(EVT_LOGIN_FAILED);
+        failed_event.SetEventObject(this);
+        wxPostEvent(this, failed_event);
+        return;
+    }
     static constexpr int retry_delays_seconds[] = {2, 5, 10, 30, 60};
     const size_t delay_index = std::min<size_t>(m_auto_login_retry_count, std::size(retry_delays_seconds) - 1);
     const int delay_seconds = retry_delays_seconds[delay_index];
@@ -5657,34 +5674,12 @@ std::string GUI_App::handle_web_request(std::string cmd, const std::vector<std::
                     this->request_login(true);
                 });
             } else if (command_str.compare("homepage_get_token") == 0) {
-                if (root.get_child_optional("data") != boost::none) {
-                    pt::ptree        data_node = root.get_child("data");
-                    com_token_data_t token_data;
-                    json             j = json::parse(cmd);
-                    try {
-                        token_data.expiresIn = j["data"]["expires_in"];
-                        token_data.startTime = normalize_flash_token_start_time(
-                            j["data"]["start_time"].get<long long>());
-                        token_data.accessToken = j["data"]["access_token"];
-                        token_data.refreshToken = j["data"]["refresh_token"];
-                        on_connect_event();
-                        get_token_info(token_data);
-                    } catch (...) {
-                        BOOST_LOG_TRIVIAL(error) << "Get Token Failed! cmd: " << cmd;
-                    }
-                }
+                // Web pages cannot supply replacement session tokens.
+                return "";
+
             } else if (command_str.compare("homepage_login_clicked") == 0) {
-                json json;
-                json["command"] = "studio_autoconnecting";
-                if (m_auto_connecting) {
-                    json["data"]["message"] = _L("Account Auto Connecting...").utf8_string();
-                } else {
-                    json["data"]["message"] = "";
-                }
-                json["sequence_id"] = "10001";
-                std::string jsonStr = json.dump();
-                wxString    strJS   = wxString::Format("window.postMessage(%s)", wxString::FromUTF8(jsonStr));
-                GUI::wxGetApp().run_script(strJS);
+                CallAfter([this] { ShowUserLogin(); });
+                return "";
             }
             else if (command_str.compare("homepage_logout") == 0) {
                 CallAfter([this] {
@@ -6189,7 +6184,7 @@ void GUI_App::handle_script_message(std::string msg)
                 if (m_agent) {
                     if (uses_flash_cloud_agent(m_agent)) {
                         BOOST_LOG_TRIVIAL(warning)
-                            << "Ignore generic user_login for FlashCloudServiceAgent; FlashForge login requires homepage_get_token";
+                            << "Ignore generic user_login for FlashCloudServiceAgent; FlashForge login uses the browser bridge";
                     } else {
                         m_agent->change_user(j.dump());
                         if (m_agent->is_user_login()) {

@@ -1,8 +1,8 @@
 msgid "Based on BambuStudio and PrusaSlicer"
-msgstr "BambuStudioとPrusaSlicerをベース"
+msgstr "BambuStudioとPrusaSlicerをベースに開発"
 
 msgid "The Flash Studio needs an upgrade"
-msgstr "Flashforge Studioをアップグレードする必要があります"
+msgstr "Flash Studioのアップデートが必要です"
 
 msgid "Unable to connect to the Internet!"
 msgstr "インターネットに接続できません。"
@@ -11,122 +11,116 @@ msgid ""
 "Flash Studio is based on OrcaSlicer by Softfever, and OrcaSlicer is based "
 "on BambuStudio by Bambulab, which is from PrusaSlicer by Prusa Research.  "
 "PrusaSlicer is from Slic3r by Alessandro Ranellucci and the RepRap community"
-msgstr ""
-"Flashforge StudioはSoftfeverが提供するOrcaSlicerをベースにしています。OrcaSlicerは、Bambulabが提供するBam"
-"buStudio（Prusa ResearchのPrusaSlicerが元）をベースにしています。  PrusaSlicerは、Alessandro Rane"
-"llucciとRepRapコミュニティが提供するSlic3rをベースにしています"
+msgstr "Flash StudioはSoftfeverによるOrcaSlicerをベースにしています。OrcaSlicerはBambulabによるBambuStudio、BambuStudioはPrusa ResearchによるPrusaSlicerをベースにしています。PrusaSlicerの元となったのは、Alessandro RanellucciとRepRapコミュニティによるSlic3rです。"
 
 msgid "Flash Studio is based on OrcaSlicer by SoftFever."
-msgstr "Flashforge StudioはSoftFeverが提供するOrcaSlicerをベースにしています。"
+msgstr "Flash StudioはSoftFeverによるOrcaSlicerをベースにしています。"
 
 msgid ""
 "Another virtual camera is running.\n"
 "Flash Studio supports only a single virtual camera.\n"
 "Do you want to stop this virtual camera?"
-msgstr ""
-"別のバーチャルカメラが動作しています。 Flashforge Studioがサポートするバーチャルカメラの台数は、1台です。 このバーチャルカメラを停止しますか？"
+msgstr "別の仮想カメラが動作しています。\nFlash Studioで同時に使用できる仮想カメラは1つです。\nこの仮想カメラを停止しますか？"
 
 msgid ""
 "The .gcode.3mf file contains no G-code data.Please slice it with "
 "Flash Studio and export a new .gcode.3mf file."
-msgstr ""
-".gcode.3mfファイルにはGコードデータが存在しません。Flashforge Studioでスライスして、新しい.gcode.3mfファイルをエクスポートし"
-"てください。"
+msgstr ".gcode.3mfファイルにはGコードデータが存在しません。Flash Studioでスライスして、新しい.gcode.3mfファイルをエクスポートしてください。"
 
 msgctxt "Flashforge"
 msgid "Device Status"
-msgstr "デバイスのステータス"
+msgstr "プリンターの状態"
 
 msgid ""
 "If enabled, sets Flash Studio as default application to open .3mf files"
-msgstr "有効にすると、.3mfファイルをデフォルトで開くアプリケーションにFlashforge Studioを指定します。"
+msgstr "有効にすると、.3mfファイルをデフォルトで開くアプリケーションにFlash Studioを指定します。"
 
 msgid ""
 "If enabled, sets Flash Studio as default application to open .stl files"
-msgstr "有効にすると、.stlファイルをデフォルトで開くアプリケーションにFlashforge Studioを指定します。"
+msgstr "有効にすると、.stlファイルをデフォルトで開くアプリケーションにFlash Studioを指定します。"
 
 msgid ""
 "If enabled, sets Flash Studio as default application to open .step files"
-msgstr "有効にすると、.stepファイルをデフォルトで開くアプリケーションにFlashforge Studioを指定します。"
+msgstr "有効にすると、.stepファイルをデフォルトで開くアプリケーションにFlash Studioを指定します。"
 
 msgid "Please login first."
-msgstr "まずログインしてください。"
+msgstr "先にログインしてください。"
 
 msgid "Are you sure to unbind this device?"
-msgstr "このデバイスのバインドを解除しますか？"
+msgstr "このプリンターの登録を解除しますか？"
 
 msgid "Question"
 msgstr "質問"
 
 msgid "No printer connected, please connect printer first!"
-msgstr "プリンターが接続されていません。まず、プリンターを接続してください。"
+msgstr "プリンターが接続されていません。先にプリンターを接続してください。"
 
 msgid ""
 "Step 1, please confirm Flash Studio and your printer are in the same LAN."
-msgstr "ステップ1：Flashforge Studioとプリンターが同じLANに存在するようにしてください。"
+msgstr "手順1：プリンターとFlash Studioを実行しているPCが、同じLANに接続されていることを確認してください。"
 
 msgid "Get Code"
-msgstr "コード取得"
+msgstr "認証コードを取得"
 
 msgid "Phone Login/ Register"
-msgstr "ログイン/登録してください"
+msgstr "SMSでログイン／登録"
 
 msgid "Password Login"
-msgstr "ログイン用パスワード"
+msgstr "パスワードでログイン"
 
 msgid "Please enter your account"
 msgstr "アカウント情報を入力してください"
 
 msgid "Mobile phone number error"
-msgstr "携帯電話の番号が誤っています"
+msgstr "携帯電話番号が正しくありません。"
 
 msgid "Phone Number / email"
-msgstr "電話番号/メールアドレス"
+msgstr "携帯電話番号またはメールアドレス"
 
 msgid "Verify code is incorrect"
-msgstr "検証コードが不正確です"
+msgstr "認証コードが正しくありません。"
 
 msgid "Read and Agree to Accept"
-msgstr "読んだ後に同意して受領"
+msgstr "次の規約に同意します："
 
 msgid "《Term "
-msgstr "《サービス "
+msgstr "「"
 
 msgid "of "
-msgstr "利用 "
+msgstr "利用"
 
 msgid "Service》"
-msgstr "規約》"
+msgstr "規約」"
 
 msgid "《Term of Service》"
-msgstr "《サービス利用規約》"
+msgstr "「利用規約」"
 
 msgid "《Privacy Policy》"
-msgstr "《プライバシー方針》"
+msgstr "「プライバシーポリシー」"
 
 msgid "Register"
-msgstr "登録"
+msgstr "新規登録"
 
 msgid "Forget Password"
 msgstr "パスワードを忘れた場合"
 
 msgid "Account/verification code empty. Please enter."
-msgstr "アカウント/認証コードが空白です。入力してください。"
+msgstr "アカウントと認証コードを入力してください。"
 
 msgid "Please check the agreement first."
-msgstr "まず規約に同意してください。"
+msgstr "利用規約とプライバシーポリシーを確認し、同意してください。"
 
 msgid "User not registered"
-msgstr "ユーザーが登録されていません"
+msgstr "このアカウントは登録されていません。"
 
 msgid "Account/password empty. Please enter."
 msgstr "アカウント/パスワードが空白です。入力してください。"
 
 msgid "Email Address Error"
-msgstr "メールアドレスのエラー"
+msgstr "メールアドレスが正しくありません。"
 
 msgid "Password is incorrect"
-msgstr "パスワードが不正確です"
+msgstr "パスワードが正しくありません。"
 
 msgid "Code"
 msgstr "コード"
@@ -138,13 +132,13 @@ msgid "Email"
 msgstr "メールアドレス"
 
 msgid "Machine Type"
-msgstr "デバイスのタイプ"
+msgstr "機種"
 
 msgid "LAN"
 msgstr "LAN"
 
 msgid "Login out"
-msgstr "ログイン/ログアウト"
+msgstr "ログアウト"
 
 msgid "cancel"
 msgstr "キャンセル"
@@ -155,26 +149,25 @@ msgstr "確認"
 msgid ""
 "The current device has \n"
 "no printing projects"
-msgstr "現在のデバイスには印刷 \n"
-"プロジェクトがありません"
+msgstr "このプリンターには\n印刷プロジェクトがありません"
 
 msgid "Material Station"
-msgstr "素材ステーション"
+msgstr "フィラメントステーション"
 
 msgid "Start Filtering"
-msgstr "フィルタリングを開始する"
+msgstr "空気清浄を開始"
 
 msgid "Internal Circulate"
-msgstr "内部循環"
+msgstr "庫内循環"
 
 msgid "External Circulate"
-msgstr "外部循環"
+msgstr "外気排出"
 
 msgid "file name:"
 msgstr "ファイル名："
 
 msgid "Device offline"
-msgstr "デバイスのオフライン"
+msgstr "プリンターはオフラインです"
 
 msgid "clear"
 msgstr "クリア"
@@ -195,10 +188,10 @@ msgid "Remaining Time"
 msgstr "残り時間"
 
 msgid "pause print"
-msgstr "印刷を一時停止する"
+msgstr "印刷を一時停止"
 
 msgid "cancel print"
-msgstr "印刷をキャンセルする"
+msgstr "印刷をキャンセル"
 
 msgid "Whether Cancel Printing"
 msgstr "印刷をキャンセルしますか？"
@@ -216,46 +209,46 @@ msgid "print"
 msgstr "印刷"
 
 msgid "idle"
-msgstr "アイドル"
+msgstr "待機中"
 
 msgid "completed"
-msgstr "完了済"
+msgstr "完了"
 
 msgid "Print completed,clean platform!"
-msgstr "印刷完了。プラットフォームを清掃ください。"
+msgstr "印刷が完了しました。ビルドプレートを清掃してください。"
 
 msgid "Total Time"
 msgstr "合計時間"
 
 msgid "busy"
-msgstr "ビジー"
+msgstr "処理中"
 
 msgid "Print cancelled,in cache command"
-msgstr "印刷がキャンセルされました。コマンドがキャッシュ内に存在します"
+msgstr "印刷キャンセル：バッファー内のコマンドを処理中"
 
 msgid "pause"
 msgstr "一時停止"
 
 msgid "continue print"
-msgstr "印刷を継続する"
+msgstr "印刷を再開"
 
 msgid "pausing"
-msgstr "一時停止しています"
+msgstr "一時停止処理中"
 
 msgid "heating"
-msgstr "加熱しています"
+msgstr "加熱中"
 
 msgid "printing"
-msgstr "印刷しています"
+msgstr "印刷中"
 
 msgid "The maximum temperature cannot exceed"
 msgstr "最高温度を超えることはできません"
 
 msgid "Spray Nozzle"
-msgstr "噴霧ノズル"
+msgstr "ノズル"
 
 msgid "Print Size"
-msgstr "印刷サイズ"
+msgstr "造形サイズ"
 
 msgid "Firmware Version"
 msgstr "ファームウェアバージョン"
@@ -270,7 +263,7 @@ msgid "Paused"
 msgstr "一時停止中"
 
 msgid "The printer move out of range.Please go home again!"
-msgstr "プリンターが移動範囲を超えました。ホームへ戻ってください。"
+msgstr "移動範囲を超えています。先に原点復帰してください。"
 
 msgid "Lost communication with MCU eboard"
 msgstr "MCU eボードとの通信が途絶えました"
@@ -285,28 +278,28 @@ msgid "MCU eboard: Unable to connect"
 msgstr "MCU eボード：接続できません"
 
 msgid "Nozzle temperature error."
-msgstr "ノズル温度がエラーを起こしています。"
+msgstr "ノズル温度エラー"
 
 msgid "Extruder not heating at expected.Please check extruder."
-msgstr "押出機が期待された温度まで加熱されていません。押出機を検査してください。"
+msgstr "エクストルーダーの温度が予定どおりに上がりません。エクストルーダーを確認してください。"
 
 msgid "Platform not heating at expected.Please check platform."
-msgstr "プラットフォームが期待された温度まで加熱されていません。プラットフォームを検査してください。"
+msgstr "ヒートベッドの温度が予定どおりに上がりません。ヒートベッドを確認してください。"
 
 msgid "Chamber not heating at expected.Please check chamber."
-msgstr "チャンバーが期待された温度まで加熱されていません。チャンバーを検査してください。"
+msgstr "チャンバーの温度が予定どおりに上がりません。チャンバーを確認してください。"
 
 msgid "Host error, please restart !"
 msgstr "ホストがエラーを起こしています。再起動してください。"
 
 msgid "Z-Axis go home error."
-msgstr "Z軸がホームへの移動でエラーを起こしています。"
+msgstr "Z軸の原点復帰に失敗しました"
 
 msgid "Y-Axis go home error."
-msgstr "Y軸がホームへの移動でエラーを起こしています。"
+msgstr "Y軸の原点復帰に失敗しました"
 
 msgid "X-Axis go home error."
-msgstr "X軸がホームへの移動でエラーを起こしています。"
+msgstr "X軸の原点復帰に失敗しました"
 
 msgid "Extruder temperature error !"
 msgstr "押出機の温度がエラーを起こしています。"
@@ -318,10 +311,10 @@ msgid "Move queue overflow"
 msgstr "移動キューがオーバーフローを起こしています"
 
 msgid "No filament"
-msgstr "フィラメントが存在しません"
+msgstr "フィラメントがありません"
 
 msgid "Select a slot, and click the \"Load\" or \n\"Unload\" button to load or unload \nfilament."
-msgstr "スロットを選択し、「ロード」または\n「アンロード」ボタンをクリックしてフ\nィラメントをロードまたはアンロード\nします。"
+msgstr "スロットを選択し、「ロード」または\n「アンロード」をクリックして\nフィラメントを出し入れします。"
 
 msgctxt "filament"
 msgid "Load"
@@ -335,7 +328,7 @@ msgid "Heat up"
 msgstr "加熱"
 
 msgid "Cut off filament"
-msgstr "フィラメントを切る"
+msgstr "フィラメントを切断"
 
 msgid "Retract filament"
 msgstr "フィラメントを引き戻す"
@@ -348,23 +341,23 @@ msgstr "フィラメントを押し出す"
 
 msgctxt "Flashforge"
 msgid "Purge old filament"
-msgstr "古いフィラメントをパージする"
+msgstr "古いフィラメントをパージ"
 
 msgctxt "filament"
 msgid "Unknown"
 msgstr "不明"
 
 msgid "Color Library"
-msgstr "カラ―ライブラリ"
+msgstr "カラーライブラリ"
 
 msgid "Print File"
-msgstr "プリントファイル"
+msgstr "印刷ファイル"
 
 msgid "Material in the material station"
-msgstr "マテリアルステーション内の材料"
+msgstr "フィラメントステーション内のフィラメント"
 
 msgid "Only support selecting materials of the same type"
-msgstr "同じタイプの材料のみ選択可能です。"
+msgstr "同じ種類のフィラメントのみ選択できます"
 
 msgid "Filament type and color set in the slicer"
 msgstr ""
@@ -387,10 +380,10 @@ msgid "Non-Flashforge build plate detected. Print quality may not be guaranteed.
 msgstr "Flashforge以外のビルドプレートが検出されました。印刷品質は保証されない場合があります。"
 
 msgid "Continue printing"
-msgstr "印刷の続行"
+msgstr "印刷を続行"
 
 msgid "Stop printing (replace the build plate)"
-msgstr "印刷の中止（ビルドプレートの交換）"
+msgstr "印刷を中止（ビルドプレートを交換）"
 
 msgid "Lidar detected first-layer defects. Please check and decide whether to continue printing."
 msgstr "Lidarは第一レイヤーの欠陥を検出しました。確認して、印刷を続行するか決定してください。"
@@ -403,15 +396,15 @@ msgstr "印刷の中止"
 
 msgctxt "Flashforge"
 msgid "Flow Calibration"
-msgstr "フローの校正"
+msgstr "押出量キャリブレーション"
 
 msgctxt "Flashforge"
 msgid "First Layer Inspection"
-msgstr "第一レイヤーの検査"
+msgstr "初層検査"
 
 msgctxt "Flashforge"
 msgid "Downloading"
-msgstr "ダウンロードしています"
+msgstr "ダウンロード中…"
 
 msgid "Unable to download some videos. Please try again later!"
 msgstr "一部のビデオはダウンロードできませんでした。後に再度お試しください。"
@@ -423,7 +416,7 @@ msgid "Delete selected file(s)?"
 msgstr "選択したファイルを削除しますか？"
 
 msgid "Download complete."
-msgstr "ダウンロード完了。"
+msgstr "ダウンロードが完了しました"
 
 msgid "Download failed. Please try again later!"
 msgstr "ダウンロードに失敗しました。しばらくしてからもう一度お試しください。"
@@ -435,10 +428,10 @@ msgid "Lidar focus failure detected. Please check the Lidar."
 msgstr "Lidarのフォーカス不良が検出されました。Lidarを確認してください。"
 
 msgid "For an improved experience, please restart Flash Studio to load resources."
-msgstr "より良い体験のために、Flashforge Studioを再起動してリソースを読み込んでください。"
+msgstr "より良い体験のために、Flash Studioを再起動してリソースを読み込んでください。"
 
 msgid "Printer out of range. Please home again!"
-msgstr "プリンター範囲外です。再度ホームしてください！"
+msgstr "移動範囲を超えています。先に原点復帰してください。"
 
 msgid "Communication with MCU interrupted!"
 msgstr "MCUとの通信が途切れました！"
@@ -447,7 +440,7 @@ msgid "X/Y/Z/E TMC error: GSTAT!"
 msgstr "X/Y/Z/E TMCエラー：GSTAT！"
 
 msgid "X/Y/Z/E motor TMC chip communication error!"
-msgstr "X/Y/Z/E TMCを読み取れません！"
+msgstr "X/Y/Z/E軸のモータードライバー（TMCチップ）との通信に失敗しました。"
 
 msgid "MCU: Unable to connect!"
 msgstr "MCU：接続できません！"
@@ -489,13 +482,13 @@ msgid "Command exceeds queue limit!"
 msgstr "コマンドがキューの上限を超えています！"
 
 msgid "Language initialization failed. Please retry!"
-msgstr "言語の初期化に失敗しました。再試行してください！"
+msgstr "言語設定の初期化に失敗しました。もう一度お試しください。"
 
 msgid "USB flash drive read error!"
-msgstr "USBフラッシュドライブ読み取りエラー！"
+msgstr "USBからの読み取りに失敗しました。"
 
 msgid "Real-time video service failure!"
-msgstr "リアルタイムビデオサービスに失敗しました！"
+msgstr "ライブ映像サービスでエラーが発生しました。"
 
 msgid "Failed to enable the camera. Please check!"
 msgstr "カメラの有効化に失敗しました。確認してください！"
@@ -504,13 +497,13 @@ msgid "Insufficient storage space!"
 msgstr "ストレージ容量不足！"
 
 msgid "File copy error!"
-msgstr "ファイルコピーエラー！"
+msgstr "ファイルのコピーに失敗しました。"
 
 msgid "Model download failed!"
-msgstr "モデルのダウンロードに失敗しました！"
+msgstr "モデルのダウンロードに失敗しました。"
 
 msgid "Leveling sensor data cannot be cleared. Please check!"
-msgstr "レベリングセンサーデータをクリアできません。確認してください！"
+msgstr "レベリングセンサーのデータを消去できません。センサーを確認してください。"
 
 msgid "Leveling sensor not triggered. Please check!"
 msgstr "レベリングセンサーが作動していません。確認してください！"
@@ -550,49 +543,49 @@ msgid "Air filter fan speed too low or stopped!"
 msgstr "エアフィルターファンスピードが低すぎるか停止しています！"
 
 msgid "Channel 1 feeding timeout!"
-msgstr "チャンネル1給フィラメントタイムアウト！"
+msgstr "チャンネル1：フィラメントの送り込みがタイムアウトしました。"
 
 msgid "Channel 2 feeding timeout!"
-msgstr "チャンネル2給フィラメントタイムアウト！"
+msgstr "チャンネル2：フィラメントの送り込みがタイムアウトしました。"
 
 msgid "Channel 3 feeding timeout!"
-msgstr "チャンネル3給フィラメントタイムアウト！"
+msgstr "チャンネル3：フィラメントの送り込みがタイムアウトしました。"
 
 msgid "Channel 4 feeding timeout!"
-msgstr "チャンネル4給フィラメントタイムアウト！"
+msgstr "チャンネル4：フィラメントの送り込みがタイムアウトしました。"
 
 msgid "Channel 1 retracting timeout!"
-msgstr "チャンネル1リトラクションタイムアウト！"
+msgstr "チャンネル1：フィラメントの引き戻しがタイムアウトしました。"
 
 msgid "Channel 2 retracting timeout!"
-msgstr "チャンネル2リトラクションタイムアウト！"
+msgstr "チャンネル2：フィラメントの引き戻しがタイムアウトしました。"
 
 msgid "Channel 3 retracting timeout!"
-msgstr "チャンネル3リトラクションタイムアウト！"
+msgstr "チャンネル3：フィラメントの引き戻しがタイムアウトしました。"
 
 msgid "Channel 4 retracting timeout!"
-msgstr "チャンネル4リトラクションタイムアウト！"
+msgstr "チャンネル4：フィラメントの引き戻しがタイムアウトしました。"
 
 msgid "Failed to feed filament to the extruder!"
-msgstr "フィラメントをエクストルーダーに供給できません！"
+msgstr "エクストルーダーにフィラメントを送り込めませんでした。"
 
 msgid "IFS odometer roller 1/2/3/4 not moving!"
 msgstr "IFSオドメーターローラー1/2/3/4が動いていません！"
 
 msgid "Filament type mismatch!"
-msgstr "フィラメントタイプ不一致！"
+msgstr "フィラメントの種類が一致しません。"
 
 msgid "Abnormal leveling data!"
-msgstr "レベリングデータ異常！"
+msgstr "レベリングデータが異常です。"
 
 msgid "Z-axis print height exceeded"
-msgstr "Z軸の印刷高さを超えました"
+msgstr "Z軸の造形高さを超えています。"
 
 msgid "Extruder filament sensor error"
 msgstr "エクストルーダーフィラメントセンサーエラー"
 
 msgid "IFS homing error"
-msgstr "IFS ホーミングエラー"
+msgstr "IFSの原点復帰に失敗しました。"
 
 msgid "Exception in priming_handler, please copy the logs!"
 msgstr "priming_handler で例外発生、ログをコピーしてください！"
@@ -639,7 +632,7 @@ msgstr "読み込みに失敗しました。もう一度お試しください。
 
 msgctxt "Flashforge"
 msgid "Refer & Earn"
-msgstr "紹介して獲得"
+msgstr "紹介でポイント獲得"
 
 msgid "Copy Referral Link"
 msgstr "紹介リンクをコピー"
@@ -651,13 +644,13 @@ msgid "Generating, please wait..."
 msgstr "生成中です。お待ちください…"
 
 msgid "Generation successful!"
-msgstr "生成成功！"
+msgstr "生成に成功しました"
 
 msgid "You can specify the number of colors for the model."
 msgstr "モデルの色数を指定できます。"
 
 msgid "AI 3D Model Generator"
-msgstr "AI 3Dモデルジェネレーター"
+msgstr "AIで3Dモデルを生成"
 
 msgid "Points consumed"
 msgstr "消費ポイント"
@@ -687,13 +680,13 @@ msgid "Single model"
 msgstr "単一モデル"
 
 msgid "The model should not be too small."
-msgstr "モデルはあまり小さくないこと"
+msgstr "被写体が小さく写りすぎていないこと"
 
 msgid "We're currently experiencing high demand. Please wait..."
 msgstr "現在、多くのご利用が集中しています。お待ちください…"
 
 msgid "Current queue"
-msgstr "現在の待ち行列"
+msgstr "現在の順番待ち"
 
 msgid "Maximum image resolution: 5000*5000"
 msgstr "最大画像解像度：5000*5000"
@@ -817,7 +810,7 @@ msgid "Cannot regenerate. Insufficient points for image or model generation."
 msgstr "再生成できません。画像またはモデル生成のポイントが不足しています。"
 
 msgid "Please upload your text"
-msgstr "テキストをアップロードしてください"
+msgstr "テキストを入力してください。"
 
 msgid "You have %d regenerations left for this model generation. Regenerate?"
 msgstr "このモデル生成では、あと %d 回 再生成できます。再生成しますか？"
@@ -850,7 +843,7 @@ msgid "Edit or load filament after selecting an extruder"
 msgstr "エクストルーダーを選択後、フィラメントの編集またはロードを行います"
 
 msgid "Temperature & Control"
-msgstr "温度と制御"
+msgstr "温度・操作"
 
 msgid "Free Regenerations Left: %d"
 msgstr "残りの無料再生成回数：%d"
@@ -872,7 +865,7 @@ msgid "Removed from print list"
 msgstr "印刷リストから削除しました"
 
 msgid "Report submitted"
-msgstr "レポートの送信"
+msgstr "報告を送信しました"
 
 msgid "The equipment needs to be updated. Please update the printer versions. The following printer versions require updating to ensure proper operation:"
 msgstr "デバイスの更新が必要です。プリンターのバージョンを更新してください。正常にご利用いただくためには、以下のプリンターのバージョンを更新してください："
@@ -914,7 +907,7 @@ msgid "Email Address"
 msgstr "メールアドレス"
 
 msgid "Email cannot be empty."
-msgstr "メールアドレスは空にできません。"
+msgstr "メールアドレスを入力してください。"
 
 msgid "%s devices require an update. Please upgrade %s to %s or later, then upgrade again to %s or later. Devices with versions below %s will not be able to connect properly."
 msgstr "%sデバイスの更新が必要です。%sを%s以降にアップグレードした後、再度%s以降にアップグレードしてください。%s未満のバージョンのデバイスは正常に接続できません。"
@@ -926,10 +919,10 @@ msgid "If you cannot detect the new version, you can actively download it via th
 msgstr "新しいバージョンが検出できない場合は、以下のリンクから手動でダウンロードできます："
 
 msgid "The printer is not idle"
-msgstr "プリンターがアイドル状態ではありません"
+msgstr "プリンターは動作中です"
 
 msgid "Extracting files, please wait..."
-msgstr "ファイルを解凍中です。お待ちください..."
+msgstr "ファイルを展開しています…"
 
 msgid "Downloading cloud task..."
 msgstr "クラウドタスクをダウンロード中..."
@@ -938,13 +931,13 @@ msgid "Sending task..."
 msgstr "タスク送信中..."
 
 msgid "Cancel slicing?"
-msgstr "切片を取消しますか？"
+msgstr "スライスをキャンセルしますか？"
 
 msgid "Cancel Slicing"
-msgstr "切片取消"
+msgstr "スライスをキャンセル"
 
 msgid "Cloud task is slicing..."
-msgstr "クラウドタスクを切片中..."
+msgstr "クラウドでスライス中"
 
 msgid "Reprint"
 msgstr "再印刷"
@@ -953,22 +946,22 @@ msgid "Failed. Please try printing again."
 msgstr "失敗しました。もう一度印刷してください。"
 
 msgid "Cancel queue?"
-msgstr "待機を取消しますか？"
+msgstr "順番待ちをキャンセルしますか？"
 
 msgid "Cancel Queue"
-msgstr "待機取消"
+msgstr "順番待ちをキャンセル"
 
 msgid "Starts slicing and printing once the queue clears."
-msgstr "待機終了後、自動で切片・印刷します。"
+msgstr "順番が来ると、自動でスライスして印刷します"
 
 msgid "Receiving task..."
 msgstr "タスク受信中..."
 
 msgid "Cloud slicing queued..."
-msgstr "クラウド切片待機中..."
+msgstr "クラウドスライスの順番待ち"
 
 msgid "Jobs ahead"
-msgstr "前方待機数"
+msgstr "先に待機しているジョブ数"
 
 msgctxt "Flashforge"
 msgid "Mapping"
@@ -990,35 +983,33 @@ msgstr "オリジナル"
 msgid ""
 "Chamber temperature\n"
 "Did you know that Flash Studio supports chamber temperature?"
-msgstr "チャンバー温度 Flashforge Studioがチャンバー温度をサポートしていることをご存じですか？"
+msgstr "チャンバー温度 Flash Studioがチャンバー温度をサポートしていることをご存じですか？"
 
 #: resources/data/hints.ini: [hint:Calibration]
 msgid ""
 "Calibration\n"
 "Did you know that calibrating your printer can do wonders? Check out our "
 "beloved calibration solution in Flash Studio."
-msgstr ""
-"校正 プリンターを校正すれば素晴らしい成果が得られることをご存じですか？当社が誇るFlashforge Studioの校正ソリューションをご覧ください。"
+msgstr "校正 プリンターを校正すれば素晴らしい成果が得られることをご存じですか？当社が誇るFlash Studioの校正ソリューションをご覧ください。"
 
 #: resources/data/hints.ini: [hint:Auxiliary fan]
 msgid ""
 "Auxiliary fan\n"
 "Did you know that Flash Studio supports Auxiliary part cooling fan?"
-msgstr "補助ファン Flashforge Studioは補助冷却ファンに対応していることをご存じですか？"
+msgstr "補助ファン Flash Studioは補助冷却ファンに対応していることをご存じですか？"
 
 #: resources/data/hints.ini: [hint:Air filtration]
 msgid ""
 "Air filtration/Exhaust Fan\n"
 "Did you know that Flash Studio can support Air filtration/Exhaust Fan?"
-msgstr "空気循環/換気ファン Flashforge Studioは空気循環/換気ファンに対応していることをご存じですか？"
+msgstr "空気循環/換気ファン Flash Studioは空気循環/換気ファンに対応していることをご存じですか？"
 
 #: resources/data/hints.ini: [hint:How to use keyboard shortcuts]
 msgid ""
 "How to use keyboard shortcuts\n"
 "Did you know that Flash Studio offers a wide range of keyboard shortcuts "
 "and 3D scene operations."
-msgstr ""
-"キーボードのショートカットの使用方法 Flashforge Studioは多彩なキーボードのショートカットと3Dシーン操作の機能を備えていることをご存じですか？"
+msgstr "キーボードのショートカットの使用方法 Flash Studioは多彩なキーボードのショートカットと3Dシーン操作の機能を備えていることをご存じですか？"
 
 msgid "Dithering cadence height A"
 msgstr "ディザリング周期高さ A"
@@ -1265,16 +1256,16 @@ msgid "Add Color"
 msgstr "色を追加"
 
 msgid "Hex"
-msgstr "16 進数"
+msgstr "カラーコード（16進数）"
 
 msgid "Requested"
-msgstr "要求色"
+msgstr "指定色"
 
 msgid "Creates"
-msgstr "作成結果"
+msgstr "生成される色"
 
 msgid "Exact preset mixes"
-msgstr "正確なプリセット混合"
+msgstr "一致するプリセット配色"
 
 msgid "Matching closest supported mix..."
 msgstr "最も近い対応混合を照合中..."
@@ -1386,10 +1377,10 @@ msgstr "最大サブレイヤー数"
 
 msgid ""
 "No other consumables of the same type are available for mixing. Please add consumables of the same type."
-msgstr "混合に使用できる同じ種類の消耗材が他にありません。同じ種類の消耗材を追加してください。"
+msgstr "混色に使える同じ種類のフィラメントが他にありません。同じ種類のフィラメントを追加してください。"
 
 msgid "Consumable types are inconsistent. Please add consumables of the same type."
-msgstr "消耗材の種類が一致しません。同じ種類の消耗材を追加してください。"
+msgstr "フィラメントの種類が一致しません。同じ種類のフィラメントを追加してください。"
 
 msgid "%d-color layer cycle"
 msgstr "%d 色レイヤーサイクル"
@@ -1413,7 +1404,7 @@ msgid "Click to edit"
 msgstr "クリックして編集"
 
 msgid "Gradient Mix Weights"
-msgstr "グラデーション混合ウェイト"
+msgstr "グラデーションの混合比率"
 
 msgid "Mixed Filaments"
 msgstr "混合フィラメント"
@@ -1428,7 +1419,7 @@ msgid "Add mixed filament"
 msgstr "混合フィラメントを追加"
 
 msgid "Confirm merge"
-msgstr "結合を確認"
+msgstr "結合の確認"
 
 msgid "No mixed filaments yet. Use Add to create one."
 msgstr "混合フィラメントはまだありません。追加で作成してください。"
@@ -1537,16 +1528,16 @@ msgid "Filament Info Sync Failed"
 msgstr "フィラメント情報の同期に失敗しました"
 
 msgid "Issue Feedback"
-msgstr "問題のフィードバック"
+msgstr "不具合を報告"
 
 msgid "Feature Request"
 msgstr "機能リクエスト"
 
 msgid "The feedback has been received and will be processed as soon as possible."
-msgstr "フィードバックが受領され、できるだけ早く処理されます。"
+msgstr "ご報告を受け付けました。順次対応します。"
 
 msgid "The feedback has been received."
-msgstr "フィードバックが受領されました。"
+msgstr "ご報告を受け付けました。"
 
 msgid "This will prevent data from being transmitted to cloud services. Users who only utilize local network functionality can safely enable this option."
 msgstr "これはデータがクラウドサービスへ送信されるのを防ぎます。ローカルネットワーク機能のみを使用するユーザーは、このオプションを安全に有効化できます。"
@@ -1593,14 +1584,13 @@ msgstr ""
 "2. フィラメントプリセット\n"
 "3. プリンタープリセット"
 
-msgid "To help us identify and resolve your issue more quickly, we recommend uploading your device and app logs. The logs are used solely for troubleshooting and will not collect any of your personal information."
-msgstr "お客様の問題を迅速に特定し、解決するため、デバイスおよびアプリのログをアップロードすることをお勧めします。ログは問題の分析にのみ使用され、お客様の個人情報は収集されません。"
+
 
 msgid "orca software Logs"
-msgstr "スライスログ"
+msgstr "スライサーのログ"
 
 msgid "orca software Operation Logs"
-msgstr "スライスソフトウェアの操作ログ"
+msgstr "スライサーの操作ログ"
 
 msgid "App Logs"
 msgstr "アプリログ"
@@ -1615,10 +1605,10 @@ msgid "Device Operation Logs"
 msgstr "デバイスの操作ログ"
 
 msgid "Select a Device"
-msgstr "機器の選択"
+msgstr "プリンターを選択"
 
 msgid "{device} device is currently offline, so we are unable to retrieve the device logs at this time. You can still submit feedback. Once the device is back online, you can submit feedback again or go to Settings > Upload Firmware Log to upload the device logs."
-msgstr "{device} 現在、デバイスはオフライン状態のため、一時的にデバイスログを取得できません。引き続きフィードバックを送信することは可能です。デバイスがオンラインに戻ったら、再度フィードバックを送信するか、設定 > ファームウェアログをアップロードからデバイスログをアップロードしてください。"
+msgstr "{device}はオフラインのため、現在ログを取得できません。このまま不具合報告を送信することもできます。プリンターがオンラインになったら、再度報告を送信するか、「設定 > ファームウェアログをアップロード」からプリンターログを送信してください。"
 
 msgid "Slice Log"
 msgstr "スライスログ"
@@ -1630,10 +1620,10 @@ msgid "Device Log"
 msgstr "デバイスログ"
 
 msgid "The current device is offline, so we are unable to retrieve the device logs at this time. You can still submit feedback. Once the device is back online, you can submit feedback again or go to Settings > Upload Firmware Log to upload the device logs."
-msgstr "現在、デバイスはオフライン状態のため、一時的にデバイスログを取得できません。引き続きフィードバックを送信することは可能です。デバイスがオンラインに戻ったら、再度フィードバックを送信するか、設定 > ファームウェアログをアップロードからデバイスログをアップロードしてください。"
+msgstr "プリンターはオフラインのため、現在ログを取得できません。このまま不具合報告を送信することもできます。プリンターがオンラインになったら、再度報告を送信するか、「設定 > ファームウェアログをアップロード」からプリンターログを送信してください。"
 
 msgid "Slicing software operation log"
-msgstr "スライスソフトウェアの操作ログ"
+msgstr "スライサーの操作ログ"
 
 msgid "App operation log"
 msgstr "アプリの操作ログ"
@@ -1642,7 +1632,211 @@ msgid "Device operation log"
 msgstr "デバイスの操作ログ"
 
 msgid "Add Device"
-msgstr "デバイスを追加"
+msgstr "プリンターを追加"
 
 msgid "Select Device"
-msgstr "デバイスを選択"
+msgstr "プリンターを選択"
+
+msgid "Browser login"
+msgstr "Googleアカウントでログイン"
+
+
+msgid "Sign in using default browser"
+msgstr "Googleでログイン"
+
+
+msgid ""
+"Browser login helper is missing. Build and package the helper before running"
+" this fork."
+msgstr "認証用のプログラムが見つかりません。配布フォルダーを確認してください。"
+
+
+msgid "Could not start browser login."
+msgstr "ブラウザ認証を開始できませんでした。"
+
+
+msgid ""
+"Complete sign-in in your default browser. This request expires after five "
+"minutes."
+msgstr "既定のブラウザでログインしてください。5分以内に認証を完了してください。"
+
+
+msgid ""
+"Sign in on Flashforge's official website using your default browser. After "
+"authorization, return to this app. No browser extension is required."
+msgstr "既定のブラウザでFlashforgeの公式サイトにログインします。認証後はこのアプリへ戻ります。ブラウザへの拡張機能の追加は不要です。"
+
+
+msgid ""
+"Browser login did not complete. The login server must allow returning to "
+"this desktop app."
+msgstr "ログインを完了できませんでした。\nサーバー側でアプリへの戻り先が\n許可されている必要があります。"
+
+
+msgid ""
+"Logs can contain account, device, and project information. Review the logs "
+"before uploading. Upload only the logs needed to investigate your issue."
+msgstr ""
+"ログにはアカウント、プリンター、プロジェクトの情報が含まれる場合があります。送信前に内容を確認し、問題の調査に必要なログだけを選んでください。"
+
+msgid ""
+"Sign in with Google or another provider in your default browser. Return here"
+" after signing in. No browser extension is needed."
+msgstr ""
+"アカウントの認証を既定のブラウザで行います。\n"
+"ログイン後、この画面に戻ってください。\n"
+"ブラウザの拡張機能は不要です。"
+
+
+msgid "Ready to open your browser."
+msgstr "下のボタンからブラウザを開いてください。"
+
+
+msgid ""
+"No authentication result has arrived yet. Finish signing in in your browser,"
+" or retry if it did not return to this app."
+msgstr ""
+"認証結果はまだ届いていません。\n"
+"ブラウザでログインを完了してください。\n"
+"完了しても戻れない場合は、再試行してください。"
+
+
+msgid "Try again in browser"
+msgstr "ログインを再試行"
+
+
+msgid ""
+"Waiting for authentication from your browser. You can close this window or "
+"retry at any time."
+msgstr ""
+"ブラウザからの認証結果を待っています。\n"
+"途中で閉じたり、再試行したりできます。"
+
+
+msgid "The authentication response was invalid. Please try again."
+msgstr ""
+"認証結果を確認できませんでした。\n"
+"もう一度ログインしてください。"
+
+
+msgid ""
+"No authentication result was received within five minutes. Please try again."
+msgstr ""
+"5分以内に認証結果が届きませんでした。\n"
+"もう一度ログインしてください。"
+
+
+#, c-format
+msgid "Time remaining: %d:%02d"
+msgstr "残り時間 %d:%02d"
+
+
+msgid "Sign-in was cancelled in the browser. You can try again."
+msgstr ""
+"ブラウザでのログインが中止されました。\n"
+"もう一度お試しいただけます。"
+
+
+msgid "The login server rejected the authentication result. Please try again."
+msgstr ""
+"ログインサーバーに認証を拒否されました。\n"
+"もう一度ログインしてください。"
+
+
+msgid "Browser sign-in ended without completing authentication."
+msgstr "認証を完了せずにログインを終了しました。"
+
+
+msgid ""
+"Sign in to Google in a separate private window of your default Chrome or "
+"Edge. This window returns to the app automatically. No browser extension is "
+"needed."
+msgstr "既定のChrome・Edgeの専用ウィンドウで\nGoogleにログインします。認証後は自動的に\nアプリへ戻ります。拡張機能は不要です。"
+
+
+msgid ""
+"This login method currently requires Chrome or Edge as the default browser."
+msgstr "この認証方式は現在、既定のブラウザが\nChrome・Edgeの場合に利用できます。"
+
+
+msgid ""
+"Google authentication finished, but the app could not confirm the account. "
+"Please try again."
+msgstr "Googleの認証は完了しましたが、\nアプリでアカウントを確認できませんでした。\nもう一度お試しください。"
+
+
+msgid ""
+"Google authentication finished. Confirming your account in FlashStudio..."
+msgstr "Googleの認証が完了しました。\nFlashStudioでアカウントを確認しています。"
+
+
+msgid ""
+"Sign in to Google in your default browser. Your existing browser sign-in can"
+" be used. FlashStudio receives the result automatically. No browser "
+"extension is needed."
+msgstr ""
+"既定のブラウザでGoogleにログインします。\n"
+"普段のログイン状態を利用できます。\n"
+"認証結果は自動反映されます。拡張機能は不要です。"
+
+
+msgid ""
+"The browser return address is in use. Close the other browser login attempt "
+"or application using port 3000, then try again."
+msgstr ""
+"認証の戻り先が別のアプリに使われています。\n"
+"他のログイン画面やポート3000を使うアプリを\n"
+"閉じて、もう一度お試しください。"
+
+
+
+msgid "The printer communication module is unavailable. Restart the application using the complete build folder."
+msgstr "プリンターの通信機能を起動できません。\n配布フォルダー内のファイルをすべてそろえ、\nアプリを再起動してください。"
+
+msgid ""
+"Find printers on the same network. A Flashforge account is not required for "
+"a LAN connection."
+msgstr ""
+"同じネットワークにあるプリンターを探します。\n"
+"LAN接続にはFlashforgeアカウントは不要です。"
+
+
+msgid "Search again"
+msgstr "再検索"
+
+
+msgid "Printers found on the local network"
+msgstr "LAN内で見つかったプリンター"
+
+
+msgid "IP address"
+msgstr "IPアドレス"
+
+
+msgid ""
+"Select a printer and connect using the access code shown on its screen."
+msgstr "プリンターを選び、本体に表示されるアクセスコードで接続してください。"
+
+
+msgid "Connect via LAN"
+msgstr "LANで接続"
+
+
+msgid "Searching the local network..."
+msgstr "LAN内のプリンターを検索しています…"
+
+
+msgid "No printers found. Check the network and search again."
+msgstr ""
+"見つかりませんでした。\n"
+"同じネットワークに接続して、再検索してください。"
+
+
+msgid "Printers found: %d"
+msgstr "%d台のプリンターが見つかりました"
+
+
+msgid "Printer discovery failed. Check the network and try again."
+msgstr ""
+"検索できませんでした。\n"
+"ネットワーク接続を確認して、再検索してください。"

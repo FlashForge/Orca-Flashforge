@@ -530,7 +530,7 @@ wxWebView* WebView::CreateWebView(wxWindow * parent, wxString const & url)
     url2.Replace("\\", "/");
 #endif
     if (!url2.empty()) { url2 = wxURI(url2).BuildURI(); }
-    BOOST_LOG_TRIVIAL(trace) << __FUNCTION__ << ": " << url2.ToUTF8();
+    BOOST_LOG_TRIVIAL(trace) << __FUNCTION__ << ": navigation";
 
 #ifdef __WIN32__
     wxWebView* webView = new WebViewEdge(create_edge_webview_config());
@@ -639,15 +639,13 @@ void WebView::LoadUrl(wxWebView * webView, wxString const &url)
     url2.Replace("\\", "/");
 #endif
     if (!url2.empty()) { url2 = wxURI(url2).BuildURI(); }
-    BOOST_LOG_TRIVIAL(trace) << __FUNCTION__ << url2.ToUTF8();
+    BOOST_LOG_TRIVIAL(trace) << __FUNCTION__ << ": navigation";
     webView->LoadURL(url2);
 }
 
 bool WebView::RunScript(wxWebView *webView, wxString const &javascript)
 {
-    if (Slic3r::GUI::wxGetApp().app_config->get("internal_developer_mode") == "true"
-            && javascript.find("studio_userlogin") == wxString::npos)
-        wxLogMessage("Running JavaScript:\n%s\n", javascript);
+    // Script bodies may contain session tokens or user data. Never log them.
 
     try {
 #ifdef __WIN32__

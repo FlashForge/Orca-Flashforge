@@ -205,6 +205,7 @@ public:
 
 public:
     void update_scan_machine();
+    void update_scan_machine(const std::vector<fnet_lan_dev_info>& devInfos);
     void clear_scan_machine();
     void update_scan_list(const std::vector<fnet_lan_dev_info>& infos);
     void read_local_machine_from_config();

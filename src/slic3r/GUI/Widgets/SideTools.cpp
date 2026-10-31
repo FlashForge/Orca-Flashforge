@@ -28,6 +28,21 @@ namespace Slic3r { namespace GUI {
 
     m_none_printing_img = ScalableBitmap(this, "monitor_device", 18);
     m_none_add_img      = ScalableBitmap(this, "monitor_device_add", 18);
+    m_add_printer_button = new wxBitmapButton(this, wxID_ANY, m_none_add_img.bmp(),
+        wxDefaultPosition, FromDIP(wxSize(32, 32)), wxBU_AUTODRAW | wxBORDER_NONE);
+    m_add_printer_button->SetName(_L("Add Device"));
+    m_add_printer_button->SetToolTip(_L("Add Device"));
+    m_add_printer_button->SetBackgroundColour(*wxWHITE);
+    m_add_printer_button->Bind(wxEVT_BUTTON, [this](wxCommandEvent &) {
+        DevListBtnClickedEvent event(EVT_DEV_LIST_BTN_CLICKED);
+        event.SetEventObject(this);
+        wxPostEvent(this, event);
+    });
+    Bind(wxEVT_SIZE, [this](wxSizeEvent &event) {
+        layout_add_printer_button();
+        event.Skip();
+    });
+    layout_add_printer_button();
 
     m_wifi_none_img     = ScalableBitmap(this, "monitor_signal_no", 18);
     m_wifi_weak_img     = ScalableBitmap(this, "monitor_signal_weak", 18);
@@ -41,8 +56,6 @@ namespace Slic3r { namespace GUI {
     this->Bind(wxEVT_TIMER, &SideToolsPanel::stop_interval, this);
     this->Bind(wxEVT_ENTER_WINDOW, &SideToolsPanel::on_mouse_enter, this);
     this->Bind(wxEVT_LEAVE_WINDOW, &SideToolsPanel::on_mouse_leave, this);
-    this->Bind(wxEVT_LEFT_DOWN, &SideToolsPanel::on_mouse_left_down, this);
-    this->Bind(wxEVT_LEFT_UP, &SideToolsPanel::on_mouse_left_up, this);
 }
 
 SideToolsPanel::~SideToolsPanel() { delete m_intetval_timer; }
@@ -96,7 +109,16 @@ bool SideToolsPanel::is_in_interval()
 
 void SideToolsPanel::msw_rescale()
 {
+    m_add_printer_button->SetBitmap(m_none_add_img.bmp());
+    layout_add_printer_button();
     Refresh();
+}
+
+void SideToolsPanel::layout_add_printer_button()
+{
+    const wxSize buttonSize = FromDIP(wxSize(32, 32));
+    m_add_printer_button->SetSize(GetClientSize().x - buttonSize.x - FromDIP(8),
+        (GetClientSize().y - buttonSize.y) / 2, buttonSize.x, buttonSize.y);
 }
 
 void SideToolsPanel::OnPaint(wxPaintEvent &event)
@@ -152,7 +174,7 @@ void SideToolsPanel::doRender(wxDC &dc)
         if (devOpr->my_machine_empty()) {
             wxString no_printer_str  = _L("No printer");
             auto     sizet           = dc.GetTextExtent(no_printer_str);
-            auto     left_add_bitmap = size.x - FromDIP(18) - m_wifi_none_img.GetBmpSize().x - m_none_add_img.GetBmpSize().x;
+            auto     left_add_bitmap = m_add_printer_button->GetPosition().x - FromDIP(8);
             auto     size_width      = left_add_bitmap - left;
 
             if (sizet.x > size_width) {
@@ -169,8 +191,6 @@ void SideToolsPanel::doRender(wxDC &dc)
             dc.DrawText(no_printer_str, wxPoint(left, (size.y - sizet.y) / 2));
         }
 
-        left = size.x - FromDIP(18) - m_wifi_none_img.GetBmpSize().x;
-        dc.DrawBitmap(m_none_add_img.bmp(), left, (size.y - m_none_add_img.GetBmpSize().y) / 2);
     } else {
         dc.DrawBitmap(m_printing_img.bmp(), left, (size.y - m_printing_img.GetBmpSize().y) / 2);
 
@@ -183,11 +203,11 @@ void SideToolsPanel::doRender(wxDC &dc)
         dc.SetTextForeground(StateColor::darkModeColorFor(SIDE_TOOLS_GREY900));
 
         auto sizet = dc.GetTextExtent(m_dev_name);
-        auto text_end = size.x - m_wifi_none_img.GetBmpSize().x - 20;
+        auto text_end = m_add_printer_button->GetPosition().x - FromDIP(8);
 
         wxString finally_name = m_dev_name;
         if (sizet.x > (text_end - left)) {
-            auto limit_width = text_end - left - dc.GetTextExtent("...").x - 20;
+            auto limit_width = text_end - left - dc.GetTextExtent("...").x;
             for (auto i = 0; i < m_dev_name.length(); i++) {
                 auto curr_width = dc.GetTextExtent(m_dev_name.substr(0, i));
                 if (curr_width.x >= limit_width) {
@@ -213,29 +233,6 @@ void SideToolsPanel::doRender(wxDC &dc)
         dc.SetBrush(*wxTRANSPARENT_BRUSH);
         dc.DrawRectangle(0, 0, size.x, size.y);
     }
-}
-
-void SideToolsPanel::on_mouse_left_down(wxMouseEvent &evt)
-{
-    m_click = true;
-    wxSize        bmpsize = m_none_add_img.GetBmpSize();    
-    auto          left   = GetSize().x - m_none_add_img.GetBmpSize().x - FromDIP(24);
-    auto          right  = left + m_none_add_img.GetBmpSize().x + FromDIP(6);
-    auto          top    = (GetSize().y - m_none_add_img.GetBmpSize().y) / 2 - FromDIP(6);
-    auto          bottom = (GetSize().y - m_none_add_img.GetBmpSize().y) / 2 + m_none_add_img.GetBmpSize().y + FromDIP(6);
-    if ((evt.GetPosition().x >= left && evt.GetPosition().x <= right) && evt.GetPosition().y >= top && evt.GetPosition().y <= bottom) {
-        wxCommandEvent event(EVT_DEV_LIST_BTN_CLICKED);
-        event.SetEventObject(this);
-        GetEventHandler()->ProcessEvent(event);
-    }
-
-    Refresh();
-}
-
-void SideToolsPanel::on_mouse_left_up(wxMouseEvent &evt)
-{
-     m_click = false;
-     Refresh();
 }
 
 void SideToolsPanel::on_mouse_enter(wxMouseEvent &evt)

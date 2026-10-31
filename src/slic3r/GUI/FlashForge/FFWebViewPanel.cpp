@@ -929,7 +929,8 @@ bool FFWebViewPanel::InitBrowser()
     std::string homePageEnableDebug = wxGetApp().app_config->get("home_page_enable_debug");
     m_mainBrowser->EnableAccessToDevTools(homePageEnableDebug == "true" || homePageEnableDebug == "1");
     WebView::AddOpenNewWindowScript(m_mainBrowser);
-    m_mainBrowser->Bind(wxEVT_WEBVIEW_NAVIGATED, &FFWebViewPanel::OnMainNavigated, this);
+    m_mainBrowser->Bind(wxEVT_WEBVIEW_NAVIGATING, &FFWebViewPanel::OnMainNavigating, this);
+    m_mainBrowser->Bind(wxEVT_WEBVIEW_LOADED, &FFWebViewPanel::OnMainLoaded, this);
 
     m_modelPnl = new wxPanel(this);
     m_modelPnl->Hide();
@@ -1138,6 +1139,13 @@ bool FFWebViewPanel::RequestEmbeddedCheckout(const wxString &url, const wxString
 void FFWebViewPanel::RouteMainNewWindowUrl(const wxString &url)
 {
     if (url.empty() || m_mainBrowser == nullptr) {
+        return;
+    }
+    const wxURI authUri(url);
+    const wxString authHost = authUri.GetServer().Lower();
+    if (authHost == "accounts.google.com" || authHost == "appleid.apple.com" ||
+        authHost == "www.facebook.com" || authHost == "facebook.com") {
+        CallAfter([] { wxGetApp().ShowUserLogin(); });
         return;
     }
     if (RequestEmbeddedCheckout(url, wxEmptyString)) {
@@ -1734,21 +1742,44 @@ void FFWebViewPanel::OnViewNow(wxCommandEvent &evt)
     Layout();
 }
 
-void FFWebViewPanel::OnMainNavigated(wxWebViewEvent &evt) 
+namespace {
+bool is_identity_provider_url(const wxString &url)
 {
-    wxString currentURL = m_mainBrowser->GetCurrentURL();
-    wxString targetDomain = "google.com";
+    const wxURI uri(url);
+    const wxString host = uri.GetServer().Lower();
+    return host == "accounts.google.com" || host == "appleid.apple.com" ||
+           ((host == "www.facebook.com" || host == "facebook.com") && uri.GetPath().Contains("/dialog/oauth"));
+}
 
-    if (currentURL.Contains(targetDomain)) {
-        wxString jsCode = R"(
-            setInterval(() => {
-                const el = document.getElementById('headingSubtext');
-                if (el) el.style.display = 'none';
-            }, 100)
-            console.log("googleJs injure success")
-        )";
-        CallAfter([=]() { m_mainBrowser->RunScript(jsCode); });
+bool is_homepage_bridge_url(const wxString &url)
+{
+    const wxURI uri(url);
+    return uri.GetScheme() == "https" && uri.GetUserInfo().empty() &&
+           (uri.GetPort().empty() || uri.GetPort() == "443") &&
+           (uri.GetServer().Lower() == "desktop.voxelshare.com" ||
+            uri.GetServer().Lower() == "desktop.voxelshare.cn");
+}
+}
+
+void FFWebViewPanel::OnMainNavigating(wxWebViewEvent &evt)
+{
+    if (is_identity_provider_url(evt.GetURL())) {
+        evt.Veto();
+        CallAfter([] { wxGetApp().ShowUserLogin(); });
     }
+}
+
+void FFWebViewPanel::OnMainLoaded(wxWebViewEvent &evt)
+{
+    evt.Skip();
+    if (!m_mainBrowser || !is_homepage_bridge_url(m_mainBrowser->GetCurrentURL()) ||
+        wxGetApp().current_language_code_safe().BeforeFirst('_') != "ja")
+        return;
+    wxFile file;
+    wxString script;
+    const auto path = wxString::FromUTF8(resources_dir()) + "/web/homepage-ja.js";
+    if (file.Open(path) && file.ReadAll(&script))
+        WebView::RunScript(m_mainBrowser, script);
 }
 
 void FFWebViewPanel::OnMainNewWindow(wxWebViewEvent &evt)
@@ -1765,6 +1796,9 @@ void FFWebViewPanel::OnMainNewWindow(wxWebViewEvent &evt)
 void FFWebViewPanel::OnMainScriptMessageReceived(wxWebViewEvent &evt)
 {
     if (m_mainBrowser == nullptr) {
+        return;
+    }
+    if (!is_homepage_bridge_url(m_mainBrowser->GetCurrentURL())) {
         return;
     }
     std::string message = evt.GetString().utf8_string();
@@ -1819,6 +1853,11 @@ void FFWebViewPanel::OnMainScriptMessageReceived(wxWebViewEvent &evt)
 
 void FFWebViewPanel::OnModelNavigating(wxWebViewEvent &evt)
 {
+    if (is_identity_provider_url(evt.GetURL())) {
+        evt.Veto();
+        CallAfter([] { wxGetApp().ShowUserLogin(); });
+        return;
+    }
     if (m_modelBrowser == nullptr) {
         return;
     }
