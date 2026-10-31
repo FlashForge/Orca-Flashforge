@@ -150,11 +150,20 @@ FlashNetworkIntfc::FlashNetworkIntfc(const char *libraryPath, const char *server
     INIT_FUNC_PTR(freeUploadLogInfo, fnet_freeUploadLogInfo);
     INIT_FUNC_PTR(allocString, fnet_allocString);
     INIT_FUNC_PTR(freeString, fnet_freeString);
-    if (initlize(serverSettingsPath, &logSettings) == FNET_OK && strcmp(getVersion(), "3.4.3") == 0) {
+    // Check the ABI before initializing the SDK. A different version must not
+    // leave a successfully initialized SDK behind an unusable interface.
+    static constexpr char expectedVersion[] = "3.4.3";
+    const char *version = getVersion();
+    if (version == nullptr || strcmp(version, expectedVersion) != 0) {
+        printf("unsupported FlashNetwork version: expected=%s, actual=%s\n",
+            expectedVersion, version ? version : "unknown");
+        return;
+    }
+    if (initlize(serverSettingsPath, &logSettings) == FNET_OK) {
         m_isOk = true;
     }
     else {
-        printf("initlize flashnetwork failed, version = %s", getVersion());
+        printf("initialize FlashNetwork failed, version=%s\n", version);
     }
 }
 

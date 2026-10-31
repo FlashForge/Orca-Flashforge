@@ -185,7 +185,9 @@ bool MultiComMgr::initalize(const std::string &dllPath, const std::string &dataD
     fnet_log_settings_t logSettings;
     logSettings.fileDir = logFileDir.c_str();
     logSettings.expireHours = 7 * 24;
-    logSettings.level = debug ? FNET_LOG_LEVEL_DEBUG : FNET_LOG_LEVEL_INFO;
+    // The closed network library must not write authentication payloads during
+    // normal use. Explicit diagnostic mode is opt-in and may contain secrets.
+    logSettings.level = debug ? FNET_LOG_LEVEL_DEBUG : FNET_LOG_LEVEL_OFF;
 
 #ifdef __APPLE__
     std::string serverSettingsPath = (appPathWithSep + "../Resources/data/" + DAT_FILE_NAME).ToUTF8().data();

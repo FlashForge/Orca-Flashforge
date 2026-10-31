@@ -3,6 +3,7 @@
 
 #include <wx/dcgraph.h>
 #include <wx/gdicmn.h>
+#include <wx/bmpbuttn.h>
 #include <wx/dcclient.h>
 #include "Button.hpp"
 #include "Label.hpp"
@@ -48,7 +49,7 @@ public:
         : wxCommandEvent(type)
     {}
 
-    DevListBtnClickedEvent *Clone() const { return new DevListBtnClickedEvent(GetEventType()); }
+    DevListBtnClickedEvent *Clone() const { return new DevListBtnClickedEvent(*this); }
 
 };
 wxDECLARE_EVENT(EVT_DEV_LIST_BTN_CLICKED, DevListBtnClickedEvent);
@@ -59,7 +60,6 @@ private:
     WifiSignal      m_wifi_type{WifiSignal::NONE};
     wxString        m_dev_name;
     bool            m_hover{false};
-    bool            m_click{false};
     bool            m_none_printer{true};
     int             last_printer_signal = 0;
 
@@ -68,6 +68,8 @@ private:
 
     ScalableBitmap  m_none_printing_img;
     ScalableBitmap  m_none_add_img;
+    wxBitmapButton *m_add_printer_button { nullptr };
+    void layout_add_printer_button();
 
     ScalableBitmap  m_wifi_none_img;
     ScalableBitmap  m_wifi_weak_img;
@@ -100,8 +102,6 @@ protected:
     void doRender(wxDC &dc);
     void on_mouse_enter(wxMouseEvent &evt);
     void on_mouse_leave(wxMouseEvent &evt);
-    void on_mouse_left_down(wxMouseEvent &evt);
-    void on_mouse_left_up(wxMouseEvent &evt);
 };
 
 class DeviceObject;

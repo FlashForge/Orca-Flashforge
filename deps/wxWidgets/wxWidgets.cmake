@@ -80,5 +80,12 @@ ExternalProject_Add_Step(dep_wxWidgets copy_private_headers
 )
 
 if (MSVC)
+    # WebView loads this DLL at runtime, so PE import checks cannot detect its absence.
+    ExternalProject_Add_Step(dep_wxWidgets copy_webview_loader
+        DEPENDEES install
+        COMMAND ${CMAKE_COMMAND}
+            -DWX_BUILD_DIR=<BINARY_DIR> -DDESTDIR=${DESTDIR}
+            -P ${CMAKE_CURRENT_LIST_DIR}/copy_webview_loader.cmake
+    )
     add_debug_dep(dep_wxWidgets)
 endif ()

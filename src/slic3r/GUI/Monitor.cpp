@@ -31,7 +31,9 @@
 #include "MediaFilePanel.h"
 #include "Plater.hpp"
 #include "BindDialog.hpp"
+#include "MsgDialog.hpp"
 #include "FlashForge/DeviceListPanel.hpp"
+#include "FlashForge/AddPrinterDialog.hpp"
 #include "FlashForge/DeviceData.hpp"
 #include "DeviceCore/DevManager.h"
 #include "FlashForge/SingleDeviceState.hpp"
@@ -122,7 +124,7 @@ wxDEFINE_EVENT(EVT_SWITCH_TO_DEVICE_STATUS, wxCommandEvent);
     init_timer();
 
     //m_side_tools->get_panel()->Connect(wxEVT_LEFT_DOWN, wxMouseEventHandler(MonitorPanel::on_printer_clicked), NULL, this);
-    m_side_tools->get_panel()->Connect(EVT_DEV_LIST_BTN_CLICKED, wxMouseEventHandler(MonitorPanel::on_printer_clicked), NULL, this);
+    m_side_tools->get_panel()->Bind(EVT_DEV_LIST_BTN_CLICKED, &MonitorPanel::on_printer_clicked, this);
 
     Bind(wxEVT_TIMER, &MonitorPanel::on_timer, this);
     Bind(wxEVT_SIZE, &MonitorPanel::on_size, this);
@@ -160,7 +162,7 @@ wxDEFINE_EVENT(EVT_SWITCH_TO_DEVICE_STATUS, wxCommandEvent);
 MonitorPanel::~MonitorPanel()
 {
     //m_side_tools->get_panel()->Disconnect(wxEVT_LEFT_DOWN, wxMouseEventHandler(MonitorPanel::on_printer_clicked), NULL, this);
-    m_side_tools->get_panel()->Disconnect(EVT_DEV_LIST_BTN_CLICKED, wxMouseEventHandler(MonitorPanel::on_printer_clicked), NULL, this);
+    m_side_tools->get_panel()->Unbind(EVT_DEV_LIST_BTN_CLICKED, &MonitorPanel::on_printer_clicked, this);
     Slic3r::GUI::MultiComMgr::inst()->Unbind(COM_WAN_DEV_MAINTAIN_EVENT, &MonitorPanel::onComWanDevMaintainEvent, this);
     wxGetApp().Unbind(EVT_LOGIN_OUT, &MonitorPanel::on_login_out, this);
     delete m_side_tools;
@@ -334,32 +336,22 @@ void MonitorPanel::on_select_printer(wxCommandEvent &event)
     Layout();
 }
 
-void MonitorPanel::on_printer_clicked(wxMouseEvent &event)
+void MonitorPanel::on_printer_clicked(DevListBtnClickedEvent &event)
 {
-    auto mouse_pos = ClientToScreen(event.GetPosition());
-    wxPoint rect = m_side_tools->ClientToScreen(wxPoint(0, 0));
-    if (!m_side_tools->is_in_interval()) {
-        wxPoint pos      = m_side_tools->ClientToScreen(wxPoint(0, 0));
-        wxPoint mainPos  = wxGetApp().mainframe->ClientToScreen(wxPoint(0, 0));
-        int     toolPosy = pos.y - mainPos.y;
-        pos.y += m_side_tools->GetRect().height;
-        // pos.x = pos.x < 0? 0:pos.x;
-        m_select_machine.Move(pos);
-
-        wxSize sizeAll = wxGetApp().mainframe->GetSize();   
-#ifdef _WIN32
-        int side_tools_height = sizeAll.y /*- rect.y*/ - toolPosy - m_side_tools->GetRect().height - m_side_tools->getConnectInfoHeight() - 10;
-#else
-        int side_tools_height = sizeAll.y /*- rect.y*/ - toolPosy - m_side_tools->GetRect().height - m_side_tools->getConnectInfoHeight() - 40;
-#endif
-//#ifdef __linux__
-        m_select_machine.SetSize(wxSize(m_side_tools->GetSize().x, side_tools_height));
-        m_select_machine.SetMaxSize(wxSize(m_side_tools->GetSize().x, side_tools_height));
-        m_select_machine.SetMinSize(wxSize(m_side_tools->GetSize().x, side_tools_height));
-        //#endif
-
-        m_select_machine.Popup();
+    if (m_add_printer_open)
+        return;
+    if (MultiComMgr::inst()->networkIntfc() == nullptr) {
+        MessageDialog dialog(this,
+            _L("The printer communication module is unavailable. Restart the application using the complete build folder."),
+            _L("Add Device"), wxOK | wxICON_ERROR);
+        dialog.ShowModal();
+        return;
     }
+    m_add_printer_open = true;
+    AddPrinterDialog dialog(wxGetApp().mainframe);
+    if (dialog.ShowModal() == wxID_OK)
+        wxGetApp().mainframe->jump_to_monitor(dialog.connectedPrinter());
+    m_add_printer_open = false;
 }
 
 void MonitorPanel::on_size(wxSizeEvent& event) { Layout(); }

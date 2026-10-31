@@ -385,31 +385,17 @@ void DeviceObjectOpr::update_scan_machine()
     //clear_scan_machine();
 
     std::vector<fnet_lan_dev_info> devInfos;
-    MultiComUtils::getLanDevList(devInfos);
+    if (MultiComUtils::getLanDevList(devInfos) != COM_OK)
+        return;
+    update_scan_machine(devInfos);
+}
+
+void DeviceObjectOpr::update_scan_machine(const std::vector<fnet_lan_dev_info>& devInfos)
+{
     update_scan_list(devInfos);
     for (auto &elem : devInfos) {
         std::string dev_id = elem.serialNumber;
-        #if 1
-        if (elem.connectMode == 1 && elem.bindStatus == 1) {
-            auto it = m_local_devices.find(dev_id);
-            if (it != m_local_devices.end()) {
-                std::string name = elem.name;
-                // auto lanInfo = new fnet_lan_dev_info(*info);
-                if (name != it->second->get_dev_name()) {
-                    it->second->set_dev_name(name);
-                    AppConfig* config = GUI::wxGetApp().app_config;
-                    if (config) {
-                        config->save_bind_machine_to_config(dev_id, name, "", elem.pid,false);
-                    }
-                    LocalDeviceNameChangeEvent event(EVT_LOCAL_DEVICE_NAME_CHANGED, dev_id, name);
-                    event.SetEventObject(this);
-                    wxPostEvent(this, event);
-                }
-            }
-            continue;
-        }
-            
-        #endif
+        // Every discovered device may be offered for local code verification.
         bool          newObj = false;
         DeviceObject *devObj = nullptr;
         auto   scanIt = m_scan_devices.find(dev_id);
@@ -442,7 +428,7 @@ void DeviceObjectOpr::update_scan_machine()
             auto info    = devObj->get_lan_dev_info();
             std::string name = info->name;
             //auto lanInfo = new fnet_lan_dev_info(*info);
-            info->connectMode = 0;            
+            // Preserve the mode reported by the printer; never fabricate LAN mode.
             it->second->set_lan_dev_info(*info);
             if (name != it->second->get_dev_name()) {
                 it->second->set_dev_name(name);
@@ -700,7 +686,7 @@ void DeviceObjectOpr::get_my_machine_list(map<std::string, DeviceObject*>& devLi
         if (tmpIt == devList.end()) {
             devList.emplace(make_pair(it->first, it->second));
         } else {
-            if (tmpIt->second->device_type() == DT_BOTH && !tmpIt->second->is_online()) {
+            if (it->second->is_lan_mode_printer()) { // Prefer an explicitly paired local connection.
                 devList.erase(tmpIt);
                 devList.emplace(make_pair(it->first, it->second));
             }
@@ -783,10 +769,6 @@ void DeviceObjectOpr::update_scan_list(const std::vector<fnet_lan_dev_info> &inf
 {
     map<std::string, fnet_lan_dev_info> lan_map;
     for (auto info : infos){
-#if 1
-        if (info.connectMode == 1 && info.bindStatus == 1)
-            continue;
-#endif
         lan_map.emplace(make_pair(info.serialNumber, info));
     }
     for (auto it = m_scan_devices.begin(); it != m_scan_devices.end();) {

@@ -534,8 +534,8 @@ long FFUtils::getHttpHeaders(const std::string &url, const std::vector<std::stri
     std::unique_ptr<curl_slist, decltype(&curl_slist_free_all)> freeCurlSlist(curlSlist, curl_slist_free_all);
     client_data_t clientData(headerMap, keys);
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
     //curl_easy_setopt(curl, CURLOPT_HTTPHEADER, curlSlist);
     curl_easy_setopt(curl, CURLOPT_HEADERDATA, &clientData);
     curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, headerCallback);

@@ -370,7 +370,7 @@ void MachineObjectPanel::on_mouse_left_up(wxMouseEvent &evt)
             wxGetApp().mainframe->jump_to_monitor(m_devInfo->get_dev_id());
         }
     } else {
-        if (m_devInfo && m_devInfo->is_lan_mode_in_scan_print()) {
+        if (m_devInfo && m_devInfo->get_lan_dev_info() != nullptr) {
 #ifdef __APPLE__
             BOOST_LOG_TRIVIAL(info) << "MachineObjectPanel::on_mouse_left_up, lan connect 2";
             SelectMachinePopup::m_wan_bind_enable = true;
@@ -704,7 +704,7 @@ void SelectMachinePopup::update_other_devices()
 
         /* do not show printer in my list */
         auto it = m_bind_machine_list.find(deviceObj->get_dev_id());
-        if (it != m_bind_machine_list.end())
+        if (it != m_bind_machine_list.end() && it->second->is_lan_mode_printer())
             continue;
 
         MachineObjectPanel* op = nullptr;
@@ -723,7 +723,7 @@ void SelectMachinePopup::update_other_devices()
 
         op->update_device_info(deviceObj);
 
-        if (deviceObj->is_lan_mode_in_scan_print()) {
+        if (deviceObj->get_lan_dev_info() != nullptr) {
             op->set_printer_state(PrinterState::OFFLINE_LAN);
             /*if (deviceObj->has_access_right()) {
                 op->set_printer_state(PrinterState::IN_LAN);
@@ -744,7 +744,7 @@ void SelectMachinePopup::update_other_devices()
 
         op->Bind(EVT_CONNECT_LAN_PRINT, [this, deviceObj](wxCommandEvent &e) {
             if (deviceObj) {
-                if (deviceObj->is_lan_mode_printer()) {
+                if (deviceObj->get_lan_dev_info() != nullptr) {
                     //ConnectPrinterDialog dlg(wxGetApp().mainframe, wxID_ANY, _L("Input access code"));
                     ConnectPrinterDialog dlg;
                     dlg.set_device_object(deviceObj);
@@ -845,7 +845,7 @@ void SelectMachinePopup::update_user_devices()
             if (!devObj->is_online()) {
                 op->SetToolTip(_L(""));
                 op->show_printer_bind(true, PrinterBindState::ALLOW_UNBIND);
-                if (devObj->is_lan_mode_in_scan_print()) {
+                if (devObj->get_lan_dev_info() != nullptr) {
                     op->set_printer_state(PrinterState::OFFLINE_LAN);
                     if (m_updateConnect && devObj->get_lan_dev_info() != nullptr) {
                         /*m_updateConnect = false;
@@ -1343,7 +1343,7 @@ void SelectMachinePopup::update_other_devices()
 
         /* do not show printer in my list */
         auto it = m_bind_machine_list.find(deviceObj->get_dev_id());
-        if (it != m_bind_machine_list.end())
+        if (it != m_bind_machine_list.end() && it->second->is_lan_mode_printer())
             continue;
 
         MachineObjectPanel* op = nullptr;
@@ -1367,7 +1367,7 @@ void SelectMachinePopup::update_other_devices()
 
         op->update_device_info(deviceObj);
 
-        if (deviceObj->is_lan_mode_in_scan_print()) {
+        if (deviceObj->get_lan_dev_info() != nullptr) {
             op->set_printer_state(PrinterState::OFFLINE_LAN);
             /*if (deviceObj->has_access_right()) {
                 op->set_printer_state(PrinterState::IN_LAN);
@@ -1388,7 +1388,7 @@ void SelectMachinePopup::update_other_devices()
 
         op->Bind(EVT_CONNECT_LAN_PRINT, [this, deviceObj](wxCommandEvent &e) {
             if (deviceObj) {
-                if (deviceObj->is_lan_mode_printer()) {
+                if (deviceObj->get_lan_dev_info() != nullptr) {
                     //ConnectPrinterDialog dlg(wxGetApp().mainframe, wxID_ANY, _L("Input access code"));
                     ConnectPrinterDialog dlg;
                     dlg.set_device_object(deviceObj);
@@ -1494,7 +1494,7 @@ void SelectMachinePopup::update_user_devices()
             if (!devObj->is_online()) {
                 op->SetToolTip(_L(""));
                 op->show_printer_bind(true, PrinterBindState::ALLOW_UNBIND);
-                if (devObj->is_lan_mode_in_scan_print()) {
+                if (devObj->get_lan_dev_info() != nullptr) {
                     op->set_printer_state(PrinterState::OFFLINE_LAN);
                     if (m_updateConnect && devObj->get_lan_dev_info() != nullptr) {
                         /*m_updateConnect = false;

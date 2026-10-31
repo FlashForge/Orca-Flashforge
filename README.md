@@ -1,4 +1,9 @@
 # Orca-Flashforge
+
+Default-browser Google login, account-free LAN printer addition and Japanese UI fixes.
+既定ブラウザでのGoogle認証、ログイン不要のLAN追加、日本語UIの改善。
+
+[Changes and build instructions / 変更内容とビルド方法](BROWSER_LAN.md)
 Orca-Flashforge is an open source slicer for FDM printers.
 
 # How to compile

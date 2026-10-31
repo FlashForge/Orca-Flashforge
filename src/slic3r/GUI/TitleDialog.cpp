@@ -3,6 +3,7 @@
 #include <wx/stattext.h>
 #include <wx/graphics.h>
 #include <wx/dcgraph.h>
+#include <wx/uri.h>
 #include "wxExtensions.hpp"
 #include "libslic3r/Utils.hpp"
 #include "slic3r/GUI/GUI_App.hpp"
@@ -258,10 +259,17 @@ WebDialog::WebDialog(wxWindow* parent, const wxString& title, const wxString& ur
     m_browser->SetMinSize(size);
     Layout();
 
-    m_browser->Bind(wxEVT_WEBVIEW_NAVIGATED, &WebDialog::OnNavigated, this);
+    m_browser->Bind(wxEVT_WEBVIEW_NAVIGATING, &WebDialog::OnNavigated, this);
     m_browser->Bind(wxEVT_WEBVIEW_NEWWINDOW, &WebDialog::OnNewWindow, this);
     m_browser->Bind(wxEVT_WEBVIEW_SCRIPT_MESSAGE_RECEIVED, [=](wxWebViewEvent& evt) {
         if (m_browser == nullptr) {
+            return;
+        }
+        const wxURI source(m_browser->GetCurrentURL());
+        const wxString host = source.GetServer().Lower();
+        if (source.GetScheme() != "https" || !source.GetUserInfo().empty() ||
+            (!source.GetPort().empty() && source.GetPort() != "443") ||
+            (host != "desktop.voxelshare.com" && host != "desktop.voxelshare.cn" && host != "auth.flashforge.com")) {
             return;
         }
         wxString url;
@@ -288,23 +296,18 @@ WebDialog::WebDialog(wxWindow* parent, const wxString& title, const wxString& ur
 
 void WebDialog::OnNavigated(wxWebViewEvent& evt)
 {
-    wxString currentURL   = m_browser->GetCurrentURL();
-    wxString targetDomain = "google.com";
-
-    if (currentURL.Contains(targetDomain)) {
-        wxString jsCode = R"(
-            setInterval(() => {
-                const el = document.getElementById('headingSubtext');
-                if (el) el.style.display = 'none';
-            }, 100)
-            console.log("googleJs injure success")
-        )";
-        CallAfter([=]() { m_browser->RunScript(jsCode); });
+    const wxURI target(evt.GetURL());
+    const wxString host = target.GetServer().Lower();
+    if (host == "accounts.google.com" || host == "appleid.apple.com" ||
+        host == "facebook.com" || host == "www.facebook.com") {
+        evt.Veto();
+        CallAfter([] { wxGetApp().ShowUserLogin(); });
     }
 }
 
 void WebDialog::OnNewWindow(wxWebViewEvent& evt)
 {
+    evt.Veto();
     if (m_browser == nullptr) {
         return;
     }

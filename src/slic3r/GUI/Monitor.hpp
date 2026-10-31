@@ -101,6 +101,7 @@ private:
     wxStaticBitmap* m_bitmap_wifi_signal;
     wxBoxSizer *    m_side_tools_sizer;
     SelectMachinePopup m_select_machine;
+    bool m_add_printer_open { false };
 
     int last_wifi_signal = -1;
     int last_status;
@@ -140,7 +141,7 @@ public:
     void on_update_all(wxMouseEvent &event);
     void on_timer(wxTimerEvent& event);
     void on_select_printer(wxCommandEvent& event);
-    void on_printer_clicked(wxMouseEvent &event);
+    void on_printer_clicked(DevListBtnClickedEvent &event);
     void on_size(wxSizeEvent &event);
     void onComWanDevMaintainEvent(ComWanDevMaintainEvent& event);
     void on_login_out(wxCommandEvent& event);

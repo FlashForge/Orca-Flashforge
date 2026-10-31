@@ -1,0 +1,5 @@
+FlashStudio fork: based on FlashForge/Orca-Flashforge, see root LICENSE.txt.
+Helper runtime: Python (PSF license; see LICENSE_PYTHON.txt), including OpenSSL.
+OpenSSL license: https://www.openssl.org/source/license.html
+PyInstaller bootloader: GPL with exception permitting bundled application distribution.
+https://pyinstaller.org/en/stable/license.html

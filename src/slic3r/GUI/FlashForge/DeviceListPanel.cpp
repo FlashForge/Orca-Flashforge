@@ -765,7 +765,7 @@ void DeviceListPanel::build()
 #endif
     m_no_device_bitmap = new wxStaticBitmap(m_no_device_panel, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxDefaultSize, 0);
     m_no_device_bitmap->SetBitmap(create_scaled_bitmap("monitor_device_empty", nullptr, 250));
-    m_no_device_staticText = new wxStaticText(m_no_device_panel, wxID_ANY, wxT("No Device"));
+    m_no_device_staticText = new wxStaticText(m_no_device_panel, wxID_ANY, _L("No printer"));
     wxClientDC no_device_dc(m_no_device_staticText);
     no_device_dc.SetFont(m_no_device_staticText->GetFont());
     wxSize no_device_text_size = no_device_dc.GetTextExtent(m_no_device_staticText->GetLabel());

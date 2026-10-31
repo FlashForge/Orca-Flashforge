@@ -49,3 +49,6 @@ internal_docs/
 /flatpak-repo/
 /usr
 FLASHNETWORK*_*.dat
+
+# Generated browser authentication helper
+/resources/browser-auth/*.exe
